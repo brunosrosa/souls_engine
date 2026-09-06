@@ -19,3 +19,12 @@ _donor/
 _staging/
 *.log
 .env
+
+# Outros
+docs/.archive/
+*\bin
+
+# Souls Temp Folders
+.souls_data/
+.souls_sandbox/
+.souls_scratchpad/
