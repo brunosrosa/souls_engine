@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/souls_protocol",
+    "crates/souls_core",
+    "crates/souls_memory",
+    "crates/souls_ast",
+    "crates/souls_inference",
+    "crates/souls_router",
+    "crates/souls_server",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Bruno Rosa"]
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+# Concorrência e Runtime
+tokio = { version = "1.40", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+async-trait = "0.1"
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Serialização
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Web e Protocolos (Axum para MCP HTTP/SSE e REST)
+axum = { version = "0.7", features = ["macros"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }

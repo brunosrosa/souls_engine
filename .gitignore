@@ -1,0 +1,21 @@
+/target
+Cargo.lock
+
+# Bancos de dados locais e memória (nunca comitar dados reais)
+*.db
+*.db-wal
+*.db-shm
+*.lance/
+data/
+storage/
+
+# Modelos locais pesados
+models/
+*.onnx
+*.gguf
+
+# Staging e backups temporários
+_donor/
+_staging/
+*.log
+.env

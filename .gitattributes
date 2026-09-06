@@ -1,0 +1,9 @@
+# Forçar LF para evitar falhas de AST, JSON-RPC e compilação cruzada
+* text=auto eol=lf
+
+# Binários e modelos
+*.db binary
+*.lance binary
+*.onnx binary
+*.gguf binary
+*.pyd binary

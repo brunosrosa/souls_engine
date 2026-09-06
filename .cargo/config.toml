@@ -1,0 +1,7 @@
+[build]
+# Otimizado para toolchain MSVC nativa no Windows 11
+target = "x86_64-pc-windows-msvc"
+
+[env]
+# Garante que traces assíncronos mostrem linha de código em debug
+RUST_BACKTRACE = "1"
