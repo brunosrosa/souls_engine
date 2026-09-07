@@ -1,5 +1,5 @@
 [package]
-name = "souls_inference"
+name = "souls_model_router"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
