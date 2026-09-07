@@ -7,7 +7,6 @@ Cargo.lock
 *.db-shm
 *.lance/
 data/
-storage/
 
 # Modelos locais pesados
 models/
