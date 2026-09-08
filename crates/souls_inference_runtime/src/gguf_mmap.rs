@@ -36,26 +36,83 @@ pub struct GgufMetadataInfo {
     pub kv_pairs_count: u64,
 }
 
+/// Encapsulates a mapped GGUF file and its parsed metadata with explicit handle lifetime management.
+///
+/// On Windows NT / ReFS, holding an open memory mapping locks the underlying file descriptor,
+/// preventing file operations (rename, overwrite, delete) with OS Error 5 (Access Denied).
+/// `GgufMappedReader` allows explicit `unload(&mut self)` to release the OS handle immediately,
+/// and guarantees handle release on `Drop`.
+pub struct GgufMappedReader {
+    mmap: Option<Mmap>,
+    pub metadata: GgufMetadataInfo,
+    path: std::path::PathBuf,
+}
+
+impl GgufMappedReader {
+    /// Opens and memory-maps a GGUF file in O(1) time complexity.
+    pub fn open(path: impl AsRef<Path>) -> Result<Self, InferenceError> {
+        let p = path.as_ref().to_path_buf();
+        if !p.exists() {
+            return Err(InferenceError::ModelNotFound(p.display().to_string()));
+        }
+
+        let file = File::open(&p)?;
+        let file_size_bytes = file.metadata()?.len();
+
+        if file_size_bytes < 24 {
+            return Err(InferenceError::GgufParseError(
+                "File is too small to contain a valid GGUF header".to_string(),
+            ));
+        }
+
+        // SAFETY: We create a read-only memory map of the local GGUF file.
+        // The mapped memory is accessed strictly as immutable slices and will not be modified.
+        let mmap = unsafe { Mmap::map(&file)? };
+        let metadata = parse_gguf_slice(&mmap, file_size_bytes)?;
+
+        Ok(Self {
+            mmap: Some(mmap),
+            metadata,
+            path: p,
+        })
+    }
+
+    /// Explicitly unloads and drops the virtual memory map, immediately releasing the ReFS file handle.
+    pub fn unload(&mut self) {
+        if let Some(mmap) = self.mmap.take() {
+            drop(mmap);
+            tracing::info!("Explicitly unloaded GGUF memory map for: {:?}", self.path);
+        }
+    }
+
+    /// Returns true if the memory map is currently active in virtual memory.
+    pub fn is_loaded(&self) -> bool {
+        self.mmap.is_some()
+    }
+
+    /// Returns a reference to the parsed metadata.
+    pub fn metadata(&self) -> &GgufMetadataInfo {
+        &self.metadata
+    }
+
+    /// Provides access to the mapped byte slice if loaded.
+    pub fn as_slice(&self) -> Option<&[u8]> {
+        self.mmap.as_deref()
+    }
+}
+
+impl Drop for GgufMappedReader {
+    fn drop(&mut self) {
+        self.unload();
+    }
+}
+
 /// Inspects GGUF metadata in O(1) time complexity via zero-copy read-only mmap.
 pub fn inspect_gguf_metadata_o1(path: &Path) -> Result<GgufMetadataInfo, InferenceError> {
-    if !path.exists() {
-        return Err(InferenceError::ModelNotFound(path.display().to_string()));
-    }
-
-    let file = File::open(path)?;
-    let file_size_bytes = file.metadata()?.len();
-
-    if file_size_bytes < 24 {
-        return Err(InferenceError::GgufParseError(
-            "File is too small to contain a valid GGUF header".to_string(),
-        ));
-    }
-
-    // SAFETY: We create a read-only memory map of the local GGUF file.
-    // The mapped memory is accessed strictly as immutable slices and will not be modified.
-    let mmap = unsafe { Mmap::map(&file)? };
-
-    parse_gguf_slice(&mmap, file_size_bytes)
+    let mut reader = GgufMappedReader::open(path)?;
+    let metadata = reader.metadata.clone();
+    reader.unload(); // Explicit early unload per Seguro A (ReFS safety)
+    Ok(metadata)
 }
 
 /// Parses the GGUF header from an in-memory byte slice.
@@ -293,5 +350,32 @@ mod tests {
         assert_eq!(info.context_length, 8192);
         assert_eq!(info.tensor_count, 120);
         assert_eq!(info.kv_pairs_count, 2);
+    }
+
+    #[test]
+    fn test_gguf_mapped_reader_explicit_unload() {
+        let mut file = NamedTempFile::new().unwrap();
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&GGUF_MAGIC);
+        buf.extend_from_slice(&3u32.to_le_bytes());
+        buf.extend_from_slice(&10u64.to_le_bytes());
+        buf.extend_from_slice(&0u64.to_le_bytes()); // 0 KV pairs
+        buf.extend_from_slice(&[0u8; 64]);
+        file.write_all(&buf).unwrap();
+
+        let mut reader = GgufMappedReader::open(file.path()).expect("Failed to open mapped reader");
+        assert!(reader.is_loaded());
+        assert_eq!(reader.metadata().version, 3);
+        assert_eq!(reader.metadata().tensor_count, 10);
+
+        // Explicitly unload virtual memory map
+        reader.unload();
+        assert!(!reader.is_loaded());
+        assert!(reader.as_slice().is_none());
+
+        // Calling unload multiple times is idempotent
+        reader.unload();
+        assert!(!reader.is_loaded());
     }
 }

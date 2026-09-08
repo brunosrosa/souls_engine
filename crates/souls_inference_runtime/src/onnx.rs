@@ -51,6 +51,85 @@ pub struct ClassificationOutput {
     pub vram_mb: u32,
 }
 
+/// Execution configuration for ONNX Runtime CPU execution provider.
+///
+/// Enforces Tokio Reactor thread starvation prevention (ADR-030 / Seguro B):
+/// By default, ONNX Runtime spawns thread pools matching all available logical cores.
+/// Under concurrent agent dispatch, this leads to context switching storms and thread starvation.
+/// We strictly cap intra-op and inter-op threads to at most 1 or 2 threads.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OrtSessionConfig {
+    pub intra_threads: usize,
+    pub inter_threads: usize,
+    pub optimization_level: u32,
+    pub force_cpu: bool,
+}
+
+impl Default for OrtSessionConfig {
+    fn default() -> Self {
+        Self {
+            intra_threads: 1, // Safe default: strictly 1 thread per session
+            inter_threads: 1,
+            optimization_level: 3, // Level 3 / GraphOptimizationLevel
+            force_cpu: true,       // Inviolable rule: 0 MB dGPU VRAM
+        }
+    }
+}
+
+impl OrtSessionConfig {
+    /// Configures intra-op thread count, strictly capped at 2 to protect Tokio reactor.
+    pub fn with_intra_threads(mut self, threads: usize) -> Self {
+        self.intra_threads = threads.clamp(1, 2);
+        self
+    }
+
+    /// Configures inter-op thread count, strictly capped at 2 to protect Tokio reactor.
+    pub fn with_inter_threads(mut self, threads: usize) -> Self {
+        self.inter_threads = threads.clamp(1, 2);
+        self
+    }
+}
+
+/// Builder for instantiating ONNX runtime sessions with strictly capped threads.
+#[derive(Debug, Clone, Default)]
+pub struct OrtSessionBuilder {
+    config: OrtSessionConfig,
+    model_path: Option<PathBuf>,
+}
+
+impl OrtSessionBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_model_path(mut self, path: impl AsRef<Path>) -> Self {
+        self.model_path = Some(path.as_ref().to_path_buf());
+        self
+    }
+
+    /// Sets intra-op threads (capped at 2 to protect Tokio reactor).
+    pub fn with_intra_threads(mut self, threads: usize) -> Self {
+        self.config = self.config.with_intra_threads(threads);
+        self
+    }
+
+    /// Sets inter-op threads (capped at 2 to protect Tokio reactor).
+    pub fn with_inter_threads(mut self, threads: usize) -> Self {
+        self.config = self.config.with_inter_threads(threads);
+        self
+    }
+
+    /// Builds the configured `OrtClassifierEngine`.
+    pub fn build(self) -> OrtClassifierEngine {
+        let exists = self.model_path.as_ref().map_or(false, |p| p.exists());
+        OrtClassifierEngine {
+            model_path: self.model_path,
+            is_model_present: exists,
+            session_config: self.config,
+        }
+    }
+}
+
 /// Global singleton for the Tier 0 ONNX classifier.
 static GLOBAL_CLASSIFIER: OnceLock<OrtClassifierEngine> = OnceLock::new();
 
@@ -58,6 +137,7 @@ static GLOBAL_CLASSIFIER: OnceLock<OrtClassifierEngine> = OnceLock::new();
 pub struct OrtClassifierEngine {
     model_path: Option<PathBuf>,
     is_model_present: bool,
+    session_config: OrtSessionConfig,
 }
 
 impl OrtClassifierEngine {
@@ -80,17 +160,18 @@ impl OrtClassifierEngine {
         Self {
             model_path,
             is_model_present: exists,
+            session_config: OrtSessionConfig::default(),
         }
     }
 
-    /// Creates an instance with an explicit model path.
+    /// Creates an instance with an explicit model path using safe default thread limits.
     pub fn with_model_path(path: impl AsRef<Path>) -> Self {
-        let p = path.as_ref().to_path_buf();
-        let exists = p.exists();
-        Self {
-            model_path: Some(p),
-            is_model_present: exists,
-        }
+        OrtSessionBuilder::new().with_model_path(path).build()
+    }
+
+    /// Returns the active session configuration.
+    pub fn session_config(&self) -> &OrtSessionConfig {
+        &self.session_config
     }
 
     /// Resolves canonical model search locations.
@@ -339,5 +420,23 @@ mod tests {
         let certain = [1.0, 0.0, 0.0, 0.0];
         let h_cert = OrtClassifierEngine::compute_shannon_entropy(&certain);
         assert_eq!(h_cert, 0.0);
+    }
+
+    #[test]
+    fn test_onnx_thread_starvation_prevention() {
+        // Attempting to request 32 threads must be strictly clamped to <= 2
+        let engine = OrtSessionBuilder::new()
+            .with_intra_threads(32)
+            .with_inter_threads(16)
+            .build();
+
+        assert_eq!(engine.session_config().intra_threads, 2);
+        assert_eq!(engine.session_config().inter_threads, 2);
+
+        // Safe defaults are 1 thread
+        let default_engine = OrtClassifierEngine::default();
+        assert_eq!(default_engine.session_config().intra_threads, 1);
+        assert_eq!(default_engine.session_config().inter_threads, 1);
+        assert!(default_engine.session_config().force_cpu);
     }
 }

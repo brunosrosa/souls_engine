@@ -15,6 +15,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 memmap2 = "0.9"
 nvml-wrapper = "0.10"
+dashmap = "6.1"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = [

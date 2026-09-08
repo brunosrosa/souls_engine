@@ -18,10 +18,13 @@ pub mod onnx;
 
 // Re-export canonical types and functions
 pub use error::InferenceError;
-pub use gguf_mmap::{inspect_gguf_metadata_o1, parse_gguf_slice, GgufMetadataInfo};
+pub use gguf_mmap::{
+    inspect_gguf_metadata_o1, parse_gguf_slice, GgufMappedReader, GgufMetadataInfo,
+};
 pub use healing::heal_json_response;
 pub use inference::{
-    GenOutput, GenParams, KvCacheConfig, KvCacheType, Tier1GenerativeEngine,
+    get_or_compile_grammar, grammar_cache, CompiledGrammar, GenOutput, GenParams,
+    KvCacheConfig, KvCacheType, Tier1GenerativeEngine,
 };
 pub use llamacpp::{
     LlamaBatchLayout, LlamaLogitProber, LogitProbingOutput,
@@ -32,7 +35,8 @@ pub use nvml::{
     HardwareWatchdog, OperationalZone, RTX_2060M_VRAM_TOTAL_MB,
 };
 pub use onnx::{
-    ClassificationLabel, ClassificationOutput, OrtClassifierEngine, MAX_TRIAGE_CHARS,
+    ClassificationLabel, ClassificationOutput, OrtClassifierEngine, OrtSessionBuilder,
+    OrtSessionConfig, MAX_TRIAGE_CHARS,
 };
 
 use std::path::Path;

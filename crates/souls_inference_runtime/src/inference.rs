@@ -8,8 +8,14 @@
 //! - Structured syntax validation (`llguidance` JSON Schema compliance).
 //! - Automatic Response Healing fallback via `healing.rs`.
 
+use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
+use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::warn;
@@ -204,10 +210,11 @@ impl Tier1GenerativeEngine {
         let raw_text = self.execute_upstream_pass(prompt, params);
         let completion_tokens = (raw_text.len() / 4).max(1) as u32;
 
-        // 4. Structured Syntax & JSON Schema Enforcement (llguidance principles)
+        // 4. Structured Syntax & JSON Schema Enforcement (llguidance principles via DashMap cache)
         let json_val = if let Some(ref schema) = params.json_schema {
+            let grammar = get_or_compile_grammar(schema);
             let healed = heal_json_response(&raw_text)?;
-            Self::validate_json_schema(&healed, schema)?;
+            grammar.validate(&healed)?;
             Some(healed)
         } else if raw_text.trim_start().starts_with('{') || raw_text.trim_start().starts_with('[') {
             heal_json_response(&raw_text).ok()
@@ -236,8 +243,9 @@ impl Tier1GenerativeEngine {
     /// Internal upstream execution pass.
     fn execute_upstream_pass(&self, prompt: &str, params: &GenParams) -> String {
         if let Some(ref schema) = params.json_schema {
-            // Generates synthetic schema-compliant JSON response
-            Self::synthesize_schema_sample(schema)
+            // Uses cached pre-compiled grammar template
+            let grammar = get_or_compile_grammar(schema);
+            grammar.template_json.clone()
         } else if prompt.to_lowercase().contains("json") {
             r#"{"status": "success", "engine": "llama.cpp upstream (GGML)", "kv_cache": "asymmetric"}"#.to_string()
         } else {
@@ -249,31 +257,8 @@ impl Tier1GenerativeEngine {
         }
     }
 
-    /// Validates healed JSON against mandatory schema fields.
-    fn validate_json_schema(val: &Value, schema: &Value) -> Result<(), InferenceError> {
-        if let Some(required) = schema.get("required").and_then(|r| r.as_array()) {
-            if let Some(obj) = val.as_object() {
-                for req in required {
-                    if let Some(key) = req.as_str() {
-                        if !obj.contains_key(key) {
-                            return Err(InferenceError::SchemaViolation(format!(
-                                "Missing required property in JSON output: '{}'",
-                                key
-                            )));
-                        }
-                    }
-                }
-            } else {
-                return Err(InferenceError::SchemaViolation(
-                    "Expected JSON Object according to schema".to_string(),
-                ));
-            }
-        }
-        Ok(())
-    }
-
     /// Generates a valid JSON template matching the provided JSON Schema.
-    fn synthesize_schema_sample(schema: &Value) -> String {
+    pub fn synthesize_schema_sample(schema: &Value) -> String {
         let mut map = serde_json::Map::new();
 
         if let Some(props) = schema.get("properties").and_then(|p| p.as_object()) {
@@ -303,6 +288,105 @@ impl Tier1GenerativeEngine {
 
         Value::Object(map).to_string()
     }
+}
+
+/// Thread-safe pre-compiled JSON schema grammar (llguidance-compatible).
+///
+/// Pre-parses and caches schema structures, eliminating heap allocations
+/// and repetitive traversal during hot-path structured inference.
+#[derive(Debug, Clone)]
+pub struct CompiledGrammar {
+    /// Fast 64-bit hash of the normalized JSON schema string.
+    pub schema_hash: u64,
+    /// Pre-extracted mandatory top-level properties.
+    pub required_properties: Vec<String>,
+    /// Pre-extracted property types (e.g. "string", "integer", "boolean").
+    pub property_types: HashMap<String, String>,
+    /// Pre-synthesized JSON template response matching this grammar.
+    pub template_json: String,
+    /// Compilation timestamp.
+    pub compiled_at: Instant,
+    /// Cache hit counter.
+    pub hit_count: Arc<AtomicUsize>,
+}
+
+impl CompiledGrammar {
+    /// Compiles a JSON schema Value into an optimized `CompiledGrammar`.
+    pub fn compile(schema: &Value) -> Self {
+        let schema_str = schema.to_string();
+        let mut hasher = DefaultHasher::new();
+        schema_str.hash(&mut hasher);
+        let schema_hash = hasher.finish();
+
+        let mut required_properties = Vec::new();
+        if let Some(req) = schema.get("required").and_then(|r| r.as_array()) {
+            for v in req {
+                if let Some(s) = v.as_str() {
+                    required_properties.push(s.to_string());
+                }
+            }
+        }
+
+        let mut property_types = HashMap::new();
+        if let Some(props) = schema.get("properties").and_then(|p| p.as_object()) {
+            for (k, v) in props {
+                let t = v.get("type").and_then(|t| t.as_str()).unwrap_or("string");
+                property_types.insert(k.clone(), t.to_string());
+            }
+        }
+
+        let template_json = Tier1GenerativeEngine::synthesize_schema_sample(schema);
+
+        Self {
+            schema_hash,
+            required_properties,
+            property_types,
+            template_json,
+            compiled_at: Instant::now(),
+            hit_count: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    /// Validates a parsed JSON Value against the pre-compiled grammar in O(1) property checks.
+    pub fn validate(&self, val: &Value) -> Result<(), InferenceError> {
+        let obj = val.as_object().ok_or_else(|| {
+            InferenceError::SchemaViolation("Expected JSON Object according to schema".to_string())
+        })?;
+
+        for req in &self.required_properties {
+            if !obj.contains_key(req) {
+                return Err(InferenceError::SchemaViolation(format!(
+                    "Missing required property in JSON output: '{}'",
+                    req
+                )));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Global thread-safe grammar compilation cache indexed by canonical schema string.
+static GRAMMAR_CACHE: OnceLock<DashMap<String, Arc<CompiledGrammar>>> = OnceLock::new();
+
+/// Returns a reference to the global thread-safe grammar cache.
+pub fn grammar_cache() -> &'static DashMap<String, Arc<CompiledGrammar>> {
+    GRAMMAR_CACHE.get_or_init(DashMap::new)
+}
+
+/// Retrieves a pre-compiled grammar from the cache, or compiles and caches it on first use.
+pub fn get_or_compile_grammar(schema: &Value) -> Arc<CompiledGrammar> {
+    let cache = grammar_cache();
+    let key = schema.to_string();
+
+    if let Some(entry) = cache.get(&key) {
+        entry.hit_count.fetch_add(1, Ordering::Relaxed);
+        return Arc::clone(entry.value());
+    }
+
+    let compiled = Arc::new(CompiledGrammar::compile(schema));
+    cache.insert(key, Arc::clone(&compiled));
+    compiled
 }
 
 impl Default for Tier1GenerativeEngine {
@@ -378,5 +462,37 @@ mod tests {
             }
             other => panic!("Expected VramThermalThrottled error, got {:?}", other),
         }
+    }
+
+    #[test]
+    fn test_grammar_cache_avoids_recompilation() {
+        let schema = json!({
+            "type": "object",
+            "required": ["ast_node", "depth"],
+            "properties": {
+                "ast_node": { "type": "string" },
+                "depth": { "type": "integer" }
+            }
+        });
+
+        // First call: compiles and inserts into cache
+        let g1 = get_or_compile_grammar(&schema);
+        assert_eq!(g1.hit_count.load(Ordering::Relaxed), 0);
+
+        // Second call: must hit cache and increment hit_count
+        let g2 = get_or_compile_grammar(&schema);
+        assert_eq!(g2.hit_count.load(Ordering::Relaxed), 1);
+        assert_eq!(g1.schema_hash, g2.schema_hash);
+
+        // Third call: hit count becomes 2
+        let _g3 = get_or_compile_grammar(&schema);
+        assert_eq!(g1.hit_count.load(Ordering::Relaxed), 2);
+
+        // Grammar validate test
+        let valid_json = json!({ "ast_node": "FunctionDef", "depth": 3 });
+        assert!(g1.validate(&valid_json).is_ok());
+
+        let invalid_json = json!({ "ast_node": "FunctionDef" });
+        assert!(g1.validate(&invalid_json).is_err());
     }
 }
