@@ -5,7 +5,8 @@
 //! auto-shrink pruning (Brace, Indent, Block paradigms), and concurrent multi-file reads.
 
 use std::path::Path;
-use tiktoken::get_encoding;
+use std::sync::OnceLock;
+use tiktoken::CoreBpe;
 use crate::ansi_filter::strip_ansi_escapes;
 use crate::error::CoreError;
 
@@ -62,12 +63,23 @@ pub fn detect_paradigm(code: &str, ext_or_path: Option<&str>) -> LanguageParadig
     }
 }
 
+/// Global thread-safe instance of the cl100k_base BPE tokenizer.
+///
+/// Avoids repeated recompilation of the BPE vocabulary dictionary on every smart-read invocation,
+/// eliminating heap churn and saving dozens of milliseconds per call under agentic concurrency.
+static GLOBAL_TOKENIZER: OnceLock<Option<&'static CoreBpe>> = OnceLock::new();
+
+/// Returns a reference to the statically initialized global tokenizer.
+pub fn get_global_tokenizer() -> Option<&'static CoreBpe> {
+    *GLOBAL_TOKENIZER.get_or_init(|| tiktoken::get_encoding("cl100k_base"))
+}
+
 /// Fast synchronous token count using `cl100k_base` encoding on CPU.
 pub fn count_tokens(text: &str) -> usize {
     if text.is_empty() {
         return 0;
     }
-    match get_encoding("cl100k_base") {
+    match get_global_tokenizer() {
         Some(enc) => enc.count(text),
         None => text.len() / 4,
     }

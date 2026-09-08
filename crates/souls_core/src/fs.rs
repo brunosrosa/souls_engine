@@ -230,17 +230,19 @@ fn clone_file_refs_sync(src: &Path, dest: &Path) -> Result<(), CoreError> {
     Ok(())
 }
 
-/// Fallback for non-Windows platforms (e.g. testing / cross-compilation).
+/// Fallback for non-Windows platforms delegating asynchronously to tokio::fs::copy.
 #[cfg(not(windows))]
-fn clone_file_refs_sync(src: &Path, dest: &Path) -> Result<(), CoreError> {
-    std::fs::copy(src, dest)?;
+pub async fn clone_file_refs(src: &Path, dest: &Path) -> Result<(), CoreError> {
+    tokio::fs::copy(src, dest).await.map_err(CoreError::Io)?;
     Ok(())
 }
 
 /// Asynchronously clones a file using Windows 11 ReFS Block Cloning (Copy-on-Write).
 ///
-/// Dispatches the synchronous NT kernel call to `tokio::task::spawn_blocking` to prevent
-/// async worker thread starvation.
+/// Dispatches the synchronous NT kernel call `DeviceIoControl` with `FSCTL_DUPLICATE_EXTENTS_TO_FILE`
+/// to `tokio::task::spawn_blocking` to prevent async worker thread starvation, achieving O(1)
+/// constant-time extent duplication with zero physical NVMe write amplification.
+#[cfg(windows)]
 pub async fn clone_file_refs(src: &Path, dest: &Path) -> Result<(), CoreError> {
     let src_buf = src.to_path_buf();
     let dest_buf = dest.to_path_buf();

@@ -229,6 +229,30 @@ pub async fn init_schema(pool: &Pool<Sqlite>) -> Result<(), MemoryError> {
     Ok(())
 }
 
+/// Executes an atomic raw `PRAGMA wal_checkpoint(TRUNCATE);` on the SQLite pool,
+/// forcing complete physical flush of WAL frame buffers into the main database file
+/// on the ReFS Dev Drive and truncating the .db-wal file.
+#[instrument(skip(pool))]
+pub async fn wal_checkpoint_truncate(pool: &Pool<Sqlite>) -> Result<(), MemoryError> {
+    sqlx::raw_sql("PRAGMA wal_checkpoint(TRUNCATE);")
+        .execute(pool)
+        .await?;
+    info!("Executed PRAGMA wal_checkpoint(TRUNCATE) successfully.");
+    Ok(())
+}
+
+impl crate::SoulsMemoryStore {
+    /// Gracefully tears down the memory store by executing an atomic WAL checkpoint (TRUNCATE)
+    /// to flush all uncommitted/residual WAL buffers to disk before closing connection pools.
+    pub async fn shutdown(&self) -> Result<(), MemoryError> {
+        let pool = self.pool();
+        wal_checkpoint_truncate(&pool).await?;
+        pool.close().await;
+        info!("SoulsMemoryStore successfully shut down with WAL flushed and truncated.");
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -356,4 +380,29 @@ mod tests {
 
         assert!(fts_after.is_none(), "FTS5 record must be purged on memory deletion");
     }
+
+    #[tokio::test]
+    async fn test_wal_checkpoint_truncate_and_shutdown() {
+        let store = crate::SoulsMemoryStore::new_in_memory().await.unwrap();
+        // Insert some data into the store's pool
+        sqlx::query(
+            r#"
+            INSERT INTO epistemic_memories 
+            (id, session_id, category, content, partition, salience, access_count, created_at, last_accessed_at, updated_at)
+            VALUES ('mem_cp_1', 's1', 'checkpoint', 'WAL checkpoint test data', 'STABLE', 0.9, 1, 100, 100, 100)
+            "#,
+        )
+        .execute(&*store.pool())
+        .await
+        .unwrap();
+
+        // Checkpoint explicitly
+        let cp_res = wal_checkpoint_truncate(&store.pool()).await;
+        assert!(cp_res.is_ok());
+
+        // Shutdown store which triggers wal_checkpoint_truncate and pool.close()
+        let res = store.shutdown().await;
+        assert!(res.is_ok());
+    }
 }
+

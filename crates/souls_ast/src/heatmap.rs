@@ -4,12 +4,42 @@
 //! F(a) = \sum Changes * e^{-\lambda \Delta t}
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{OnceLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::AstError;
+
+static REPO_CACHE: OnceLock<RwLock<HashMap<PathBuf, gix::ThreadSafeRepository>>> = OnceLock::new();
+
+/// Retains or retrieves a cached `gix::ThreadSafeRepository` for the given repository path.
+pub fn get_or_retain_repo(repo_path: &Path) -> Result<gix::Repository, AstError> {
+    let canonical = repo_path.canonicalize().unwrap_or_else(|_| repo_path.to_path_buf());
+    let cache = REPO_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+    {
+        let reader = cache
+            .read()
+            .map_err(|e| AstError::GitError(format!("repo cache read lock poisoned: {e}")))?;
+        if let Some(sync_repo) = reader.get(&canonical) {
+            return Ok(sync_repo.to_thread_local());
+        }
+    }
+    let mut writer = cache
+        .write()
+        .map_err(|e| AstError::GitError(format!("repo cache write lock poisoned: {e}")))?;
+    if let Some(sync_repo) = writer.get(&canonical) {
+        return Ok(sync_repo.to_thread_local());
+    }
+    let repo = gix::open(&canonical)
+        .or_else(|_| gix::open(repo_path))
+        .map_err(|e| AstError::GitError(format!("open repo failed: {e}")))?;
+    let sync_repo = repo.into_sync();
+    let thread_local = sync_repo.to_thread_local();
+    writer.insert(canonical, sync_repo);
+    Ok(thread_local)
+}
 
 /// Canonical decay constant if half_life is not provided (~1h55min half-life).
 pub const DEFAULT_LAMBDA: f64 = 0.0001;
@@ -53,12 +83,22 @@ pub fn compute_langevin_frecency(changes: &[(u32, i64)], now: i64, lambda: f64) 
 }
 
 /// Inspects local Git repository using `gix` and calculates Frecency heatmap.
+/// Reuses retained `gix::ThreadSafeRepository` across invocations to avoid repeated open overhead.
 pub fn calculate_repo_frecency(
     repo_path: &Path,
     time_window_days: u32,
     half_life_days: f64,
 ) -> Result<Vec<FileHeatEntry>, AstError> {
-    let repo = gix::open(repo_path).map_err(|e| AstError::GitError(format!("open repo failed: {e}")))?;
+    let repo = get_or_retain_repo(repo_path)?;
+    calculate_repo_frecency_from_repo(&repo, time_window_days, half_life_days)
+}
+
+/// Calculates Frecency heatmap directly from an open or retained `gix::Repository`.
+pub fn calculate_repo_frecency_from_repo(
+    repo: &gix::Repository,
+    time_window_days: u32,
+    half_life_days: f64,
+) -> Result<Vec<FileHeatEntry>, AstError> {
 
     let head_commit = match repo.head_commit() {
         Ok(commit) => commit,
@@ -276,6 +316,42 @@ mod tests {
         assert_eq!(entry_a.commit_count, 2);
         assert_eq!(entry_b.commit_count, 1);
         assert!(entry_a.frecency_score > entry_b.frecency_score, "file_a must have higher frecency score");
+    }
+
+    #[test]
+    fn test_repo_retention_reused() {
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let repo = gix::init(temp_dir.path()).expect("init git repo");
+        let blob = repo.write_blob(b"pub fn retained() {}").expect("write blob");
+        let mut tree = gix::objs::Tree::empty();
+        tree.entries.push(gix::objs::tree::Entry {
+            mode: gix::objs::tree::EntryKind::Blob.into(),
+            filename: "lib.rs".into(),
+            oid: blob.detach(),
+        });
+        let tree_id = repo.write_object(&tree).expect("write tree");
+        let sig = gix::actor::SignatureRef {
+            name: "Souls BareMetal".into(),
+            email: "engineer@souls.engine".into(),
+            time: gix::date::Time::now_local_or_utc(),
+        };
+        let no_parents: [gix::ObjectId; 0] = [];
+        let _ = repo
+            .commit_as(sig, sig, "HEAD", "Initial commit", tree_id, no_parents)
+            .expect("commit");
+
+        // First access caches the ThreadSafeRepository
+        let repo1 = get_or_retain_repo(temp_dir.path()).expect("get_or_retain_repo 1");
+        // Second access reuses the cached ThreadSafeRepository
+        let repo2 = get_or_retain_repo(temp_dir.path()).expect("get_or_retain_repo 2");
+
+        let heat1 = calculate_repo_frecency_from_repo(&repo1, 30, 7.0).expect("frecency 1");
+        let heat2 = calculate_repo_frecency_from_repo(&repo2, 30, 7.0).expect("frecency 2");
+
+        assert_eq!(heat1.len(), 1);
+        assert_eq!(heat2.len(), 1);
+        assert_eq!(heat1[0].file_path, "lib.rs");
+        assert_eq!(heat2[0].file_path, "lib.rs");
     }
 }
 

@@ -56,69 +56,85 @@ impl LadybugOntologyGraph {
     }
 
     /// Rehydrates the in-memory graph from FrankenSQLite in cold-boot (<20ms).
+    /// Offloads JSON parsing and petgraph assembly to tokio::task::spawn_blocking to keep the reactor unblocked.
     pub async fn load_from_db(&self, pool: &Pool<Sqlite>) -> Result<usize, MemoryError> {
-        let mut g = self.graph.write().await;
-        g.clear();
-        self.index_map.clear();
-
-        // 1. Load all nodes
+        // 1. Fetch raw node records asynchronously
         let node_rows = sqlx::query(
             "SELECT id, node_type, canonical_name, metadata_json FROM ladybug_nodes",
         )
         .fetch_all(pool)
         .await?;
 
-        for row in node_rows {
-            let id: String = row.get(0);
-            let node_type: String = row.get(1);
-            let canonical_name: String = row.get(2);
-            let metadata_json: String = row.get(3);
+        let raw_nodes: Vec<(String, String, String, String)> = node_rows
+            .into_iter()
+            .map(|row| (row.get(0), row.get(1), row.get(2), row.get(3)))
+            .collect();
 
-            let banned = serde_json::from_str::<serde_json::Value>(&metadata_json)
-                .ok()
-                .and_then(|v| v.get("banned_patterns").cloned())
-                .and_then(|v| serde_json::from_value::<Vec<String>>(v).ok())
-                .unwrap_or_default();
-
-            let node = OntologicalNode {
-                id: id.clone(),
-                node_type,
-                canonical_name,
-                metadata_json,
-                banned_patterns: banned,
-            };
-
-            let idx = g.add_node(node);
-            self.index_map.insert(id, idx);
-        }
-
-        // 2. Load all edges
+        // 2. Fetch raw edge records asynchronously
         let edge_rows = sqlx::query(
             "SELECT source_id, target_id, relationship, weight FROM ladybug_edges",
         )
         .fetch_all(pool)
         .await?;
 
-        let mut loaded_edges = 0;
-        for row in edge_rows {
-            let source_id: String = row.get(0);
-            let target_id: String = row.get(1);
-            let relationship: String = row.get(2);
-            let weight: f64 = row.get(3);
+        let raw_edges: Vec<(String, String, String, f64)> = edge_rows
+            .into_iter()
+            .map(|row| (row.get(0), row.get(1), row.get(2), row.get(3)))
+            .collect();
 
-            if let (Some(src_idx), Some(dst_idx)) = (
-                self.index_map.get(&source_id).map(|r| *r),
-                self.index_map.get(&target_id).map(|r| *r),
-            ) {
-                let edge = OntologicalEdge {
-                    source_id,
-                    target_id,
-                    relationship,
-                    weight: weight as f32,
+        // 3. Offload compute-heavy deserialization and graph assembly to blocking threadpool
+        let (new_graph, new_index_map, loaded_edges) = tokio::task::spawn_blocking(move || {
+            let mut g: DiGraph<OntologicalNode, OntologicalEdge> = DiGraph::new();
+            let mut index_map: std::collections::HashMap<String, NodeIndex> =
+                std::collections::HashMap::new();
+
+            for (id, node_type, canonical_name, metadata_json) in raw_nodes {
+                let banned = serde_json::from_str::<serde_json::Value>(&metadata_json)
+                    .ok()
+                    .and_then(|v| v.get("banned_patterns").cloned())
+                    .and_then(|v| serde_json::from_value::<Vec<String>>(v).ok())
+                    .unwrap_or_default();
+
+                let node = OntologicalNode {
+                    id: id.clone(),
+                    node_type,
+                    canonical_name,
+                    metadata_json,
+                    banned_patterns: banned,
                 };
-                g.add_edge(src_idx, dst_idx, edge);
-                loaded_edges += 1;
+
+                let idx = g.add_node(node);
+                index_map.insert(id, idx);
             }
+
+            let mut loaded_edges = 0;
+            for (source_id, target_id, relationship, weight) in raw_edges {
+                if let (Some(&src_idx), Some(&dst_idx)) = (
+                    index_map.get(&source_id),
+                    index_map.get(&target_id),
+                ) {
+                    let edge = OntologicalEdge {
+                        source_id,
+                        target_id,
+                        relationship,
+                        weight: weight as f32,
+                    };
+                    g.add_edge(src_idx, dst_idx, edge);
+                    loaded_edges += 1;
+                }
+            }
+
+            (g, index_map, loaded_edges)
+        })
+        .await
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+
+        // 4. Atomically swap graph and index_map under write lock
+        let mut g = self.graph.write().await;
+        *g = new_graph;
+        self.index_map.clear();
+        for (id, idx) in new_index_map {
+            self.index_map.insert(id, idx);
         }
 
         info!(
@@ -460,5 +476,56 @@ mod tests {
                 .unwrap()
                 .get(0);
         assert_eq!(remaining_edge_src, "node_b");
+    }
+
+    #[tokio::test]
+    async fn test_ladybug_load_from_db_spawn_blocking() {
+        let pool = create_in_memory_sqlite_pool().await.unwrap();
+        let graph1 = LadybugOntologyGraph::new();
+
+        let node1 = OntologicalNode {
+            id: "node_x".to_string(),
+            node_type: "Component".to_string(),
+            canonical_name: "CompX".to_string(),
+            metadata_json: r#"{"banned_patterns": ["bad_pattern_1", "bad_pattern_2"]}"#.to_string(),
+            banned_patterns: vec!["bad_pattern_1".to_string(), "bad_pattern_2".to_string()],
+        };
+        let node2 = OntologicalNode {
+            id: "node_y".to_string(),
+            node_type: "Service".to_string(),
+            canonical_name: "ServY".to_string(),
+            metadata_json: "{}".to_string(),
+            banned_patterns: vec![],
+        };
+
+        graph1.insert_node(&pool, node1, 100).await.unwrap();
+        graph1.insert_node(&pool, node2, 100).await.unwrap();
+        graph1
+            .insert_edge(
+                &pool,
+                OntologicalEdge {
+                    source_id: "node_x".to_string(),
+                    target_id: "node_y".to_string(),
+                    relationship: "depends_on".to_string(),
+                    weight: 0.95,
+                },
+                100,
+            )
+            .await
+            .unwrap();
+
+        // Fresh graph instance rehydrating from SQLite
+        let graph2 = LadybugOntologyGraph::new();
+        let loaded_nodes = graph2.load_from_db(&pool).await.unwrap();
+        assert_eq!(loaded_nodes, 2);
+
+        // Verify loaded nodes and firewall banned patterns were restored
+        let firewall_res = graph2
+            .check_ontology_compliance("node_x", "testing bad_pattern_1 here", 2)
+            .await;
+        assert!(firewall_res.is_err());
+
+        let blast = graph2.calculate_blast_radius("node_x", 1).await.unwrap();
+        assert_eq!(blast, vec!["node_y".to_string()]);
     }
 }

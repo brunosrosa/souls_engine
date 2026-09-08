@@ -277,6 +277,40 @@ pub fn resolve_grammar_bytecode(language: &str, custom_path: Option<&Path>) -> R
     }
 }
 
+/// Global JIT pre-compiled module cache for standard Tree-sitter WASM grammars.
+///
+/// Prevents repetitive `wasmtime::Module::new` compilation on every AST inspection,
+/// saving tens of milliseconds and CPU thread contention.
+static RUST_GRAMMAR_MODULE: OnceLock<Result<Module, String>> = OnceLock::new();
+static PYTHON_GRAMMAR_MODULE: OnceLock<Result<Module, String>> = OnceLock::new();
+static OUTLINE_GRAMMAR_MODULE: OnceLock<Result<Module, String>> = OnceLock::new();
+
+/// Retrieves a pre-compiled JIT Module from the global static cache, compiling it once.
+pub fn get_or_compile_grammar_module(language: &str) -> Result<Module, AstError> {
+    let engine = WasmSandboxEngine::global();
+
+    match language {
+        "rust" | "rs" => {
+            let res = RUST_GRAMMAR_MODULE.get_or_init(|| {
+                engine.load_module(TREE_SITTER_RUST_WASM).map_err(|e| e.to_string())
+            });
+            res.clone().map_err(AstError::WasmError)
+        }
+        "python" | "py" => {
+            let res = PYTHON_GRAMMAR_MODULE.get_or_init(|| {
+                engine.load_module(TREE_SITTER_PYTHON_WASM).map_err(|e| e.to_string())
+            });
+            res.clone().map_err(AstError::WasmError)
+        }
+        _ => {
+            let res = OUTLINE_GRAMMAR_MODULE.get_or_init(|| {
+                engine.load_module(OUTLINE_PARSER_WASM).map_err(|e| e.to_string())
+            });
+            res.clone().map_err(AstError::WasmError)
+        }
+    }
+}
+
 /// Parses source code inside the enjailed Wasmtime sandbox with graceful containment.
 ///
 /// If any trap, fuel exhaustion, OOM or guest failure occurs, it returns an empty syntax tree
@@ -296,18 +330,32 @@ pub fn parse_code_isolated(
     }
 
     let engine = WasmSandboxEngine::global();
-    let wasm_bytes = resolve_grammar_bytecode(language, custom_wasm_path)?;
-    let module = match engine.load_module(&wasm_bytes) {
-        Ok(m) => m,
-        Err(err) => {
-            // Graceful containment of module compilation failures
-            tracing::warn!("WASM module compilation failed: {err}; returning graceful empty tree");
-            return Ok(ParsedSyntaxTree {
-                language: language.to_string(),
-                symbols: Vec::new(),
-                raw_outline: String::new(),
-                is_empty_fallback: true,
-            });
+    let module = if let Some(path) = custom_wasm_path {
+        let wasm_bytes = load_grammar_bytecode_mmap(path)?;
+        match engine.load_module(&wasm_bytes) {
+            Ok(m) => m,
+            Err(err) => {
+                tracing::warn!("Custom WASM module compilation failed: {err}; returning graceful empty tree");
+                return Ok(ParsedSyntaxTree {
+                    language: language.to_string(),
+                    symbols: Vec::new(),
+                    raw_outline: String::new(),
+                    is_empty_fallback: true,
+                });
+            }
+        }
+    } else {
+        match get_or_compile_grammar_module(language) {
+            Ok(m) => m,
+            Err(err) => {
+                tracing::warn!("Pre-compiled WASM module error for '{language}': {err}; returning graceful empty tree");
+                return Ok(ParsedSyntaxTree {
+                    language: language.to_string(),
+                    symbols: Vec::new(),
+                    raw_outline: String::new(),
+                    is_empty_fallback: true,
+                });
+            }
         }
     };
 
@@ -514,5 +562,17 @@ mod tests {
             })
             .expect("answer function must execute cleanly");
         assert_eq!(result, 42);
+    }
+
+    #[test]
+    fn test_precompiled_grammar_module_caching() {
+        let m1 = get_or_compile_grammar_module("rust").expect("Rust module should compile");
+        let m2 = get_or_compile_grammar_module("rust").expect("Cached Rust module should return");
+        // Both modules are valid and share the same Wasmtime engine
+        assert_eq!(m1.image_range(), m2.image_range());
+
+        let py1 = get_or_compile_grammar_module("python").expect("Python module should compile");
+        let py2 = get_or_compile_grammar_module("python").expect("Cached Python module should return");
+        assert_eq!(py1.image_range(), py2.image_range());
     }
 }
