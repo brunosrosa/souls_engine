@@ -390,7 +390,7 @@ def generate_inventory_report(custom_db: Optional[str] = None, output_file: Opti
     lines.append("- **Aceleração Gráfica (Target GPU):** NVIDIA GeForce RTX 2060m (6GB VRAM GDDR6, Arquitetura Turing sm_75)")
     lines.append("- **Aceleração Host (CPU):** Intel Core i9 (AVX2 SIMD AOT) + Gateway Tokio Rust")
     lines.append("- **Matriz de Motores:**")
-    lines.append("  - `ik_llama_vanguard`: TurboQuant com V-Cache 4-bit, FlashAttention O(1) e LoRA residual.")
+    lines.append("  - `llama.cpp upstream (GGML)`: Asymmetric KV Cache (Key: FP16/Q8, Value: Q4_0), FlashAttention O(1) e LoRA residual.")
     lines.append("  - `llama_upstream`: Binding oficial llama.cpp 2026 para arquiteturas Phi-4, Nemotron, LFM e Mamba GGUF.")
     lines.append("  - `mistral_rs`: Runtime bare-metal especializado em State Space Models (SSM/Mamba).")
     lines.append("  - `llama_cpp4`: Motor puro de CPU AVX2 para calibração, logit probing e fallback de sensor.")
