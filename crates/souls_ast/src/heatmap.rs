@@ -6,38 +6,59 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{OnceLock, RwLock};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::AstError;
 
-static REPO_CACHE: OnceLock<RwLock<HashMap<PathBuf, gix::ThreadSafeRepository>>> = OnceLock::new();
+/// Maximum number of active Gitoxide repositories retained in RAM simultaneously.
+pub const MAX_CACHED_REPOSITORIES: usize = 8;
 
-/// Retains or retrieves a cached `gix::ThreadSafeRepository` for the given repository path.
+static REPO_CACHE: OnceLock<RwLock<HashMap<PathBuf, (Instant, gix::ThreadSafeRepository)>>> =
+    OnceLock::new();
+
+/// Returns the current number of cached repositories in the bounded cache.
+pub fn cached_repo_count() -> usize {
+    REPO_CACHE
+        .get()
+        .and_then(|c| c.read().ok())
+        .map(|m| m.len())
+        .unwrap_or(0)
+}
+
+/// Retains or retrieves a cached `gix::ThreadSafeRepository` for the given repository path,
+/// strictly bounded at a maximum of 8 entries with LRU (least recently accessed Instant) eviction.
 pub fn get_or_retain_repo(repo_path: &Path) -> Result<gix::Repository, AstError> {
     let canonical = repo_path.canonicalize().unwrap_or_else(|_| repo_path.to_path_buf());
     let cache = REPO_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-    {
-        let reader = cache
-            .read()
-            .map_err(|e| AstError::GitError(format!("repo cache read lock poisoned: {e}")))?;
-        if let Some(sync_repo) = reader.get(&canonical) {
-            return Ok(sync_repo.to_thread_local());
-        }
-    }
+
     let mut writer = cache
         .write()
         .map_err(|e| AstError::GitError(format!("repo cache write lock poisoned: {e}")))?;
-    if let Some(sync_repo) = writer.get(&canonical) {
+
+    if let Some((instant, sync_repo)) = writer.get_mut(&canonical) {
+        *instant = Instant::now();
         return Ok(sync_repo.to_thread_local());
     }
+
+    // Enforce hard bound of 8 repositories: evict least recently used entry if at capacity
+    if writer.len() >= MAX_CACHED_REPOSITORIES {
+        if let Some(lru_key) = writer
+            .iter()
+            .min_by_key(|(_, (instant, _))| *instant)
+            .map(|(k, _)| k.clone())
+        {
+            writer.remove(&lru_key);
+        }
+    }
+
     let repo = gix::open(&canonical)
         .or_else(|_| gix::open(repo_path))
         .map_err(|e| AstError::GitError(format!("open repo failed: {e}")))?;
     let sync_repo = repo.into_sync();
     let thread_local = sync_repo.to_thread_local();
-    writer.insert(canonical, sync_repo);
+    writer.insert(canonical, (Instant::now(), sync_repo));
     Ok(thread_local)
 }
 
@@ -352,6 +373,45 @@ mod tests {
         assert_eq!(heat2.len(), 1);
         assert_eq!(heat1[0].file_path, "lib.rs");
         assert_eq!(heat2[0].file_path, "lib.rs");
+    }
+
+    #[test]
+    fn test_bounded_repo_cache_lru_eviction() {
+        let mut temp_dirs = Vec::new();
+        // Insert 12 distinct repositories
+        for i in 0..12 {
+            let temp_dir = tempfile::tempdir().expect("create temp dir");
+            let repo = gix::init(temp_dir.path()).expect("init git repo");
+            let blob = repo
+                .write_blob(format!("fn repo_{i}() {{}}").as_bytes())
+                .expect("write blob");
+            let mut tree = gix::objs::Tree::empty();
+            tree.entries.push(gix::objs::tree::Entry {
+                mode: gix::objs::tree::EntryKind::Blob.into(),
+                filename: format!("file_{i}.rs").into(),
+                oid: blob.detach(),
+            });
+            let tree_id = repo.write_object(&tree).expect("write tree");
+            let sig = gix::actor::SignatureRef {
+                name: "Souls BareMetal".into(),
+                email: "engineer@souls.engine".into(),
+                time: gix::date::Time::now_local_or_utc(),
+            };
+            let no_parents: [gix::ObjectId; 0] = [];
+            let _ = repo
+                .commit_as(sig, sig, "HEAD", "Initial commit", tree_id, no_parents)
+                .expect("commit");
+
+            let _ = get_or_retain_repo(temp_dir.path()).expect("get_or_retain_repo");
+            temp_dirs.push(temp_dir);
+        }
+
+        // Validate that the cache size is strictly bounded to at most MAX_CACHED_REPOSITORIES (8)
+        assert_eq!(
+            cached_repo_count(),
+            MAX_CACHED_REPOSITORIES,
+            "Bounded cache must be capped strictly at 8 connections despite 12 insertions"
+        );
     }
 }
 

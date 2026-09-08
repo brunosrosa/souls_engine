@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::time::Duration;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
-use sqlx::{Pool, Sqlite};
+use sqlx::{Connection, Pool, Sqlite, SqliteConnection};
 use tracing::{info, instrument};
 
 use crate::error::MemoryError;
@@ -241,15 +241,45 @@ pub async fn wal_checkpoint_truncate(pool: &Pool<Sqlite>) -> Result<(), MemoryEr
     Ok(())
 }
 
+/// Drains and closes a SQLite pool completely, then opens an exclusive short-lived
+/// connection to execute `PRAGMA wal_checkpoint(TRUNCATE);` directly on the physical database file,
+/// guaranteeing zero SQLITE_BUSY contention and truncating `.db-wal` to 0 bytes.
+#[instrument(skip(pool))]
+pub async fn drain_pool_and_exclusive_checkpoint(
+    pool: &Pool<Sqlite>,
+    db_path: &Path,
+) -> Result<(), MemoryError> {
+    // 1. Definitively close the connection pool to physically release all descriptors
+    pool.close().await;
+
+    // 2. Open an exclusive single-shot connection directly to the file if it exists physically
+    if db_path.exists() && db_path != Path::new(":memory:") {
+        let options = SqliteConnectOptions::new()
+            .filename(db_path)
+            .journal_mode(SqliteJournalMode::Wal)
+            .busy_timeout(Duration::from_millis(5000));
+
+        let mut conn = SqliteConnection::connect_with(&options).await?;
+
+        // 3. Execute PRAGMA wal_checkpoint(TRUNCATE); directly on the exclusive connection
+        sqlx::raw_sql("PRAGMA wal_checkpoint(TRUNCATE);")
+            .execute(&mut conn)
+            .await?;
+
+        // 4. Explicitly close and drop the temporary exclusive connection
+        conn.close().await?;
+    }
+
+    info!("Pool drained and exclusive WAL checkpoint (TRUNCATE) completed successfully.");
+    Ok(())
+}
+
 impl crate::SoulsMemoryStore {
-    /// Gracefully tears down the memory store by executing an atomic WAL checkpoint (TRUNCATE)
-    /// to flush all uncommitted/residual WAL buffers to disk before closing connection pools.
+    /// Gracefully tears down the memory store by draining the connection pool,
+    /// then establishing an exclusive single-shot connection to truncate the WAL to zero bytes.
     pub async fn shutdown(&self) -> Result<(), MemoryError> {
         let pool = self.pool();
-        wal_checkpoint_truncate(&pool).await?;
-        pool.close().await;
-        info!("SoulsMemoryStore successfully shut down with WAL flushed and truncated.");
-        Ok(())
+        drain_pool_and_exclusive_checkpoint(&pool, self.db_path()).await
     }
 }
 
@@ -383,26 +413,51 @@ mod tests {
 
     #[tokio::test]
     async fn test_wal_checkpoint_truncate_and_shutdown() {
-        let store = crate::SoulsMemoryStore::new_in_memory().await.unwrap();
-        // Insert some data into the store's pool
-        sqlx::query(
-            r#"
-            INSERT INTO epistemic_memories 
-            (id, session_id, category, content, partition, salience, access_count, created_at, last_accessed_at, updated_at)
-            VALUES ('mem_cp_1', 's1', 'checkpoint', 'WAL checkpoint test data', 'STABLE', 0.9, 1, 100, 100, 100)
-            "#,
-        )
-        .execute(&*store.pool())
-        .await
-        .unwrap();
+        let test_dir = Path::new("Z:\\souls_engine\\.souls_data\\spool\\test_wal_shutdown");
+        let _ = std::fs::remove_dir_all(test_dir);
+        std::fs::create_dir_all(test_dir).expect("Failed to create test directory");
+        let db_path = test_dir.join("checkpoint_test.db");
+        let wal_path = test_dir.join("checkpoint_test.db-wal");
 
-        // Checkpoint explicitly
-        let cp_res = wal_checkpoint_truncate(&store.pool()).await;
-        assert!(cp_res.is_ok());
+        let store = crate::SoulsMemoryStore::new(&db_path, 4).await.unwrap();
 
-        // Shutdown store which triggers wal_checkpoint_truncate and pool.close()
+        // 1. Insert multiple records into epistemic_memories to dirty the WAL log
+        for i in 0..10 {
+            sqlx::query(
+                r#"
+                INSERT INTO epistemic_memories 
+                (id, session_id, category, content, partition, salience, access_count, created_at, last_accessed_at, updated_at)
+                VALUES (?1, 's1', 'checkpoint', 'WAL checkpoint test data', 'STABLE', 0.9, 1, 100, 100, 100)
+                "#,
+            )
+            .bind(format!("mem_cp_{i}"))
+            .execute(&*store.pool())
+            .await
+            .unwrap();
+        }
+
+        // 2. WAL file must exist on disk and contain active frames (> 0 bytes)
+        assert!(wal_path.exists(), "WAL file should exist after writes");
+        let wal_size_before = std::fs::metadata(&wal_path).unwrap().len();
+        assert!(wal_size_before > 0, "WAL size must be > 0 bytes before shutdown");
+
+        // 3. Shutdown store: pool.close() -> exclusive connection -> PRAGMA wal_checkpoint(TRUNCATE) -> conn.close()
         let res = store.shutdown().await;
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "Shutdown sequence must succeed cleanly");
+
+        // 4. Verify WAL file is deterministically truncated to zero bytes
+        if wal_path.exists() {
+            let wal_size_after = std::fs::metadata(&wal_path).unwrap().len();
+            assert_eq!(
+                wal_size_after, 0,
+                "WAL file must be deterministically truncated to 0 bytes after shutdown"
+            );
+        }
+
+        // Cleanup
+        let _ = std::fs::remove_file(&db_path);
+        let _ = std::fs::remove_file(&wal_path);
+        let _ = std::fs::remove_dir_all(test_dir);
     }
 }
 

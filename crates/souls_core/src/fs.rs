@@ -242,13 +242,28 @@ pub async fn clone_file_refs(src: &Path, dest: &Path) -> Result<(), CoreError> {
 /// Dispatches the synchronous NT kernel call `DeviceIoControl` with `FSCTL_DUPLICATE_EXTENTS_TO_FILE`
 /// to `tokio::task::spawn_blocking` to prevent async worker thread starvation, achieving O(1)
 /// constant-time extent duplication with zero physical NVMe write amplification.
+///
+/// If ReFS Block Cloning is unsupported, unaligned, or fails with Win32 error 87 (ERROR_INVALID_PARAMETER),
+/// transparently falls back to `tokio::fs::copy` to ensure seamless bare-metal reliability.
 #[cfg(windows)]
 pub async fn clone_file_refs(src: &Path, dest: &Path) -> Result<(), CoreError> {
     let src_buf = src.to_path_buf();
     let dest_buf = dest.to_path_buf();
-    tokio::task::spawn_blocking(move || clone_file_refs_sync(&src_buf, &dest_buf))
+    let clone_result = tokio::task::spawn_blocking(move || clone_file_refs_sync(&src_buf, &dest_buf))
         .await
-        .map_err(|e| CoreError::TaskJoinError(e.to_string()))?
+        .map_err(|e| CoreError::TaskJoinError(e.to_string()))?;
+
+    match clone_result {
+        Ok(()) => Ok(()),
+        Err(CoreError::RefsBlockCloningFailed(msg)) => {
+            tracing::warn!(
+                "ReFS block cloning failed ({msg}); activating transparent fallback to tokio::fs::copy"
+            );
+            tokio::fs::copy(src, dest).await.map_err(CoreError::Io)?;
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
 }
 
 #[cfg(test)]
@@ -314,4 +329,48 @@ mod tests {
         let _ = std::fs::remove_file(&dest_file);
         let _ = std::fs::remove_dir(test_dir);
     }
+
+    #[tokio::test]
+    async fn test_refs_block_cloning_fallback_on_unaligned_512_bytes() {
+        let test_dir = Path::new("Z:\\souls_engine\\.souls_data\\spool\\test_refs_unaligned");
+        let _ = std::fs::remove_dir_all(test_dir);
+        std::fs::create_dir_all(test_dir).expect("Failed to create test directory");
+
+        let src_file = test_dir.join("src_512b.bin");
+        let dest_file = test_dir.join("dest_512b_clone.bin");
+
+        // 512 bytes payload (deliberately unaligned to 4KB ReFS cluster boundary)
+        let unaligned_size = 512;
+        let test_payload: Vec<u8> = (0..unaligned_size).map(|i| (i % 256) as u8).collect();
+        {
+            let mut file = std::fs::File::create(&src_file).expect("Failed to create 512B src file");
+            file.write_all(&test_payload).expect("Write failed");
+            file.flush().expect("Flush failed");
+        }
+
+        // clone_file_refs must catch error 87 / non-alignment and fallback cleanly to tokio::fs::copy
+        clone_file_refs(&src_file, &dest_file)
+            .await
+            .expect("clone_file_refs should succeed via transparent fallback");
+
+        assert!(dest_file.exists(), "Destination file must exist");
+        let dest_meta = std::fs::metadata(&dest_file).expect("Stat dest file");
+        assert_eq!(
+            dest_meta.len(),
+            unaligned_size as u64,
+            "Destination size must be exact 512 bytes"
+        );
+
+        let dest_content = std::fs::read(&dest_file).expect("Read dest file");
+        assert_eq!(
+            dest_content, test_payload,
+            "Destination content must match source payload exactly"
+        );
+
+        // Cleanup
+        let _ = std::fs::remove_file(&src_file);
+        let _ = std::fs::remove_file(&dest_file);
+        let _ = std::fs::remove_dir(test_dir);
+    }
 }
+
