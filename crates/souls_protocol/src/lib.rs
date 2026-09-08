@@ -1,14 +1,14 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! # Souls Protocol (`souls_protocol`)
+//!
+//! Universal Data Transfer Objects (DTOs), FinOps metrics, hardware telemetry,
+//! and MCP JSON-RPC domain error definitions for the Souls Engine v7.
+//!
+//! Bare-metal foundation crate: pure types, zero I/O side effects, zero unsafe code.
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#![forbid(unsafe_code)]
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub mod dto;
+pub mod error;
+
+pub use dto::*;
+pub use error::*;

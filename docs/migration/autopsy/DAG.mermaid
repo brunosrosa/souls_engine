@@ -1,0 +1,50 @@
+graph TD
+    %% Nós Raízes e Meta-Dependências
+    TASK-PRT-001[TASK-PRT-001: Mapear Tipos de Telemetria e FinOps]
+
+    %% Infraestrutura e Contexto
+    TASK-COR-001[TASK-COR-001: Filtros de ANSI e Telemetria]
+    TASK-COR-002[TASK-COR-002: Motor de Leitura LEAN]
+    TASK-COR-003[TASK-COR-003: Integração de ReFS Block Cloning]
+
+    %% AST e Análise
+    TASK-AST-001[TASK-AST-001: Integração de Diferencial Myers]
+    TASK-AST-002[TASK-AST-002: Motor de Heatmap Frecency]
+    TASK-AST-003[TASK-AST-003: Sandbox Wasmtime para Parsers Tree-sitter]
+
+    %% Persistência L3
+    TASK-MEM-001[TASK-MEM-001: Fusão RRF e Decaimento Langevin]
+    TASK-MEM-002[TASK-MEM-002: Consolidar Grafo Ladybug]
+
+    %% Inferência e VRAM
+    TASK-INF-001[TASK-INF-001: NVML Hardware Watchdog e EWMA]
+    TASK-INF-002[TASK-INF-002: Integração de Tier 0 ONNX/Llamacpp]
+
+    %% Esteira Automática SAST
+    TASK-ANT-001[TASK-ANT-001: Purga e Transplante do Harvester]
+
+    %% Fim de processo
+    TASK-CLN-001[TASK-CLN-001: Expurgo Físico de Necrose]
+
+    %% Relacionamentos Topológicos Rigorosos
+    TASK-PRT-001 --> TASK-COR-001
+    TASK-PRT-001 --> TASK-AST-001
+    TASK-PRT-001 --> TASK-MEM-001
+
+    TASK-COR-001 --> TASK-COR-002
+    TASK-COR-002 --> TASK-COR-003
+    TASK-COR-003 --> TASK-MEM-002
+
+    TASK-AST-001 --> TASK-AST-002
+    TASK-AST-002 --> TASK-AST-003
+    TASK-AST-003 --> TASK-ANT-001
+
+    TASK-MEM-001 --> TASK-MEM-002
+    TASK-MEM-002 --> TASK-INF-001
+
+    TASK-INF-001 --> TASK-INF-002
+
+    %% Cleanup depende da compilação e teste finalizados de todas as crates vitais
+    TASK-COR-003 --> TASK-CLN-001
+    TASK-ANT-001 --> TASK-CLN-001
+    TASK-INF-002 --> TASK-CLN-001
