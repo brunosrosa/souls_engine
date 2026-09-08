@@ -6,3 +6,23 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+souls_protocol = { path = "../souls_protocol" }
+souls_core = { path = "../souls_core" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+petgraph = "0.6"
+dashmap = "6.1"
+arc-swap = "1.7"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+] }
+
+[dev-dependencies]
+tempfile = "3.10"
