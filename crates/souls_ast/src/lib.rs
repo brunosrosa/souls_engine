@@ -1,14 +1,17 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! `souls_ast` — Static analysis, dehydrated outlines, Myers diff, and gitoxide heatmap.
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod error;
+pub mod heatmap;
+pub mod myers;
+pub mod treesitter;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use error::AstError;
+pub use heatmap::{calculate_repo_frecency, FileHeatEntry};
+pub use myers::{
+    compute_safe_myers_diff, myers_diff, myers_diff_with_stats, DiffChange, DiffTag, MyersDiffStats,
+    MyersPatch,
+};
+pub use treesitter::{
+    parse_code_isolated, ParsedSyntaxTree, WasmSandboxEngine, WasmTrap, FUEL_LIMIT,
+    MEMORY_LIMIT_BYTES_GRAMMAR,
+};

@@ -6,3 +6,19 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+souls_protocol = { path = "../souls_protocol" }
+souls_core = { path = "../souls_core" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+similar = { version = "2.7", features = ["inline"] }
+gix = { version = "0.66", features = ["revision", "blob-diff"] }
+wasmtime = { version = "29", features = ["wat", "component-model"] }
+wasmtime-wasi = { version = "29" }
+memmap2 = "0.9"
+bumpalo = "3.16"
+
+[dev-dependencies]
+tempfile = "3.10"
