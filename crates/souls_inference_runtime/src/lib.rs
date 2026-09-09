@@ -19,7 +19,8 @@ pub mod onnx;
 // Re-export canonical types and functions
 pub use error::InferenceError;
 pub use gguf_mmap::{
-    inspect_gguf_metadata_o1, parse_gguf_slice, GgufMappedReader, GgufMetadataInfo,
+    inspect_gguf_metadata_o1, parse_gguf_slice, BoundedGgufPool, GgufMappedReader,
+    GgufMetadataInfo, MAX_MAPPED_HANDLES,
 };
 pub use healing::heal_json_response;
 pub use inference::{
@@ -48,6 +49,7 @@ pub struct InferenceRuntime {
     classifier: &'static OrtClassifierEngine,
     prober: LlamaLogitProber,
     tier1: Tier1GenerativeEngine,
+    gguf_pool: Arc<BoundedGgufPool>,
 }
 
 impl InferenceRuntime {
@@ -58,12 +60,18 @@ impl InferenceRuntime {
             classifier: OrtClassifierEngine::global(),
             prober: LlamaLogitProber::new(),
             tier1: Tier1GenerativeEngine::new(),
+            gguf_pool: Arc::new(BoundedGgufPool::new()),
         }
     }
 
     /// Obtains a clone of the hardware watchdog mutex.
     pub fn watchdog(&self) -> Arc<Mutex<HardwareWatchdog>> {
         Arc::clone(&self.watchdog)
+    }
+
+    /// Obtains a clone of the bounded GGUF handle pool.
+    pub fn gguf_pool(&self) -> Arc<BoundedGgufPool> {
+        Arc::clone(&self.gguf_pool)
     }
 
     /// Tier 0 Classification (CPU Host AVX2, 0 MB VRAM).
@@ -97,9 +105,9 @@ impl InferenceRuntime {
         Ok(res.text)
     }
 
-    /// Zero-copy O(1) GGUF metadata inspection.
+    /// Zero-copy O(1) GGUF metadata inspection backed by the bounded handle pool.
     pub fn inspect_gguf(&self, path: &Path) -> Result<GgufMetadataInfo, InferenceError> {
-        inspect_gguf_metadata_o1(path)
+        self.gguf_pool.inspect_metadata(path)
     }
 
     /// In-flight JSON healing pipeline.

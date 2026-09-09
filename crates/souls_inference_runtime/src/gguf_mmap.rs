@@ -6,11 +6,17 @@
 //! - Strict adherence to unsafe justification policy: `// SAFETY: <racional>`.
 
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock, RwLock};
+use dashmap::DashMap;
 use memmap2::Mmap;
 use serde::{Deserialize, Serialize};
 
 use crate::error::InferenceError;
+
+/// Canonical upper limit of concurrently mapped GGUF file descriptors / handles.
+pub const MAX_MAPPED_HANDLES: usize = 16;
 
 /// GGUF file magic identifier (`GGUF` in ASCII).
 pub const GGUF_MAGIC: [u8; 4] = *b"GGUF";
@@ -99,11 +105,245 @@ impl GgufMappedReader {
     pub fn as_slice(&self) -> Option<&[u8]> {
         self.mmap.as_deref()
     }
+
+    /// Returns the path of the underlying GGUF model file.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 impl Drop for GgufMappedReader {
     fn drop(&mut self) {
         self.unload();
+    }
+}
+
+impl std::fmt::Debug for GgufMappedReader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GgufMappedReader")
+            .field("path", &self.path)
+            .field("is_loaded", &self.is_loaded())
+            .field("metadata", &self.metadata)
+            .finish()
+    }
+}
+
+/// Internal entry in the bounded GGUF handle pool tracking recency.
+#[derive(Debug)]
+struct PoolEntry {
+    reader: Arc<RwLock<GgufMappedReader>>,
+    last_accessed: AtomicU64,
+}
+
+/// Thread-safe bounded pool of memory-mapped GGUF readers with LRU eviction.
+///
+/// Prevents Windows NT file descriptor / handle exhaustion (`EMFILE`) by enforcing a strict
+/// upper limit (`MAX_MAPPED_HANDLES`) on open `GgufMappedReader` instances.
+/// Hot-path lookups for already mapped files are lock-free and execute in O(1).
+pub struct BoundedGgufPool {
+    capacity: usize,
+    entries: DashMap<PathBuf, Arc<PoolEntry>>,
+    access_sequence: AtomicU64,
+    eviction_lock: Mutex<()>,
+}
+
+impl BoundedGgufPool {
+    /// Creates a new pool with the default capacity of `MAX_MAPPED_HANDLES` (16).
+    pub fn new() -> Self {
+        Self::with_capacity(MAX_MAPPED_HANDLES)
+    }
+
+    /// Creates a new pool with the specified maximum capacity of mapped handles.
+    pub fn with_capacity(capacity: usize) -> Self {
+        let cap = if capacity == 0 { 1 } else { capacity };
+        Self {
+            capacity: cap,
+            entries: DashMap::new(),
+            access_sequence: AtomicU64::new(1),
+            eviction_lock: Mutex::new(()),
+        }
+    }
+
+    /// Returns a global singleton instance of the bounded pool.
+    pub fn global() -> &'static Self {
+        static GLOBAL: OnceLock<BoundedGgufPool> = OnceLock::new();
+        GLOBAL.get_or_init(BoundedGgufPool::new)
+    }
+
+    /// Retrieves or opens a memory-mapped GGUF reader for the given path.
+    ///
+    /// - If already mapped, updates the LRU access sequence and returns the existing reader in O(1).
+    /// - If not mapped and the pool is at capacity, evicts the least recently used reader,
+    ///   calling `.unload()` to release the physical NT kernel handle, before mapping the new file.
+    pub fn get_or_open(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<Arc<RwLock<GgufMappedReader>>, InferenceError> {
+        let key = path.as_ref().to_path_buf();
+
+        // 1. Hot-path: Lock-free O(1) read lookup via sharded DashMap
+        if let Some(entry) = self.entries.get(&key) {
+            let seq = self.access_sequence.fetch_add(1, Ordering::Relaxed);
+            entry.last_accessed.store(seq, Ordering::Relaxed);
+            return Ok(Arc::clone(&entry.reader));
+        }
+
+        // Validate file exists before acquiring eviction lock to avoid unnecessary evictions
+        if !key.exists() {
+            return Err(InferenceError::ModelNotFound(key.display().to_string()));
+        }
+
+        // 2. Cold-path: Acquire eviction lock to serialize eviction and handle insertion
+        let _guard = self.eviction_lock.lock().map_err(|_| {
+            InferenceError::GgufParseError("Eviction lock poisoned".to_string())
+        })?;
+
+        // Double check if another thread inserted while we were waiting for the eviction lock
+        if let Some(entry) = self.entries.get(&key) {
+            let seq = self.access_sequence.fetch_add(1, Ordering::Relaxed);
+            entry.last_accessed.store(seq, Ordering::Relaxed);
+            return Ok(Arc::clone(&entry.reader));
+        }
+
+        // 3. Eviction: If at capacity, evict the least recently used reader(s)
+        while self.entries.len() >= self.capacity && !self.entries.is_empty() {
+            let mut lru_key: Option<PathBuf> = None;
+            let mut oldest_seq = u64::MAX;
+
+            for item in self.entries.iter() {
+                let seq = item.value().last_accessed.load(Ordering::Relaxed);
+                if seq < oldest_seq {
+                    oldest_seq = seq;
+                    lru_key = Some(item.key().clone());
+                }
+            }
+
+            if let Some(victim_key) = lru_key {
+                if let Some((_, victim_entry)) = self.entries.remove(&victim_key) {
+                    // Explicitly unload virtual memory map to release NT kernel handle
+                    match victim_entry.reader.write() {
+                        Ok(mut writer) => writer.unload(),
+                        Err(poisoned) => poisoned.into_inner().unload(),
+                    }
+                    tracing::info!(
+                        victim = ?victim_key,
+                        remaining = self.entries.len(),
+                        capacity = self.capacity,
+                        "BoundedGgufPool evicted and unloaded LRU handle"
+                    );
+                }
+            } else {
+                break;
+            }
+        }
+
+        // 4. Map the new GGUF file
+        let reader = GgufMappedReader::open(&key)?;
+        let seq = self.access_sequence.fetch_add(1, Ordering::Relaxed);
+        let entry = Arc::new(PoolEntry {
+            reader: Arc::new(RwLock::new(reader)),
+            last_accessed: AtomicU64::new(seq),
+        });
+
+        self.entries.insert(key, Arc::clone(&entry));
+        Ok(Arc::clone(&entry.reader))
+    }
+
+    /// Inspects metadata of a GGUF file through the pool, caching the mapped handle.
+    pub fn inspect_metadata(&self, path: impl AsRef<Path>) -> Result<GgufMetadataInfo, InferenceError> {
+        let reader = self.get_or_open(path)?;
+        let r = reader.read().map_err(|_| {
+            InferenceError::GgufParseError("Reader lock poisoned".to_string())
+        })?;
+        Ok(r.metadata().clone())
+    }
+
+    /// Looks up a mapped reader in the pool if already loaded, updating its LRU timestamp.
+    pub fn get(&self, path: impl AsRef<Path>) -> Option<Arc<RwLock<GgufMappedReader>>> {
+        let key = path.as_ref().to_path_buf();
+        if let Some(entry) = self.entries.get(&key) {
+            let seq = self.access_sequence.fetch_add(1, Ordering::Relaxed);
+            entry.last_accessed.store(seq, Ordering::Relaxed);
+            Some(Arc::clone(&entry.reader))
+        } else {
+            None
+        }
+    }
+
+    /// Checks if a GGUF model path is currently mapped in the pool without updating recency.
+    pub fn contains(&self, path: impl AsRef<Path>) -> bool {
+        self.entries.contains_key(path.as_ref())
+    }
+
+    /// Returns the number of currently mapped GGUF readers in the pool.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Returns true if the pool contains no mapped readers.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Returns the maximum capacity of mapped handles.
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+
+    /// Counts the number of active entries whose memory mapping is currently valid.
+    pub fn active_handles(&self) -> usize {
+        self.entries
+            .iter()
+            .filter(|item| {
+                if let Ok(guard) = item.value().reader.read() {
+                    guard.is_loaded()
+                } else {
+                    false
+                }
+            })
+            .count()
+    }
+
+    /// Explicitly unloads and removes a specific path from the pool.
+    pub fn unload(&self, path: impl AsRef<Path>) -> bool {
+        let key = path.as_ref().to_path_buf();
+        if let Some((_, entry)) = self.entries.remove(&key) {
+            match entry.reader.write() {
+                Ok(mut r) => r.unload(),
+                Err(p) => p.into_inner().unload(),
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Unloads and evicts all readers from the pool.
+    pub fn clear(&self) {
+        let _guard = self.eviction_lock.lock();
+        for entry in self.entries.iter() {
+            match entry.value().reader.write() {
+                Ok(mut r) => r.unload(),
+                Err(p) => p.into_inner().unload(),
+            }
+        }
+        self.entries.clear();
+    }
+}
+
+impl Default for BoundedGgufPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Debug for BoundedGgufPool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BoundedGgufPool")
+            .field("capacity", &self.capacity)
+            .field("len", &self.entries.len())
+            .field("active_handles", &self.active_handles())
+            .finish()
     }
 }
 
@@ -377,5 +617,115 @@ mod tests {
         // Calling unload multiple times is idempotent
         reader.unload();
         assert!(!reader.is_loaded());
+    }
+
+    fn create_synthetic_gguf_file(arch: &str) -> NamedTempFile {
+        let mut file = NamedTempFile::new().unwrap();
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&GGUF_MAGIC);
+        buf.extend_from_slice(&3u32.to_le_bytes()); // Version 3
+        buf.extend_from_slice(&10u64.to_le_bytes()); // 10 tensors
+        buf.extend_from_slice(&1u64.to_le_bytes()); // 1 KV pair
+
+        let key = b"general.architecture";
+        buf.extend_from_slice(&(key.len() as u64).to_le_bytes());
+        buf.extend_from_slice(key);
+        buf.extend_from_slice(&8u32.to_le_bytes()); // string
+        let val = arch.as_bytes();
+        buf.extend_from_slice(&(val.len() as u64).to_le_bytes());
+        buf.extend_from_slice(val);
+        buf.extend_from_slice(&[0u8; 64]);
+
+        file.write_all(&buf).unwrap();
+        file
+    }
+
+    #[test]
+    fn test_gguf_handle_pool_lru_eviction() {
+        let pool = BoundedGgufPool::with_capacity(3);
+        assert_eq!(pool.capacity(), 3);
+        assert_eq!(pool.len(), 0);
+
+        let f1 = create_synthetic_gguf_file("model-1");
+        let f2 = create_synthetic_gguf_file("model-2");
+        let f3 = create_synthetic_gguf_file("model-3");
+        let f4 = create_synthetic_gguf_file("model-4");
+
+        // 1. Open models 1, 2, 3
+        let r1 = pool.get_or_open(f1.path()).expect("Failed to open model 1");
+        assert!(r1.read().unwrap().is_loaded());
+        assert_eq!(pool.len(), 1);
+
+        let r2 = pool.get_or_open(f2.path()).expect("Failed to open model 2");
+        assert!(r2.read().unwrap().is_loaded());
+        assert_eq!(pool.len(), 2);
+
+        let r3 = pool.get_or_open(f3.path()).expect("Failed to open model 3");
+        assert!(r3.read().unwrap().is_loaded());
+        assert_eq!(pool.len(), 3);
+
+        // 2. Re-access model 1: this updates model 1's recency timestamp (making model 2 the oldest)
+        let _ = pool.get_or_open(f1.path()).expect("Failed to re-access model 1");
+
+        // 3. Open model 4: capacity 3 reached -> triggers automatic eviction of oldest (model 2)
+        let r4 = pool.get_or_open(f4.path()).expect("Failed to open model 4");
+        assert!(r4.read().unwrap().is_loaded());
+        assert_eq!(pool.len(), 3);
+
+        // Model 2 must have suffered .unload() and removal from pool
+        assert!(!r2.read().unwrap().is_loaded(), "Victim model 2 must have suffered .unload()");
+        assert!(!pool.contains(f2.path()), "Pool must no longer contain model 2");
+
+        // Models 1, 3, 4 must still be loaded in pool
+        assert!(r1.read().unwrap().is_loaded(), "Model 1 must remain loaded");
+        assert!(r3.read().unwrap().is_loaded(), "Model 3 must remain loaded");
+        assert!(pool.contains(f1.path()));
+        assert!(pool.contains(f3.path()));
+        assert!(pool.contains(f4.path()));
+    }
+
+    #[tokio::test]
+    async fn test_file_descriptor_exhaustion_prevention() {
+        let pool = Arc::new(BoundedGgufPool::new());
+        assert_eq!(pool.capacity(), MAX_MAPPED_HANDLES);
+
+        // Create 32 synthetic GGUF model files (double the MAX_MAPPED_HANDLES = 16 ceiling)
+        let temp_files: Vec<_> = (0..32)
+            .map(|i| create_synthetic_gguf_file(&format!("subagent-model-{}", i)))
+            .collect();
+        let paths: Arc<Vec<PathBuf>> = Arc::new(temp_files.iter().map(|f| f.path().to_path_buf()).collect());
+
+        // Spawn 20 concurrent subagents making repeated requests across various models
+        let mut tasks = Vec::new();
+        for subagent_id in 0..20 {
+            let pool_clone = Arc::clone(&pool);
+            let paths_clone = Arc::clone(&paths);
+
+            tasks.push(tokio::spawn(async move {
+                for round in 0..15 {
+                    let target_idx = (subagent_id * 7 + round * 3) % paths_clone.len();
+                    let target_path = &paths_clone[target_idx];
+
+                    let reader = pool_clone.get_or_open(target_path).expect("Subagent open failed");
+                    {
+                        let guard = reader.read().expect("Lock poisoned");
+                        assert!(guard.is_loaded());
+                        assert_eq!(guard.metadata().version, 3);
+                    }
+
+                    // Invariant check: pool size and active handles must NEVER exceed MAX_MAPPED_HANDLES
+                    assert!(pool_clone.len() <= MAX_MAPPED_HANDLES);
+                    assert!(pool_clone.active_handles() <= MAX_MAPPED_HANDLES);
+                }
+            }));
+        }
+
+        for t in tasks {
+            t.await.expect("Concurrent subagent task panicked");
+        }
+
+        // Final strict boundary assertions
+        assert_eq!(pool.len(), MAX_MAPPED_HANDLES);
+        assert_eq!(pool.active_handles(), MAX_MAPPED_HANDLES);
     }
 }
