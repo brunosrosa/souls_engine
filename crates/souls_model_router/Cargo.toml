@@ -6,3 +6,17 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+souls_protocol = { path = "../souls_protocol" }
+souls_core = { path = "../souls_core" }
+souls_memory = { path = "../souls_memory" }
+souls_inference_runtime = { path = "../souls_inference_runtime" }
+
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+rand = "0.8"
+rand_distr = "0.4"
