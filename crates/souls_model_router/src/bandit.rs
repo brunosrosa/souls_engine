@@ -16,12 +16,24 @@ use crate::context::TaskContext;
 use crate::error::RouterError;
 use crate::metrics::{calculate_e3_metric, TaskOutcome};
 use crate::priors::{
-    current_timestamp_sec, ensure_router_tables, fetch_active_models, fetch_prior,
-    update_bayesian_prior, update_model_telemetry,
+    current_timestamp_sec, decay_bayesian_prior, ensure_router_tables, fetch_active_models,
+    fetch_prior, update_bayesian_prior, update_model_telemetry,
 };
 
 /// Maximum context tokens tolerated by local accelerated Tier 1 before mandatory failover to Cloud.
 pub const LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS: u32 = 16_000;
+
+/// Asynchronous outcome event sent via MPSC channel to worker flusher.
+#[derive(Debug, Clone, PartialEq)]
+pub struct OutcomeEvent {
+    pub task_id: String,
+    pub outcome: TaskOutcome,
+}
+
+enum OutcomeMsg {
+    Event(OutcomeEvent),
+    Flush(tokio::sync::oneshot::Sender<()>),
+}
 
 /// Weighting configuration for the multi-objective Pareto utility scalarization:
 ///
@@ -106,19 +118,59 @@ pub struct ParetoBanditRouter {
     pool: Pool<Sqlite>,
     gpu_telemetry_atomic: Arc<AtomicU64>,
     weights: ParetoWeights,
+    outcome_tx: tokio::sync::mpsc::Sender<OutcomeMsg>,
 }
 
 impl ParetoBanditRouter {
-    /// Creates a new ParetoBanditRouter with explicit components.
+    /// Creates a new ParetoBanditRouter with explicit components and spawns the background worker.
     pub fn new(
         pool: Pool<Sqlite>,
         gpu_telemetry_atomic: Arc<AtomicU64>,
         weights: ParetoWeights,
     ) -> Self {
+        let (outcome_tx, mut outcome_rx) = tokio::sync::mpsc::channel::<OutcomeMsg>(256);
+        let pool_worker = pool.clone();
+
+        tokio::spawn(async move {
+            while let Some(msg) = outcome_rx.recv().await {
+                match msg {
+                    OutcomeMsg::Event(event) => {
+                        let now_sec = current_timestamp_sec();
+                        let reward = event.outcome.fractional_reward();
+                        if let Err(err) = update_bayesian_prior(
+                            &pool_worker,
+                            &event.outcome.tier_name,
+                            &event.outcome.task_category,
+                            reward,
+                            now_sec,
+                        )
+                        .await
+                        {
+                            warn!("Asynchronous prior update failed: {}", err);
+                        }
+                        if let Err(err) = update_model_telemetry(
+                            &pool_worker,
+                            &event.outcome.tier_name,
+                            event.outcome.latency_ms,
+                            event.outcome.success,
+                        )
+                        .await
+                        {
+                            warn!("Asynchronous model telemetry update failed: {}", err);
+                        }
+                    }
+                    OutcomeMsg::Flush(ack) => {
+                        let _ = ack.send(());
+                    }
+                }
+            }
+        });
+
         Self {
             pool,
             gpu_telemetry_atomic,
             weights,
+            outcome_tx,
         }
     }
 
@@ -316,43 +368,55 @@ impl ParetoBanditRouter {
         }
     }
 
-    /// Records subagent task feedback, performing Bayesian prior updates and dynamic EMA maintenance.
+    /// Asynchronously records task outcome feedback via non-blocking MPSC channel,
+    /// completely decoupling caller threads from SQLite disk writes.
     pub async fn record_outcome(
         &self,
         task_id: &str,
         outcome: &TaskOutcome,
     ) -> Result<(), RouterError> {
-        let now_sec = current_timestamp_sec();
-        let reward = outcome.fractional_reward();
+        let event = OutcomeEvent {
+            task_id: task_id.to_string(),
+            outcome: outcome.clone(),
+        };
 
-        // 1. Update Bayesian Beta prior parameters atomically
-        update_bayesian_prior(
-            &self.pool,
-            &outcome.tier_name,
-            &outcome.task_category,
-            reward,
-            now_sec,
-        )
-        .await?;
-
-        // 2. Update model dynamic EMA telemetry in model_registry
-        update_model_telemetry(
-            &self.pool,
-            &outcome.tier_name,
-            outcome.latency_ms,
-            outcome.success,
-        )
-        .await?;
-
-        info!(
-            task_id,
-            tier = %outcome.tier_name,
-            reward,
-            e3 = outcome.compute_e3(),
-            "Task outcome recorded and Bayesian priors updated"
-        );
+        if let Err(tokio::sync::mpsc::error::TrySendError::Full(ev)) =
+            self.outcome_tx.try_send(OutcomeMsg::Event(event))
+        {
+            self.outcome_tx.send(ev).await.map_err(|e| {
+                RouterError::InvalidOutcome(format!("Outcome MPSC channel closed: {}", e))
+            })?;
+        }
 
         Ok(())
+    }
+
+    /// Flushes all pending asynchronous outcomes in the MPSC channel and awaits SQLite persistence.
+    pub async fn flush_outcomes(&self) -> Result<(), RouterError> {
+        let (ack_tx, ack_rx) = tokio::sync::oneshot::channel();
+        self.outcome_tx
+            .send(OutcomeMsg::Flush(ack_tx))
+            .await
+            .map_err(|e| {
+                RouterError::InvalidOutcome(format!("Outcome MPSC channel closed: {}", e))
+            })?;
+        ack_rx
+            .await
+            .map_err(|e| RouterError::InvalidOutcome(format!("Outcome flush ACK dropped: {}", e)))?;
+        Ok(())
+    }
+
+    /// Applies geometric decay factor (\gamma) on a stored Beta prior in SQLite:
+    /// \alpha' = 1.0 + \gamma * (\alpha - 1.0)
+    /// \beta' = 1.0 + \gamma * (\beta - 1.0)
+    pub async fn decay_prior(
+        &self,
+        tier_name: &str,
+        task_category: &str,
+        gamma: f64,
+    ) -> Result<crate::priors::BanditPrior, RouterError> {
+        let now_sec = current_timestamp_sec();
+        decay_bayesian_prior(&self.pool, tier_name, task_category, gamma, now_sec).await
     }
 
     /// Helper for computing the $E^3$ metric.

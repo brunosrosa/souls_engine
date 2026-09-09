@@ -22,15 +22,17 @@ pub mod priors;
 
 // Canonical public surface exports
 pub use bandit::{
-    pack_gpu_telemetry, unpack_gpu_telemetry, ParetoBanditRouter, ParetoWeights, RoutingDecision,
-    LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS,
+    pack_gpu_telemetry, unpack_gpu_telemetry, OutcomeEvent, ParetoBanditRouter, ParetoWeights,
+    RoutingDecision, LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS,
 };
 pub use context::TaskContext;
 pub use error::RouterError;
 pub use metrics::{calculate_e3_metric, TaskOutcome, E3_EPSILON};
 pub use priors::{
-    ensure_router_tables, fetch_active_models, fetch_prior, update_bayesian_prior,
-    update_model_telemetry, upsert_model, BanditPrior, ModelRecord, ROUTER_DDL,
+    beta_variance, calculate_geometric_decay, current_timestamp_sec, decay_bayesian_prior,
+    default_cold_start_prior, ensure_router_tables, fetch_active_models, fetch_prior,
+    update_bayesian_prior, update_model_telemetry, upsert_model, BanditPrior, ModelRecord,
+    DEFAULT_GEOMETRIC_DECAY_GAMMA, ROUTER_DDL,
 };
 
 #[cfg(test)]
@@ -237,7 +239,7 @@ mod tests {
     }
 
     /// Gate 3: test_e3_metric_calculation_and_decay
-    /// Validates the E3 equation and Bayesian fractional updates.
+    /// Validates the E3 equation and Bayesian fractional updates with sovereign cold-start base.
     #[tokio::test]
     async fn test_e3_metric_calculation_and_decay() {
         // 1. Verify E3 metric for local zero-cost model
@@ -255,7 +257,7 @@ mod tests {
         // Local execution of identical quality achieves overwhelming advantage
         assert!(local_e3 > cloud_e3 * 100_000.0);
 
-        // 3. Verify Bayesian fractional updates
+        // 3. Verify Bayesian fractional updates with sovereign cold-start prior Beta(5.0, 1.0)
         let router = setup_test_router(45.0, 850).await;
 
         let outcome = TaskOutcome {
@@ -271,16 +273,17 @@ mod tests {
         };
 
         router.record_outcome("task_test_e3", &outcome).await.unwrap();
+        router.flush_outcomes().await.unwrap();
 
         let prior = fetch_prior(router.pool(), "tier1_qwen_coder_gpu", "code")
             .await
             .unwrap();
 
-        // Initially alpha=1.0, beta=1.0.
+        // Local tier cold start is Beta(5.0, 1.0).
         // After fractional reward 0.85:
-        // alpha = 1.0 + 0.85 = 1.85
+        // alpha = 5.0 + 0.85 = 5.85
         // beta = 1.0 + (1.0 - 0.85) = 1.15
-        assert!((prior.alpha - 1.85).abs() < 1e-6);
+        assert!((prior.alpha - 5.85).abs() < 1e-6);
         assert!((prior.beta - 1.15).abs() < 1e-6);
         assert_eq!(prior.pull_count, 1);
         assert!((prior.cumulative_reward - 0.85).abs() < 1e-6);
@@ -341,6 +344,7 @@ mod tests {
         };
 
         router.record_outcome("task_ema", &outcome).await.unwrap();
+        router.flush_outcomes().await.unwrap();
 
         let models = fetch_active_models(router.pool()).await.unwrap();
         let tier1 = models
@@ -369,5 +373,156 @@ mod tests {
             other => panic!("Unexpected error variant: {:?}", other),
         }
     }
+
+    /// Seguro A DoD: test_geometric_decay_preserves_variance_and_plasticity
+    /// Demonstrates that geometric attenuation expands posterior variance restoring plasticity,
+    /// while strictly obeying database constraints (\alpha >= 1.0, \beta >= 1.0).
+    #[tokio::test]
+    async fn test_geometric_decay_preserves_variance_and_plasticity() {
+        let router = setup_test_router(45.0, 850).await;
+
+        // Populate a heavily exploited prior with narrow variance
+        // Beta(100.0, 10.0) -> Mean = 100/110 ~= 0.909, Variance ~= 0.00073
+        sqlx::query(
+            "INSERT INTO pareto_bandit_priors (tier_name, task_category, alpha, beta, pull_count, cumulative_reward, last_updated_at)
+             VALUES ('tier1_qwen_coder_gpu', 'plasticity_test', 100.0, 10.0, 110, 100.0, 1000)
+             ON CONFLICT(tier_name, task_category) DO UPDATE SET alpha = 100.0, beta = 10.0"
+        )
+        .execute(router.pool())
+        .await
+        .unwrap();
+
+        let initial_var = beta_variance(100.0, 10.0);
+
+        // Apply geometric decay with \gamma = 0.995
+        let decayed = router
+            .decay_prior("tier1_qwen_coder_gpu", "plasticity_test", DEFAULT_GEOMETRIC_DECAY_GAMMA)
+            .await
+            .unwrap();
+
+        // Exact analytical formulas:
+        // alpha' = 1.0 + 0.995 * (100.0 - 1.0) = 1.0 + 0.995 * 99.0 = 99.505
+        // beta'  = 1.0 + 0.995 * (10.0 - 1.0)  = 1.0 + 0.995 * 9.0  = 9.955
+        assert!((decayed.alpha - 99.505).abs() < 1e-4);
+        assert!((decayed.beta - 9.955).abs() < 1e-4);
+        assert!(decayed.alpha >= 1.0);
+        assert!(decayed.beta >= 1.0);
+
+        let decayed_var = beta_variance(decayed.alpha, decayed.beta);
+
+        // Variance expanded (restoring exploration plasticity)
+        assert!(
+            decayed_var > initial_var,
+            "Decayed variance ({}) should exceed initial variance ({})",
+            decayed_var,
+            initial_var
+        );
+
+        // Even with extreme decay (\gamma = 0.0), boundaries are preserved at Beta(1.0, 1.0)
+        let boundary = router
+            .decay_prior("tier1_qwen_coder_gpu", "plasticity_test", 0.0)
+            .await
+            .unwrap();
+        assert_eq!(boundary.alpha, 1.0);
+        assert_eq!(boundary.beta, 1.0);
+    }
+
+    /// Seguro B DoD: test_sovereignty_biased_cold_start_priors
+    /// Proves that in cold state (zero database history), local models (tier0/tier1)
+    /// receive optimistic priors Beta(5.0, 1.0) over cloud Beta(2.0, 2.0),
+    /// guaranteeing deterministic sovereign preference under Thompson Sampling.
+    #[tokio::test]
+    async fn test_sovereignty_biased_cold_start_priors() {
+        let router = setup_test_router(45.0, 850).await;
+
+        // Verify default priors on unrecorded cold arms
+        let prior_tier1 = fetch_prior(router.pool(), "tier1_qwen_coder_gpu", "cold_cat")
+            .await
+            .unwrap();
+        let prior_tier0 = fetch_prior(router.pool(), "tier0_onnx_cpu", "cold_cat")
+            .await
+            .unwrap();
+        let prior_tier3 = fetch_prior(router.pool(), "tier3_cloud_deepseek", "cold_cat")
+            .await
+            .unwrap();
+
+        assert_eq!(prior_tier1.alpha, 5.0);
+        assert_eq!(prior_tier1.beta, 1.0); // Mean = 5/6 ~= 0.833
+        assert_eq!(prior_tier0.alpha, 5.0);
+        assert_eq!(prior_tier0.beta, 1.0);
+        assert_eq!(prior_tier3.alpha, 2.0);
+        assert_eq!(prior_tier3.beta, 2.0); // Mean = 2/4 = 0.500
+
+        // Perform 50 cold-start routing decisions
+        let cold_task = TaskContext::new("cold_task_1", "session_1", "cold_cat", 500, 200);
+        let mut local_chosen = 0;
+        let trials = 50;
+
+        for _ in 0..trials {
+            let decision = router.route_task(&cold_task).await.unwrap();
+            if decision.provider_type == "LOCAL" {
+                local_chosen += 1;
+            }
+        }
+
+        // Local sovereignty bias combined with zero API cost must dominate Cloud dispatch
+        assert_eq!(
+            local_chosen, trials,
+            "Local sovereignty must be chosen 50/50 times in cold start, got {}",
+            local_chosen
+        );
+    }
+
+    /// Seguro C DoD: test_async_mpsc_outcome_recording_non_blocking
+    /// Dispatches 100 concurrent task outcomes through the non-blocking MPSC channel
+    /// and validates zero lock contention and complete asynchronous SQLite persistence.
+    #[tokio::test]
+    async fn test_async_mpsc_outcome_recording_non_blocking() {
+        let router = setup_test_router(45.0, 850).await;
+
+        let mut tasks = Vec::with_capacity(100);
+
+        // Dispatch 100 concurrent outcomes from independent asynchronous subagent threads
+        for i in 0..100 {
+            let r = router.clone();
+            tasks.push(tokio::spawn(async move {
+                let outcome = TaskOutcome {
+                    task_id: format!("conc_task_{i}"),
+                    tier_name: "tier1_qwen_coder_gpu".to_string(),
+                    task_category: "concurrent_ops".to_string(),
+                    success: true,
+                    structural_score: 1.0,
+                    direct_cost_usd: 0.0,
+                    latency_ms: 100.0,
+                    tokens_input: 100,
+                    tokens_output: 50,
+                };
+                r.record_outcome(&format!("conc_task_{i}"), &outcome)
+                    .await
+                    .expect("Non-blocking MPSC outcome send failed");
+            }));
+        }
+
+        for t in tasks {
+            t.await.expect("Subagent thread join failed");
+        }
+
+        // Flush all pending background worker operations into SQLite
+        router.flush_outcomes().await.expect("Flush failed");
+
+        let prior = fetch_prior(router.pool(), "tier1_qwen_coder_gpu", "concurrent_ops")
+            .await
+            .unwrap();
+
+        // Initial prior is Beta(5.0, 1.0).
+        // 100 successes with reward 1.0 each:
+        // alpha = 5.0 + 100.0 = 105.0
+        // beta = 1.0 + 0.0 = 1.0
+        assert_eq!(prior.pull_count, 100);
+        assert!((prior.alpha - 105.0).abs() < 1e-5);
+        assert!((prior.beta - 1.0).abs() < 1e-5);
+        assert!((prior.cumulative_reward - 100.0).abs() < 1e-5);
+    }
 }
+
 

@@ -196,8 +196,57 @@ pub async fn upsert_model(pool: &Pool<Sqlite>, model: &ModelRecord) -> Result<()
     Ok(())
 }
 
+/// Default geometric decay factor (\gamma = 0.995) preserving Thompson Sampling plasticity.
+pub const DEFAULT_GEOMETRIC_DECAY_GAMMA: f64 = 0.995;
+
+/// Computes theoretical variance of Beta(\alpha, \beta) distribution:
+///
+/// $$\text{Var}(X) = \frac{\alpha \beta}{(\alpha + \beta)^2 (\alpha + \beta + 1)}$$
+#[inline]
+pub fn beta_variance(alpha: f64, beta: f64) -> f64 {
+    let sum = alpha + beta;
+    (alpha * beta) / (sum * sum * (sum + 1.0))
+}
+
+/// Computes geometric decay on Beta prior parameters:
+///
+/// $$\alpha' = 1.0 + \gamma \cdot (\alpha - 1.0), \quad \beta' = 1.0 + \gamma \cdot (\beta - 1.0)$$
+///
+/// Guarantees that \alpha' >= 1.0 and \beta' >= 1.0 are strictly preserved.
+#[inline]
+pub fn calculate_geometric_decay(alpha: f64, beta: f64, gamma: f64) -> (f64, f64) {
+    let g = gamma.clamp(0.0, 1.0);
+    let alpha_decayed = (1.0 + g * (alpha - 1.0).max(0.0)).max(1.0);
+    let beta_decayed = (1.0 + g * (beta - 1.0).max(0.0)).max(1.0);
+    (alpha_decayed, beta_decayed)
+}
+
+/// Returns the optimistic sovereign cold-start prior (alpha, beta) for unrecorded arms:
+/// - Local Tiers (tier0, tier05 / tier0_5, tier1): Beta(5.0, 1.0) (Mean = 5/6 ~= 0.833)
+/// - Cloud Tiers (tier3, tier4): Beta(2.0, 2.0) (Mean = 2/4 = 0.500)
+#[inline]
+pub fn default_cold_start_prior(tier_name: &str) -> (f64, f64) {
+    let lower = tier_name.to_lowercase();
+    let is_local = lower.contains("tier0")
+        || lower.contains("tier_0")
+        || lower.contains("tier1")
+        || lower.contains("tier_1")
+        || lower.contains("local")
+        || lower.contains("gpu")
+        || lower.contains("cpu")
+        || lower.contains("onnx");
+
+    if is_local {
+        (5.0, 1.0)
+    } else {
+        (2.0, 2.0)
+    }
+}
+
 /// Retrieves the prior $\text{Beta}(\alpha, \beta)$ for a tier and category.
-/// If no prior is recorded yet, returns default uninformative prior $\text{Beta}(1.0, 1.0)$.
+/// If no prior is recorded yet, returns optimistic sovereign cold-start prior:
+/// - Local Tiers (tier0, tier05, tier1): Beta(5.0, 1.0)
+/// - Cloud Tiers (tier3, tier4): Beta(2.0, 2.0)
 #[instrument(skip(pool))]
 pub async fn fetch_prior(
     pool: &Pool<Sqlite>,
@@ -229,15 +278,18 @@ pub async fn fetch_prior(
                 last_updated_at: r.get("last_updated_at"),
             })
         }
-        None => Ok(BanditPrior {
-            tier_name: tier_name.to_string(),
-            task_category: task_category.to_string(),
-            alpha: 1.0,
-            beta: 1.0,
-            pull_count: 0,
-            cumulative_reward: 0.0,
-            last_updated_at: current_timestamp_sec(),
-        }),
+        None => {
+            let (alpha, beta) = default_cold_start_prior(tier_name);
+            Ok(BanditPrior {
+                tier_name: tier_name.to_string(),
+                task_category: task_category.to_string(),
+                alpha,
+                beta,
+                pull_count: 0,
+                cumulative_reward: 0.0,
+                last_updated_at: current_timestamp_sec(),
+            })
+        }
     }
 }
 
@@ -257,25 +309,70 @@ pub async fn update_bayesian_prior(
 ) -> Result<BanditPrior, RouterError> {
     let r_clamped = reward.clamp(0.0, 1.0);
     let penalty = 1.0 - r_clamped;
+    let (init_alpha, init_beta) = default_cold_start_prior(tier_name);
+    let alpha_insert = init_alpha + r_clamped;
+    let beta_insert = init_beta + penalty;
 
     // Atomic UPSERT ensuring table constraints alpha >= 1.0 and beta >= 1.0
     sqlx::query(
         r#"
         INSERT INTO pareto_bandit_priors (
             tier_name, task_category, alpha, beta, pull_count, cumulative_reward, last_updated_at
-        ) VALUES (?1, ?2, 1.0 + ?3, 1.0 + ?4, 1, ?3, ?5)
+        ) VALUES (?1, ?2, ?3, ?4, 1, ?5, ?6)
         ON CONFLICT(tier_name, task_category) DO UPDATE SET
-            alpha = pareto_bandit_priors.alpha + ?3,
-            beta = pareto_bandit_priors.beta + ?4,
+            alpha = pareto_bandit_priors.alpha + ?5,
+            beta = pareto_bandit_priors.beta + ?7,
             pull_count = pareto_bandit_priors.pull_count + 1,
-            cumulative_reward = pareto_bandit_priors.cumulative_reward + ?3,
-            last_updated_at = ?5
+            cumulative_reward = pareto_bandit_priors.cumulative_reward + ?5,
+            last_updated_at = ?6
         "#,
     )
     .bind(tier_name)
     .bind(task_category)
+    .bind(alpha_insert)
+    .bind(beta_insert)
     .bind(r_clamped)
+    .bind(now_epoch_sec)
     .bind(penalty)
+    .execute(pool)
+    .await?;
+
+    fetch_prior(pool, tier_name, task_category).await
+}
+
+/// Applies geometric decay factor (\gamma) on a stored Beta prior:
+///
+/// $$\alpha' = 1.0 + \gamma \cdot (\alpha - 1.0), \quad \beta' = 1.0 + \gamma \cdot (\beta - 1.0)$$
+///
+/// Preserves variance and plasticity, preventing Thompson Sampling starvation over long horizons.
+#[instrument(skip(pool))]
+pub async fn decay_bayesian_prior(
+    pool: &Pool<Sqlite>,
+    tier_name: &str,
+    task_category: &str,
+    gamma: f64,
+    now_epoch_sec: i64,
+) -> Result<BanditPrior, RouterError> {
+    let prior = fetch_prior(pool, tier_name, task_category).await?;
+    let (alpha_prime, beta_prime) = calculate_geometric_decay(prior.alpha, prior.beta, gamma);
+
+    sqlx::query(
+        r#"
+        INSERT INTO pareto_bandit_priors (
+            tier_name, task_category, alpha, beta, pull_count, cumulative_reward, last_updated_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        ON CONFLICT(tier_name, task_category) DO UPDATE SET
+            alpha = ?3,
+            beta = ?4,
+            last_updated_at = ?7
+        "#,
+    )
+    .bind(tier_name)
+    .bind(task_category)
+    .bind(alpha_prime)
+    .bind(beta_prime)
+    .bind(prior.pull_count as i64)
+    .bind(prior.cumulative_reward)
     .bind(now_epoch_sec)
     .execute(pool)
     .await?;
