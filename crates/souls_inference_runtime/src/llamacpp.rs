@@ -73,7 +73,7 @@ impl LlamaLogitProber {
     /// Creates a new prober, checking standard locations for Gemma-4 or Phi-4 mini GGUF.
     pub fn new() -> Self {
         let model_path = Self::resolve_slm_model_path();
-        let exists = model_path.as_ref().map_or(false, |p| p.exists());
+        let exists = model_path.as_ref().is_some_and(|p| p.exists());
 
         if exists {
             info!("Tier 0.5 CPU GGUF model detected at: {:?}", model_path);
@@ -190,9 +190,7 @@ impl LlamaLogitProber {
             }
         } else {
             let uniform = 1.0 / logits.len() as f32;
-            for p in &mut probs {
-                *p = uniform;
-            }
+            probs.fill(uniform);
         }
 
         probs
@@ -282,34 +280,31 @@ impl LlamaLogitProber {
 
         // Quadrant 0: Affirmative / Safe (0..32)
         let alpha_ratio = alphabetic as f32 / n;
-        for i in 0..32 {
+        for (i, item) in v[..32].iter_mut().enumerate() {
             let decay = 1.0 / (1.0 + i as f32 * 0.05);
-            v[i] = (alpha_ratio * 4.0 - 1.0) * decay;
+            *item = (alpha_ratio * 4.0 - 1.0) * decay;
         }
 
         // Quadrant 1: Disagreement / Refusal (32..64)
         let punct_ratio = punctuation as f32 / n;
-        for i in 32..64 {
-            let idx = i - 32;
+        for (idx, item) in v[32..64].iter_mut().enumerate() {
             let decay = 1.0 / (1.0 + idx as f32 * 0.05);
-            v[i] = (punct_ratio * 5.0 - 1.2) * decay;
+            *item = (punct_ratio * 5.0 - 1.2) * decay;
         }
 
         // Quadrant 2: High Uncertainty / Entropy (64..96)
         let normalized_entropy = (byte_entropy / 8.0).clamp(0.0, 1.0);
-        for i in 64..96 {
-            let idx = i - 64;
+        for (idx, item) in v[64..96].iter_mut().enumerate() {
             let decay = 1.0 / (1.0 + idx as f32 * 0.05);
-            v[i] = (normalized_entropy * 3.5 - 0.5) * decay;
+            *item = (normalized_entropy * 3.5 - 0.5) * decay;
         }
 
         // Quadrant 3: Syntactic Structural Complexity (96..128)
         let digits_ratio = digits as f32 / n;
         let space_ratio = whitespace as f32 / n;
-        for i in 96..128 {
-            let idx = i - 96;
+        for (idx, item) in v[96..128].iter_mut().enumerate() {
             let decay = 1.0 / (1.0 + idx as f32 * 0.05);
-            v[i] = ((digits_ratio + space_ratio) * 3.0 - 0.8) * decay;
+            *item = ((digits_ratio + space_ratio) * 3.0 - 0.8) * decay;
         }
 
         v

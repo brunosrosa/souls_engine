@@ -60,7 +60,7 @@ struct AutoHandle(HANDLE);
 #[cfg(windows)]
 impl Drop for AutoHandle {
     fn drop(&mut self) {
-        if self.0 != INVALID_HANDLE_VALUE && self.0 != std::ptr::null_mut() {
+        if self.0 != INVALID_HANDLE_VALUE && !self.0.is_null() {
             // SAFETY: Closing valid Win32 handle on scope exit.
             unsafe {
                 CloseHandle(self.0);

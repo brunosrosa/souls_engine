@@ -287,11 +287,7 @@ fn extract_python_outline(code: &str) -> String {
             } else {
                 out.push(format!("{line}: pass  # body omitted"));
             }
-        } else if trimmed.starts_with("class ") {
-            out.push(line.to_string());
-        } else if trimmed.starts_with("import ") || trimmed.starts_with("from ") || trimmed.starts_with('#') || current_indent == 0 {
-            out.push(line.to_string());
-        } else if !suppressing_body {
+        } else {
             out.push(line.to_string());
         }
     }
@@ -351,9 +347,7 @@ fn extract_elixir_outline(code: &str) -> String {
             } else {
                 out.push(line.to_string());
             }
-        } else if trimmed.starts_with("use ") || trimmed.starts_with("import ") || trimmed.starts_with("alias ") || trimmed.starts_with('#') {
-            out.push(line.to_string());
-        } else if !suppressing_body {
+        } else {
             out.push(line.to_string());
         }
     }

@@ -121,7 +121,7 @@ impl OrtSessionBuilder {
 
     /// Builds the configured `OrtClassifierEngine`.
     pub fn build(self) -> OrtClassifierEngine {
-        let exists = self.model_path.as_ref().map_or(false, |p| p.exists());
+        let exists = self.model_path.as_ref().is_some_and(|p| p.exists());
         OrtClassifierEngine {
             model_path: self.model_path,
             is_model_present: exists,
@@ -149,7 +149,7 @@ impl OrtClassifierEngine {
     /// Initializes singleton resolving standard model paths.
     fn init_singleton() -> Self {
         let model_path = Self::resolve_gliclass_model_path();
-        let exists = model_path.as_ref().map_or(false, |p| p.exists());
+        let exists = model_path.as_ref().is_some_and(|p| p.exists());
 
         if exists {
             info!("Tier 0 ONNX model detected at: {:?}", model_path);

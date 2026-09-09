@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_hardware_constants_sanity() {
-        assert!(RTX_2060M_WDDM_CEILING_MB < RTX_2060M_VRAM_TOTAL_MB);
+        const { assert!(RTX_2060M_WDDM_CEILING_MB < RTX_2060M_VRAM_TOTAL_MB) };
         assert_eq!(RTX_2060M_VRAM_TOTAL_MB, 6144);
         assert_eq!(MIN_PCIE_BANDWIDTH_GBPS_FOR_SPILLOVER, 32.0);
     }

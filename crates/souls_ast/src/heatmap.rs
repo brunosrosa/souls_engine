@@ -53,9 +53,10 @@ pub fn get_or_retain_repo(repo_path: &Path) -> Result<gix::Repository, AstError>
         }
     }
 
-    let repo = gix::open(&canonical)
-        .or_else(|_| gix::open(repo_path))
-        .map_err(|e| AstError::GitError(format!("open repo failed: {e}")))?;
+    let repo = match gix::open(&canonical) {
+        Ok(r) => r,
+        Err(_) => gix::open(repo_path).map_err(|e| AstError::GitError(format!("open repo failed: {e}")))?,
+    };
     let sync_repo = repo.into_sync();
     let thread_local = sync_repo.to_thread_local();
     writer.insert(canonical, (Instant::now(), sync_repo));
@@ -192,12 +193,10 @@ pub fn calculate_repo_frecency_from_repo(
             }
         } else {
             // Initial commit: all blobs in tree
-            for entry in current_tree.iter() {
-                if let Ok(entry) = entry {
-                    if entry.mode().is_blob() {
-                        let path = entry.filename().to_string();
-                        changed_files.push(path);
-                    }
+            for entry in current_tree.iter().flatten() {
+                if entry.mode().is_blob() {
+                    let path = entry.filename().to_string();
+                    changed_files.push(path);
                 }
             }
         }

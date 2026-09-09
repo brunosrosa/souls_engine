@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::InferenceError;
 
 /// GGUF file magic identifier (`GGUF` in ASCII).
-pub const GGUF_MAGIC: [u8; 4] = [b'G', b'G', b'U', b'F'];
+pub const GGUF_MAGIC: [u8; 4] = *b"GGUF";
 
 /// Structured metadata information extracted in O(1) from GGUF header.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -139,7 +139,7 @@ pub fn parse_gguf_slice(slice: &[u8], file_size_bytes: u64) -> Result<GgufMetada
             .map_err(|_| InferenceError::GgufParseError("Failed reading version".into()))?,
     );
 
-    if version < 1 || version > 4 {
+    if !(1..=4).contains(&version) {
         return Err(InferenceError::GgufParseError(format!(
             "Unsupported GGUF version: {}",
             version
@@ -263,8 +263,8 @@ fn skip_gguf_value(slice: &[u8], mut cursor: usize, val_type: u32) -> Result<usi
     match val_type {
         0 | 1 | 7 => cursor += 1, // uint8, int8, bool
         2 | 3 => cursor += 2,     // uint16, int16
-        4 | 5 | 6 => cursor += 4, // uint32, int32, float32
-        10 | 11 | 12 => cursor += 8, // uint64, int64, float64
+        4..=6 => cursor += 4,     // uint32, int32, float32
+        10..=12 => cursor += 8,   // uint64, int64, float64
         8 => {
             // string: len (u64) + bytes
             if cursor + 8 > slice.len() {

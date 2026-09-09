@@ -127,7 +127,7 @@ impl LadybugOntologyGraph {
             (g, index_map, loaded_edges)
         })
         .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        .map_err(std::io::Error::other)?;
 
         // 4. Atomically swap graph and index_map under write lock
         let mut g = self.graph.write().await;

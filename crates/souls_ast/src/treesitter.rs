@@ -378,7 +378,7 @@ pub fn parse_code_isolated(
         let input_len = source_bytes.len();
         let output_capacity = std::cmp::max(input_len * 2, 16 * 1024);
         let total_needed = HEADER_OFFSET + input_len + output_capacity;
-        let needed_pages = (total_needed + 65535) / 65536;
+        let needed_pages = total_needed.div_ceil(65536);
 
         let current_pages = memory.size(&*store) as usize;
         if current_pages < needed_pages {

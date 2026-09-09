@@ -115,7 +115,7 @@ impl Tier1GenerativeEngine {
     /// Creates a new Tier 1 engine with asymmetric KV Cache (Key: FP16, Value: Q4_0).
     pub fn new() -> Self {
         let model_path = Self::resolve_tier1_model_path();
-        let exists = model_path.as_ref().map_or(false, |p| p.exists());
+        let exists = model_path.as_ref().is_some_and(|p| p.exists());
 
         Self {
             model_path,

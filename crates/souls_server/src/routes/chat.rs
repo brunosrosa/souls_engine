@@ -148,7 +148,7 @@ pub async fn chat_completions_handler(
         .join("\n");
 
     let prompt_tokens = (prompt.len() / 4).max(1) as u32;
-    let completion_id = format!("chatcmpl-{}", &souls_core::fs::validate_refs_path(&std::path::PathBuf::from("Z:/souls_engine")).map(|_| uuid_like_id()).unwrap_or_else(|_| uuid_like_id()));
+    let completion_id = format!("chatcmpl-{}", souls_core::fs::validate_refs_path(&std::path::PathBuf::from("Z:/souls_engine")).map(|_| uuid_like_id()).unwrap_or_else(|_| uuid_like_id()));
     let created_ts = current_timestamp_sec();
 
     // Configure generation parameters & JSON Schema

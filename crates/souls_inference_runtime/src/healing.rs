@@ -27,7 +27,7 @@ pub fn heal_json_response(raw: &str) -> Result<Value, InferenceError> {
     let unwrapped = strip_markdown_fences(trimmed);
 
     // 3. Extract candidate JSON substring starting at first '{' or '['
-    let start_idx = match unwrapped.find(|c| c == '{' || c == '[') {
+    let start_idx = match unwrapped.find(['{', '[']) {
         Some(idx) => idx,
         None => {
             return Err(InferenceError::JsonHealingError(
@@ -190,12 +190,10 @@ fn clean_boundary(s: String) -> String {
     let mut trimmed = s.trim_end().to_string();
 
     // Fix truncated booleans/nulls
-    if trimmed.ends_with(": tru") {
-        trimmed.push_str("e");
-    } else if trimmed.ends_with(": fals") {
-        trimmed.push_str("e");
+    if trimmed.ends_with(": tru") || trimmed.ends_with(": fals") {
+        trimmed.push('e');
     } else if trimmed.ends_with(": nul") {
-        trimmed.push_str("l");
+        trimmed.push('l');
     } else if trimmed.ends_with(':') {
         // Truncated key without value -> supply null
         trimmed.push_str(" null");
