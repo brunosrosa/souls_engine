@@ -6,3 +6,24 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+souls_protocol = { path = "../souls_protocol" }
+souls_core = { path = "../souls_core" }
+souls_memory = { path = "../souls_memory" }
+souls_inference_runtime = { path = "../souls_inference_runtime" }
+souls_model_router = { path = "../souls_model_router" }
+souls_ast = { path = "../souls_ast" }
+souls_anthropophagy = { path = "../souls_anthropophagy" }
+souls_llm_local_arena = { path = "../souls_llm_local_arena" }
+
+tokio = { workspace = true }
+axum = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio-stream = { version = "0.1", features = ["sync"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
