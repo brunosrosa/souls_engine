@@ -300,21 +300,27 @@ Executar suítes de benchmarking empírico contínuo, aferição de tokens por s
 
 #### Estrutura Canônica de Módulos (`crates/souls_llm_local_arena/src/`)
 
-- `lib.rs`: Ponto de entrada das baterias de estresse de modelos locais.
-- `benchmarks.rs`: Harness de velocidade (TTFT, tokens/s sustentados, vazão com prompt de preenchimento).
-- `rigidity.rs`: Bateria de validação de quebra sintática contra esquemas estruturados complexos.
-- `harness.rs`: Orquestrador de estresse de hardware com injeção de cargas simultâneas CPU/GPU.
+> **ESPECIFICAÇÃO DETALHADA E TAXONOMIA:** Consulte [`docs/architecture/ARENA_BENCHMARK_SPECIFICATION.md`](file:///Z:/souls_engine/docs/architecture/ARENA_BENCHMARK_SPECIFICATION.md) e [`docs/decisions/adrs/ADR-007-Desacoplamento-Ontologico-Arena-Benchmark-Types.md`](file:///Z:/souls_engine/docs/decisions/adrs/ADR-007-Desacoplamento-Ontologico-Arena-Benchmark-Types.md).
+
+- `lib.rs`: Interface executiva da Arena e re-exportação de contratos de benchmark.
+- `domain/`: Entidades de domínio desatreladas (`ModelDescriptor`, `ArenaInferEngine`, `EngineType`).
+- `discovery/`: Scanner de modelos locais zero-copy (`scanner.rs`, `metadata.rs`, `vault.rs`).
+- `batteries/`: As 5 Baterias de Teste (`type1_hardware.rs`, `type2_cognitive.rs`, `type3_vision.rs`, `type4_speculative.rs`, `type5_pressure.rs`).
+- `harness/`: Isolamento em worker thread com `catch_unwind` e barreira NVML.
+- `reporters/`: Formatadores de saída para terminal e relatórios Markdown em `docs/telemetry/reports/`.
+- `bin/souls_arena.rs`: CLI Standalone executável para disparo de avaliações via terminal.
 
 #### Superfície Pública Canônica
 
-- `pub async fn run_performance_benchmark(model_path: &Path, test_suite: &BenchmarkSuite) -> Result<BenchmarkReport, ArenaError>`
-- `pub async fn evaluate_json_rigidity(tier: ModelTier, schema: &serde_json::Value) -> Result<RigidityScore, ArenaError>`
+- `pub async fn run_benchmark(descriptor: &ModelDescriptor, battery: BenchmarkType, engine: EngineType) -> Result<BenchmarkReport, ArenaError>`
+- `pub fn scan_local_models(search_paths: &[PathBuf]) -> Result<Vec<ModelDescriptor>, ArenaError>`
 
 #### Anti-Patterns Estritos (Linhas Vermelhas)
 
-- **PROIBIDO** executar testes de estresse sem monitoramento simultâneo do Watchdog NVML.
+- **PROIBIDO** utilizar a palavra "Tier" para descrever tipos ou modalidades de benchmark (usar estritamente `BenchmarkType 1..5`).
+- **PROIBIDO** executar testes de estresse sem monitoramento simultâneo do Watchdog NVML da RTX 2060m.
 - **PROIBIDO** introduzir dependências de crates de visualização gráfica local.
-- **PROIBIDO** executar testes que deliberadamente ignorem os tetos de segurança térmica ($\ge 82^\circ\text{C}$).
+- **PROIBIDO** executar testes que deliberadamente ignorem os tetos de segurança térmica ($\ge 82^\circ\text{C}$) ou VRAM ($> 5.294\text{ MB}$).
 
 #### Comando de Validação
 
