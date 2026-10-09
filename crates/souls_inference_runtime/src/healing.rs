@@ -13,7 +13,9 @@ use crate::error::InferenceError;
 
 /// Heals and parses a raw LLM output into a valid `serde_json::Value`.
 pub fn heal_json_response(raw: &str) -> Result<Value, InferenceError> {
-    let trimmed = raw.trim();
+    let unescaped = strip_ansi_escapes(raw);
+    let cleaned_input = unescaped.replace("[end of text]", "").replace("[start of text]", "");
+    let trimmed = cleaned_input.trim();
     if trimmed.is_empty() {
         return Err(InferenceError::JsonHealingError("Empty input".to_string()));
     }
@@ -269,6 +271,28 @@ fn clean_boundary(s: String) -> String {
     trimmed
 }
 
+/// Strips ANSI terminal escape codes (e.g. \x1b[0m or \x1b[32m).
+pub fn strip_ansi_escapes(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            if chars.peek() == Some(&'[') {
+                chars.next(); // consume '['
+                while let Some(&next_c) = chars.peek() {
+                    chars.next();
+                    if next_c.is_ascii_alphabetic() || next_c == 'm' {
+                        break;
+                    }
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -326,6 +350,15 @@ mod tests {
     fn test_heal_conversational_trailer() {
         let raw = "{\n  \"action\": \"refactor\",\n  \"target\": \"crates/souls_ast\",\n  \"confidence\": 0.98\n}\n```\n\nThis is a valid JSON object.";
         let val = heal_json_response(raw).expect("Conversational trailer healing failed");
+        assert_eq!(val["action"], "refactor");
+        assert_eq!(val["target"], "crates/souls_ast");
+        assert_eq!(val["confidence"], 0.98);
+    }
+
+    #[test]
+    fn test_heal_ansi_escapes_and_eos_token() {
+        let raw = "\x1b[0m\n\n{\n  \"action\": \"refactor\",\n  \"target\": \"crates/souls_ast\",\n  \"confidence\": 0.98\n} [end of text]";
+        let val = heal_json_response(raw).expect("ANSI escapes and EOS token healing failed");
         assert_eq!(val["action"], "refactor");
         assert_eq!(val["target"], "crates/souls_ast");
         assert_eq!(val["confidence"], 0.98);
