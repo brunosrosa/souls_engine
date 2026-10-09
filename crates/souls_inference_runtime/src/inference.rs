@@ -352,6 +352,8 @@ impl Tier1GenerativeEngine {
                     .arg(self.kv_config.type_v.as_str())
                     .arg("-fa")
                     .arg(if self.kv_config.flash_attention { "on" } else { "off" })
+                    .arg("-c")
+                    .arg(if prompt.len() > 16000 { "8192" } else { "4096" })
                     .arg("--no-warmup")
                     .arg("-no-cnv")
                     .arg("--single-turn")
