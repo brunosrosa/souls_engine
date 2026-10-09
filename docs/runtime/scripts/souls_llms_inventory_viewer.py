@@ -32,6 +32,45 @@ from datetime import datetime
 SAFE_WDDM_VRAM_CEILING_MB = 5294.0
 RTX_2060M_TOTAL_VRAM_MB = 6144.0
 
+TIER_DESCRIPTIONS = {
+    "Tier 0": {
+        "title": "Tier 0 — Bootstrap, Sanity & Fast Heuristic Triage",
+        "role": "Classificação preliminar de intenção, triagem de prompts, bootstrap ultra-rápido (<15ms) e verificações de sanidade a frio sem alocação de VRAM.",
+        "specs": "CPU Host Intel Core i9 (extensões AVX2) | Modelos < 350 MB (135M parâmetros ou ONNX) | 0 MB VRAM dGPU | Meta: Throughput > 100 TPS.",
+        "engines": "`onnx-cpu` (ONNX Runtime) e `llama-cpu` (`-ngl 0`).",
+    },
+    "Tier 0.5": {
+        "title": "Tier 0.5 — Epistemic Probing & SLM Host Sensors",
+        "role": "Sensor epistêmico de incerteza (entropia de Shannon), extração direta de logits (forward-only prefill sem geração recursiva) e triagens heurísticas leves.",
+        "specs": "CPU Host Intel i9 AVX2 | 0 MB VRAM dGPU (estritamente RAM do sistema) | Modelos SLM de 360M a 2B parâmetros | Latência de probe < 150 ms.",
+        "engines": "`llama-cpu` (`-ngl 0 -t 8`), BitNet 1.58b, SmolLM2-360M.",
+    },
+    "Tier 1": {
+        "title": "Tier 1 — Master Interactive Chat, Coding & Autonomous Tool-Calling",
+        "role": "Cérebro executivo local e motor principal para Live Chat, geração de código Rust AST e despacho estruturado de ferramentas MCP para o Hermes Agent.",
+        "specs": "dGPU NVIDIA GeForce RTX 2060m (teto seguro WDDM de 5.294 MB de VRAM) | Modelos de 2.7B a 7B (quantizações Q4_0, Q4_K_M, IQ3_M) | KV Cache Assimétrico (Key=FP16, Value=Q4_0) com FlashAttention-2 | Meta: TPS ≥ 30 tok/s e TTFT < 2.500 ms.",
+        "engines": "`llama-cuda` (`-ngl 99 -ctk f16 -ctv q4_0 -fa on`).",
+    },
+    "Tier 2": {
+        "title": "Tier 2 — Background Heavyweight & Deep Cognitive Reasoning",
+        "role": "Raciocínio profundo assíncrono (deep CoT), arquiteturas Mixture-of-Experts (MoE) ou modelos de alta capacidade (>14B / 27B) que excedem a VRAM da dGPU.",
+        "specs": "32GB RAM DDR4 Host via AVX2 / CPU Pinned (0 MB VRAM na GPU para evitar spillover PCIe forçado pelo Windows) | Operação assíncrona em background via delegate_task.",
+        "engines": "`llama-cpu` (`-ngl 0 -t 8`), rnj-1 (8B Gemma 3), laguna-xs (16B MoE).",
+    },
+    "Tier 3": {
+        "title": "Tier 3 — Multimodal Vision-Language Models & UI Grounding",
+        "role": "Inspeção visual de interfaces, OCR técnico de diagramas e captura multimodal via projetores mmproj pareados.",
+        "specs": "dGPU NVIDIA RTX 2060m com projetores acoplados via --mmproj | Modelos VLM de 2B a 7B (Qwen2-VL, Gemma-4-E2B-IT, UI-TARS).",
+        "engines": "`llama-cuda` (`-ngl 99 --mmproj <sidecar_path>`).",
+    },
+    "Tier 4": {
+        "title": "Tier 4 — Speculative Decoding Drafters & Acceleration Sparks",
+        "role": "Modelos compactos (drafters) executados em conjunto com o modelo mestre para especular múltiplos tokens por passo e acelerar a geração via taxa de aceitação α.",
+        "specs": "Modelos ultracompactos (300M a 1.6GB ou heads MTP) co-alocados na VRAM da dGPU ou RAM | Meta: Taxa de aceitação α ≥ 55% para speedup de 1.4x a 2.1x.",
+        "engines": "`llama-cuda` (`-md <drafter.gguf>`).",
+    },
+}
+
 def extract_parameters(name: str, folder: str = "") -> str:
     """Extrai a contagem canônica de parâmetros a partir do nome e pasta."""
     combined = f"{name} {folder}".lower()
@@ -335,7 +374,22 @@ def generate_inventory_report(
 
     conn = sqlite3.connect(db_path)
     all_rows = fetch_inventory_data(conn)
+    
+    # Busca telemetria de Type 5 (ContextPressure / Needle-in-a-Haystack)
+    cursor = conn.cursor()
+    cursor.execute("SELECT model_id, e3_score, status, created_at FROM arena_telemetry WHERE benchmark_type = 'ContextPressure' ORDER BY id DESC")
+    pressure_raw = cursor.fetchall()
     conn.close()
+
+    pressure_map = {}
+    for prow in pressure_raw:
+        pm_id, pe3, pstatus, pcreated = prow
+        if pm_id not in pressure_map:
+            pressure_map[pm_id] = {
+                "max_effective_ctx": int(pe3) if pe3 > 0 else 0,
+                "status": pstatus,
+                "tested_ctx": 8192,
+            }
 
     # Filtra por padrão apenas arquivos que existem fisicamente no disco
     if not include_ghosts:
@@ -418,14 +472,14 @@ def generate_inventory_report(
 
         processed_models.append(r)
 
-    # Ordenação dos modelos: Tier 1 primeiro se tier1_only, senão por Tier e por E3 Score decrescente
+    # Ordenação dos modelos: estritamente crescente por Tier físico (0 a 4), depois por TPS decrescente
     tier_order = {
-        "Tier 1": 0,
+        "Tier 0": 0,
         "Tier 0.5": 1,
-        "Tier 0": 2,
-        "Tier 3": 3,
-        "Tier 4": 4,
-        "Tier 2": 5,
+        "Tier 1": 2,
+        "Tier 2": 3,
+        "Tier 3": 4,
+        "Tier 4": 5,
     }
 
     processed_models.sort(
@@ -482,38 +536,43 @@ def generate_inventory_report(
 
     if not tier1_only:
         # =========================================================================
-        # SEÇÃO 2: MATRIZ DE SILÍCIO POR TIER OPERACIONAL (TODOS OS MODELOS)
+        # SEÇÃO 2: MATRIZ DE SILÍCIO POR TIER OPERACIONAL (ORDEM CRESCENTE TIER 0 A 4)
         # =========================================================================
         lines.append(f"## 🖥️ 2. INVENTÁRIO COMPLETO DE SILÍCIO POR TIER ({len(processed_models)} Modelos)")
+        lines.append("Apresentação canônica e sequencial de todos os modelos locais categorizados por Tier Físico e ordenados por throughput decrescente dentro de cada camada:")
         lines.append("")
 
-        current_tier = None
-        tier_sub_idx = 1
-        for m in processed_models:
-            tier = m.get("clean_tier", "Tier 1")
-            if tier != current_tier:
-                current_tier = tier
-                tier_sub_idx = 1
-                lines.append(f"### 🎯 {current_tier}")
-                lines.append("")
-                lines.append("| # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |")
-                lines.append("| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |")
+        ordered_tiers = ["Tier 0", "Tier 0.5", "Tier 1", "Tier 2", "Tier 3", "Tier 4"]
+        for tier_key in ordered_tiers:
+            models_in_tier = [m for m in processed_models if m.get("clean_tier") == tier_key]
+            if not models_in_tier:
+                continue
 
-            m_id = m.get("model_id") or m.get("model_name")
-            size_str = format_bytes(m.get("file_size_bytes"))
-            tps_str = f"{m['tps']:.1f}" if m['tps'] > 0 else "N/A"
-            ttft_str = f"{m['ttft_ms']:.1f}" if m['ttft_ms'] > 0 else "N/A"
-            vram_str = f"{m['vram_peak_mb']:.0f} MB" if m['vram_peak_mb'] > 0 else "0 MB"
-            e3_str = f"{m['e3_score']:.2f}" if m['e3_score'] > 0 else "N/A"
-            engine_str = m.get("engine_selected") or "llama.cpp"
+            info = TIER_DESCRIPTIONS.get(tier_key, {})
+            lines.append(f"### 🎯 {info.get('title', tier_key)}")
+            lines.append(f"> **Papel Arquitetural:** {info.get('role', '')}")
+            lines.append(f"> **Hardware Alvo & Limites:** {info.get('specs', '')}")
+            lines.append(f"> **Motores Homologados:** {info.get('engines', '')}")
+            lines.append("")
+            lines.append("| # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |")
+            lines.append("| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |")
 
-            lines.append(
-                f"| {tier_sub_idx} | `{m_id}` | `{m.get('quantization')}` | {size_str} | `{engine_str}` | "
-                f"{tps_str} | {ttft_str} | {vram_str} | {e3_str} | {m['hermes_badge']} |"
-            )
-            tier_sub_idx += 1
+            for sub_idx, m in enumerate(models_in_tier, start=1):
+                m_id = m.get("model_id") or m.get("model_name")
+                params_str = m.get("parameters", "N/A")
+                size_str = format_bytes(m.get("file_size_bytes"))
+                tps_str = f"{m['tps']:.1f}" if m['tps'] > 0 else "N/A"
+                ttft_str = f"{m['ttft_ms']:.1f}" if m['ttft_ms'] > 0 else "N/A"
+                vram_str = f"{m['vram_peak_mb']:.0f} MB" if m['vram_peak_mb'] > 0 else "0 MB"
+                e3_str = f"{m['e3_score']:.2f}" if m['e3_score'] > 0 else "N/A"
+                engine_str = m.get("engine_selected") or "llama.cpp"
 
-        lines.append("")
+                lines.append(
+                    f"| {sub_idx} | `{m_id}` | {params_str} | `{m.get('quantization')}` | {size_str} | `{engine_str}` | "
+                    f"{tps_str} | {ttft_str} | {vram_str} | {e3_str} | {m['hermes_badge']} |"
+                )
+            lines.append("")
+
         lines.append("---")
         lines.append("")
 
@@ -526,7 +585,11 @@ def generate_inventory_report(
         lines.append("| Modelo | Tier | 🦀 Track 2A (Rust AST Code) | 🛠️ Track 2B (MCP JSON Tools) | 🧠 Track 2C (CoT Reasoning) | Veredito Cognitivo |")
         lines.append("| :--- | :---: | :---: | :---: | :---: | :--- |")
 
-        for m in tier1_models + [m for m in processed_models if m.get("clean_tier") in ["Tier 0.5", "Tier 2"]][:5]:
+        eval_models = [m for m in processed_models if (m.get("score_code_ast") or 0.0) > 0 or (m.get("score_json_tools") or 0.0) > 0 or (m.get("score_reasoning") or 0.0) > 0]
+        if not eval_models:
+            eval_models = tier1_models
+
+        for m in eval_models:
             m_id = m.get("model_id") or m.get("model_name")
             s_code = f"{m['score_code_ast'] * 100:.0f}%" if (m.get("score_code_ast") or 0.0) > 0 else "N/A"
             s_json = f"{m['score_json_tools'] * 100:.0f}%" if (m.get("score_json_tools") or 0.0) > 0 else "N/A"
@@ -541,10 +604,35 @@ def generate_inventory_report(
         lines.append("")
 
         # =========================================================================
-        # SEÇÃO 4: MODELOS DE VISÃO VLM & PROJETORES MMPROJ (TIER 3)
+        # SEÇÃO 4: PRESSÃO DE CONTEXTO & RESISTÊNCIA A DECAIMENTO (TYPE 5)
+        # =========================================================================
+        if pressure_map:
+            lines.append(f"## 🎯 4. PRESSÃO DE CONTEXTO & RESISTÊNCIA A DECAIMENTO (BENCHMARK TYPE 5) ({len(pressure_map)} Avaliados)")
+            lines.append("Aferição física de recuperação de agulha (*Needle-in-a-Haystack*) injetada a 50% de profundidade sob dGPU CUDA:")
+            lines.append("")
+            lines.append("| Modelo | Contexto Testado | Contexto Efetivo Recuperado | Status Agulha | Veredito de Atenção |")
+            lines.append("| :--- | :---: | :---: | :---: | :--- |")
+
+            for mid, pinfo in pressure_map.items():
+                status = pinfo["status"]
+                verdict = (
+                    "🟢 PASS_STABLE (Sem perda de foco)"
+                    if status == "PASS_STABLE"
+                    else ("🟠 ATTENTION_DEGRADED (Perda após 4k)" if status == "ATTENTION_DEGRADED" else "🔴 RETRIEVAL_FAILED")
+                )
+                t_ctx = f"{pinfo['tested_ctx'] // 1024}k tokens"
+                e_ctx = f"{pinfo['max_effective_ctx'] // 1024}k tokens" if pinfo['max_effective_ctx'] > 0 else "0k (Falha)"
+                lines.append(f"| `{mid}` | {t_ctx} | {e_ctx} | `{status}` | {verdict} |")
+
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+
+        # =========================================================================
+        # SEÇÃO 5: MODELOS DE VISÃO VLM & PROJETORES MMPROJ (TIER 3)
         # =========================================================================
         tier3_models = [m for m in processed_models if m.get("clean_tier") == "Tier 3"]
-        lines.append(f"## 👁️ 4. MODELOS MULTIMODAIS & PROJETORES DE VISÃO MMPROJ (TIER 3) ({len(tier3_models)})")
+        lines.append(f"## 👁️ 5. MODELOS MULTIMODAIS & PROJETORES DE VISÃO MMPROJ (TIER 3) ({len(tier3_models)})")
         lines.append("")
         lines.append("| Modelo VLM | Quant | Tamanho | Projetor Sidecar Pareado | Status Multimodal |")
         lines.append("| :--- | :---: | :---: | :---: | :--- |")
@@ -560,10 +648,10 @@ def generate_inventory_report(
         lines.append("")
 
         # =========================================================================
-        # SEÇÃO 5: ACELERAÇÃO ESPECULATIVA & DRAFTERS (TIER 4)
+        # SEÇÃO 6: ACELERAÇÃO ESPECULATIVA & DRAFTERS (TIER 4)
         # =========================================================================
         tier4_models = [m for m in processed_models if m.get("clean_tier") == "Tier 4"]
-        lines.append(f"## ⚡ 5. ACELERAÇÃO ESPECULATIVA & MODELOS DRAFTER (TIER 4) ({len(tier4_models)})")
+        lines.append(f"## ⚡ 6. ACELERAÇÃO ESPECULATIVA & MODELOS DRAFTER (TIER 4) ({len(tier4_models)})")
         lines.append("")
         lines.append("| Modelo Drafter | Tamanho | Taxa de Aceitação Alpha (α) | Speedup Projetado | Veredito FinOps |")
         lines.append("| :--- | :---: | :---: | :---: | :--- |")

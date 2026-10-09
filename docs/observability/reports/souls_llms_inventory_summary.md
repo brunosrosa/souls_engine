@@ -1,5 +1,5 @@
 # 📊 SOULS SILICON OBSERVABILITY & HERMES LLM DOSSIER (v7 Canônica)
-> **Gerado em:** 2026-10-09 20:02:44 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
+> **Gerado em:** 2026-10-09 20:21:48 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
 > **Host Físico:** Intel Core i9-9880H (AVX2) | 32GB RAM | NVIDIA GeForce RTX 2060m (6GB GDDR6, WDDM 3.x)
 > **Governança:** ADR-004 (Teto Útil WDDM 5.2GB) & ADR-007 (Desacoplamento dos Benchmark Types 1 a 5)
 
@@ -32,69 +32,93 @@ Esta matriz classifica exclusivamente os modelos de **Tier 1** (Live Chat, Codin
 ---
 
 ## 🖥️ 2. INVENTÁRIO COMPLETO DE SILÍCIO POR TIER (38 Modelos)
+Apresentação canônica e sequencial de todos os modelos locais categorizados por Tier Físico e ordenados por throughput decrescente dentro de cada camada:
 
-### 🎯 Tier 1
+### 🎯 Tier 0 — Bootstrap, Sanity & Fast Heuristic Triage
+> **Papel Arquitetural:** Classificação preliminar de intenção, triagem de prompts, bootstrap ultra-rápido (<15ms) e verificações de sanidade a frio sem alocação de VRAM.
+> **Hardware Alvo & Limites:** CPU Host Intel Core i9 (extensões AVX2) | Modelos < 350 MB (135M parâmetros ou ONNX) | 0 MB VRAM dGPU | Meta: Throughput > 100 TPS.
+> **Motores Homologados:** `onnx-cpu` (ONNX Runtime) e `llama-cpu` (`-ngl 0`).
 
-| # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `zamba2-2-7b-instruct-v2-q4-0` | `Q4_0` | 2.08 GB | `llama-cuda` | 44.1 | 121.0 | 1205 MB | 8727.90 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 2 | `arch-function-chat-3b-q5-k-m` | `Q5_K_M` | 2.07 GB | `llama-cuda` | 44.1 | 1695.7 | 1234 MB | 4794.68 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 3 | `huggingfacetb-smollm3-3b-q5-k-m` | `Q5_K_M` | 2.06 GB | `llama-cuda` | 37.8 | 2400.1 | 1233 MB | 4692.41 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 4 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | `Q4_K_M` | 2.60 GB | `llama-cuda` | 35.4 | 2081.5 | 1201 MB | 5114.44 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | `Q4_K_M` | 2.33 GB | `llama-cuda` | 32.8 | 2833.9 | 1203 MB | 3925.39 | 🔵 SUBAGENTE DE SUPORTE |
-| 6 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | `I1-Q4_K_S` | 2.45 GB | `llama-cuda` | 32.6 | 1792.1 | 1200 MB | 5080.50 | 🔵 SUBAGENTE DE SUPORTE |
-| 7 | `phi-4-mini-instruct-q5-k-m` | `Q5_K_M` | 2.65 GB | `llama-cuda` | 30.8 | 2640.5 | 1205 MB | 3710.82 | 🔵 SUBAGENTE DE SUPORTE |
-| 8 | `phi-4-mini-instruct-q4-k-m` | `Q4_K_M` | 2.32 GB | `llama-cuda` | 29.8 | 9468.0 | 1069 MB | 3369.94 | 🔵 SUBAGENTE DE SUPORTE |
-| 9 | `phi-4-mini-reasoning-q4-k-m` | `Q4_K_M` | 2.32 GB | `llama-cuda` | 28.1 | 2338.9 | 753 MB | 3074.59 | 🔵 SUBAGENTE DE SUPORTE |
-| 10 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | `IQ3_M` | 3.33 GB | `llama-cuda` | 26.4 | 3966.4 | 1205 MB | 2859.39 | 🔵 SUBAGENTE DE SUPORTE |
-| 11 | `qwen3-5-4b-super-coder-q4-0` | `Q4_0` | 2.43 GB | `llama-cuda` | 26.0 | 2604.5 | 322 MB | 2779.72 | 🔵 SUBAGENTE DE SUPORTE |
-| 12 | `mamba-codestral-7b-v0-1-q4-k-m` | `Q4_K_M` | 3.86 GB | `llama-cuda` | 25.7 | 1738.5 | 1203 MB | 4401.66 | 🔵 SUBAGENTE DE SUPORTE |
-| 13 | `mamba-codestral-7b-instruct-agnuxo` | `Q4_K_M` | 4.07 GB | `llama-cuda` | 25.5 | 2336.0 | 1789 MB | 4078.03 | 🔵 SUBAGENTE DE SUPORTE |
-| 14 | `falcon3-mamba-7b-instruct-i1-iq3-m` | `IQ3_M` | 3.05 GB | `llama-cuda` | 25.0 | 6703.1 | 1233 MB | 2544.45 | 🔵 SUBAGENTE DE SUPORTE |
-| 15 | `nvidia-nemotron-3-nano-4b-q4-k-m` | `Q4_K_M` | 2.64 GB | `llama-cuda` | 23.6 | 7736.0 | 1203 MB | 3213.68 | 🔵 SUBAGENTE DE SUPORTE |
-| 16 | `hy-mt2-7b-q4-k-m` | `Q4_K_M` | 4.31 GB | `llama-cuda` | 23.3 | 3330.1 | 1231 MB | 3059.28 | 🔵 SUBAGENTE DE SUPORTE |
-### 🎯 Tier 0.5
+| # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| 1 | `qwen35-4b-dflash-q4-k-m` | 4B | `Q4_K_M` | 4.0 MB | `mock` | 110.0 | 45.0 | 1427 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 2 | `neuralai-mamba-k1-v3-q4-k-m` | 135M | `Q4_K_M` | 85.7 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 3 | `smollm-135m-instruct-q4-k-m` | 135M | `Q4_K_M` | 100.6 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 4 | `smollm2-135m-reasoning-5k-q4-k-m` | 135M | `Q4_K_M` | 100.6 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
 
-| # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `bitnet-b1.58-2b-4t` | `I2_S` | 1.11 GB | `llama-cpu` | 65.0 | 605.1 | 1143 MB | 6970.87 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 2 | `smollm2-360m-instruct-q8-0` | `Q8_0` | 368.5 MB | `llama-cpu` | 51.2 | 441.4 | 1117 MB | 5925.90 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 3 | `mamba-790m-hf-q4-k-m` | `Q4_K_M` | 459.3 MB | `llama-cpu` | 22.7 | 780.9 | 1117 MB | 659.38 | 🔵 SUBAGENTE DE SUPORTE |
-| 4 | `lfm2-5-1-2b-instruct-q8-0` | `Q8_0` | 1.16 GB | `llama-cpu` | 15.1 | 994.6 | 1114 MB | 228.67 | 🟠 CADÊNCIA LENTA |
-| 5 | `deepseek-r1-distill-qwen-1-5b-q8-0` | `Q8_0` | 1.76 GB | `llama-cpu` | 12.6 | 1265.1 | 1138 MB | 124.58 | 🟠 CADÊNCIA LENTA |
-### 🎯 Tier 0
+### 🎯 Tier 0.5 — Epistemic Probing & SLM Host Sensors
+> **Papel Arquitetural:** Sensor epistêmico de incerteza (entropia de Shannon), extração direta de logits (forward-only prefill sem geração recursiva) e triagens heurísticas leves.
+> **Hardware Alvo & Limites:** CPU Host Intel i9 AVX2 | 0 MB VRAM dGPU (estritamente RAM do sistema) | Modelos SLM de 360M a 2B parâmetros | Latência de probe < 150 ms.
+> **Motores Homologados:** `llama-cpu` (`-ngl 0 -t 8`), BitNet 1.58b, SmolLM2-360M.
 
-| # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `qwen35-4b-dflash-q4-k-m` | `Q4_K_M` | 4.0 MB | `mock` | 110.0 | 45.0 | 1427 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 2 | `neuralai-mamba-k1-v3-q4-k-m` | `Q4_K_M` | 85.7 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 3 | `smollm-135m-instruct-q4-k-m` | `Q4_K_M` | 100.6 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 4 | `smollm2-135m-reasoning-5k-q4-k-m` | `Q4_K_M` | 100.6 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-### 🎯 Tier 3
+| # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| 1 | `bitnet-b1.58-2b-4t` | 2B | `I2_S` | 1.11 GB | `llama-cpu` | 65.0 | 605.1 | 1143 MB | 6970.87 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 2 | `smollm2-360m-instruct-q8-0` | 360M | `Q8_0` | 368.5 MB | `llama-cpu` | 51.2 | 441.4 | 1117 MB | 5925.90 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 3 | `mamba-790m-hf-q4-k-m` | 790M | `Q4_K_M` | 459.3 MB | `llama-cpu` | 22.7 | 780.9 | 1117 MB | 659.38 | 🔵 SUBAGENTE DE SUPORTE |
+| 4 | `lfm2-5-1-2b-instruct-q8-0` | 1.2B | `Q8_0` | 1.16 GB | `llama-cpu` | 15.1 | 994.6 | 1114 MB | 228.67 | 🟠 CADÊNCIA LENTA |
+| 5 | `deepseek-r1-distill-qwen-1-5b-q8-0` | 1.5B | `Q8_0` | 1.76 GB | `llama-cpu` | 12.6 | 1265.1 | 1138 MB | 124.58 | 🟠 CADÊNCIA LENTA |
 
-| # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `bonsai-27b-q1-0-ai-joe` | `Q1_0` | 3.54 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 2 | `bonsai-27b-q1-0-lmstudio` | `Q1_0` | 3.54 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 3 | `deepseek-v4-pro-qwen3-5-4b-mtp-q4-k-s` | `Q4_K_S` | 2.45 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 4 | `gemma-4-e2b-it-q4-k-m` | `Q4_K_M` | 3.19 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 5 | `gemma-4-e2b-it-ultra-uncensored-heretic-q4-k-m` | `Q4_K_M` | 3.19 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 6 | `microsoft-fara-7b-iq3-m` | `IQ3_M` | 3.33 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 7 | `microsoft-fara1-5-4b-f16-gguf-q4-k-m` | `Q4_K_M` | 2.52 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 8 | `nimbus-4b-q4-k-m` | `Q4_K_M` | 2.52 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-### 🎯 Tier 4
+### 🎯 Tier 1 — Master Interactive Chat, Coding & Autonomous Tool-Calling
+> **Papel Arquitetural:** Cérebro executivo local e motor principal para Live Chat, geração de código Rust AST e despacho estruturado de ferramentas MCP para o Hermes Agent.
+> **Hardware Alvo & Limites:** dGPU NVIDIA GeForce RTX 2060m (teto seguro WDDM de 5.294 MB de VRAM) | Modelos de 2.7B a 7B (quantizações Q4_0, Q4_K_M, IQ3_M) | KV Cache Assimétrico (Key=FP16, Value=Q4_0) com FlashAttention-2 | Meta: TPS ≥ 30 tok/s e TTFT < 2.500 ms.
+> **Motores Homologados:** `llama-cuda` (`-ngl 99 -ctk f16 -ctv q4_0 -fa on`).
 
-| # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `bonsai-27b-dspark-q4-1` | `Q4_1` | 1.66 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 2 | `laguna-xs-2-1-dspark-q4-k-m` | `Q4_K_M` | 297.6 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 3 | `qwen35-4b-dflash-q4-k-m` | `Q4_K_M` | 363.8 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-### 🎯 Tier 2
+| # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| 1 | `zamba2-2-7b-instruct-v2-q4-0` | 2.7B | `Q4_0` | 2.08 GB | `llama-cuda` | 44.1 | 121.0 | 1205 MB | 8727.90 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 2 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | 2.07 GB | `llama-cuda` | 44.1 | 1695.7 | 1234 MB | 4794.68 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 3 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | 2.06 GB | `llama-cuda` | 37.8 | 2400.1 | 1233 MB | 4692.41 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 4 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | 2.60 GB | `llama-cuda` | 35.4 | 2081.5 | 1201 MB | 5114.44 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | 2.33 GB | `llama-cuda` | 32.8 | 2833.9 | 1203 MB | 3925.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 6 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | 2.45 GB | `llama-cuda` | 32.6 | 1792.1 | 1200 MB | 5080.50 | 🔵 SUBAGENTE DE SUPORTE |
+| 7 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | 2.65 GB | `llama-cuda` | 30.8 | 2640.5 | 1205 MB | 3710.82 | 🔵 SUBAGENTE DE SUPORTE |
+| 8 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | 29.8 | 9468.0 | 1069 MB | 3369.94 | 🔵 SUBAGENTE DE SUPORTE |
+| 9 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | 28.1 | 2338.9 | 753 MB | 3074.59 | 🔵 SUBAGENTE DE SUPORTE |
+| 10 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | 3.33 GB | `llama-cuda` | 26.4 | 3966.4 | 1205 MB | 2859.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 11 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | 2.43 GB | `llama-cuda` | 26.0 | 2604.5 | 322 MB | 2779.72 | 🔵 SUBAGENTE DE SUPORTE |
+| 12 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | 3.86 GB | `llama-cuda` | 25.7 | 1738.5 | 1203 MB | 4401.66 | 🔵 SUBAGENTE DE SUPORTE |
+| 13 | `mamba-codestral-7b-instruct-agnuxo` | 7B | `Q4_K_M` | 4.07 GB | `llama-cuda` | 25.5 | 2336.0 | 1789 MB | 4078.03 | 🔵 SUBAGENTE DE SUPORTE |
+| 14 | `falcon3-mamba-7b-instruct-i1-iq3-m` | 7B | `IQ3_M` | 3.05 GB | `llama-cuda` | 25.0 | 6703.1 | 1233 MB | 2544.45 | 🔵 SUBAGENTE DE SUPORTE |
+| 15 | `nvidia-nemotron-3-nano-4b-q4-k-m` | 4B | `Q4_K_M` | 2.64 GB | `llama-cuda` | 23.6 | 7736.0 | 1203 MB | 3213.68 | 🔵 SUBAGENTE DE SUPORTE |
+| 16 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | 4.31 GB | `llama-cuda` | 23.3 | 3330.1 | 1231 MB | 3059.28 | 🔵 SUBAGENTE DE SUPORTE |
 
-| # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `laguna-xs-2-1-apex-i-compact` | `GGUF` | 14.69 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 2 | `rnj-1-instruct-q4-k-m` | `Q4_K_M` | 4.76 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+### 🎯 Tier 2 — Background Heavyweight & Deep Cognitive Reasoning
+> **Papel Arquitetural:** Raciocínio profundo assíncrono (deep CoT), arquiteturas Mixture-of-Experts (MoE) ou modelos de alta capacidade (>14B / 27B) que excedem a VRAM da dGPU.
+> **Hardware Alvo & Limites:** 32GB RAM DDR4 Host via AVX2 / CPU Pinned (0 MB VRAM na GPU para evitar spillover PCIe forçado pelo Windows) | Operação assíncrona em background via delegate_task.
+> **Motores Homologados:** `llama-cpu` (`-ngl 0 -t 8`), rnj-1 (8B Gemma 3), laguna-xs (16B MoE).
+
+| # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| 1 | `laguna-xs-2-1-apex-i-compact` | 16B MoE | `GGUF` | 14.69 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 2 | `rnj-1-instruct-q4-k-m` | 8B | `Q4_K_M` | 4.76 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+
+### 🎯 Tier 3 — Multimodal Vision-Language Models & UI Grounding
+> **Papel Arquitetural:** Inspeção visual de interfaces, OCR técnico de diagramas e captura multimodal via projetores mmproj pareados.
+> **Hardware Alvo & Limites:** dGPU NVIDIA RTX 2060m com projetores acoplados via --mmproj | Modelos VLM de 2B a 7B (Qwen2-VL, Gemma-4-E2B-IT, UI-TARS).
+> **Motores Homologados:** `llama-cuda` (`-ngl 99 --mmproj <sidecar_path>`).
+
+| # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| 1 | `bonsai-27b-q1-0-ai-joe` | 27B | `Q1_0` | 3.54 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 2 | `bonsai-27b-q1-0-lmstudio` | 27B | `Q1_0` | 3.54 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 3 | `deepseek-v4-pro-qwen3-5-4b-mtp-q4-k-s` | 4B | `Q4_K_S` | 2.45 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 4 | `gemma-4-e2b-it-q4-k-m` | 2B | `Q4_K_M` | 3.19 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 5 | `gemma-4-e2b-it-ultra-uncensored-heretic-q4-k-m` | 2B | `Q4_K_M` | 3.19 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 6 | `microsoft-fara-7b-iq3-m` | 7B | `IQ3_M` | 3.33 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 7 | `microsoft-fara1-5-4b-f16-gguf-q4-k-m` | 4B | `Q4_K_M` | 2.52 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 8 | `nimbus-4b-q4-k-m` | 4B | `Q4_K_M` | 2.52 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+
+### 🎯 Tier 4 — Speculative Decoding Drafters & Acceleration Sparks
+> **Papel Arquitetural:** Modelos compactos (drafters) executados em conjunto com o modelo mestre para especular múltiplos tokens por passo e acelerar a geração via taxa de aceitação α.
+> **Hardware Alvo & Limites:** Modelos ultracompactos (300M a 1.6GB ou heads MTP) co-alocados na VRAM da dGPU ou RAM | Meta: Taxa de aceitação α ≥ 55% para speedup de 1.4x a 2.1x.
+> **Motores Homologados:** `llama-cuda` (`-md <drafter.gguf>`).
+
+| # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| 1 | `bonsai-27b-dspark-q4-1` | 27B | `Q4_1` | 1.66 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 2 | `laguna-xs-2-1-dspark-q4-k-m` | 300M | `Q4_K_M` | 297.6 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 3 | `qwen35-4b-dflash-q4-k-m` | 4B | `Q4_K_M` | 363.8 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
 
 ---
 
@@ -119,15 +143,20 @@ Aferição de integridade lógica necessária para subagentes executivos e MCP T
 | `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `nvidia-nemotron-3-nano-4b-q4-k-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `hy-mt2-7b-q4-k-m` | Tier 1 | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `bitnet-b1.58-2b-4t` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
-| `smollm2-360m-instruct-q8-0` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
-| `mamba-790m-hf-q4-k-m` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
-| `lfm2-5-1-2b-instruct-q8-0` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
-| `deepseek-r1-distill-qwen-1-5b-q8-0` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
 
 ---
 
-## 👁️ 4. MODELOS MULTIMODAIS & PROJETORES DE VISÃO MMPROJ (TIER 3) (8)
+## 🎯 4. PRESSÃO DE CONTEXTO & RESISTÊNCIA A DECAIMENTO (BENCHMARK TYPE 5) (2 Avaliados)
+Aferição física de recuperação de agulha (*Needle-in-a-Haystack*) injetada a 50% de profundidade sob dGPU CUDA:
+
+| Modelo | Contexto Testado | Contexto Efetivo Recuperado | Status Agulha | Veredito de Atenção |
+| :--- | :---: | :---: | :---: | :--- |
+| `phi-4-mini-instruct-q4-k-m` | 8k tokens | 4k tokens | `ATTENTION_DEGRADED` | 🟠 ATTENTION_DEGRADED (Perda após 4k) |
+| `qwen3-5-4b-super-coder-q4-0` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+
+---
+
+## 👁️ 5. MODELOS MULTIMODAIS & PROJETORES DE VISÃO MMPROJ (TIER 3) (8)
 
 | Modelo VLM | Quant | Tamanho | Projetor Sidecar Pareado | Status Multimodal |
 | :--- | :---: | :---: | :---: | :--- |
@@ -142,7 +171,7 @@ Aferição de integridade lógica necessária para subagentes executivos e MCP T
 
 ---
 
-## ⚡ 5. ACELERAÇÃO ESPECULATIVA & MODELOS DRAFTER (TIER 4) (3)
+## ⚡ 6. ACELERAÇÃO ESPECULATIVA & MODELOS DRAFTER (TIER 4) (3)
 
 | Modelo Drafter | Tamanho | Taxa de Aceitação Alpha (α) | Speedup Projetado | Veredito FinOps |
 | :--- | :---: | :---: | :---: | :--- |
