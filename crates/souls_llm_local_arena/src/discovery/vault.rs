@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
 use tracing::info;
 use crate::domain::model::ModelDescriptor;
-use crate::domain::result::HardwareProfileResult;
+use crate::domain::result::{CognitiveEvalResult, HardwareProfileResult};
 use crate::error::ArenaError;
 
 /// Resolves the heuristic vault database path.
@@ -252,6 +252,62 @@ impl VaultManager {
         .bind(res.tps)
         .bind(res.peak_vram_mb)
         .bind(res.ram_mb)
+        .bind(res.e3_score)
+        .bind(&res.status)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Records cognitive evaluation result into the vault.
+    pub async fn record_cognitive_eval(
+        &self,
+        res: &CognitiveEvalResult,
+    ) -> Result<(), ArenaError> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64;
+
+        // 1. Update model_registry specific track scores
+        let col_score = if res.track.contains("2A") || res.track.contains("RustAst") {
+            "score_code_ast"
+        } else if res.track.contains("2B") || res.track.contains("Json") {
+            "score_json_tools"
+        } else {
+            "score_reasoning"
+        };
+        let score_val = res.accuracy_pct / 100.0;
+
+        let update_sql = format!(
+            "UPDATE model_registry SET
+                {} = ?1,
+                last_benchmarked_epoch = ?2
+             WHERE model_id = ?3 OR file_path = ?4;",
+            col_score
+        );
+
+        let _ = sqlx::query(&update_sql)
+            .bind(score_val)
+            .bind(now)
+            .bind(&res.model_id)
+            .bind(&res.model_path)
+            .execute(&self.pool)
+            .await;
+
+        // 2. Insert into chronological telemetry log
+        sqlx::query(
+            "INSERT INTO arena_telemetry (
+                file_path, prompt_id, model_id, benchmark_type, engine, ttft_ms, tpot_ms, tps,
+                vram_peak_mb, ram_mb, e3_score, status, created_at
+            ) VALUES (?1, ?2, ?3, 'CognitiveEval', 'llama-cuda', ?4, 0.0, ?5, 0.0, 0.0, ?6, ?7, datetime('now'));"
+        )
+        .bind(&res.model_path)
+        .bind(&res.track)
+        .bind(&res.model_id)
+        .bind(res.avg_ttft_ms)
+        .bind(res.avg_tps)
         .bind(res.e3_score)
         .bind(&res.status)
         .execute(&self.pool)

@@ -178,7 +178,19 @@ fn extract_thinking_tokens(text: &str) -> (String, u32) {
     (text.trim().to_string(), 0)
 }
 
-fn validate_rust_syntax_delimiters(code: &str) -> bool {
+fn validate_rust_syntax_delimiters(raw_code: &str) -> bool {
+    let code = if let Some(start) = raw_code.find("```") {
+        let after_start = &raw_code[start + 3..];
+        let code_start = after_start.find('\n').map(|idx| &after_start[idx + 1..]).unwrap_or(after_start);
+        if let Some(end) = code_start.find("```") {
+            &code_start[..end]
+        } else {
+            code_start
+        }
+    } else {
+        raw_code
+    };
+
     let mut braces = 0i32;
     let mut parens = 0i32;
     let mut in_str = false;
