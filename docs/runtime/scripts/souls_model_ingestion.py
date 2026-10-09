@@ -47,11 +47,62 @@ def extract_quantization(name: str) -> str:
         return "ONNX"
     return "GGUF"
 
-def extract_parameters(name: str, folder: str) -> str:
+import re
+
+def extract_parameters(name: str, folder: str = "") -> str:
     combined = f"{name} {folder}".lower()
-    for p in ["135m", "360m", "790m", "500m", "1.2b", "1.5b", "1.7b", "2.7b", "3.8b", "2b", "3b", "4b", "7b", "8b", "14b", "27b", "33b"]:
-        if p in combined:
+
+    # 1. Regras explícitas de famílias conhecidas
+    if "phi-4-mini" in combined or "phi-4" in combined:
+        return "3.8B"
+    if "mamba-codestral" in combined or "codestral" in combined:
+        return "7B"
+    if "nemotron-3-nano" in combined:
+        return "4B"
+    if "zamba2-2.7b" in combined or "zamba2" in combined:
+        return "2.7B"
+    if "neuralai-mamba-k1" in combined or "mamba-k1" in combined:
+        return "135M"
+    if "laguna-xs-2.1-dspark" in combined or ("dspark" in combined and "laguna" in combined):
+        return "300M"
+    if "laguna-xs" in combined or "laguna" in combined:
+        return "16B MoE"
+    if "rnj-1" in combined:
+        return "8B"
+    if "bonsai-27b" in combined:
+        return "27B"
+    if "fara1.5-4b" in combined or "fara1.5" in combined:
+        return "4B"
+    if "fara-7b" in combined:
+        return "7B"
+    if "nimbus-4b" in combined:
+        return "4B"
+    if "gemma-4-e2b" in combined or "e2b" in combined:
+        return "2B"
+    if "smollm3-3b" in combined or "smollm3" in combined:
+        return "3B"
+    if "arch-function-chat-3b" in combined:
+        return "3B"
+    if "hy-mt2-7b" in combined:
+        return "7B"
+    if "ui-tars-1.5-7b" in combined or "ui-tars" in combined:
+        return "7B"
+    if "lfm2.5-1.2b" in combined or "lfm2-5-1-2b" in combined:
+        return "1.2B"
+
+    # Remove falsos positivos como 4bit, 8bit, 1bit, 2bit
+    clean = re.sub(r"\b\d+bit\b", "", combined)
+
+    # 2. Busca por números ordenados do maior para o menor para evitar colisões
+    for p in [
+        "70b", "33b", "27b", "16b", "14b", "13b", "12b", "9b", "8b", "7b",
+        "4b", "3.8b", "3.5b", "3b", "2.7b", "2b", "1.7b", "1.5b", "1.2b", "1b", "0.5b",
+        "790m", "500m", "360m", "135m", "300m"
+    ]:
+        pattern = r"(?:^|[^0-9a-z])" + re.escape(p) + r"(?:$|[^0-9a-z])"
+        if re.search(pattern, clean):
             return p.upper()
+
     return "Unknown"
 
 def classify_tier(

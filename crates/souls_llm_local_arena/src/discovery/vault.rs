@@ -222,7 +222,7 @@ impl VaultManager {
                 vram_peak_mb = ?5,
                 e3_score = ?6,
                 last_benchmarked_epoch = ?7
-             WHERE model_id = ?8 OR file_path = ?8;"
+             WHERE model_id = ?8 OR file_path = ?9;"
         )
         .bind(&res.engine)
         .bind(res.ttft_ms)
@@ -232,16 +232,19 @@ impl VaultManager {
         .bind(res.e3_score)
         .bind(now)
         .bind(&res.model_id)
+        .bind(&res.model_path)
         .execute(&self.pool)
         .await?;
 
         // 2. Insert into chronological telemetry log
         sqlx::query(
             "INSERT INTO arena_telemetry (
-                model_id, benchmark_type, engine, ttft_ms, tpot_ms, tps,
+                file_path, prompt_id, model_id, benchmark_type, engine, ttft_ms, tpot_ms, tps,
                 vram_peak_mb, ram_mb, e3_score, status, created_at
-            ) VALUES (?1, 'HardwareProfile', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10);"
+            ) VALUES (?1, ?2, ?3, 'HardwareProfile', ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'));"
         )
+        .bind(&res.model_path)
+        .bind("type1_hardware_profile")
         .bind(&res.model_id)
         .bind(&res.engine)
         .bind(res.ttft_ms)
@@ -251,7 +254,6 @@ impl VaultManager {
         .bind(res.ram_mb)
         .bind(res.e3_score)
         .bind(&res.status)
-        .bind(now)
         .execute(&self.pool)
         .await?;
 
