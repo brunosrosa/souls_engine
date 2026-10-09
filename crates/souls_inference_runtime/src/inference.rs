@@ -336,11 +336,27 @@ impl Tier1GenerativeEngine {
                 if let Some(parent) = bin.parent() {
                     cmd.current_dir(parent);
                 }
-                cmd.arg("-m")
-                    .arg(model_path)
-                    .arg("-p")
-                    .arg(prompt)
-                    .arg("-n")
+                let temp_prompt_file = if prompt.len() > 1024 {
+                    let ts = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_micros();
+                    let p = std::env::temp_dir().join(format!("souls_p_{}_{}.txt", std::process::id(), ts));
+                    let _ = std::fs::write(&p, prompt);
+                    Some(p)
+                } else {
+                    None
+                };
+
+                cmd.arg("-m").arg(model_path);
+
+                if let Some(ref pf) = temp_prompt_file {
+                    cmd.arg("--file").arg(pf);
+                } else {
+                    cmd.arg("-p").arg(prompt);
+                }
+
+                cmd.arg("-n")
                     .arg(params.max_tokens.to_string())
                     .arg("--temp")
                     .arg(params.temperature.to_string())
@@ -361,7 +377,13 @@ impl Tier1GenerativeEngine {
                     .stdout(std::process::Stdio::piped())
                     .stderr(std::process::Stdio::null());
 
-                if let Ok(output) = cmd.output() {
+                let run_result = cmd.output();
+
+                if let Some(ref pf) = temp_prompt_file {
+                    let _ = std::fs::remove_file(pf);
+                }
+
+                if let Ok(output) = run_result {
                     if output.status.success() {
                         let raw = String::from_utf8_lossy(&output.stdout).to_string();
                         let clean = Self::clean_cli_output(&raw, prompt);
