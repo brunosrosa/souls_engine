@@ -83,7 +83,7 @@ async fn run_json_schema_track(
         prompt: "Return a JSON object with action='refactor', target='crates/souls_ast', and confidence=0.98."
             .to_string(),
         system_prompt: Some("You must respond strictly with a valid JSON object matching the schema.".to_string()),
-        max_tokens: 128,
+        max_tokens: 256,
         temperature: 0.1,
         top_p: 0.95,
         json_schema: Some(schema),
@@ -98,7 +98,7 @@ async fn run_json_schema_track(
     let (accuracy_pct, status) = if direct_valid {
         (100.0, "QUALIFIED (Strict)")
     } else if healed_valid {
-        (75.0, "QUALIFIED (Healed)")
+        (85.0, "QUALIFIED (Healed)")
     } else {
         (10.0, "REJECTED")
     };
