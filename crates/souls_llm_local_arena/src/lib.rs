@@ -99,6 +99,16 @@ impl ArenaRunner {
         let engine = SiliconRuntimeEngine::new(Arc::clone(&self.runtime), engine_type);
         run_cognitive_eval(descriptor, &engine, track).await
     }
+
+    /// Executes Type 5 ContextPressure on a target model descriptor.
+    pub async fn run_context_pressure(
+        &self,
+        descriptor: &ModelDescriptor,
+        engine_type: EngineType,
+    ) -> Result<ContextPressureResult, ArenaError> {
+        let engine = SiliconRuntimeEngine::new(Arc::clone(&self.runtime), engine_type);
+        run_context_pressure(descriptor, &engine).await
+    }
 }
 
 impl Default for ArenaRunner {

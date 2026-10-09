@@ -1,5 +1,5 @@
 # 📊 SOULS SILICON OBSERVABILITY & HERMES LLM DOSSIER (v7 Canônica)
-> **Gerado em:** 2026-10-09 17:47:51 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
+> **Gerado em:** 2026-10-09 20:02:44 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
 > **Host Físico:** Intel Core i9-9880H (AVX2) | 32GB RAM | NVIDIA GeForce RTX 2060m (6GB GDDR6, WDDM 3.x)
 > **Governança:** ADR-004 (Teto Útil WDDM 5.2GB) & ADR-007 (Desacoplamento dos Benchmark Types 1 a 5)
 
@@ -14,13 +14,13 @@ Esta matriz classifica exclusivamente os modelos de **Tier 1** (Live Chat, Codin
 | 2 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | **44.1** | 1695.7 | 1234 MB | 4060 MB | 4794.68 | 🟢 CANDIDATO PRINCIPAL HERMES |
 | 3 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | **37.8** | 2400.1 | 1233 MB | 4061 MB | 4692.41 | 🟢 CANDIDATO PRINCIPAL HERMES |
 | 4 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | **35.4** | 2081.5 | 1201 MB | 4093 MB | 5114.44 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 5 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | **34.7** | 11046.0 | 1247 MB | 4047 MB | 3248.92 | 🔵 SUBAGENTE DE SUPORTE |
-| 6 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | **32.8** | 2833.9 | 1203 MB | 4091 MB | 3925.39 | 🔵 SUBAGENTE DE SUPORTE |
-| 7 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | **32.6** | 1792.1 | 1200 MB | 4094 MB | 5080.50 | 🔵 SUBAGENTE DE SUPORTE |
-| 8 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | **30.8** | 2640.5 | 1205 MB | 4089 MB | 3710.82 | 🔵 SUBAGENTE DE SUPORTE |
-| 9 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | **28.4** | 2852.5 | 353 MB | 4941 MB | 2654.37 | 🔵 SUBAGENTE DE SUPORTE |
-| 10 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | **28.1** | 2338.9 | 753 MB | 4541 MB | 3074.59 | 🔵 SUBAGENTE DE SUPORTE |
-| 11 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | **26.4** | 3966.4 | 1205 MB | 4089 MB | 2859.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | **32.8** | 2833.9 | 1203 MB | 4091 MB | 3925.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 6 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | **32.6** | 1792.1 | 1200 MB | 4094 MB | 5080.50 | 🔵 SUBAGENTE DE SUPORTE |
+| 7 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | **30.8** | 2640.5 | 1205 MB | 4089 MB | 3710.82 | 🔵 SUBAGENTE DE SUPORTE |
+| 8 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | **29.8** | 9468.0 | 1069 MB | 4225 MB | 3369.94 | 🔵 SUBAGENTE DE SUPORTE |
+| 9 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | **28.1** | 2338.9 | 753 MB | 4541 MB | 3074.59 | 🔵 SUBAGENTE DE SUPORTE |
+| 10 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | **26.4** | 3966.4 | 1205 MB | 4089 MB | 2859.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 11 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | **26.0** | 2604.5 | 322 MB | 4972 MB | 2779.72 | 🔵 SUBAGENTE DE SUPORTE |
 | 12 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | **25.7** | 1738.5 | 1203 MB | 4091 MB | 4401.66 | 🔵 SUBAGENTE DE SUPORTE |
 | 13 | `mamba-codestral-7b-instruct-agnuxo` | 7B | `Q4_K_M` | **25.5** | 2336.0 | 1789 MB | 3505 MB | 4078.03 | 🔵 SUBAGENTE DE SUPORTE |
 | 14 | `falcon3-mamba-7b-instruct-i1-iq3-m` | 7B | `IQ3_M` | **25.0** | 6703.1 | 1233 MB | 4061 MB | 2544.45 | 🔵 SUBAGENTE DE SUPORTE |
@@ -41,13 +41,13 @@ Esta matriz classifica exclusivamente os modelos de **Tier 1** (Live Chat, Codin
 | 2 | `arch-function-chat-3b-q5-k-m` | `Q5_K_M` | 2.07 GB | `llama-cuda` | 44.1 | 1695.7 | 1234 MB | 4794.68 | 🟢 CANDIDATO PRINCIPAL HERMES |
 | 3 | `huggingfacetb-smollm3-3b-q5-k-m` | `Q5_K_M` | 2.06 GB | `llama-cuda` | 37.8 | 2400.1 | 1233 MB | 4692.41 | 🟢 CANDIDATO PRINCIPAL HERMES |
 | 4 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | `Q4_K_M` | 2.60 GB | `llama-cuda` | 35.4 | 2081.5 | 1201 MB | 5114.44 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 5 | `phi-4-mini-instruct-q4-k-m` | `Q4_K_M` | 2.32 GB | `llama-cuda` | 34.7 | 11046.0 | 1247 MB | 3248.92 | 🔵 SUBAGENTE DE SUPORTE |
-| 6 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | `Q4_K_M` | 2.33 GB | `llama-cuda` | 32.8 | 2833.9 | 1203 MB | 3925.39 | 🔵 SUBAGENTE DE SUPORTE |
-| 7 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | `I1-Q4_K_S` | 2.45 GB | `llama-cuda` | 32.6 | 1792.1 | 1200 MB | 5080.50 | 🔵 SUBAGENTE DE SUPORTE |
-| 8 | `phi-4-mini-instruct-q5-k-m` | `Q5_K_M` | 2.65 GB | `llama-cuda` | 30.8 | 2640.5 | 1205 MB | 3710.82 | 🔵 SUBAGENTE DE SUPORTE |
-| 9 | `qwen3-5-4b-super-coder-q4-0` | `Q4_0` | 2.43 GB | `llama-cuda` | 28.4 | 2852.5 | 353 MB | 2654.37 | 🔵 SUBAGENTE DE SUPORTE |
-| 10 | `phi-4-mini-reasoning-q4-k-m` | `Q4_K_M` | 2.32 GB | `llama-cuda` | 28.1 | 2338.9 | 753 MB | 3074.59 | 🔵 SUBAGENTE DE SUPORTE |
-| 11 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | `IQ3_M` | 3.33 GB | `llama-cuda` | 26.4 | 3966.4 | 1205 MB | 2859.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | `Q4_K_M` | 2.33 GB | `llama-cuda` | 32.8 | 2833.9 | 1203 MB | 3925.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 6 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | `I1-Q4_K_S` | 2.45 GB | `llama-cuda` | 32.6 | 1792.1 | 1200 MB | 5080.50 | 🔵 SUBAGENTE DE SUPORTE |
+| 7 | `phi-4-mini-instruct-q5-k-m` | `Q5_K_M` | 2.65 GB | `llama-cuda` | 30.8 | 2640.5 | 1205 MB | 3710.82 | 🔵 SUBAGENTE DE SUPORTE |
+| 8 | `phi-4-mini-instruct-q4-k-m` | `Q4_K_M` | 2.32 GB | `llama-cuda` | 29.8 | 9468.0 | 1069 MB | 3369.94 | 🔵 SUBAGENTE DE SUPORTE |
+| 9 | `phi-4-mini-reasoning-q4-k-m` | `Q4_K_M` | 2.32 GB | `llama-cuda` | 28.1 | 2338.9 | 753 MB | 3074.59 | 🔵 SUBAGENTE DE SUPORTE |
+| 10 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | `IQ3_M` | 3.33 GB | `llama-cuda` | 26.4 | 3966.4 | 1205 MB | 2859.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 11 | `qwen3-5-4b-super-coder-q4-0` | `Q4_0` | 2.43 GB | `llama-cuda` | 26.0 | 2604.5 | 322 MB | 2779.72 | 🔵 SUBAGENTE DE SUPORTE |
 | 12 | `mamba-codestral-7b-v0-1-q4-k-m` | `Q4_K_M` | 3.86 GB | `llama-cuda` | 25.7 | 1738.5 | 1203 MB | 4401.66 | 🔵 SUBAGENTE DE SUPORTE |
 | 13 | `mamba-codestral-7b-instruct-agnuxo` | `Q4_K_M` | 4.07 GB | `llama-cuda` | 25.5 | 2336.0 | 1789 MB | 4078.03 | 🔵 SUBAGENTE DE SUPORTE |
 | 14 | `falcon3-mamba-7b-instruct-i1-iq3-m` | `IQ3_M` | 3.05 GB | `llama-cuda` | 25.0 | 6703.1 | 1233 MB | 2544.45 | 🔵 SUBAGENTE DE SUPORTE |
@@ -57,11 +57,11 @@ Esta matriz classifica exclusivamente os modelos de **Tier 1** (Live Chat, Codin
 
 | # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `bitnet-b1.58-2b-4t` | `I2_S` | 1.11 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 2 | `deepseek-r1-distill-qwen-1-5b-q8-0` | `Q8_0` | 1.76 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 3 | `lfm2-5-1-2b-instruct-q8-0` | `Q8_0` | 1.16 GB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 4 | `mamba-790m-hf-q4-k-m` | `Q4_K_M` | 459.3 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
-| 5 | `smollm2-360m-instruct-q8-0` | `Q8_0` | 368.5 MB | `llama.cpp` | N/A | N/A | 0 MB | N/A | 🟡 AGUARDANDO BENCHMARK |
+| 1 | `bitnet-b1.58-2b-4t` | `I2_S` | 1.11 GB | `llama-cpu` | 65.0 | 605.1 | 1143 MB | 6970.87 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 2 | `smollm2-360m-instruct-q8-0` | `Q8_0` | 368.5 MB | `llama-cpu` | 51.2 | 441.4 | 1117 MB | 5925.90 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 3 | `mamba-790m-hf-q4-k-m` | `Q4_K_M` | 459.3 MB | `llama-cpu` | 22.7 | 780.9 | 1117 MB | 659.38 | 🔵 SUBAGENTE DE SUPORTE |
+| 4 | `lfm2-5-1-2b-instruct-q8-0` | `Q8_0` | 1.16 GB | `llama-cpu` | 15.1 | 994.6 | 1114 MB | 228.67 | 🟠 CADÊNCIA LENTA |
+| 5 | `deepseek-r1-distill-qwen-1-5b-q8-0` | `Q8_0` | 1.76 GB | `llama-cpu` | 12.6 | 1265.1 | 1138 MB | 124.58 | 🟠 CADÊNCIA LENTA |
 ### 🎯 Tier 0
 
 | # | Identificador | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
@@ -107,23 +107,23 @@ Aferição de integridade lógica necessária para subagentes executivos e MCP T
 | `arch-function-chat-3b-q5-k-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `huggingfacetb-smollm3-3b-q5-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `phi-4-mini-instruct-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `phi-4-mini-instruct-q5-k-m` | Tier 1 | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `phi-4-mini-instruct-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `phi-4-mini-reasoning-q4-k-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `mamba-codestral-7b-instruct-agnuxo` | Tier 1 | 20% | 10% | 90% | 🔴 Falha em Validação Estrita |
 | `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `nvidia-nemotron-3-nano-4b-q4-k-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `hy-mt2-7b-q4-k-m` | Tier 1 | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `bitnet-b1.58-2b-4t` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
-| `deepseek-r1-distill-qwen-1-5b-q8-0` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
-| `lfm2-5-1-2b-instruct-q8-0` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
-| `mamba-790m-hf-q4-k-m` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
 | `smollm2-360m-instruct-q8-0` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
+| `mamba-790m-hf-q4-k-m` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
+| `lfm2-5-1-2b-instruct-q8-0` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
+| `deepseek-r1-distill-qwen-1-5b-q8-0` | Tier 0.5 | N/A | N/A | N/A | 🟡 Aguardando Bateria Type 2 |
 
 ---
 

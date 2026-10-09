@@ -37,13 +37,15 @@ impl ArenaInferEngine for SiliconRuntimeEngine {
 
         match self.engine_type {
             EngineType::LlamaCppCuda => {
-                let is_cognitive_eval = params.json_schema.is_some()
+                let is_generation_eval = params.json_schema.is_some()
                     || params.prompt.contains("enum State")
                     || params.prompt.contains("Return a JSON")
                     || params.prompt.contains("Desktop Window Manager")
+                    || params.prompt.contains("SOULS-DELTA-7749-KEY")
+                    || params.prompt.contains("Question:")
                     || params.max_tokens > 64;
 
-                if is_cognitive_eval && descriptor.file_path.exists() {
+                if is_generation_eval && descriptor.file_path.exists() {
                     let gen_params = GenParams {
                         max_tokens: params.max_tokens,
                         temperature: params.temperature,

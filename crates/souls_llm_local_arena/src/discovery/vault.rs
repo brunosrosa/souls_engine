@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
 use tracing::info;
 use crate::domain::model::ModelDescriptor;
-use crate::domain::result::{CognitiveEvalResult, HardwareProfileResult};
+use crate::domain::result::{CognitiveEvalResult, ContextPressureResult, HardwareProfileResult};
 use crate::error::ArenaError;
 
 /// Resolves the heuristic vault database path.
@@ -315,4 +315,27 @@ impl VaultManager {
 
         Ok(())
     }
+
+    /// Records context pressure evaluation result into the vault.
+    pub async fn record_context_pressure(
+        &self,
+        res: &ContextPressureResult,
+    ) -> Result<(), ArenaError> {
+        let max_ctx = res.max_effective_context as f64;
+        sqlx::query(
+            "INSERT INTO arena_telemetry (
+                file_path, prompt_id, model_id, benchmark_type, engine, ttft_ms, tpot_ms, tps,
+                vram_peak_mb, ram_mb, e3_score, status, created_at
+            ) VALUES (?1, 'type5_needle_pressure', ?2, 'ContextPressure', 'llama-cuda', 0.0, 0.0, 0.0, 0.0, 0.0, ?3, ?4, datetime('now'));"
+        )
+        .bind(&res.model_id)
+        .bind(&res.model_id)
+        .bind(max_ctx)
+        .bind(&res.status)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
 }
+
