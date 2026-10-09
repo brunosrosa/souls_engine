@@ -42,6 +42,18 @@ pub fn heal_json_response(raw: &str) -> Result<Value, InferenceError> {
         return Ok(v);
     }
 
+    // 5. Try extracting balanced JSON boundary if conversational trailers follow
+    if let Some(balanced) = find_balanced_json_slice(candidate) {
+        if let Ok(v) = serde_json::from_str::<Value>(balanced) {
+            return Ok(v);
+        }
+        let cleaned = remove_trailing_commas(balanced);
+        let healed = apply_stack_healing(&cleaned);
+        if let Ok(v) = serde_json::from_str::<Value>(&healed) {
+            return Ok(v);
+        }
+    }
+
     let cleaned = remove_trailing_commas(candidate);
     let healed_str = apply_stack_healing(&cleaned);
 
@@ -54,18 +66,66 @@ pub fn heal_json_response(raw: &str) -> Result<Value, InferenceError> {
     })
 }
 
+/// Identifies the first cleanly balanced JSON object or array slice.
+fn find_balanced_json_slice(input: &str) -> Option<&str> {
+    let mut stack = Vec::new();
+    let mut in_string = false;
+    let mut escaped = false;
+    let mut started = false;
+
+    for (idx, c) in input.char_indices() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == '"' {
+                in_string = false;
+            }
+        } else {
+            match c {
+                '"' => in_string = true,
+                '{' => {
+                    started = true;
+                    stack.push('}');
+                }
+                '[' => {
+                    started = true;
+                    stack.push(']');
+                }
+                '}' | ']' => {
+                    if let Some(expected) = stack.pop() {
+                        if expected == c && stack.is_empty() && started {
+                            let end_idx = idx + c.len_utf8();
+                            return Some(&input[..end_idx]);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
 /// Strips markdown code fences (```json ... ``` or ``` ... ```).
 fn strip_markdown_fences(input: &str) -> &str {
-    let mut s = input;
-    if let Some(start) = s.find("```") {
-        let after_ticks = &s[start + 3..];
-        // Skip language tag (e.g. "json\n")
-        let content_start = if let Some(newline_pos) = after_ticks.find('\n') {
-            newline_pos + 1
-        } else {
-            0
-        };
-        s = &after_ticks[content_start..];
+    let trimmed = input.trim();
+    let first_json = trimmed.find(['{', '[']);
+    let first_fence = trimmed.find("```");
+
+    let mut s = trimmed;
+    if let Some(fence_idx) = first_fence {
+        if first_json.map_or(true, |j| fence_idx < j) {
+            // Fence is genuinely before the JSON start
+            let after_ticks = &s[fence_idx + 3..];
+            let content_start = if let Some(newline_pos) = after_ticks.find('\n') {
+                newline_pos + 1
+            } else {
+                0
+            };
+            s = &after_ticks[content_start..];
+        }
     }
 
     if let Some(end) = s.rfind("```") {
@@ -260,5 +320,14 @@ mod tests {
         let val = heal_json_response(raw).expect("Trailing colon healing failed");
         assert_eq!(val["id"], 100);
         assert!(val["pending_key"].is_null());
+    }
+
+    #[test]
+    fn test_heal_conversational_trailer() {
+        let raw = "{\n  \"action\": \"refactor\",\n  \"target\": \"crates/souls_ast\",\n  \"confidence\": 0.98\n}\n```\n\nThis is a valid JSON object.";
+        let val = heal_json_response(raw).expect("Conversational trailer healing failed");
+        assert_eq!(val["action"], "refactor");
+        assert_eq!(val["target"], "crates/souls_ast");
+        assert_eq!(val["confidence"], 0.98);
     }
 }
