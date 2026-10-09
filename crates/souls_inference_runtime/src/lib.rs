@@ -24,8 +24,10 @@ pub use gguf_mmap::{
 };
 pub use healing::heal_json_response;
 pub use inference::{
-    get_or_compile_grammar, grammar_cache, CompiledGrammar, GenOutput, GenParams,
-    HardwareProfileMetrics, KvCacheConfig, KvCacheType, Tier1GenerativeEngine,
+    get_or_compile_grammar, grammar_cache, resolve_llama_bench_binary,
+    resolve_llama_cli_binary, resolve_llama_completion_binary, CompiledGrammar,
+    GenOutput, GenParams, HardwareProfileMetrics, KvCacheConfig, KvCacheType,
+    Tier1GenerativeEngine,
 };
 pub use llamacpp::{
     LlamaBatchLayout, LlamaLogitProber, LogitProbingOutput,
@@ -103,6 +105,20 @@ impl InferenceRuntime {
 
         let res = self.tier1.generate(prompt, params, &mut wd)?;
         Ok(res.text)
+    }
+
+    /// Physical token generation against a designated model path and prompt.
+    pub async fn infer_model_generate(
+        &self,
+        model_path: &Path,
+        prompt: &str,
+        params: &GenParams,
+    ) -> Result<GenOutput, InferenceError> {
+        let mut wd = self.watchdog.lock().map_err(|_| {
+            InferenceError::OnnxError("Watchdog lock poisoned".to_string())
+        })?;
+
+        self.tier1.generate_with_model(model_path, prompt, params, &mut wd)
     }
 
     /// Zero-copy O(1) GGUF metadata inspection backed by the bounded handle pool.
