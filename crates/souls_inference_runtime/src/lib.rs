@@ -25,7 +25,7 @@ pub use gguf_mmap::{
 pub use healing::heal_json_response;
 pub use inference::{
     get_or_compile_grammar, grammar_cache, CompiledGrammar, GenOutput, GenParams,
-    KvCacheConfig, KvCacheType, Tier1GenerativeEngine,
+    HardwareProfileMetrics, KvCacheConfig, KvCacheType, Tier1GenerativeEngine,
 };
 pub use llamacpp::{
     LlamaBatchLayout, LlamaLogitProber, LogitProbingOutput,
@@ -113,6 +113,17 @@ impl InferenceRuntime {
     /// In-flight JSON healing pipeline.
     pub fn heal_json(&self, raw: &str) -> Result<serde_json::Value, InferenceError> {
         heal_json_response(raw)
+    }
+
+    /// Measures physical hardware profiling metrics (TTFT, TPOT, TPS) on bare-metal silicion.
+    pub fn profile_hardware(
+        &self,
+        model_path: &Path,
+        n_prompt: u32,
+        n_gen: u32,
+        force_cpu: bool,
+    ) -> Result<HardwareProfileMetrics, InferenceError> {
+        self.tier1.profile_model_hardware(model_path, n_prompt, n_gen, force_cpu)
     }
 }
 

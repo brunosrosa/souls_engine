@@ -103,6 +103,56 @@ pub struct GenOutput {
     pub kv_cache_mode: String,
 }
 
+/// Physical hardware profiling metrics extracted from bare-metal execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardwareProfileMetrics {
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    pub ttft_ms: f64,
+    pub tpot_ms: f64,
+    pub tps: f64,
+    pub prompt_tps: f64,
+    pub model_size_bytes: u64,
+    pub model_n_params: u64,
+    pub backend: String,
+    pub cold_load_ms: f64,
+}
+
+/// Discovers official native llama-bench executables in host system.
+pub fn resolve_llama_bench_binary() -> Option<PathBuf> {
+    let candidates = [
+        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10679-win32-x64\llama-bench.exe",
+        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10362-win32-x64\llama-bench.exe",
+        "llama-bench.exe",
+        "llama-bench",
+    ];
+    for c in &candidates {
+        let p = PathBuf::from(c);
+        if p.exists() {
+            return Some(p);
+        }
+    }
+    None
+}
+
+/// Discovers official native llama-cli / completion executables in host system.
+pub fn resolve_llama_cli_binary() -> Option<PathBuf> {
+    let candidates = [
+        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10679-win32-x64\llama-cli.exe",
+        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10679-win32-x64\llama-completion.exe",
+        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10362-win32-x64\llama-cli.exe",
+        "llama-cli.exe",
+        "llama-cli",
+    ];
+    for c in &candidates {
+        let p = PathBuf::from(c);
+        if p.exists() {
+            return Some(p);
+        }
+    }
+    None
+}
+
 /// Tier 1 Generative Engine.
 pub struct Tier1GenerativeEngine {
     model_path: Option<PathBuf>,
@@ -240,8 +290,50 @@ impl Tier1GenerativeEngine {
         })
     }
 
-    /// Internal upstream execution pass.
+    /// Physical upstream execution pass using host llama-cli runner or fallback.
     fn execute_upstream_pass(&self, prompt: &str, params: &GenParams) -> String {
+        if let Some(ref model_path) = self.model_path {
+            if model_path.exists() {
+                if let Some(bin) = resolve_llama_cli_binary() {
+                    let mut cmd = std::process::Command::new(&bin);
+                    if let Some(parent) = bin.parent() {
+                        cmd.current_dir(parent);
+                    }
+                    cmd.arg("-m")
+                        .arg(model_path)
+                        .arg("-p")
+                        .arg(prompt)
+                        .arg("-n")
+                        .arg(params.max_tokens.to_string())
+                        .arg("--temp")
+                        .arg(params.temperature.to_string())
+                        .arg("-ngl")
+                        .arg(self.gpu_layers.to_string())
+                        .arg("-ctk")
+                        .arg(self.kv_config.type_k.as_str())
+                        .arg("-ctv")
+                        .arg(self.kv_config.type_v.as_str())
+                        .arg("-fa")
+                        .arg(if self.kv_config.flash_attention { "on" } else { "off" })
+                        .arg("--log-disable")
+                        .arg("--single-turn")
+                        .stdin(std::process::Stdio::null())
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::null());
+
+                    if let Ok(output) = cmd.output() {
+                        if output.status.success() {
+                            let raw = String::from_utf8_lossy(&output.stdout).to_string();
+                            let clean = Self::clean_cli_output(&raw, prompt);
+                            if !clean.trim().is_empty() {
+                                return clean;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if let Some(ref schema) = params.json_schema {
             // Uses cached pre-compiled grammar template
             let grammar = get_or_compile_grammar(schema);
@@ -255,6 +347,153 @@ impl Tier1GenerativeEngine {
                 self.kv_config.type_v.as_str()
             )
         }
+    }
+
+    /// Cleans standard prompt banners and metric summaries from CLI output.
+    fn clean_cli_output(raw: &str, prompt: &str) -> String {
+        let text = if let Some(idx) = raw.find(prompt) {
+            &raw[idx + prompt.len()..]
+        } else if let Some(idx) = raw.rfind('>') {
+            &raw[idx + 1..]
+        } else {
+            raw
+        };
+
+        let mut lines = Vec::new();
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("[ Prompt:")
+                || trimmed.starts_with("Exiting...")
+                || trimmed.starts_with("available commands:")
+                || trimmed.starts_with("build      :")
+                || trimmed.starts_with("model      :")
+                || trimmed.starts_with("ftype      :")
+                || trimmed.starts_with("modalities :")
+                || trimmed.starts_with("Loading model...")
+            {
+                continue;
+            }
+            lines.push(line);
+        }
+        lines.join("\n").trim().to_string()
+    }
+
+    /// Measures true hardware latency, TTFT, TPOT, and sustained TPS using native llama-bench.
+    pub fn profile_model_hardware(
+        &self,
+        model_path: &Path,
+        n_prompt: u32,
+        n_gen: u32,
+        force_cpu: bool,
+    ) -> Result<HardwareProfileMetrics, InferenceError> {
+        let bin = resolve_llama_bench_binary().ok_or_else(|| {
+            InferenceError::LlamaCppError("llama-bench executable not found in host tools".to_string())
+        })?;
+
+        if !model_path.exists() {
+            return Err(InferenceError::ModelNotFound(model_path.to_string_lossy().to_string()));
+        }
+
+        let mut cmd = std::process::Command::new(&bin);
+        if let Some(parent) = bin.parent() {
+            cmd.current_dir(parent);
+        }
+
+        let ngl = if force_cpu { 0 } else { self.gpu_layers };
+        cmd.arg("-m")
+            .arg(model_path)
+            .arg("-p")
+            .arg(n_prompt.to_string())
+            .arg("-n")
+            .arg(n_gen.to_string())
+            .arg("-ngl")
+            .arg(ngl.to_string())
+            .arg("-ctk")
+            .arg(self.kv_config.type_k.as_str())
+            .arg("-ctv")
+            .arg(self.kv_config.type_v.as_str())
+            .arg("-fa")
+            .arg(if self.kv_config.flash_attention { "on" } else { "off" })
+            .arg("-r")
+            .arg("1")
+            .arg("--no-warmup")
+            .arg("-o")
+            .arg("json")
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null());
+
+        let output = cmd.output().map_err(|e| {
+            InferenceError::LlamaCppError(format!("Failed to execute llama-bench: {}", e))
+        })?;
+
+        if !output.status.success() {
+            return Err(InferenceError::LlamaCppError(format!(
+                "llama-bench exited with error code: {:?}",
+                output.status.code()
+            )));
+        }
+
+        let stdout_str = String::from_utf8_lossy(&output.stdout);
+        let json_start = stdout_str.find('[').ok_or_else(|| {
+            InferenceError::LlamaCppError("No valid JSON output found from llama-bench".to_string())
+        })?;
+        let json_slice = &stdout_str[json_start..];
+        let items: Vec<serde_json::Value> = serde_json::from_str(json_slice).map_err(|e| {
+            InferenceError::LlamaCppError(format!("Failed to parse llama-bench JSON telemetry: {}", e))
+        })?;
+
+        let mut ttft_ms = 0.0;
+        let mut prompt_tps = 0.0;
+        let mut tps = 0.0;
+        let mut tpot_ms = 0.0;
+        let mut model_size_bytes = 0u64;
+        let mut model_n_params = 0u64;
+        let mut backend = "UNKNOWN".to_string();
+
+        for item in &items {
+            if let Some(sz) = item.get("model_size").and_then(|v| v.as_u64()) {
+                model_size_bytes = sz;
+            }
+            if let Some(params) = item.get("model_n_params").and_then(|v| v.as_u64()) {
+                model_n_params = params;
+            }
+            if let Some(b) = item.get("backends").and_then(|v| v.as_str()) {
+                backend = b.to_string();
+            }
+
+            let p = item.get("n_prompt").and_then(|v| v.as_u64()).unwrap_or(0);
+            let g = item.get("n_gen").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            if p > 0 && g == 0 {
+                if let Some(avg_ns) = item.get("avg_ns").and_then(|v| v.as_f64()) {
+                    ttft_ms = avg_ns / 1_000_000.0;
+                }
+                if let Some(avg_ts) = item.get("avg_ts").and_then(|v| v.as_f64()) {
+                    prompt_tps = avg_ts;
+                }
+            } else if g > 0 {
+                if let Some(avg_ts) = item.get("avg_ts").and_then(|v| v.as_f64()) {
+                    tps = avg_ts;
+                    if tps > 0.0 {
+                        tpot_ms = 1000.0 / tps;
+                    }
+                }
+            }
+        }
+
+        Ok(HardwareProfileMetrics {
+            prompt_tokens: n_prompt,
+            completion_tokens: n_gen,
+            ttft_ms,
+            tpot_ms,
+            tps,
+            prompt_tps,
+            model_size_bytes,
+            model_n_params,
+            backend,
+            cold_load_ms: 0.0,
+        })
     }
 
     /// Generates a valid JSON template matching the provided JSON Schema.
