@@ -472,12 +472,23 @@ impl Tier1GenerativeEngine {
 
     /// Cleans standard prompt banners and metric summaries from CLI output.
     fn clean_cli_output(raw: &str, prompt: &str) -> String {
-        let text = if let Some(idx) = raw.find(prompt) {
-            &raw[idx + prompt.len()..]
-        } else if let Some(idx) = raw.rfind('>') {
-            &raw[idx + 1..]
+        let raw_norm = raw.replace("\r\n", "\n");
+        let prompt_norm = prompt.replace("\r\n", "\n");
+
+        let text = if let Some(idx) = raw_norm.find(&prompt_norm) {
+            &raw_norm[idx + prompt_norm.len()..]
         } else {
-            raw
+            // Fallback: match by the trailing snippet of the prompt (e.g. "Answer:" or question end)
+            let prompt_tail = if prompt_norm.len() > 64 {
+                &prompt_norm[prompt_norm.len() - 64..]
+            } else {
+                &prompt_norm
+            };
+            if let Some(idx) = raw_norm.find(prompt_tail) {
+                &raw_norm[idx + prompt_tail.len()..]
+            } else {
+                &raw_norm
+            }
         };
 
         let mut lines = Vec::new();
