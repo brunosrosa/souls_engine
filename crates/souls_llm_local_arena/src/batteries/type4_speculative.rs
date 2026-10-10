@@ -35,7 +35,9 @@ pub async fn run_speculative_draft(
 
     if let Some(drafter) = drafter_descriptor {
         let is_same_family = (model_lower.contains("qwen") && drafter.model_id.to_lowercase().contains("qwen"))
-            || (model_lower.contains("llama") && drafter.model_id.to_lowercase().contains("llama"));
+            || (model_lower.contains("llama") && drafter.model_id.to_lowercase().contains("llama"))
+            || (model_lower.contains("laguna") && drafter.model_id.to_lowercase().contains("laguna"))
+            || (model_lower.contains("bonsai") && drafter.model_id.to_lowercase().contains("bonsai"));
 
         if is_same_family {
             let acceptance_rate_alpha = 0.58;
