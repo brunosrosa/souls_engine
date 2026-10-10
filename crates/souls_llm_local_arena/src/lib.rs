@@ -218,5 +218,21 @@ mod tests {
 
         let json_res = run_cognitive_eval(&desc, &engine, "json").await.unwrap();
         assert!(json_res.json_strict_valid);
+
+        let ifeval_res = run_cognitive_eval(&desc, &engine, "ifeval").await.unwrap();
+        assert_eq!(ifeval_res.track, "StrictConstraintIFEval (2D)");
+
+        let bug_res = run_cognitive_eval(&desc, &engine, "bughunt").await.unwrap();
+        assert_eq!(bug_res.track, "BugHuntingConcurrency (2E)");
+
+        let mcp_res = run_cognitive_eval(&desc, &engine, "mcp").await.unwrap();
+        assert_eq!(mcp_res.track, "McpToolAmbiguity (2F)");
+
+        let pt_res = run_cognitive_eval(&desc, &engine, "pt").await.unwrap();
+        assert_eq!(pt_res.track, "PortugueseTechnicalFluency (2G)");
+
+        let hard_suite = run_cognitive_eval(&desc, &engine, "hard").await.unwrap();
+        assert_eq!(hard_suite.track, "HardEvalDiscriminatoryComposite (2H)");
     }
 }
+

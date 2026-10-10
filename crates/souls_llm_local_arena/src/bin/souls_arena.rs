@@ -206,6 +206,19 @@ async fn handle_run(args: &[String]) -> ExitCode {
                 }
                 Err(e) => eprintln!("    [!] Erro no Type 2 (CoT) para {}: {}", m.model_id, e),
             }
+            match runner.run_cognitive_eval(m, engine_type, "hard").await {
+                Ok(res) => {
+                    if let Some(ref v) = vault {
+                        if let Err(ve) = v.record_cognitive_eval(&res).await {
+                            eprintln!("    [!] Erro ao registrar Type 2 (Hard Eval) no vault: {}", ve);
+                        } else {
+                            println!("    [✓] Telemetria Type 2 (HardEval Discriminatório: {:.1}%) registrada no vault.", res.accuracy_pct);
+                        }
+                    }
+                    cog_results.push(res);
+                }
+                Err(e) => eprintln!("    [!] Erro no Type 2 (Hard Eval) para {}: {}", m.model_id, e),
+            }
         }
 
         if bench_type == BenchmarkType::Type3Vision || bench_type == BenchmarkType::All {
