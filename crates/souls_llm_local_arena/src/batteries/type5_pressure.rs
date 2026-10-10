@@ -17,7 +17,7 @@ fn build_needle_prompt(target_tokens: usize) -> (String, String) {
         NEEDLE_TOKEN
     );
 
-    let query = "\n\nQuestion: What is the secret master authentication token for the Souls Engine enclave mentioned in the text above? Answer strictly with the token code and nothing else.\nAnswer: ";
+    let query = "\n\nQuestion: What is the secret master authentication token for the Souls Engine enclave mentioned in the text above? Answer strictly with the token code and nothing else.\nAnswer: <think></think>";
 
     let prompt = format!("{}{}{}{}", filler_half, needle_block, filler_half, query);
     (prompt, NEEDLE_TOKEN.to_string())
@@ -35,7 +35,7 @@ pub async fn run_context_pressure(
     let params_4k = InferenceRunParams {
         prompt: prompt_4k,
         system_prompt: Some("You are a high-precision enclave verification AI.".to_string()),
-        max_tokens: 32,
+        max_tokens: 64,
         temperature: 0.0,
         top_p: 1.0,
         json_schema: None,
@@ -50,7 +50,7 @@ pub async fn run_context_pressure(
         let params_8k = InferenceRunParams {
             prompt: prompt_8k,
             system_prompt: Some("You are a high-precision enclave verification AI.".to_string()),
-            max_tokens: 32,
+            max_tokens: 64,
             temperature: 0.0,
             top_p: 1.0,
             json_schema: None,
