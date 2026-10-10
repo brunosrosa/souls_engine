@@ -1,5 +1,5 @@
 # 📊 SOULS SILICON OBSERVABILITY & HERMES LLM DOSSIER (v7 Canônica)
-> **Gerado em:** 2026-10-10 00:51:41 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
+> **Gerado em:** 2026-10-10 19:31:36 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
 > **Host Físico Bare-Metal:** Intel Core i9-9880H (AVX2) | 32GB RAM DDR4 | NVIDIA GeForce RTX 2060m (6GB GDDR6, WDDM 3.x)
 > **Governança:** ADR-004 (Teto Útil WDDM 5.2GB), ADR-007 (Desacoplamento Types 1 a 5) & Item 5 da Cost Matrix Specification
 
@@ -114,11 +114,11 @@ Um modelo $A$ **domina** $B$ na Fronteira de Pareto se $S_{\text{task}}(A) \ge S
 | 1 | `smollm2-135m-reasoning-5k-q4-k-m` | Tier 0 | 135M | **84.1** | 0.162 | 109.1 | **149.5 tok/s** | 910 MB | 357.4ms | 🏆 Campeão Absoluto (Qualidade & ROI) |
 | 2 | `smollm-135m-instruct-q4-k-m` | Tier 0 | 135M | **72.8** | 0.170 | 94.0 | **111.2 tok/s** | 910 MB | 305.9ms | 🔗 Fallback Local #1 |
 | 3 | `neuralai-mamba-k1-v3-q4-k-m` | Tier 0 | 135M | **64.4** | 0.192 | 82.1 | **83.7 tok/s** | 913 MB | 352.3ms | 🔗 Fallback Local #2 |
-| 4 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 4B | **59.5** | 0.261 | 72.9 | **51.2 tok/s** | 1276 MB | 254.3ms | ⚪ Alternativa Subordinada |
-| 5 | `gliclass_multilang` | Tier 0 | 77M ONNX | **58.8** | 0.211 | 74.1 | **65.0 tok/s** | 910 MB | 344.3ms | ⚪ Alternativa Subordinada |
-| 6 | `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 4B | **58.2** | 0.275 | 70.8 | **50.1 tok/s** | 1442 MB | 216.5ms | ⚪ Alternativa Subordinada |
-| 7 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 4B | **57.8** | 0.271 | 70.5 | **46.6 tok/s** | 1278 MB | 241.2ms | ⚪ Alternativa Subordinada |
-| 8 | `bitnet-b1.58-2b-4t` | Tier 0.5 | 2B | **56.7** | 0.259 | 69.6 | **65.0 tok/s** | 1143 MB | 605.1ms | ⚪ Alternativa Subordinada |
+| 4 | `bonsai-27b-dspark-q4-1` | Tier 4 | 27B | **61.4** | 0.271 | 74.9 | **62.2 tok/s** | 1741 MB | 117.2ms | ⚪ Alternativa Subordinada |
+| 5 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 4B | **59.5** | 0.261 | 72.9 | **51.2 tok/s** | 1276 MB | 254.3ms | ⚪ Alternativa Subordinada |
+| 6 | `gliclass_multilang` | Tier 0 | 77M ONNX | **58.8** | 0.211 | 74.1 | **65.0 tok/s** | 910 MB | 344.3ms | ⚪ Alternativa Subordinada |
+| 7 | `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 4B | **58.2** | 0.275 | 70.8 | **50.1 tok/s** | 1442 MB | 216.5ms | ⚪ Alternativa Subordinada |
+| 8 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 4B | **57.8** | 0.271 | 70.5 | **46.6 tok/s** | 1278 MB | 241.2ms | ⚪ Alternativa Subordinada |
 
 > 🏆 **Campeão Absoluto de Throughput:** `smollm2-135m-reasoning-5k-q4-k-m` (Throughput recorde de **149.5 tok/s**, **0 MB VRAM dGPU**, ROI: **109.1**).
 > 🔬 **Sensor Epistêmico de Host:** `bitnet-b1.58-2b-4t` (Throughput de **65.0 tok/s** na CPU i9 com quantização ternária 1.58-bit).
@@ -147,7 +147,7 @@ Apresentação canônica e sequencial de todos os modelos físicos categorizados
 | 1 | `smollm2-135m-reasoning-5k-q4-k-m` | 135M | `Q4_K_M` | 100.6 MB | `llama-cpu` | **149.5** | 357.4 | 910 MB | 4384 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
 | 2 | `smollm-135m-instruct-q4-k-m` | 135M | `Q4_K_M` | 100.6 MB | `llama-cpu` | **111.2** | 305.9 | 910 MB | 4384 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
 | 3 | `neuralai-mamba-k1-v3-q4-k-m` | 135M | `Q4_K_M` | 85.7 MB | `llama-cpu` | **83.7** | 352.3 | 913 MB | 4381 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 4 | `gliclass_multilang` | 77M ONNX | `Q4_K_M` | 4.0 MB | `onnx-cpu` | **65.0** | 344.3 | 910 MB | 4384 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 4 | `gliclass_multilang` | 77M ONNX | `ONNX` | 4.0 MB | `onnx-cpu` | **65.0** | 344.3 | 910 MB | 4384 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
 
 ### 🎯 Tier 0.5 — Epistemic Probing & SLM Host Sensors (5 Modelos)
 > **Papel Arquitetural:** Sensor epistêmico de incerteza (entropia de Shannon), extração direta de logits (forward-only prefill sem geração recursiva) e triagens heurísticas leves.
@@ -230,6 +230,13 @@ Aferição de integridade lógica necessária para subagentes executivos e MCP T
 
 | Modelo | Tier | Params | 🦀 Track 2A (Rust AST Code) | 🛠️ Track 2B (MCP JSON Tools) | 🧠 Track 2C (CoT Reasoning) | Veredito Cognitivo |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| `smollm2-135m-reasoning-5k-q4-k-m` | Tier 0 | 135M | 100% | N/A | 100% | 🟢 Aprovado em Sintaxe Estrita |
+| `smollm-135m-instruct-q4-k-m` | Tier 0 | 135M | 100% | 80% | 100% | 🟢 Aprovado em Sintaxe Estrita |
+| `neuralai-mamba-k1-v3-q4-k-m` | Tier 0 | 135M | 100% | N/A | 100% | 🟢 Aprovado em Sintaxe Estrita |
+| `smollm2-360m-instruct-q8-0` | Tier 0.5 | 360M | 100% | N/A | 100% | 🟢 Aprovado em Sintaxe Estrita |
+| `mamba-790m-hf-q4-k-m` | Tier 0.5 | 790M | 100% | N/A | 100% | 🟢 Aprovado em Sintaxe Estrita |
+| `lfm2-5-1-2b-instruct-q8-0` | Tier 0.5 | 1.2B | 100% | N/A | 100% | 🟢 Aprovado em Sintaxe Estrita |
+| `deepseek-r1-distill-qwen-1-5b-q8-0` | Tier 0.5 | 1.5B | 100% | N/A | 100% | 🟢 Aprovado em Sintaxe Estrita |
 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 4B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 4B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `nvidia-nemotron-3-nano-4b-q4-k-m` | Tier 1 | 4B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
@@ -246,6 +253,8 @@ Aferição de integridade lógica necessária para subagentes executivos e MCP T
 | `hy-mt2-7b-q4-k-m` | Tier 1 | 7B | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 7B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 7B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `laguna-xs-2-1-apex-i-compact` | Tier 2 | 16B MoE | 85% | 75% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `rnj-1-instruct-q4-k-m` | Tier 2 | 8B | 85% | 75% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 
 ---
 
@@ -296,14 +305,14 @@ Verificação física de acoplamento de tensores visuais mmproj e latência de p
 | `hy-mt2-7b-q4-k-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
 | `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `microsoft-fara1-5-4b-f16-gguf-q4-k-m` | Tier 3 | 4B | `mmproj-microsoft.Fara1.5-4B.f16.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
-| `deepseek-v4-pro-qwen3-5-4b-mtp-q4-k-s` | Tier 3 | 4B | `mmproj-F32.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
-| `nimbus-4b-q4-k-m` | Tier 3 | 4B | `mmproj-Nimbus-4B-F16.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
-| `gemma-4-e2b-it-ultra-uncensored-heretic-q4-k-m` | Tier 3 | 2B | `gemma-4-E2B-it-mmproj-BF16.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
-| `microsoft-fara-7b-iq3-m` | Tier 3 | 7B | `mmproj-microsoft_Fara-7B-f16.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
-| `bonsai-27b-q1-0-lmstudio` | Tier 3 | 27B | `mmproj-Bonsai-27B-BF16.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
-| `bonsai-27b-q1-0-ai-joe` | Tier 3 | 27B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `gemma-4-e2b-it-q4-k-m` | Tier 3 | 2B | `mmproj-gemma-4-E2B-it-BF16.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
+| `microsoft-fara1-5-4b-f16-gguf-q4-k-m` | Tier 3 | 4B | `C:\Users\rosas\llm_local_models\tier_3_multimodal_vision\microsoft-fara1-5-4b-f16-gguf-q4-k-m\microsoft.Fara1.5-4B.f16.gguf.Q4_K_M.gguf` | 69.4ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
+| `deepseek-v4-pro-qwen3-5-4b-mtp-q4-k-s` | Tier 3 | 4B | `C:\Users\rosas\llm_local_models\tier_3_multimodal_vision\deepseek-v4-pro-qwen3-5-4b-mtp-q4-k-s\DeepSeek-V4-Pro-Qwen3.5-4B-MTP-Q4_K_S.gguf` | 118.9ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
+| `nimbus-4b-q4-k-m` | Tier 3 | 4B | `C:\Users\rosas\llm_local_models\tier_3_multimodal_vision\nimbus-4b-q4-k-m\Nimbus-4B-Q4_K_M.gguf` | 68.5ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
+| `gemma-4-e2b-it-ultra-uncensored-heretic-q4-k-m` | Tier 3 | 2B | `C:\Users\rosas\llm_local_models\tier_3_multimodal_vision\gemma-4-e2b-it-ultra-uncensored-heretic-q4-k-m\gemma-4-E2B-it-ultra-uncensored-heretic-Q4_K_M.gguf` | 93.8ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
+| `microsoft-fara-7b-iq3-m` | Tier 3 | 7B | `C:\Users\rosas\llm_local_models\tier_3_multimodal_vision\microsoft-fara-7b-iq3-m\microsoft_Fara-7B-IQ3_M.gguf` | 121.5ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
+| `bonsai-27b-q1-0-lmstudio` | Tier 3 | 27B | `C:\Users\rosas\llm_local_models\tier_3_multimodal_vision\bonsai-27b-q1-0-lmstudio-community\Bonsai-27B-Q1_0.gguf` | 92.9ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
+| `bonsai-27b-q1-0-ai-joe` | Tier 3 | 27B | `C:\Users\rosas\llm_local_models\tier_3_multimodal_vision\bonsai-27b-q1-0-ai-joe-git\Bonsai-27B-Q1_0.gguf` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `gemma-4-e2b-it-q4-k-m` | Tier 3 | 2B | `C:\Users\rosas\llm_local_models\tier_3_multimodal_vision\gemma-4-e2b-it-q4-k-m\gemma-4-E2B-it-Q4_K_M.gguf` | 98.6ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
 
 ---
 
@@ -328,9 +337,9 @@ Aferição física de speedup por predição multi-token (MTP) e acoplamento de 
 | `hy-mt2-7b-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
 | `falcon3-mamba-7b-instruct-i1-iq3-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `bonsai-27b-dspark-q4-1` | `Standalone Drafter` | N/A | 62.2 tok/s | 1.00x | Drafter Primário |
-| `laguna-xs-2-1-dspark-q4-k-m` | `Standalone Drafter` | N/A | 20.3 tok/s | 1.00x | Drafter Primário |
-| `qwen35-4b-dflash-q4-k-m` | `Standalone Drafter` | N/A | 8.2 tok/s | 1.00x | Drafter Primário |
+| `bonsai-27b-dspark-q4-1` | `C:\Users\rosas\llm_local_models\tier_4_speculative_draft\bonsai-27b-dspark-q4-1\Bonsai-27B-dspark-Q4_1.gguf` | 64.0% | 45.0 tok/s | 64.00x | 🔵 Drafter Pareado Fechado |
+| `laguna-xs-2-1-dspark-q4-k-m` | `C:\Users\rosas\llm_local_models\tier_4_speculative_draft\laguna-xs-2-1-dspark-q4-k-m\Laguna-XS-2.1-DSpark-Q4_K_M.gguf` | 58.0% | 45.0 tok/s | 58.00x | 🔵 Drafter Pareado Fechado |
+| `qwen35-4b-dflash-q4-k-m` | `C:\Users\rosas\llm_local_models\tier_4_speculative_draft\qwen35-4b-dflash-q4-k-m\qwen35-4b-dflash-Q4_K_M.gguf` | 62.0% | 45.0 tok/s | 62.00x | 🔵 Drafter Pareado Fechado |
 
 ---
 
