@@ -235,6 +235,110 @@ CREATE INDEX IF NOT EXISTS idx_checkpoint_session
     ON session_checkpoints (session_id, created_at DESC);
 ```
 
+### 2.8 Base de Dados SSOT do Heuristic Vault (`souls_heuristic_vault.db`)
+
+Governada pela crate `souls_llm_local_arena` para registro do inventário de silício, telemetria física dos 5 Benchmark Types e classificação multi-perfil ratificada no ADR-008.
+
+#### Tabela `model_registry` (Catálogo Unificado de Modelos e Silício)
+
+```sql
+CREATE TABLE IF NOT EXISTS model_registry (
+    file_path TEXT PRIMARY KEY NOT NULL,
+    model_name TEXT NOT NULL,
+    model_id TEXT,
+    tier_classified TEXT,
+    parameters TEXT,
+    quantization TEXT,
+    file_size_bytes INTEGER DEFAULT 0,
+    context_length INTEGER DEFAULT 8192,
+    has_mmproj_sidecar INTEGER DEFAULT 0,
+    mmproj_file_path TEXT,
+    engine_selected TEXT,
+    ttft_ms REAL DEFAULT 0.0,
+    tpot_ms REAL DEFAULT 0.0,
+    tps REAL DEFAULT 0.0,
+    vram_peak_mb REAL DEFAULT 0.0,
+    e3_score REAL DEFAULT 0.0,
+    score_code_ast REAL DEFAULT 0.0,
+    score_json_tools REAL DEFAULT 0.0,
+    score_reasoning REAL DEFAULT 0.0,
+    score_vision_vqa REAL DEFAULT 0.0,
+    mtp_acceptance_rate REAL DEFAULT 0.0,
+    is_active INTEGER DEFAULT 1,
+    last_benchmarked_epoch INTEGER DEFAULT 0,
+    score_profile_coding REAL,
+    score_profile_agentic REAL,
+    score_profile_reasoning REAL,
+    score_profile_fast REAL,
+    silicon_cost_index REAL,
+    roi_silicon_coding REAL,
+    roi_silicon_agentic REAL,
+    roi_silicon_reasoning REAL,
+    roi_silicon_fast REAL,
+    pareto_coding_tag TEXT,
+    pareto_agentic_tag TEXT,
+    pareto_reasoning_tag TEXT,
+    pareto_fast_tag TEXT
+);
+```
+
+#### Tabela `arena_telemetry` (Histórico Cronológico dos 5 Benchmark Types)
+
+```sql
+CREATE TABLE IF NOT EXISTS arena_telemetry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_path TEXT NOT NULL,
+    prompt_id TEXT,
+    model_id TEXT NOT NULL,
+    benchmark_type TEXT NOT NULL,  -- HardwareProfile, CognitiveEval, MultimodalVision, SpeculativeDraft, ContextPressure
+    engine TEXT NOT NULL,          -- llama-cuda, llama-cpu, onnx-cpu
+    ttft_ms REAL DEFAULT 0.0,
+    tpot_ms REAL DEFAULT 0.0,
+    tps REAL DEFAULT 0.0,
+    vram_peak_mb REAL DEFAULT 0.0,
+    ram_mb REAL DEFAULT 0.0,
+    e3_score REAL DEFAULT 0.0,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_telemetry_lookup 
+    ON arena_telemetry (model_id, benchmark_type, id DESC);
+```
+
+#### Tabela `model_task_profiles` (Matriz Canônica de Perfis e Fronteira de Pareto — ADR-008)
+
+```sql
+CREATE TABLE IF NOT EXISTS model_task_profiles (
+    model_id TEXT PRIMARY KEY NOT NULL,
+    file_path TEXT NOT NULL,
+    tier TEXT NOT NULL,
+    parameters TEXT NOT NULL,
+    quantization TEXT NOT NULL,
+    score_coding REAL NOT NULL,
+    score_agentic REAL NOT NULL,
+    score_reasoning REAL NOT NULL,
+    score_fast REAL NOT NULL,
+    silicon_cost REAL NOT NULL,
+    roi_coding REAL NOT NULL,
+    roi_agentic REAL NOT NULL,
+    roi_reasoning REAL NOT NULL,
+    roi_fast REAL NOT NULL,
+    is_pareto_coding INTEGER NOT NULL,
+    is_pareto_agentic INTEGER NOT NULL,
+    is_pareto_reasoning INTEGER NOT NULL,
+    is_pareto_fast INTEGER NOT NULL,
+    pareto_tag_coding TEXT NOT NULL,
+    pareto_tag_agentic TEXT NOT NULL,
+    pareto_tag_reasoning TEXT NOT NULL,
+    pareto_tag_fast TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_tier_coding 
+    ON model_task_profiles (tier, score_coding DESC);
+```
+
 ## 3. ESQUEMAS COLUNARES APACHE ARROW (LANCEDB L3)
 
 O repositório vetorial é governado com exclusividade pela crate `souls_memory` através do LanceDB, estruturado diretamente sobre o formato de dados colunar **Apache Arrow**.

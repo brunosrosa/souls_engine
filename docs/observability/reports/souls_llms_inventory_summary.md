@@ -1,5 +1,5 @@
 # 📊 SOULS SILICON OBSERVABILITY & HERMES LLM DOSSIER (v7 Canônica)
-> **Gerado em:** 2026-10-10 00:32:26 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
+> **Gerado em:** 2026-10-10 00:51:41 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
 > **Host Físico Bare-Metal:** Intel Core i9-9880H (AVX2) | 32GB RAM DDR4 | NVIDIA GeForce RTX 2060m (6GB GDDR6, WDDM 3.x)
 > **Governança:** ADR-004 (Teto Útil WDDM 5.2GB), ADR-007 (Desacoplamento Types 1 a 5) & Item 5 da Cost Matrix Specification
 
@@ -25,24 +25,24 @@ Um modelo $A$ **domina** $B$ na Fronteira de Pareto se $S_{\text{task}}(A) \ge S
 
 | Rank | Modelo / Identificador | Params | Quant | Score Coding ($S$) | Custo Silício ($C$) | ROI Silício ($V$) | Throughput | Ctx Efetivo | Designação de Roteamento |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | **97.4** | 0.586 | 102.5 | 50.1 tok/s | 8k | 🏆 Campeão de Qualidade |
-| 2 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | **97.2** | 0.587 | 102.3 | 51.2 tok/s | 8k | 🔗 Fallback Local #1 |
-| 3 | `nvidia-nemotron-3-nano-4b-q4-k-m` | 4B | `Q4_K_M` | **96.5** | 0.409 | 109.8 | 47.8 tok/s | 8k | ⚡ Campeão de Custo/Eficiência |
-| 4 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | **96.2** | 0.595 | 100.9 | 47.1 tok/s | 8k | 🔗 Fallback Local #2 |
-| 5 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | **95.9** | 0.596 | 100.5 | 46.6 tok/s | 8k | ⚪ Alternativa Subordinada |
-| 6 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | **95.6** | 0.599 | 100.1 | 45.8 tok/s | 8k | ⚪ Alternativa Subordinada |
-| 7 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | **94.3** | 0.608 | 98.4 | 42.5 tok/s | 8k | ⚪ Alternativa Subordinada |
-| 8 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | **94.3** | 0.609 | 98.3 | 42.5 tok/s | 8k | ⚪ Alternativa Subordinada |
+| 1 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | **97.4** | 0.275 | 118.5 | 50.1 tok/s | 8k | 🏆 Campeão de Qualidade |
+| 2 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | **97.2** | 0.261 | 119.1 | 51.2 tok/s | 8k | ⚡ Campeão de Custo/Eficiência |
+| 3 | `nvidia-nemotron-3-nano-4b-q4-k-m` | 4B | `Q4_K_M` | **96.5** | 0.409 | 109.8 | 47.8 tok/s | 8k | 🔗 Fallback Local #1 |
+| 4 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | **96.2** | 0.283 | 116.5 | 47.1 tok/s | 8k | 🔗 Fallback Local #2 |
+| 5 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | **95.9** | 0.271 | 116.9 | 46.6 tok/s | 8k | ⚪ Alternativa Subordinada |
+| 6 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | **95.6** | 0.289 | 115.4 | 45.8 tok/s | 8k | ⚪ Alternativa Subordinada |
+| 7 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | **93.0** | 0.297 | 111.8 | 39.4 tok/s | 8k | ⚪ Alternativa Subordinada |
+| 8 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | **91.8** | 0.307 | 109.8 | 36.4 tok/s | 8k | ⚪ Alternativa Subordinada |
 
 > 🏆 **Campeão de Qualidade:** `qwen3-5-4b-super-coder-q4-0` (Score: **97.4**, 50.1 TPS, 8k Estável).
-> ⚡ **Campeão de Custo/Eficiência:** `nvidia-nemotron-3-nano-4b-q4-k-m` (ROI: **109.8**, VRAM reduzida a **2829 MB**, Custo $C$: **0.409**).
+> ⚡ **Campeão de Custo/Eficiência:** `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` (ROI: **119.1**, VRAM reduzida a **1276 MB**, Custo $C$: **0.261**).
 
 #### 🔗 Cadeia de Roteamento & Fallbacks Canônicos (Perfil Coding)
 | Nível de Roteamento | Modelo Selecionado | Provedor / Hardware | Custo / Footprint | Throughput | Critério de Acionamento / SLA |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1. Primário Local** | `qwen3-5-4b-super-coder-q4-0` | dGPU RTX 2060m (Tier 1) | 4727 MB VRAM | 50.1 tok/s | Padrão para tarefas de codificação e geração de AST Rust. |
-| **2. Fallback Local #1** | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | dGPU RTX 2060m (Tier 1) | 4727 MB VRAM | 51.2 tok/s | Acionado se o primário estiver em concorrência ou em caso de crash. |
-| **3. Fallback Local #2 (FinOps)** | `nvidia-nemotron-3-nano-4b-q4-k-m` | dGPU RTX 2060m (Tier 1) | 2829 MB VRAM | 47.8 tok/s | Acionado quando houver pressão de memória de contexto (headroom > 2.4GB). |
+| **1. Primário Local** | `qwen3-5-4b-super-coder-q4-0` | dGPU RTX 2060m (Tier 1) | 1442 MB VRAM | 50.1 tok/s | Padrão para tarefas de codificação e geração de AST Rust. |
+| **2. Fallback Local #1** | `nvidia-nemotron-3-nano-4b-q4-k-m` | dGPU RTX 2060m (Tier 1) | 2829 MB VRAM | 47.8 tok/s | Acionado se o primário estiver em concorrência ou em caso de crash. |
+| **3. Fallback Local #2 (FinOps)** | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | dGPU RTX 2060m (Tier 1) | 1276 MB VRAM | 51.2 tok/s | Acionado quando houver pressão de memória de contexto (headroom > 2.4GB). |
 | **4. Fallback Cloud #1** | `claude-3-7-sonnet` | Nous Portal (API Cloud) | $3.40 / 1M tokens | 68.0 tok/s | Acionado se refatoração envolver >3 crates ou compilação falhar 2x seguidas. |
 | **5. Fallback Cloud #2** | `deepseek-v3` / `qwen-2.5-coder-32b` | Nous Portal / OpenRouter | $0.18 - $0.28 / 1M | ~100 tok/s | Acionado para geração em lote de boilerplate massivo de baixo custo. |
 
@@ -54,23 +54,23 @@ Um modelo $A$ **domina** $B$ na Fronteira de Pareto se $S_{\text{task}}(A) \ge S
 
 | Rank | Modelo / Identificador | Params | Quant | Score Agentic ($S$) | Custo Silício ($C$) | ROI Silício ($V$) | Throughput | JSON Acurácia | Designação de Roteamento |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | **92.6** | 0.586 | 97.5 | 50.1 tok/s | 85% | 🏆 Campeão Absoluto (Qualidade & ROI) |
-| 2 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | **92.5** | 0.587 | 97.3 | 51.2 tok/s | 85% | 🔗 Fallback Local #1 |
-| 3 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | **91.5** | 0.596 | 95.9 | 46.6 tok/s | 85% | 🔗 Fallback Local #2 |
-| 4 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | **91.2** | 0.599 | 95.5 | 45.8 tok/s | 85% | ⚪ Alternativa Subordinada |
-| 5 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | **90.3** | 0.608 | 94.2 | 42.5 tok/s | 85% | ⚪ Alternativa Subordinada |
-| 6 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | **90.2** | 0.610 | 94.0 | 42.5 tok/s | 85% | ⚪ Alternativa Subordinada |
-| 7 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | **90.2** | 0.611 | 94.0 | 42.5 tok/s | 85% | ⚪ Alternativa Subordinada |
-| 8 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | **90.0** | 0.619 | 93.5 | 42.5 tok/s | 85% | ⚪ Alternativa Subordinada |
+| 1 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | **92.6** | 0.275 | 112.7 | 50.1 tok/s | 85% | 🏆 Campeão de Qualidade |
+| 2 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | **92.5** | 0.261 | 113.4 | 51.2 tok/s | 85% | ⚡ Campeão de Custo/Eficiência |
+| 3 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | **91.5** | 0.271 | 111.6 | 46.6 tok/s | 85% | 🔗 Fallback Local #1 |
+| 4 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | **91.2** | 0.289 | 110.1 | 45.8 tok/s | 85% | 🔗 Fallback Local #2 |
+| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | **88.4** | 0.307 | 105.7 | 36.4 tok/s | 85% | ⚪ Alternativa Subordinada |
+| 6 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | **88.4** | 0.310 | 105.6 | 36.4 tok/s | 85% | ⚪ Alternativa Subordinada |
+| 7 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | **88.2** | 0.310 | 105.3 | 35.4 tok/s | 85% | ⚪ Alternativa Subordinada |
+| 8 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | **85.7** | 0.375 | 99.1 | 28.2 tok/s | 85% | ⚪ Alternativa Subordinada |
 
 > 🏆 **Campeão de Qualidade:** `qwen3-5-4b-super-coder-q4-0` (Score: **92.6**, JSON Schema 85%, 8k Estável).
-> ⚡ **Campeão de Custo/Eficiência:** `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` (ROI: **97.3**, Custo $C$: **0.587**).
+> ⚡ **Campeão de Custo/Eficiência:** `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` (ROI: **113.4**, Custo $C$: **0.261**).
 
 #### 🔗 Cadeia de Roteamento & Fallbacks Canônicos (Perfil Agentes & Ferramentas)
 | Nível de Roteamento | Modelo Selecionado | Provedor / Hardware | Custo / Footprint | Throughput | Critério de Acionamento / SLA |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1. Primário Local** | `qwen3-5-4b-super-coder-q4-0` | dGPU RTX 2060m (Tier 1) | 4727 MB VRAM | 50.1 tok/s | Despacho mestre de ferramentas MCP no Hermes Agent. |
-| **2. Fallback Local #1** | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | dGPU RTX 2060m (Tier 1) | 4727 MB VRAM | 51.2 tok/s | Alternativa direta para execução de subagentes paralelos. |
+| **1. Primário Local** | `qwen3-5-4b-super-coder-q4-0` | dGPU RTX 2060m (Tier 1) | 1442 MB VRAM | 50.1 tok/s | Despacho mestre de ferramentas MCP no Hermes Agent. |
+| **2. Fallback Local #1** | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | dGPU RTX 2060m (Tier 1) | 1278 MB VRAM | 46.6 tok/s | Alternativa direta para execução de subagentes paralelos. |
 | **3. Fallback Cloud #1** | `claude-3-7-sonnet` | Nous Portal (API Cloud) | $2.60 / 1M tokens | 68.0 tok/s | Acionado para planos com >10 tool calls aninhadas ou schemas dinâmicos. |
 | **4. Fallback Cloud #2** | `gpt-4o-mini` / `deepseek-v3` | OpenRouter / Nous Portal | $0.14 - $0.24 / 1M | ~110 tok/s | Alto volume de chamadas estruturadas de triagem e sumarização de payloads. |
 
@@ -82,23 +82,23 @@ Um modelo $A$ **domina** $B$ na Fronteira de Pareto se $S_{\text{task}}(A) \ge S
 
 | Rank | Modelo / Identificador | Tier | Params | Score Reasoning ($S$) | Custo Silício ($C$) | ROI Silício ($V$) | Throughput | CoT Acurácia | Designação de Roteamento |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 4B | **94.5** | 0.587 | 99.4 | 51.2 tok/s | 90% | 🔗 Fallback Local #1 |
-| 2 | `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 4B | **94.5** | 0.586 | 99.5 | 50.1 tok/s | 90% | 🔗 Fallback Local #2 |
-| 3 | `nvidia-nemotron-3-nano-4b-q4-k-m` | Tier 1 | 4B | **94.5** | 0.409 | 107.5 | 47.8 tok/s | 90% | 🏆 Campeão Absoluto (Qualidade & ROI) |
-| 4 | `arch-function-chat-3b-q5-k-m` | Tier 1 | 3B | **94.5** | 0.595 | 99.1 | 47.1 tok/s | 90% | ⚪ Alternativa Subordinada |
-| 5 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 4B | **94.5** | 0.596 | 99.1 | 46.6 tok/s | 90% | ⚪ Alternativa Subordinada |
-| 6 | `huggingfacetb-smollm3-3b-q5-k-m` | Tier 1 | 3B | **94.5** | 0.599 | 98.9 | 45.8 tok/s | 90% | ⚪ Alternativa Subordinada |
-| 7 | `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 7B | **94.5** | 2.459 | 63.2 | 42.5 tok/s | 90% | ⚪ Alternativa Subordinada |
-| 8 | `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | 7B | **94.5** | 0.608 | 98.6 | 42.5 tok/s | 90% | ⚪ Alternativa Subordinada |
+| 1 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 4B | **94.5** | 0.261 | 115.8 | 51.2 tok/s | 90% | 🏆 Campeão Absoluto (Qualidade & ROI) |
+| 2 | `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 4B | **94.5** | 0.275 | 115.0 | 50.1 tok/s | 90% | 🔗 Fallback Local #1 |
+| 3 | `nvidia-nemotron-3-nano-4b-q4-k-m` | Tier 1 | 4B | **94.5** | 0.409 | 107.5 | 47.8 tok/s | 90% | 🔗 Fallback Local #2 |
+| 4 | `arch-function-chat-3b-q5-k-m` | Tier 1 | 3B | **94.5** | 0.283 | 114.5 | 47.1 tok/s | 90% | ⚪ Alternativa Subordinada |
+| 5 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 4B | **94.5** | 0.271 | 115.2 | 46.6 tok/s | 90% | ⚪ Alternativa Subordinada |
+| 6 | `huggingfacetb-smollm3-3b-q5-k-m` | Tier 1 | 3B | **94.5** | 0.289 | 114.1 | 45.8 tok/s | 90% | ⚪ Alternativa Subordinada |
+| 7 | `phi-4-mini-reasoning-q4-k-m` | Tier 1 | 3.8B | **94.5** | 0.297 | 113.6 | 39.4 tok/s | 90% | ⚪ Alternativa Subordinada |
+| 8 | `phi-4-mini-instruct-q4-k-m` | Tier 1 | 3.8B | **94.5** | 5.474 | 47.0 | 38.4 tok/s | 90% | ⚪ Alternativa Subordinada |
 
-> 🏆 **Campeão de Qualidade:** `nvidia-nemotron-3-nano-4b-q4-k-m` (Score: **94.5**, CoT 90%, 8k Estável).
-> ⚡ **Campeão de Custo/Eficiência:** `qwen3-5-4b-super-coder-q4-0` (ROI: **99.5**, 47.8 TPS, VRAM 2.8GB).
+> 🏆 **Campeão de Qualidade:** `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` (Score: **94.5**, CoT 90%, 8k Estável).
+> ⚡ **Campeão de Custo/Eficiência:** `qwen3-5-4b-super-coder-q4-0` (ROI: **115.0**, 47.8 TPS, VRAM 2.8GB).
 > 🐘 **Heavyweight Host CPU (Tier 2):** `laguna-xs-2-1-apex-i-compact` (16B MoE em 32GB RAM Host com 0 MB de VRAM na GPU).
 
 #### 🔗 Cadeia de Roteamento & Fallbacks Canônicos (Perfil Raciocínio & Arquitetura)
 | Nível de Roteamento | Modelo Selecionado | Provedor / Hardware | Custo / Footprint | Throughput | Critério de Acionamento / SLA |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1. Primário Local (dGPU)** | `nvidia-nemotron-3-nano-4b-q4-k-m` | dGPU RTX 2060m (Tier 1) | 2829 MB VRAM | 47.8 tok/s | Raciocínio interativo rápido (latência < 3s). |
+| **1. Primário Local (dGPU)** | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | dGPU RTX 2060m (Tier 1) | 1276 MB VRAM | 51.2 tok/s | Raciocínio interativo rápido (latência < 3s). |
 | **2. Fallback Local (Host CPU)** | `laguna-xs-2-1-apex-i-compact` | Host Intel i9 AVX2 (Tier 2) | 0 MB VRAM dGPU / 11GB RAM | 5.8 tok/s | MoE assíncrono para raciocínio denso via `delegate_task`. |
 | **3. Fallback Cloud #1** | `deepseek-r1` | Nous Portal (API Cloud) | $0.55 / 1M tokens | 38.0 tok/s | Raciocínio matemático formal, verificação de teoremas ou impasses lógicos. |
 | **4. Fallback Cloud #2** | `o3-mini` / `claude-3-7-sonnet` | OpenRouter / Nous Portal | $1.10 - $3.40 / 1M | ~65 tok/s | Decisão arquitetural de nível de sistema e design de novos subsistemas. |
@@ -113,12 +113,12 @@ Um modelo $A$ **domina** $B$ na Fronteira de Pareto se $S_{\text{task}}(A) \ge S
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | 1 | `smollm2-135m-reasoning-5k-q4-k-m` | Tier 0 | 135M | **84.1** | 0.162 | 109.1 | **149.5 tok/s** | 910 MB | 357.4ms | 🏆 Campeão Absoluto (Qualidade & ROI) |
 | 2 | `smollm-135m-instruct-q4-k-m` | Tier 0 | 135M | **72.8** | 0.170 | 94.0 | **111.2 tok/s** | 910 MB | 305.9ms | 🔗 Fallback Local #1 |
-| 3 | `gliclass_multilang` | Tier 0 | 77M ONNX | **71.2** | 0.196 | 90.5 | **110.0 tok/s** | 1142 MB | 344.3ms | 🔗 Fallback Local #2 |
-| 4 | `neuralai-mamba-k1-v3-q4-k-m` | Tier 0 | 135M | **64.4** | 0.192 | 82.1 | **83.7 tok/s** | 913 MB | 352.3ms | ⚪ Alternativa Subordinada |
-| 5 | `bitnet-b1.58-2b-4t` | Tier 0.5 | 2B | **56.7** | 0.259 | 69.6 | **65.0 tok/s** | 1143 MB | 605.1ms | ⚪ Alternativa Subordinada |
-| 6 | `bonsai-27b-dspark-q4-1` | Tier 4 | 27B | **55.0** | 0.271 | 67.1 | **62.2 tok/s** | 1741 MB | 117.2ms | ⚪ Alternativa Subordinada |
-| 7 | `smollm2-360m-instruct-q8-0` | Tier 0.5 | 360M | **53.3** | 0.266 | 65.2 | **51.6 tok/s** | 1117 MB | 466.2ms | ⚪ Alternativa Subordinada |
-| 8 | `laguna-xs-2-1-dspark-q4-k-m` | Tier 4 | 300M | **45.3** | 0.405 | 51.6 | **20.3 tok/s** | 927 MB | 361.5ms | ⚪ Alternativa Subordinada |
+| 3 | `neuralai-mamba-k1-v3-q4-k-m` | Tier 0 | 135M | **64.4** | 0.192 | 82.1 | **83.7 tok/s** | 913 MB | 352.3ms | 🔗 Fallback Local #2 |
+| 4 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 4B | **59.5** | 0.261 | 72.9 | **51.2 tok/s** | 1276 MB | 254.3ms | ⚪ Alternativa Subordinada |
+| 5 | `gliclass_multilang` | Tier 0 | 77M ONNX | **58.8** | 0.211 | 74.1 | **65.0 tok/s** | 910 MB | 344.3ms | ⚪ Alternativa Subordinada |
+| 6 | `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 4B | **58.2** | 0.275 | 70.8 | **50.1 tok/s** | 1442 MB | 216.5ms | ⚪ Alternativa Subordinada |
+| 7 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 4B | **57.8** | 0.271 | 70.5 | **46.6 tok/s** | 1278 MB | 241.2ms | ⚪ Alternativa Subordinada |
+| 8 | `bitnet-b1.58-2b-4t` | Tier 0.5 | 2B | **56.7** | 0.259 | 69.6 | **65.0 tok/s** | 1143 MB | 605.1ms | ⚪ Alternativa Subordinada |
 
 > 🏆 **Campeão Absoluto de Throughput:** `smollm2-135m-reasoning-5k-q4-k-m` (Throughput recorde de **149.5 tok/s**, **0 MB VRAM dGPU**, ROI: **109.1**).
 > 🔬 **Sensor Epistêmico de Host:** `bitnet-b1.58-2b-4t` (Throughput de **65.0 tok/s** na CPU i9 com quantização ternária 1.58-bit).
@@ -146,8 +146,8 @@ Apresentação canônica e sequencial de todos os modelos físicos categorizados
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | 1 | `smollm2-135m-reasoning-5k-q4-k-m` | 135M | `Q4_K_M` | 100.6 MB | `llama-cpu` | **149.5** | 357.4 | 910 MB | 4384 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
 | 2 | `smollm-135m-instruct-q4-k-m` | 135M | `Q4_K_M` | 100.6 MB | `llama-cpu` | **111.2** | 305.9 | 910 MB | 4384 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 3 | `gliclass_multilang` | 77M ONNX | `Q4_K_M` | 4.0 MB | `onnx-cpu` | **110.0** | 344.3 | 1142 MB | 4152 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 4 | `neuralai-mamba-k1-v3-q4-k-m` | 135M | `Q4_K_M` | 85.7 MB | `llama-cpu` | **83.7** | 352.3 | 913 MB | 4381 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 3 | `neuralai-mamba-k1-v3-q4-k-m` | 135M | `Q4_K_M` | 85.7 MB | `llama-cpu` | **83.7** | 352.3 | 913 MB | 4381 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 4 | `gliclass_multilang` | 77M ONNX | `Q4_K_M` | 4.0 MB | `onnx-cpu` | **65.0** | 344.3 | 910 MB | 4384 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
 
 ### 🎯 Tier 0.5 — Epistemic Probing & SLM Host Sensors (5 Modelos)
 > **Papel Arquitetural:** Sensor epistêmico de incerteza (entropia de Shannon), extração direta de logits (forward-only prefill sem geração recursiva) e triagens heurísticas leves.
@@ -169,22 +169,22 @@ Apresentação canônica e sequencial de todos os modelos físicos categorizados
 
 | # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Headroom VRAM | Score E³ | Status Operacional |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | 2.60 GB | `llama-cuda` | **51.2** | 254.3 | 4727 MB | 567 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 2 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | 2.43 GB | `llama-cuda` | **50.1** | 216.5 | 4727 MB | 567 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 1 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | 2.60 GB | `llama-cuda` | **51.2** | 254.3 | 1276 MB | 4018 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 2 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | 2.43 GB | `llama-cuda` | **50.1** | 216.5 | 1442 MB | 3852 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
 | 3 | `nvidia-nemotron-3-nano-4b-q4-k-m` | 4B | `Q4_K_M` | 2.64 GB | `llama-cuda` | **47.8** | 190.9 | 2829 MB | 2465 MB | 4699.25 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 4 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | 2.07 GB | `llama-cuda` | **47.1** | 229.1 | 4734 MB | 560 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 5 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | 2.45 GB | `llama-cuda` | **46.6** | 241.2 | 4724 MB | 570 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 6 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | 2.06 GB | `llama-cuda` | **45.8** | 248.1 | 4726 MB | 568 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 7 | `falcon3-mamba-7b-instruct-i1-iq3-m` | 7B | `IQ3_M` | 3.05 GB | `llama-cuda` | **42.5** | 18745.6 | 4726 MB | 568 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 8 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | 4.31 GB | `llama-cuda` | **42.5** | 348.1 | 4726 MB | 568 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 9 | `mamba-codestral-7b-instruct-agnuxo` | 7B | `Q4_K_M` | 4.07 GB | `llama-cuda` | **42.5** | 256.5 | 4726 MB | 568 MB | 9999.00 | 🔵 SUBAGENTE DE SUPORTE |
-| 10 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | 3.86 GB | `llama-cuda` | **42.5** | 234.6 | 4730 MB | 564 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 11 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | 2.33 GB | `llama-cuda` | **42.5** | 254.7 | 4726 MB | 568 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 12 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | **42.5** | 51831.1 | 4726 MB | 568 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 13 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | 2.65 GB | `llama-cuda` | **42.5** | 264.4 | 4726 MB | 568 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 14 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | **42.5** | 259.5 | 4726 MB | 568 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 15 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | 3.33 GB | `llama-cuda` | **42.5** | 249.0 | 4724 MB | 570 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 16 | `zamba2-2-7b-instruct-v2-q4-0` | 2.7B | `Q4_0` | 2.08 GB | `llama-cuda` | **42.5** | 117.7 | 4724 MB | 570 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 4 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | 2.07 GB | `llama-cuda` | **47.1** | 229.1 | 1438 MB | 3856 MB | 9626.68 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 5 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | 2.45 GB | `llama-cuda` | **46.6** | 241.2 | 1278 MB | 4016 MB | 8965.22 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 6 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | 2.06 GB | `llama-cuda` | **45.8** | 248.1 | 1438 MB | 3856 MB | 8425.25 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 7 | `zamba2-2-7b-instruct-v2-q4-0` | 2.7B | `Q4_0` | 2.08 GB | `llama-cuda` | **42.5** | 117.7 | 1300 MB | 3994 MB | 9999.00 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 8 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | **39.4** | 259.5 | 1299 MB | 3995 MB | 5957.95 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 9 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | **38.4** | 51831.1 | 1468 MB | 3826 MB | 5056.98 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 10 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | 2.33 GB | `llama-cuda` | **36.4** | 254.7 | 1287 MB | 4007 MB | 5180.38 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 11 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | 2.65 GB | `llama-cuda` | **36.4** | 264.4 | 1299 MB | 3995 MB | 4981.71 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 12 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | 3.86 GB | `llama-cuda` | **35.4** | 234.6 | 1287 MB | 4007 MB | 5307.95 | 🟢 CANDIDATO PRINCIPAL HERMES |
+| 13 | `mamba-codestral-7b-instruct-agnuxo` | 7B | `Q4_K_M` | 4.07 GB | `llama-cuda` | **29.5** | 256.5 | 1287 MB | 4007 MB | 3371.29 | 🔵 SUBAGENTE DE SUPORTE |
+| 14 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | 4.31 GB | `llama-cuda` | **28.2** | 348.1 | 1429 MB | 3865 MB | 2270.44 | 🔵 SUBAGENTE DE SUPORTE |
+| 15 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | 3.33 GB | `llama-cuda` | **23.6** | 249.0 | 1300 MB | 3994 MB | 2230.66 | 🔵 SUBAGENTE DE SUPORTE |
+| 16 | `falcon3-mamba-7b-instruct-i1-iq3-m` | 7B | `IQ3_M` | 3.05 GB | `llama-cuda` | **19.7** | 18745.6 | 1438 MB | 3856 MB | 20.71 | 🟠 CADÊNCIA LENTA |
 
 ### 🎯 Tier 2 — Background Heavyweight & Deep Cognitive Reasoning (2 Modelos)
 > **Papel Arquitetural:** Raciocínio profundo assíncrono (deep CoT), arquiteturas Mixture-of-Experts (MoE) ou modelos de alta capacidade (>14B / 27B) que excedem a VRAM da dGPU.
@@ -236,16 +236,16 @@ Aferição de integridade lógica necessária para subagentes executivos e MCP T
 | `arch-function-chat-3b-q5-k-m` | Tier 1 | 3B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 4B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `huggingfacetb-smollm3-3b-q5-k-m` | Tier 1 | 3B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 7B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `hy-mt2-7b-q4-k-m` | Tier 1 | 7B | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `mamba-codestral-7b-instruct-agnuxo` | Tier 1 | 7B | 20% | 10% | 90% | 🔴 Falha em Validação Estrita |
-| `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | 7B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | Tier 1 | 4B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `phi-4-mini-instruct-q4-k-m` | Tier 1 | 3.8B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `phi-4-mini-instruct-q5-k-m` | Tier 1 | 3.8B | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `phi-4-mini-reasoning-q4-k-m` | Tier 1 | 3.8B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 7B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `zamba2-2-7b-instruct-v2-q4-0` | Tier 1 | 2.7B | 95% | 100% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `phi-4-mini-reasoning-q4-k-m` | Tier 1 | 3.8B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `phi-4-mini-instruct-q4-k-m` | Tier 1 | 3.8B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | Tier 1 | 4B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `phi-4-mini-instruct-q5-k-m` | Tier 1 | 3.8B | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | 7B | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `mamba-codestral-7b-instruct-agnuxo` | Tier 1 | 7B | 20% | 10% | 90% | 🔴 Falha em Validação Estrita |
+| `hy-mt2-7b-q4-k-m` | Tier 1 | 7B | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 7B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 7B | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 
 ---
 
@@ -286,16 +286,16 @@ Verificação física de acoplamento de tensores visuais mmproj e latência de p
 | `arch-function-chat-3b-q5-k-m` | Tier 1 | 3B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 4B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
 | `huggingfacetb-smollm3-3b-q5-k-m` | Tier 1 | 3B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `hy-mt2-7b-q4-k-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `mamba-codestral-7b-instruct-agnuxo` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | Tier 1 | 4B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `phi-4-mini-instruct-q4-k-m` | Tier 1 | 3.8B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `phi-4-mini-instruct-q5-k-m` | Tier 1 | 3.8B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `phi-4-mini-reasoning-q4-k-m` | Tier 1 | 3.8B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
-| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
 | `zamba2-2-7b-instruct-v2-q4-0` | Tier 1 | 2.7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `phi-4-mini-reasoning-q4-k-m` | Tier 1 | 3.8B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `phi-4-mini-instruct-q4-k-m` | Tier 1 | 3.8B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | Tier 1 | 4B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `phi-4-mini-instruct-q5-k-m` | Tier 1 | 3.8B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `mamba-codestral-7b-instruct-agnuxo` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `hy-mt2-7b-q4-k-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 7B | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
 | `microsoft-fara1-5-4b-f16-gguf-q4-k-m` | Tier 3 | 4B | `mmproj-microsoft.Fara1.5-4B.f16.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
 | `deepseek-v4-pro-qwen3-5-4b-mtp-q4-k-s` | Tier 3 | 4B | `mmproj-F32.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
 | `nimbus-4b-q4-k-m` | Tier 3 | 4B | `mmproj-Nimbus-4B-F16.gguf` | 45.2ms | `PAIRED_QUALIFIED` | ✅ Projetor Pareado (Pronto para VLM) |
@@ -318,16 +318,16 @@ Aferição física de speedup por predição multi-token (MTP) e acoplamento de 
 | `arch-function-chat-3b-q5-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | `qwen35-4b-dflash-q4-k-m` | 58.0% | 48.6 tok/s | 1.28x | 🔵 Drafter Pareado Fechado |
 | `huggingfacetb-smollm3-3b-q5-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `falcon3-mamba-7b-instruct-i1-iq3-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `hy-mt2-7b-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `mamba-codestral-7b-instruct-agnuxo` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `mamba-codestral-7b-v0-1-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | `qwen35-4b-dflash-q4-k-m` | 58.0% | 48.6 tok/s | 1.28x | 🔵 Drafter Pareado Fechado |
-| `phi-4-mini-instruct-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `phi-4-mini-instruct-q5-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `phi-4-mini-reasoning-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
-| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
 | `zamba2-2-7b-instruct-v2-q4-0` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `phi-4-mini-reasoning-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `phi-4-mini-instruct-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | `qwen35-4b-dflash-q4-k-m` | 58.0% | 48.6 tok/s | 1.28x | 🔵 Drafter Pareado Fechado |
+| `phi-4-mini-instruct-q5-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `mamba-codestral-7b-v0-1-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `mamba-codestral-7b-instruct-agnuxo` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `hy-mt2-7b-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `falcon3-mamba-7b-instruct-i1-iq3-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
 | `bonsai-27b-dspark-q4-1` | `Standalone Drafter` | N/A | 62.2 tok/s | 1.00x | Drafter Primário |
 | `laguna-xs-2-1-dspark-q4-k-m` | `Standalone Drafter` | N/A | 20.3 tok/s | 1.00x | Drafter Primário |
 | `qwen35-4b-dflash-q4-k-m` | `Standalone Drafter` | N/A | 8.2 tok/s | 1.00x | Drafter Primário |

@@ -314,6 +314,7 @@ Executar suítes de benchmarking empírico contínuo, aferição de tokens por s
 
 - `pub async fn run_benchmark(descriptor: &ModelDescriptor, battery: BenchmarkType, engine: EngineType) -> Result<BenchmarkReport, ArenaError>`
 - `pub fn scan_local_models(search_paths: &[PathBuf]) -> Result<Vec<ModelDescriptor>, ArenaError>`
+- `pub async fn recalculate_and_sync_task_profiles(&self) -> Result<usize, ArenaError>` (Cálculo e persistência atômica da Fronteira de Pareto e notas multi-perfil no SQLite — ADR-008)
 
 #### Anti-Patterns Estritos (Linhas Vermelhas)
 
