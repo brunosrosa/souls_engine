@@ -289,6 +289,13 @@ async fn handle_run(args: &[String]) -> ExitCode {
         }
     }
 
+    if let Some(ref v) = vault {
+        match v.recalculate_and_sync_task_profiles().await {
+            Ok(n) => println!("[✓] {} perfis multi-dimensionais e Fronteira de Pareto recalculados e persistidos no vault SSOT.", n),
+            Err(e) => eprintln!("[!] Falha ao recalcular perfis e Pareto no vault: {}", e),
+        }
+    }
+
     ExitCode::SUCCESS
 }
 
