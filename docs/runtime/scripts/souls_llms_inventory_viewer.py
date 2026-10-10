@@ -375,20 +375,44 @@ def generate_inventory_report(
     conn = sqlite3.connect(db_path)
     all_rows = fetch_inventory_data(conn)
     
-    # Busca telemetria de Type 5 (ContextPressure / Needle-in-a-Haystack)
+    # Busca telemetrias da arena (Type 3, Type 4 e Type 5)
     cursor = conn.cursor()
     cursor.execute("SELECT model_id, e3_score, status, created_at FROM arena_telemetry WHERE benchmark_type = 'ContextPressure' ORDER BY id DESC")
     pressure_raw = cursor.fetchall()
+
+    cursor.execute("SELECT model_id, file_path, ttft_ms, status FROM arena_telemetry WHERE benchmark_type = 'MultimodalVision' ORDER BY id DESC")
+    vision_raw = cursor.fetchall()
+
+    cursor.execute("SELECT model_id, file_path, tps, e3_score, status FROM arena_telemetry WHERE benchmark_type = 'SpeculativeDraft' ORDER BY id DESC")
+    spec_raw = cursor.fetchall()
     conn.close()
 
     pressure_map = {}
-    for prow in pressure_raw:
-        pm_id, pe3, pstatus, pcreated = prow
+    for pm_id, pe3, pstatus, pcreated in pressure_raw:
         if pm_id not in pressure_map:
             pressure_map[pm_id] = {
                 "max_effective_ctx": int(pe3) if pe3 > 0 else 0,
                 "status": pstatus,
                 "tested_ctx": 8192,
+            }
+
+    vision_map = {}
+    for vm_id, vfile, vttft, vstatus in vision_raw:
+        if vm_id not in vision_map:
+            vision_map[vm_id] = {
+                "sidecar_path": vfile,
+                "ttft_ms": vttft,
+                "status": vstatus,
+            }
+
+    spec_map = {}
+    for sm_id, sfile, stps, se3, sstatus in spec_raw:
+        if sm_id not in spec_map:
+            spec_map[sm_id] = {
+                "drafter": sfile,
+                "speculative_tps": stps,
+                "speedup_ratio": se3,
+                "verdict": sstatus,
             }
 
     # Filtra por padrão apenas arquivos que existem fisicamente no disco
@@ -629,41 +653,58 @@ def generate_inventory_report(
             lines.append("")
 
         # =========================================================================
-        # SEÇÃO 5: MODELOS DE VISÃO VLM & PROJETORES MMPROJ (TIER 3)
+        # SEÇÃO 5: BENCHMARK TYPE 3: MULTIMODAL VISION & SIDECARS MMPROJ
         # =========================================================================
-        tier3_models = [m for m in processed_models if m.get("clean_tier") == "Tier 3"]
-        lines.append(f"## 👁️ 5. MODELOS MULTIMODAIS & PROJETORES DE VISÃO MMPROJ (TIER 3) ({len(tier3_models)})")
+        lines.append("## 👁️ 5. AUDITORIA MULTIMODAL DE VISÃO (BENCHMARK TYPE 3: MMPROJ PROJECTION)")
+        lines.append("Verificação física de acoplamento de tensores visuais mmproj e latência de projeção:")
         lines.append("")
-        lines.append("| Modelo VLM | Quant | Tamanho | Projetor Sidecar Pareado | Status Multimodal |")
-        lines.append("| :--- | :---: | :---: | :---: | :--- |")
+        lines.append("| Modelo | Tier | Sidecar mmproj | Latência Projeção | Status Type 3 | Veredito Multimodal |")
+        lines.append("| :--- | :---: | :---: | :---: | :---: | :--- |")
 
-        for m in tier3_models:
+        for m in processed_models:
             m_id = m.get("model_id") or m.get("model_name")
-            size_str = format_bytes(m.get("file_size_bytes"))
-            mmproj_flag = "✅ Sim (Pareado)" if m.get("has_mmproj") else "❌ Não detectado"
-            lines.append(f"| `{m_id}` | `{m.get('quantization')}` | {size_str} | {mmproj_flag} | Pronto para OCR/VQA |")
+            vinfo = vision_map.get(m_id) or vision_map.get(m.get("model_name"))
+            if vinfo:
+                sidecar = vinfo["sidecar_path"]
+                lat = f"{vinfo['ttft_ms']:.1f}ms" if vinfo["ttft_ms"] > 0 else "0.0ms"
+                status = vinfo["status"]
+                verdict = "✅ Projetor Pareado (Pronto para VLM)" if status == "PAIRED_QUALIFIED" else "🛡️ Texto/Código Puro (Sem Sidecar)"
+                lines.append(f"| `{m_id}` | {m['clean_tier']} | `{sidecar}` | {lat} | `{status}` | {verdict} |")
+            elif m.get("clean_tier") == "Tier 3":
+                lines.append(f"| `{m_id}` | {m['clean_tier']} | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |")
 
         lines.append("")
         lines.append("---")
         lines.append("")
 
         # =========================================================================
-        # SEÇÃO 6: ACELERAÇÃO ESPECULATIVA & DRAFTERS (TIER 4)
+        # SEÇÃO 6: BENCHMARK TYPE 4: ACELERAÇÃO ESPECULATIVA & MTP DRAFTING
         # =========================================================================
-        tier4_models = [m for m in processed_models if m.get("clean_tier") == "Tier 4"]
-        lines.append(f"## ⚡ 6. ACELERAÇÃO ESPECULATIVA & MODELOS DRAFTER (TIER 4) ({len(tier4_models)})")
+        lines.append("## ⚡ 6. ACELERAÇÃO ESPECULATIVA & MTP DRAFTING (BENCHMARK TYPE 4)")
+        lines.append("Aferição física de speedup por predição multi-token (MTP) e acoplamento de modelos Drafter:")
         lines.append("")
-        lines.append("| Modelo Drafter | Tamanho | Taxa de Aceitação Alpha (α) | Speedup Projetado | Veredito FinOps |")
-        lines.append("| :--- | :---: | :---: | :---: | :--- |")
+        lines.append("| Modelo Target | Drafter Acoplado | Taxa Aceitação Alpha (α) | Throughput Projetado | Speedup Real | Veredito FinOps |")
+        lines.append("| :--- | :---: | :---: | :---: | :---: | :--- |")
 
-        for m in tier4_models:
+        for m in processed_models:
             m_id = m.get("model_id") or m.get("model_name")
-            size_str = format_bytes(m.get("file_size_bytes"))
-            alpha = m.get("mtp_acceptance_rate") or 0.0
-            alpha_str = f"{alpha * 100:.1f}%" if alpha > 0 else "N/A (Aguardando Type 4)"
-            speedup_str = f"{1.0 / (1.0 - alpha + 0.1):.2f}x" if alpha > 0 else "1.00x"
-            verdict = "✅ Aprovado (α ≥ 55%)" if alpha >= 0.55 else ("❌ Descarte (α < 55%)" if alpha > 0 else "⏳ Pendente de Combate")
-            lines.append(f"| `{m_id}` | {size_str} | {alpha_str} | {speedup_str} | {verdict} |")
+            sinfo = spec_map.get(m_id) or spec_map.get(m.get("model_name"))
+            if sinfo:
+                drafter = sinfo["drafter"]
+                speedup = f"{sinfo['speedup_ratio']:.2f}x"
+                spec_tps = f"{sinfo['speculative_tps']:.1f} tok/s"
+                verdict_str = sinfo["verdict"]
+                alpha_val = m.get("mtp_acceptance_rate") or 0.0
+                alpha_str = f"{alpha_val * 100:.1f}%" if alpha_val > 0 else "0.0%"
+                if verdict_str == "MTP_QUALIFIED":
+                    badge = "🟢 MTP Acelerado (Heads Integradas)"
+                elif verdict_str == "SPEEDUP_FEASIBLE":
+                    badge = "🔵 Drafter Pareado Fechado"
+                else:
+                    badge = "⚪ Autoregressivo Standalone"
+                lines.append(f"| `{m_id}` | `{drafter}` | {alpha_str} | {spec_tps} | {speedup} | {badge} |")
+            elif m.get("clean_tier") == "Tier 4":
+                lines.append(f"| `{m_id}` | `Standalone Drafter` | N/A | N/A | 1.00x | Drafter Primário |")
 
         lines.append("")
 

@@ -1,5 +1,5 @@
 # 📊 SOULS SILICON OBSERVABILITY & HERMES LLM DOSSIER (v7 Canônica)
-> **Gerado em:** 2026-10-09 20:21:48 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
+> **Gerado em:** 2026-10-09 21:52:15 | **Banco SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`
 > **Host Físico:** Intel Core i9-9880H (AVX2) | 32GB RAM | NVIDIA GeForce RTX 2060m (6GB GDDR6, WDDM 3.x)
 > **Governança:** ADR-004 (Teto Útil WDDM 5.2GB) & ADR-007 (Desacoplamento dos Benchmark Types 1 a 5)
 
@@ -10,22 +10,22 @@ Esta matriz classifica exclusivamente os modelos de **Tier 1** (Live Chat, Codin
 
 | Rank | Modelo / Identificador | Params | Quant | Throughput (TPS) | TTFT (ms) | Pico VRAM | Headroom VRAM | Score E³ | Qualificação Hermes Agent |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `zamba2-2-7b-instruct-v2-q4-0` | 2.7B | `Q4_0` | **44.1** | 121.0 | 1205 MB | 4089 MB | 8727.90 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 2 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | **44.1** | 1695.7 | 1234 MB | 4060 MB | 4794.68 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 3 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | **37.8** | 2400.1 | 1233 MB | 4061 MB | 4692.41 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 4 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | **35.4** | 2081.5 | 1201 MB | 4093 MB | 5114.44 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | **32.8** | 2833.9 | 1203 MB | 4091 MB | 3925.39 | 🔵 SUBAGENTE DE SUPORTE |
-| 6 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | **32.6** | 1792.1 | 1200 MB | 4094 MB | 5080.50 | 🔵 SUBAGENTE DE SUPORTE |
-| 7 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | **30.8** | 2640.5 | 1205 MB | 4089 MB | 3710.82 | 🔵 SUBAGENTE DE SUPORTE |
-| 8 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | **29.8** | 9468.0 | 1069 MB | 4225 MB | 3369.94 | 🔵 SUBAGENTE DE SUPORTE |
-| 9 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | **28.1** | 2338.9 | 753 MB | 4541 MB | 3074.59 | 🔵 SUBAGENTE DE SUPORTE |
-| 10 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | **26.4** | 3966.4 | 1205 MB | 4089 MB | 2859.39 | 🔵 SUBAGENTE DE SUPORTE |
-| 11 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | **26.0** | 2604.5 | 322 MB | 4972 MB | 2779.72 | 🔵 SUBAGENTE DE SUPORTE |
-| 12 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | **25.7** | 1738.5 | 1203 MB | 4091 MB | 4401.66 | 🔵 SUBAGENTE DE SUPORTE |
-| 13 | `mamba-codestral-7b-instruct-agnuxo` | 7B | `Q4_K_M` | **25.5** | 2336.0 | 1789 MB | 3505 MB | 4078.03 | 🔵 SUBAGENTE DE SUPORTE |
-| 14 | `falcon3-mamba-7b-instruct-i1-iq3-m` | 7B | `IQ3_M` | **25.0** | 6703.1 | 1233 MB | 4061 MB | 2544.45 | 🔵 SUBAGENTE DE SUPORTE |
-| 15 | `nvidia-nemotron-3-nano-4b-q4-k-m` | 4B | `Q4_K_M` | **23.6** | 7736.0 | 1203 MB | 4091 MB | 3213.68 | 🔵 SUBAGENTE DE SUPORTE |
-| 16 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | **23.3** | 3330.1 | 1231 MB | 4063 MB | 3059.28 | 🔵 SUBAGENTE DE SUPORTE |
+| 1 | `zamba2-2-7b-instruct-v2-q4-0` | 2.7B | `Q4_0` | **32.0** | 75.6 | 753 MB | 4541 MB | 5455.06 | 🔵 SUBAGENTE DE SUPORTE |
+| 2 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | **29.2** | 1300.9 | 750 MB | 4544 MB | 3196.69 | 🔵 SUBAGENTE DE SUPORTE |
+| 3 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | **28.4** | 942.0 | 686 MB | 4608 MB | 4484.27 | 🔵 SUBAGENTE DE SUPORTE |
+| 4 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | **28.0** | 1500.0 | 770 MB | 4524 MB | 3956.88 | 🔵 SUBAGENTE DE SUPORTE |
+| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | **24.9** | 1771.2 | 752 MB | 4542 MB | 3477.49 | 🔵 SUBAGENTE DE SUPORTE |
+| 6 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | **24.7** | 1120.1 | 750 MB | 4544 MB | 4199.44 | 🔵 SUBAGENTE DE SUPORTE |
+| 7 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | **24.3** | 2303.9 | 285 MB | 5009 MB | 2774.10 | 🔵 SUBAGENTE DE SUPORTE |
+| 8 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | **23.6** | 1650.3 | 753 MB | 4541 MB | 3343.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 9 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | **23.6** | 1701.0 | 548 MB | 4746 MB | 2980.88 | 🔵 SUBAGENTE DE SUPORTE |
+| 10 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | **22.1** | 6025.1 | 680 MB | 4614 MB | 2889.32 | 🔵 SUBAGENTE DE SUPORTE |
+| 11 | `mamba-codestral-7b-instruct-agnuxo` | 7B | `Q4_K_M` | **20.9** | 1557.4 | 1193 MB | 4101 MB | 3173.91 | 🔵 SUBAGENTE DE SUPORTE |
+| 12 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | **20.9** | 2479.0 | 753 MB | 4541 MB | 2811.24 | 🔵 SUBAGENTE DE SUPORTE |
+| 13 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | **20.4** | 1086.5 | 752 MB | 4542 MB | 3775.16 | 🔵 SUBAGENTE DE SUPORTE |
+| 14 | `falcon3-mamba-7b-instruct-i1-iq3-m` | 7B | `IQ3_M` | **20.0** | 4189.4 | 770 MB | 4524 MB | 2614.41 | 🔵 SUBAGENTE DE SUPORTE |
+| 15 | `nvidia-nemotron-3-nano-4b-q4-k-m` | 4B | `Q4_K_M` | **19.1** | 4835.0 | 752 MB | 4542 MB | 3032.67 | 🟠 CADÊNCIA LENTA |
+| 16 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | **19.0** | 2081.3 | 769 MB | 4525 MB | 2936.17 | 🟠 CADÊNCIA LENTA |
 
 > **Critério de Ouro FinOps:** Modelos com mais de **35 tokens/s** e VRAM inferior a **4.200 MB** deixam margem folgada para até **8k tokens de contexto**, sendo os candidatos ideais para a experiência mestre do Hermes Agent.
 
@@ -66,22 +66,22 @@ Apresentação canônica e sequencial de todos os modelos locais categorizados p
 
 | # | Identificador | Params | Quant | Tamanho | Motor | TPS | TTFT (ms) | Pico VRAM | Score E³ | Status Operacional |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| 1 | `zamba2-2-7b-instruct-v2-q4-0` | 2.7B | `Q4_0` | 2.08 GB | `llama-cuda` | 44.1 | 121.0 | 1205 MB | 8727.90 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 2 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | 2.07 GB | `llama-cuda` | 44.1 | 1695.7 | 1234 MB | 4794.68 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 3 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | 2.06 GB | `llama-cuda` | 37.8 | 2400.1 | 1233 MB | 4692.41 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 4 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | 2.60 GB | `llama-cuda` | 35.4 | 2081.5 | 1201 MB | 5114.44 | 🟢 CANDIDATO PRINCIPAL HERMES |
-| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | 2.33 GB | `llama-cuda` | 32.8 | 2833.9 | 1203 MB | 3925.39 | 🔵 SUBAGENTE DE SUPORTE |
-| 6 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | 2.45 GB | `llama-cuda` | 32.6 | 1792.1 | 1200 MB | 5080.50 | 🔵 SUBAGENTE DE SUPORTE |
-| 7 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | 2.65 GB | `llama-cuda` | 30.8 | 2640.5 | 1205 MB | 3710.82 | 🔵 SUBAGENTE DE SUPORTE |
-| 8 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | 29.8 | 9468.0 | 1069 MB | 3369.94 | 🔵 SUBAGENTE DE SUPORTE |
-| 9 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | 28.1 | 2338.9 | 753 MB | 3074.59 | 🔵 SUBAGENTE DE SUPORTE |
-| 10 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | 3.33 GB | `llama-cuda` | 26.4 | 3966.4 | 1205 MB | 2859.39 | 🔵 SUBAGENTE DE SUPORTE |
-| 11 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | 2.43 GB | `llama-cuda` | 26.0 | 2604.5 | 322 MB | 2779.72 | 🔵 SUBAGENTE DE SUPORTE |
-| 12 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | 3.86 GB | `llama-cuda` | 25.7 | 1738.5 | 1203 MB | 4401.66 | 🔵 SUBAGENTE DE SUPORTE |
-| 13 | `mamba-codestral-7b-instruct-agnuxo` | 7B | `Q4_K_M` | 4.07 GB | `llama-cuda` | 25.5 | 2336.0 | 1789 MB | 4078.03 | 🔵 SUBAGENTE DE SUPORTE |
-| 14 | `falcon3-mamba-7b-instruct-i1-iq3-m` | 7B | `IQ3_M` | 3.05 GB | `llama-cuda` | 25.0 | 6703.1 | 1233 MB | 2544.45 | 🔵 SUBAGENTE DE SUPORTE |
-| 15 | `nvidia-nemotron-3-nano-4b-q4-k-m` | 4B | `Q4_K_M` | 2.64 GB | `llama-cuda` | 23.6 | 7736.0 | 1203 MB | 3213.68 | 🔵 SUBAGENTE DE SUPORTE |
-| 16 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | 4.31 GB | `llama-cuda` | 23.3 | 3330.1 | 1231 MB | 3059.28 | 🔵 SUBAGENTE DE SUPORTE |
+| 1 | `zamba2-2-7b-instruct-v2-q4-0` | 2.7B | `Q4_0` | 2.08 GB | `llama-cuda` | 32.0 | 75.6 | 753 MB | 5455.06 | 🔵 SUBAGENTE DE SUPORTE |
+| 2 | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 4B | `Q4_K_M` | 2.60 GB | `llama-cuda` | 29.2 | 1300.9 | 750 MB | 3196.69 | 🔵 SUBAGENTE DE SUPORTE |
+| 3 | `arch-function-chat-3b-q5-k-m` | 3B | `Q5_K_M` | 2.07 GB | `llama-cuda` | 28.4 | 942.0 | 686 MB | 4484.27 | 🔵 SUBAGENTE DE SUPORTE |
+| 4 | `huggingfacetb-smollm3-3b-q5-k-m` | 3B | `Q5_K_M` | 2.06 GB | `llama-cuda` | 28.0 | 1500.0 | 770 MB | 3956.88 | 🔵 SUBAGENTE DE SUPORTE |
+| 5 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 4B | `Q4_K_M` | 2.33 GB | `llama-cuda` | 24.9 | 1771.2 | 752 MB | 3477.49 | 🔵 SUBAGENTE DE SUPORTE |
+| 6 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 4B | `I1-Q4_K_S` | 2.45 GB | `llama-cuda` | 24.7 | 1120.1 | 750 MB | 4199.44 | 🔵 SUBAGENTE DE SUPORTE |
+| 7 | `qwen3-5-4b-super-coder-q4-0` | 4B | `Q4_0` | 2.43 GB | `llama-cuda` | 24.3 | 2303.9 | 285 MB | 2774.10 | 🔵 SUBAGENTE DE SUPORTE |
+| 8 | `phi-4-mini-instruct-q5-k-m` | 3.8B | `Q5_K_M` | 2.65 GB | `llama-cuda` | 23.6 | 1650.3 | 753 MB | 3343.39 | 🔵 SUBAGENTE DE SUPORTE |
+| 9 | `phi-4-mini-reasoning-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | 23.6 | 1701.0 | 548 MB | 2980.88 | 🔵 SUBAGENTE DE SUPORTE |
+| 10 | `phi-4-mini-instruct-q4-k-m` | 3.8B | `Q4_K_M` | 2.32 GB | `llama-cuda` | 22.1 | 6025.1 | 680 MB | 2889.32 | 🔵 SUBAGENTE DE SUPORTE |
+| 11 | `mamba-codestral-7b-instruct-agnuxo` | 7B | `Q4_K_M` | 4.07 GB | `llama-cuda` | 20.9 | 1557.4 | 1193 MB | 3173.91 | 🔵 SUBAGENTE DE SUPORTE |
+| 12 | `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 7B | `IQ3_M` | 3.33 GB | `llama-cuda` | 20.9 | 2479.0 | 753 MB | 2811.24 | 🔵 SUBAGENTE DE SUPORTE |
+| 13 | `mamba-codestral-7b-v0-1-q4-k-m` | 7B | `Q4_K_M` | 3.86 GB | `llama-cuda` | 20.4 | 1086.5 | 752 MB | 3775.16 | 🔵 SUBAGENTE DE SUPORTE |
+| 14 | `falcon3-mamba-7b-instruct-i1-iq3-m` | 7B | `IQ3_M` | 3.05 GB | `llama-cuda` | 20.0 | 4189.4 | 770 MB | 2614.41 | 🔵 SUBAGENTE DE SUPORTE |
+| 15 | `nvidia-nemotron-3-nano-4b-q4-k-m` | 4B | `Q4_K_M` | 2.64 GB | `llama-cuda` | 19.1 | 4835.0 | 752 MB | 3032.67 | 🟠 CADÊNCIA LENTA |
+| 16 | `hy-mt2-7b-q4-k-m` | 7B | `Q4_K_M` | 4.31 GB | `llama-cuda` | 19.0 | 2081.3 | 769 MB | 2936.17 | 🟠 CADÊNCIA LENTA |
 
 ### 🎯 Tier 2 — Background Heavyweight & Deep Cognitive Reasoning
 > **Papel Arquitetural:** Raciocínio profundo assíncrono (deep CoT), arquiteturas Mixture-of-Experts (MoE) ou modelos de alta capacidade (>14B / 27B) que excedem a VRAM da dGPU.
@@ -128,56 +128,104 @@ Aferição de integridade lógica necessária para subagentes executivos e MCP T
 | Modelo | Tier | 🦀 Track 2A (Rust AST Code) | 🛠️ Track 2B (MCP JSON Tools) | 🧠 Track 2C (CoT Reasoning) | Veredito Cognitivo |
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | `zamba2-2-7b-instruct-v2-q4-0` | Tier 1 | 95% | 100% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `arch-function-chat-3b-q5-k-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `huggingfacetb-smollm3-3b-q5-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `phi-4-mini-instruct-q5-k-m` | Tier 1 | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `phi-4-mini-instruct-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `phi-4-mini-reasoning-q4-k-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `qwen3-5-4b-super-coder-q4-0` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
-| `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `phi-4-mini-instruct-q5-k-m` | Tier 1 | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `phi-4-mini-reasoning-q4-k-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `phi-4-mini-instruct-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `mamba-codestral-7b-instruct-agnuxo` | Tier 1 | 20% | 10% | 90% | 🔴 Falha em Validação Estrita |
+| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
+| `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | 95% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `nvidia-nemotron-3-nano-4b-q4-k-m` | Tier 1 | 95% | 10% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 | `hy-mt2-7b-q4-k-m` | Tier 1 | 20% | 85% | 90% | 🟢 Aprovado em Sintaxe Estrita |
 
 ---
 
-## 🎯 4. PRESSÃO DE CONTEXTO & RESISTÊNCIA A DECAIMENTO (BENCHMARK TYPE 5) (2 Avaliados)
+## 🎯 4. PRESSÃO DE CONTEXTO & RESISTÊNCIA A DECAIMENTO (BENCHMARK TYPE 5) (16 Avaliados)
 Aferição física de recuperação de agulha (*Needle-in-a-Haystack*) injetada a 50% de profundidade sob dGPU CUDA:
 
 | Modelo | Contexto Testado | Contexto Efetivo Recuperado | Status Agulha | Veredito de Atenção |
 | :--- | :---: | :---: | :---: | :--- |
-| `phi-4-mini-instruct-q4-k-m` | 8k tokens | 4k tokens | `ATTENTION_DEGRADED` | 🟠 ATTENTION_DEGRADED (Perda após 4k) |
+| `zamba2-2-7b-instruct-v2-q4-0` | 8k tokens | 0k (Falha) | `RETRIEVAL_FAILED` | 🔴 RETRIEVAL_FAILED |
+| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 8k tokens | 0k (Falha) | `RETRIEVAL_FAILED` | 🔴 RETRIEVAL_FAILED |
 | `qwen3-5-4b-super-coder-q4-0` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `phi-4-mini-reasoning-q4-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `phi-4-mini-instruct-q5-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `phi-4-mini-instruct-q4-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `nvidia-nemotron-3-nano-4b-q4-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `mamba-codestral-7b-v0-1-q4-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `mamba-codestral-7b-instruct-agnuxo` | 8k tokens | 4k tokens | `ATTENTION_DEGRADED` | 🟠 ATTENTION_DEGRADED (Perda após 4k) |
+| `hy-mt2-7b-q4-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `huggingfacetb-smollm3-3b-q5-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `falcon3-mamba-7b-instruct-i1-iq3-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
+| `arch-function-chat-3b-q5-k-m` | 8k tokens | 8k tokens | `PASS_STABLE` | 🟢 PASS_STABLE (Sem perda de foco) |
 
 ---
 
-## 👁️ 5. MODELOS MULTIMODAIS & PROJETORES DE VISÃO MMPROJ (TIER 3) (8)
+## 👁️ 5. AUDITORIA MULTIMODAL DE VISÃO (BENCHMARK TYPE 3: MMPROJ PROJECTION)
+Verificação física de acoplamento de tensores visuais mmproj e latência de projeção:
 
-| Modelo VLM | Quant | Tamanho | Projetor Sidecar Pareado | Status Multimodal |
-| :--- | :---: | :---: | :---: | :--- |
-| `bonsai-27b-q1-0-ai-joe` | `Q1_0` | 3.54 GB | ❌ Não detectado | Pronto para OCR/VQA |
-| `bonsai-27b-q1-0-lmstudio` | `Q1_0` | 3.54 GB | ✅ Sim (Pareado) | Pronto para OCR/VQA |
-| `deepseek-v4-pro-qwen3-5-4b-mtp-q4-k-s` | `Q4_K_S` | 2.45 GB | ✅ Sim (Pareado) | Pronto para OCR/VQA |
-| `gemma-4-e2b-it-q4-k-m` | `Q4_K_M` | 3.19 GB | ✅ Sim (Pareado) | Pronto para OCR/VQA |
-| `gemma-4-e2b-it-ultra-uncensored-heretic-q4-k-m` | `Q4_K_M` | 3.19 GB | ✅ Sim (Pareado) | Pronto para OCR/VQA |
-| `microsoft-fara-7b-iq3-m` | `IQ3_M` | 3.33 GB | ✅ Sim (Pareado) | Pronto para OCR/VQA |
-| `microsoft-fara1-5-4b-f16-gguf-q4-k-m` | `Q4_K_M` | 2.52 GB | ✅ Sim (Pareado) | Pronto para OCR/VQA |
-| `nimbus-4b-q4-k-m` | `Q4_K_M` | 2.52 GB | ✅ Sim (Pareado) | Pronto para OCR/VQA |
+| Modelo | Tier | Sidecar mmproj | Latência Projeção | Status Type 3 | Veredito Multimodal |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| `zamba2-2-7b-instruct-v2-q4-0` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `arch-function-chat-3b-q5-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `huggingfacetb-smollm3-3b-q5-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `qwen3-5-4b-super-coder-q4-0` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `phi-4-mini-instruct-q5-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `phi-4-mini-reasoning-q4-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `phi-4-mini-instruct-q4-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `mamba-codestral-7b-instruct-agnuxo` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `mamba-codestral-7b-v0-1-q4-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `falcon3-mamba-7b-instruct-i1-iq3-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `nvidia-nemotron-3-nano-4b-q4-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `hy-mt2-7b-q4-k-m` | Tier 1 | `NONE (Not a Multimodal VLM)` | 0.0ms | `SKIPPED_NO_SIDECAR` | 🛡️ Texto/Código Puro (Sem Sidecar) |
+| `bonsai-27b-q1-0-ai-joe` | Tier 3 | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |
+| `bonsai-27b-q1-0-lmstudio` | Tier 3 | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |
+| `deepseek-v4-pro-qwen3-5-4b-mtp-q4-k-s` | Tier 3 | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |
+| `gemma-4-e2b-it-q4-k-m` | Tier 3 | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |
+| `gemma-4-e2b-it-ultra-uncensored-heretic-q4-k-m` | Tier 3 | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |
+| `microsoft-fara-7b-iq3-m` | Tier 3 | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |
+| `microsoft-fara1-5-4b-f16-gguf-q4-k-m` | Tier 3 | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |
+| `nimbus-4b-q4-k-m` | Tier 3 | `mmproj detectado` | N/A | `PENDING_ARENA` | VLM em Espera |
 
 ---
 
-## ⚡ 6. ACELERAÇÃO ESPECULATIVA & MODELOS DRAFTER (TIER 4) (3)
+## ⚡ 6. ACELERAÇÃO ESPECULATIVA & MTP DRAFTING (BENCHMARK TYPE 4)
+Aferição física de speedup por predição multi-token (MTP) e acoplamento de modelos Drafter:
 
-| Modelo Drafter | Tamanho | Taxa de Aceitação Alpha (α) | Speedup Projetado | Veredito FinOps |
-| :--- | :---: | :---: | :---: | :--- |
-| `bonsai-27b-dspark-q4-1` | 1.66 GB | N/A (Aguardando Type 4) | 1.00x | ⏳ Pendente de Combate |
-| `laguna-xs-2-1-dspark-q4-k-m` | 297.6 MB | N/A (Aguardando Type 4) | 1.00x | ⏳ Pendente de Combate |
-| `qwen35-4b-dflash-q4-k-m` | 363.8 MB | N/A (Aguardando Type 4) | 1.00x | ⏳ Pendente de Combate |
+| Modelo Target | Drafter Acoplado | Taxa Aceitação Alpha (α) | Throughput Projetado | Speedup Real | Veredito FinOps |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| `zamba2-2-7b-instruct-v2-q4-0` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | `Embedded-MTP-Heads` | 62.0% | 56.7 tok/s | 1.35x | 🟢 MTP Acelerado (Heads Integradas) |
+| `arch-function-chat-3b-q5-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `huggingfacetb-smollm3-3b-q5-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `parable-qwen3-4b-claude-fable-5-gguf-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `qwen3-5-4b-super-coder-q4-0` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `phi-4-mini-instruct-q5-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `phi-4-mini-reasoning-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `phi-4-mini-instruct-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `mamba-codestral-7b-instruct-agnuxo` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `synthagent-sft-ui-tars-1-5-7b-i1-iq3-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `mamba-codestral-7b-v0-1-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `falcon3-mamba-7b-instruct-i1-iq3-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `nvidia-nemotron-3-nano-4b-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `hy-mt2-7b-q4-k-m` | `NONE` | 0.0% | 35.0 tok/s | 1.00x | ⚪ Autoregressivo Standalone |
+| `bonsai-27b-dspark-q4-1` | `Standalone Drafter` | N/A | N/A | 1.00x | Drafter Primário |
+| `laguna-xs-2-1-dspark-q4-k-m` | `Standalone Drafter` | N/A | N/A | 1.00x | Drafter Primário |
+| `qwen35-4b-dflash-q4-k-m` | `Standalone Drafter` | N/A | N/A | 1.00x | Drafter Primário |
 
 ---
 *Fim do Dossiê de Inventário SOULS Engine v7. Gerado automaticamente via `souls_llms_inventory_viewer.py`.*
