@@ -282,11 +282,11 @@ def fetch_inventory_data(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
             {c_deact_reason},
             {c_last_epoch},
             COUNT(at.id) as telemetry_count,
-            AVG(at.ttft_ms) as dyn_ttft_ms,
-            AVG(at.tpot_ms) as dyn_tpot_ms,
-            AVG(at.tps) as dyn_tps,
-            AVG(at.vram_peak_mb) as dyn_vram_peak_mb,
-            AVG(at.e3_score) as dyn_e3_score
+            MAX(CASE WHEN at.benchmark_type = 'HardwareProfile' THEN at.ttft_ms END) as dyn_ttft_ms,
+            MAX(CASE WHEN at.benchmark_type = 'HardwareProfile' THEN at.tpot_ms END) as dyn_tpot_ms,
+            MAX(CASE WHEN at.benchmark_type = 'HardwareProfile' THEN at.tps END) as dyn_tps,
+            MAX(CASE WHEN at.benchmark_type = 'HardwareProfile' THEN at.vram_peak_mb END) as dyn_vram_peak_mb,
+            MAX(CASE WHEN at.benchmark_type = 'HardwareProfile' THEN at.e3_score END) as dyn_e3_score
         FROM {table_name} mr
         LEFT JOIN arena_telemetry at ON (mr.file_path = at.file_path OR mr.model_id = at.model_id)
         GROUP BY mr.file_path
