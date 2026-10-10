@@ -100,6 +100,27 @@ impl ArenaRunner {
         run_cognitive_eval(descriptor, &engine, track).await
     }
 
+    /// Executes Type 3 MultimodalVision on a target model descriptor.
+    pub async fn run_multimodal_vision(
+        &self,
+        descriptor: &ModelDescriptor,
+        engine_type: EngineType,
+    ) -> Result<MultimodalVisionResult, ArenaError> {
+        let engine = SiliconRuntimeEngine::new(Arc::clone(&self.runtime), engine_type);
+        run_multimodal_vision(descriptor, &engine).await
+    }
+
+    /// Executes Type 4 SpeculativeDraft on a target model descriptor.
+    pub async fn run_speculative_draft(
+        &self,
+        descriptor: &ModelDescriptor,
+        engine_type: EngineType,
+        drafter: Option<&ModelDescriptor>,
+    ) -> Result<SpeculativeResult, ArenaError> {
+        let engine = SiliconRuntimeEngine::new(Arc::clone(&self.runtime), engine_type);
+        run_speculative_draft(descriptor, &engine, drafter).await
+    }
+
     /// Executes Type 5 ContextPressure on a target model descriptor.
     pub async fn run_context_pressure(
         &self,

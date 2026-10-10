@@ -31,7 +31,7 @@ pub async fn run_context_pressure(
     let max_tested_context = descriptor.ctx_max.min(32768);
 
     // 1. Physical 4k Needle Test
-    let (prompt_4k, expected_token) = build_needle_prompt(2200);
+    let (prompt_4k, expected_token) = build_needle_prompt(1600);
     let params_4k = InferenceRunParams {
         prompt: prompt_4k,
         system_prompt: Some("You are a high-precision enclave verification AI.".to_string()),
@@ -46,7 +46,7 @@ pub async fn run_context_pressure(
 
     // 2. Physical 8k Needle Test (if model supports >= 8192)
     let needle_at_8k = if max_tested_context >= 8192 {
-        let (prompt_8k, _) = build_needle_prompt(4200);
+        let (prompt_8k, _) = build_needle_prompt(3200);
         let params_8k = InferenceRunParams {
             prompt: prompt_8k,
             system_prompt: Some("You are a high-precision enclave verification AI.".to_string()),

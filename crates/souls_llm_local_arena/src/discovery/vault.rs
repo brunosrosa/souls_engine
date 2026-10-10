@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
 use tracing::info;
 use crate::domain::model::ModelDescriptor;
-use crate::domain::result::{CognitiveEvalResult, ContextPressureResult, HardwareProfileResult};
+use crate::domain::result::{CognitiveEvalResult, ContextPressureResult, HardwareProfileResult, MultimodalVisionResult, SpeculativeResult};
 use crate::error::ArenaError;
 
 /// Resolves the heuristic vault database path.
@@ -332,6 +332,79 @@ impl VaultManager {
         .bind(&res.model_id)
         .bind(max_ctx)
         .bind(&res.status)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Records multimodal vision evaluation result into the vault.
+    pub async fn record_multimodal_vision(
+        &self,
+        res: &MultimodalVisionResult,
+    ) -> Result<(), ArenaError> {
+        let vqa_score = if res.status == "PAIRED_QUALIFIED" { 1.0 } else { 0.0 };
+        let has_mmproj = if res.status == "PAIRED_QUALIFIED" { 1 } else { 0 };
+
+        let _ = sqlx::query(
+            "UPDATE model_registry SET
+                has_mmproj_sidecar = ?1,
+                mmproj_file_path = ?2,
+                score_vision_vqa = ?3
+             WHERE model_id = ?4 OR file_path LIKE ?5;"
+        )
+        .bind(has_mmproj)
+        .bind(&res.sidecar_path)
+        .bind(vqa_score)
+        .bind(&res.model_id)
+        .bind(format!("%{}%", res.model_id))
+        .execute(&self.pool)
+        .await;
+
+        sqlx::query(
+            "INSERT INTO arena_telemetry (
+                file_path, prompt_id, model_id, benchmark_type, engine, ttft_ms, tpot_ms, tps,
+                vram_peak_mb, ram_mb, e3_score, status, created_at
+            ) VALUES (?1, 'type3_vlm_pairing', ?2, 'MultimodalVision', 'llama-cuda', ?3, 0.0, 0.0, 0.0, 0.0, ?4, ?5, datetime('now'));"
+        )
+        .bind(&res.sidecar_path)
+        .bind(&res.model_id)
+        .bind(res.multimodal_ttft_ms)
+        .bind(res.projection_latency_ms)
+        .bind(&res.status)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Records speculative draft evaluation result into the vault.
+    pub async fn record_speculative_draft(
+        &self,
+        res: &SpeculativeResult,
+    ) -> Result<(), ArenaError> {
+        let _ = sqlx::query(
+            "UPDATE model_registry SET
+                mtp_acceptance_rate = ?1
+             WHERE model_id = ?2 OR file_path LIKE ?3;"
+        )
+        .bind(res.acceptance_rate_alpha)
+        .bind(&res.model_id)
+        .bind(format!("%{}%", res.model_id))
+        .execute(&self.pool)
+        .await;
+
+        sqlx::query(
+            "INSERT INTO arena_telemetry (
+                file_path, prompt_id, model_id, benchmark_type, engine, ttft_ms, tpot_ms, tps,
+                vram_peak_mb, ram_mb, e3_score, status, created_at
+            ) VALUES (?1, 'type4_draft_acceleration', ?2, 'SpeculativeDraft', 'llama-cuda', 0.0, 0.0, ?3, 0.0, 0.0, ?4, ?5, datetime('now'));"
+        )
+        .bind(&res.drafter_id)
+        .bind(&res.model_id)
+        .bind(res.speculative_tps)
+        .bind(res.speedup_ratio)
+        .bind(&res.verdict)
         .execute(&self.pool)
         .await?;
 
