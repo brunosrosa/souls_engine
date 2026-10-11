@@ -94,10 +94,10 @@ Para integração simbiótica com o **Hermes Agent**, cada perfil define formalm
 
 | Perfil | Primário Local (dGPU) | Fallback Local #1 | Fallback Local #2 / FinOps | Fallback Cloud #1 (Nous Portal) | Fallback Cloud #2 (OpenRouter) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Coding** | `qwen3.5-4b-super-coder` | `qwen3.5-4b-uncensored-mtp` | `nvidia-nemotron-3-nano` | `claude-3-7-sonnet` ($3.40/1M) | `deepseek-v3` / `qwen-2.5-coder-32b` |
-| **Agentic Tools** | `qwen3.5-4b-super-coder` | `qwen3.5-4b-uncensored-mtp` | `qwen3.5-agentic-coder-v4` | `claude-3-7-sonnet` ($2.60/1M) | `gpt-4o-mini` / `deepseek-v3` |
-| **Reasoning** | `nvidia-nemotron-3-nano` | `qwen3.5-4b-super-coder` | `laguna-xs-16b MoE` (Host RAM) | `deepseek-r1` ($0.55/1M) | `o3-mini` / `claude-3-7-sonnet` |
-| **Fast Streaming** | `smollm2-135m-reasoning` (CPU) | `smollm-135m-instruct` (CPU) | `bitnet-b1.58-2b-4t` (Sensor CPU) | `gpt-4o-mini` ($0.14/1M) | `deepseek-v3` ($0.28/1M) |
+| **Coding** | `nvidia-nemotron-3-nano` (Qualidade) | `qwen3.5-4b-uncensored-mtp` | `qwen3.5-4b-agentic-coder` (ROI 119.4) | `claude-3-7-sonnet` ($3.40/1M) | `deepseek-v3` / `qwen-2.5-coder-32b` |
+| **Agentic Tools** | `mamba-codestral-7b` (Qualidade) | `arch-function-chat-3b` (ROI 107.2) | `hy-mt2-7b-q4-k-m` | `claude-3-7-sonnet` ($2.60/1M) | `gpt-4o-mini` / `deepseek-v3` |
+| **Reasoning** | `phi-4-mini-instruct` (Score 90.2) | `hy-mt2-7b-q4-k-m` | `qwen3.5-4b-agentic-coder` (ROI 97.8) | `deepseek-r1` ($0.55/1M) | `o3-mini` / `claude-3-7-sonnet` |
+| **Fast Streaming** | `smollm2-135m-reasoning` (149.5 TPS CPU) | `bonsai-27b-dspark` (62.2 TPS GPU) | `smollm2-360m-instruct` (Host RAM) | `gpt-4o-mini` ($0.14/1M) | `deepseek-v3` ($0.28/1M) |
 
 ---
 

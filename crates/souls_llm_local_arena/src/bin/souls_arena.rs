@@ -81,6 +81,18 @@ async fn handle_sync() -> ExitCode {
     match runner.sync_models_to_vault().await {
         Ok(count) => {
             println!("[✓] Sucesso: {} modelos sincronizados no banco SQLite.", count);
+            println!("[*] Sincronizando HardLinks com a pasta do Hermes Agent (%LOCALAPPDATA%\\hermes\\models)...");
+            match runner.sync_hermes_links(None) {
+                Ok(report) => {
+                    println!(
+                        "[✓] Hermes Links sincronizados: {} criados, {} verificados, {} obsoletos removidos.",
+                        report.links_created, report.links_verified, report.links_removed
+                    );
+                }
+                Err(e) => {
+                    eprintln!("[!] Aviso: Falha ao sincronizar links do Hermes: {}", e);
+                }
+            }
             ExitCode::SUCCESS
         }
         Err(err) => {

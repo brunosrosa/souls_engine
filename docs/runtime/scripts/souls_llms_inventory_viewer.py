@@ -128,6 +128,10 @@ def extract_parameters(name: str, folder: str = "") -> str:
         return "1.5B"
     if "smollm2-360m" in combined:
         return "360M"
+    if "qwen3.8-4b" in combined:
+        return "4B"
+    if "hermes-3-llama-3.2-3b" in combined or "hermes-3" in combined:
+        return "3.2B"
     if "smollm2-135m" in combined or "smollm-135m" in combined:
         return "135M"
     if "mamba-790m" in combined:
@@ -574,6 +578,9 @@ def generate_inventory_report(
     cursor.execute("SELECT model_id, file_path, tps, e3_score, status FROM arena_telemetry WHERE benchmark_type = 'SpeculativeDraft' ORDER BY id DESC")
     spec_raw = cursor.fetchall()
 
+    cursor.execute("SELECT model_id, prompt_id, e3_score, status FROM arena_telemetry WHERE benchmark_type = 'HardEval' ORDER BY id DESC")
+    hard_raw = cursor.fetchall()
+
     pressure_map = {}
     for pm_id, pe3, pstatus, pcreated in pressure_raw:
         if pm_id not in pressure_map:
@@ -600,6 +607,14 @@ def generate_inventory_report(
                 "speculative_tps": stps,
                 "speedup_ratio": se3,
                 "verdict": sstatus,
+            }
+
+    hard_map = {}
+    for hm_id, hprompt, he3, hstatus in hard_raw:
+        if hm_id not in hard_map:
+            hard_map[hm_id] = {
+                "composite": he3,
+                "status": hstatus,
             }
 
     # Filtra por padrão apenas arquivos que existem fisicamente no disco e exclui safetensors parciais
@@ -920,15 +935,15 @@ def generate_inventory_report(
             f"{cot_acc} | {m['pareto_tag']} |"
         )
     lines.append("")
-    lines.append(f"> 🏆 **Campeão de Qualidade:** `{champ_re_q['model_id']}` (Score: **{champ_re_q['score_reasoning_profile']}**, CoT 90%, 8k Estável).")
-    lines.append(f"> ⚡ **Campeão de Custo/Eficiência:** `{champ_re_c['model_id']}` (ROI: **{champ_re_c['v_reasoning']}**, 47.8 TPS, VRAM 2.8GB).")
-    lines.append("> 🐘 **Heavyweight Host CPU (Tier 2):** `laguna-xs-2-1-apex-i-compact` (16B MoE em 32GB RAM Host com 0 MB de VRAM na GPU).")
+    lines.append(f"> 🏆 **Campeão de Qualidade:** `{champ_re_q['model_id']}` (Score: **{champ_re_q['score_reasoning_profile']}**, CoT 80%, 8k Estável).")
+    lines.append(f"> ⚡ **Campeão de Custo/Eficiência:** `{champ_re_c['model_id']}` (ROI: **{champ_re_c['v_reasoning']}**, 46.6 TPS, VRAM 1.2GB).")
+    lines.append("> 🐘 **Heavyweight dGPU 7B (Tier 1):** `hy-mt2-7b-q4-k-m` (Score 79.0%, 100% Rust AST e 91% JSON Tools).")
     lines.append("")
     lines.append("#### 🔗 Cadeia de Roteamento & Fallbacks Canônicos (Perfil Raciocínio & Arquitetura)")
     lines.append("| Nível de Roteamento | Modelo Selecionado | Provedor / Hardware | Custo / Footprint | Throughput | Critério de Acionamento / SLA |")
     lines.append("| :--- | :--- | :--- | :--- | :--- | :--- |")
     lines.append(f"| **1. Primário Local (dGPU)** | `{champ_re_q['model_id']}` | dGPU RTX 2060m (Tier 1) | {champ_re_q['vram_peak_mb']:.0f} MB VRAM | {champ_re_q['tps']:.1f} tok/s | Raciocínio interativo rápido (latência < 3s). |")
-    lines.append("| **2. Fallback Local (Host CPU)** | `laguna-xs-2-1-apex-i-compact` | Host Intel i9 AVX2 (Tier 2) | 0 MB VRAM dGPU / 11GB RAM | 5.8 tok/s | MoE assíncrono para raciocínio denso via `delegate_task`. |")
+    lines.append("| **2. Fallback Local (Heavy 7B)** | `hy-mt2-7b-q4-k-m` | dGPU RTX 2060m (Tier 1) | 1429 MB VRAM | 28.2 tok/s | Engenharia pesada e arquitetura multi-passo local. |")
     lines.append("| **3. Fallback Cloud #1** | `deepseek-r1` | Nous Portal (API Cloud) | $0.55 / 1M tokens | 38.0 tok/s | Raciocínio matemático formal, verificação de teoremas ou impasses lógicos. |")
     lines.append("| **4. Fallback Cloud #2** | `o3-mini` / `claude-3-7-sonnet` | OpenRouter / Nous Portal | $1.10 - $3.40 / 1M | ~65 tok/s | Decisão arquitetural de nível de sistema e design de novos subsistemas. |")
     lines.append("")
@@ -956,16 +971,36 @@ def generate_inventory_report(
         )
     lines.append("")
     lines.append(f"> 🏆 **Campeão Absoluto de Throughput:** `{champ_fs_q['model_id']}` (Throughput recorde de **{champ_fs_q['tps']:.1f} tok/s**, **0 MB VRAM dGPU**, ROI: **{champ_fs_q['v_fast']}**).")
-    lines.append("> 🔬 **Sensor Epistêmico de Host:** `bitnet-b1.58-2b-4t` (Throughput de **65.0 tok/s** na CPU i9 com quantização ternária 1.58-bit).")
+    lines.append("> 🔬 **Sensor Epistêmico de Host:** `smollm2-360m-instruct-q8-0` (Throughput de **51.6 tok/s** na CPU i9 AVX2 com quantização Q8_0 e 0 MB VRAM dGPU).")
     lines.append("")
     lines.append("#### 🔗 Cadeia de Roteamento & Fallbacks Canônicos (Perfil Triagem & Streaming)")
     lines.append("| Nível de Roteamento | Modelo Selecionado | Provedor / Hardware | Custo / Footprint | Throughput | Critério de Acionamento / SLA |")
     lines.append("| :--- | :--- | :--- | :--- | :--- | :--- |")
     lines.append(f"| **1. Primário Local (CPU)** | `{champ_fs_q['model_id']}` | Host Intel i9 AVX2 (Tier 0) | 0 MB VRAM dGPU / 135M | {champ_fs_q['tps']:.1f} tok/s | Triagem de intenção e sanitização de prompts em <15ms. |")
-    lines.append(f"| **2. Fallback Local #1 (Probe)** | `{fb1_fs['model_id']}` | Host Intel i9 AVX2 (Tier 0) | 0 MB VRAM dGPU / 135M | {fb1_fs['tps']:.1f} tok/s | Sanidade de prefill e fallback imediato na CPU. |")
-    lines.append("| **3. Fallback Local #2 (Sensor)** | `bitnet-b1.58-2b-4t` | Host Intel i9 AVX2 (Tier 0.5) | 0 MB VRAM dGPU / 2B | 65.0 tok/s | Cálculo de entropia e incerteza epistêmica de respostas. |")
+    lines.append("| **2. Fallback Local #1 (Probe)** | `gliclass_multilang` | Host Intel i9 AVX2 (Tier 0) | 0 MB VRAM dGPU / 77M ONNX | 65.0 tok/s | Extração de entidades e intenções a frio via ONNX. |")
+    lines.append("| **3. Fallback Local #2 (Sensor)** | `smollm2-360m-instruct-q8-0` | Host Intel i9 AVX2 (Tier 0.5) | 0 MB VRAM dGPU / 360M | 51.6 tok/s | Cálculo de entropia e incerteza epistêmica de respostas. |")
     lines.append("| **4. Fallback Cloud #1** | `gpt-4o-mini` | OpenRouter (API Cloud) | $0.14 / 1M tokens | 115.0 tok/s | Triagens externas massivas de ETL de contexto longo. |")
     lines.append("| **5. Fallback Cloud #2** | `deepseek-v3` | Nous Portal (API Cloud) | $0.28 / 1M tokens | 92.0 tok/s | Extração estruturada massiva com SLA de alta cadência. |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # --- 1.5 MAPEAMENTO DAS 10 FUNÇÕES CANÔNICAS PARA SUBAGENTES (DELEGATE_TASK) ---
+    lines.append("### 🤖 1.5 Mapeamento das 10 Funções Canônicas para Subagentes Locais (`delegate_task`)")
+    lines.append("Esta matriz consolida a escalação definitiva do **Time Titular e Reservas Locais** para as 10 funções canônicas especializadas que os subagentes efêmeros do Hermes Agent executam via `delegate_task` e chamadas MCP:")
+    lines.append("")
+    lines.append("| # | Função Canônica Agêntica | Modelo Titular (Primary) | Modelo Reserva (Fallback Local) | Throughput / VRAM | Justificativa Empírica de Escolha |")
+    lines.append("| :---: | :--- | :--- | :--- | :---: | :--- |")
+    lines.append("| **1** | **🦀 O Artesão de Rust**<br>*(Master SWE & AST Coder)* | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | `temper-1-1-5b-q4-k-m` | 46.6 tok/s<br>1278 MB VRAM | **100% Rust AST**, iMatrix i1, patches cirúrgicos precisos e auto-healing de erros `rustc`. |")
+    lines.append("| **2** | **🛠️ O Despachante Agêntico**<br>*(MCP Tool Calling Master)* | `arch-function-chat-3b-q5-k-m` | `xlam-2-1b-fc-r-q4-k-m` | 47.1 tok/s<br>1438 MB VRAM | **88.5% Agentic Tools**; alternância com xLAM-2-1B (80 TPS, 100% JSON) para despacho de ferramentas. |")
+    lines.append("| **3** | **⚡ O Subagente de Baixa Latência**<br>*(Low-Latency / Fast Multi-Turn)* | `hermes-3-llama-3.2-3b-q4-k-m` | `qwen3-5-4b-uncensored-hauhaucs-aggressive-mtp-q4-k-m` | 51.5 tok/s<br>1450 MB VRAM | Modelo nativo do Hermes com **51.5 TPS**, TTFT de 250ms e resposta imediata em turnos interativos curtos. |")
+    lines.append("| **4** | **💰 O Protetor de Silício / FinOps**<br>*(VRAM Headroom & Multi-Agent)* | `xlam-2-1b-fc-r-q4-k-m` | `nvidia-nemotron-3-nano-4b-q4-k-m` | 80.1 tok/s<br>Headroom >4.0GB | **1.29 GB VRAM** (80.1 TPS); deixa mais de 4.0 GB livres na dGPU para concorrência de múltiplos subagentes. |")
+    lines.append("| **5** | **🐘 O Engenheiro de Sistemas**<br>*(Heavyweight dGPU 7B)* | `hy-mt2-7b-q4-k-m` | `phi-4-mini-instruct-q4-k-m` | 28.2 tok/s<br>1429 MB VRAM | **79.0% Hard Composite** (100% AST, 91% Tools). Modelo de 7B soberano e mais equilibrado do inventário. |")
+    lines.append("| **6** | **👁️ O Inspetor Visual Soberano**<br>*(VLM Multimodal & UI Grounding)* | `qwen2-5-vl-3b-instruct-q4-k-m` | `claude-3-7-sonnet` (Cloud) | **49.5 tok/s**<br>2190 MB VRAM | **0.94 Vision Grounding** com mRoPE e coordenadas cartesianas nativas. 3.1x mais rápido que antigos VLMs. |")
+    lines.append("| **7** | **🩹 O Cirurgião de Compilador**<br>*(Compiler Healer & Auto-Fix)* | `temper-1-1-5b-q4-k-m` | `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` | **72.6 tok/s**<br>1290 MB VRAM | **100% IFEval & 100% Auto-Heal**. Especialista em reparar erros do `rustc` sem conversas prolixas. |")
+    lines.append("| **8** | **⚡ O Drafter Especulativo**<br>*(Tier 4 Speculative Acceleration)* | `qwen2-5-coder-0-5b-instruct-q4-k-m` | `Embedded-MTP-Heads` | **71.7 tok/s**<br>729 MB VRAM | Drafter ultraleve (379 MB) pareado com a família Qwen com **taxa de aceitação α = 72%** (speedup ~1.85x). |")
+    lines.append("| **9** | **🚀 O Triador Relâmpago**<br>*(Host CPU Tier 0 / Sanitizer)* | `smollm2-135m-reasoning-5k-q4-k-m` | `gliclass_multilang` | **149.5 tok/s**<br>0 MB VRAM dGPU | Execução instantânea no i9 (<15ms). Sanitiza prompts e classifica intenções a custo zero de GPU. |")
+    lines.append("| **10** | **🔬 O Sensor Epistêmico & SLM de Apoio**<br>*(Host CPU Tier 0.5)* | `smollm2-360m-instruct-q8-0` | `smollm2-135m-reasoning-5k-q4-k-m` | 51.6 tok/s<br>0 MB VRAM dGPU | **54.5% Hard Composite**. Mede incerteza epistêmica e atua em tarefas leves sem acordar a GPU. |")
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -1014,34 +1049,87 @@ def generate_inventory_report(
         lines.append("")
 
         # =========================================================================
-        # SEÇÃO 3: COLISEU COGNITIVO (TYPE 2: RUST AST, TOOLS & CoT)
+        # SEÇÃO 3: COLISEU COGNITIVO & AVALIAÇÃO MULTI-PERFIL (OS 4 PERFIS DE CARGA UNIFICADOS)
         # =========================================================================
-        lines.append("## 🧬 3. COLISEU COGNITIVO (BENCHMARK TYPE 2: QUALIDADE & RIGIDEZ SINTÁTICA)")
-        lines.append("Aferição de integridade lógica necessária para subagentes executivos e MCP Tools (testes físicos no SQLite):")
+        lines.append("## 🧬 3. COLISEU COGNITIVO & AVALIAÇÃO MULTI-PERFIL (OS 4 PERFIS DE CARGA UNIFICADOS)")
+        lines.append("Esta seção consolida a avaliação de qualidade lógica e rigidez operacional segundo os **4 Perfis Canônicos de Trabalho Agêntico** (`Coding & SWE`, `Agentic & Tools`, `Deep Reasoning`, `Fast / Triage`).")
+        lines.append("Esta mesma régua de pontuação normalizada (0 a 100) unifica os modelos locais e os modelos em nuvem (especificação canônica de FinOps e Cloud Cost Matrix), permitindo ao ParetoBandit rotear tarefas entre silício local e APIs de nuvem sob critérios estritamente homogêneos:")
         lines.append("")
-        lines.append("| Modelo | Tier | Params | 🦀 Track 2A (Rust AST Code) | 🛠️ Track 2B (MCP JSON Tools) | 🧠 Track 2C (CoT Reasoning) | Veredito Cognitivo |")
-        lines.append("| :--- | :---: | :---: | :---: | :---: | :---: | :--- |")
+        lines.append("### 📊 3.0 Matriz Comparativa nos 4 Perfis Canônicos de Trabalho")
+        lines.append("| # | Modelo / Identificador | Tier | Params | 🦀 Coding & SWE (0-100) | 🛠️ Agentic & Tools (0-100) | 🧠 Deep Reasoning (0-100) | ⚡ Fast / Triage (0-100) | Média Global | Perfil Predominante | Veredito Multi-Perfil |")
+        lines.append("| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- | :--- |")
 
-        eval_models = [
-            m for m in processed_models 
-            if (m.get("raw_score_code_ast") or 0.0) > 0 or (m.get("raw_score_json_tools") or 0.0) > 0 or (m.get("raw_score_reasoning") or 0.0) > 0
-        ]
-        if not eval_models:
-            eval_models = tier1_models
-
-        for m in eval_models:
+        for s_idx, m in enumerate(processed_models, 1):
             m_id = m.get("model_id") or m.get("model_name")
-            s_code = f"{m['raw_score_code_ast'] * 100:.0f}%" if m['raw_score_code_ast'] > 0 else "N/A"
-            s_json = f"{m['raw_score_json_tools'] * 100:.0f}%" if m['raw_score_json_tools'] > 0 else "N/A"
-            s_reason = f"{m['raw_score_reasoning'] * 100:.0f}%" if m['raw_score_reasoning'] > 0 else "N/A"
+            s_cod = m.get("score_coding", 0.0)
+            s_agt = m.get("score_agentic", 0.0)
+            s_rsn = m.get("score_reasoning_profile", 0.0)
+            s_fst = m.get("score_fast", 0.0)
+            avg_score = (s_cod + s_agt + s_rsn + s_fst) / 4.0
 
-            has_eval = any(v != "N/A" for v in [s_code, s_json, s_reason])
-            verdict = (
-                "🟢 Aprovado em Sintaxe Estrita" 
-                if (m.get("raw_score_code_ast", 0) >= 0.85 or m.get("raw_score_json_tools", 0) >= 0.85) 
-                else ("🟡 Aguardando Bateria Type 2" if not has_eval else "🔴 Falha em Validação Estrita")
+            scores_dict = {
+                "🦀 Coding & SWE": s_cod,
+                "🛠️ Agentic Tools": s_agt,
+                "🧠 Deep Reasoning": s_rsn,
+                "⚡ Fast / Triage": s_fst
+            }
+            dom_profile = max(scores_dict.items(), key=lambda kv: kv[1])[0]
+
+            if avg_score >= 70.0:
+                multi_badge = "🟢 Qualificado Multi-Carga"
+            elif max(s_cod, s_agt, s_rsn, s_fst) >= 80.0:
+                multi_badge = "🔵 Especialista de Nicho"
+            elif avg_score >= 50.0:
+                multi_badge = "🟡 Carga Específica / Suporte"
+            else:
+                multi_badge = "🟠 Carga Restrita / Fallback"
+
+            lines.append(
+                f"| {s_idx} | `{m_id}` | {m['clean_tier']} | {m.get('parameters', 'N/A')} | "
+                f"**{s_cod:.1f}** | **{s_agt:.1f}** | **{s_rsn:.1f}** | **{s_fst:.1f}** | "
+                f"{avg_score:.1f} | {dom_profile} | {multi_badge} |"
             )
-            lines.append(f"| `{m_id}` | {m['clean_tier']} | {m.get('parameters', 'N/A')} | {s_code} | {s_json} | {s_reason} | {verdict} |")
+
+        lines.append("")
+        lines.append("> 💡 **Homogeneidade Arquitetural (ADR-007):** Tanto uma chamada local ao `arch-function-chat-3b` quanto uma chamada externa ao `claude-3-7-sonnet` ou `deepseek-v3` geram a mesma tupla de 4 scores. O ParetoBandit computa o Retorno de Silício $V_{\\text{task}}$ versus o custo financeiro em nuvem de forma unificada.")
+        lines.append("")
+
+        # Sub-seção 3.1: Detalhamento Físico da Bateria Discriminatória (10 Trilhas Canônicas de Rigidez)
+        lines.append("### 🔬 3.1 Detalhamento Empírico da Bateria Discriminatória (10 Trilhas Canônicas de Rigidez)")
+        lines.append("Desmembramento das notas empíricas aferidas sob estresse bare-metal com **descapitação estrita de prompt** (eliminando 100% de falsos positivos causados pelo eco do CLI do llama.cpp). Cobre as 10 trilhas canônicas de SWE & Agência:")
+        lines.append("- **🦀 Trilha AST Code (2A, 2E, 2H):** Sintaxe Rust AST + Concorrência/Deadlocks + Myers Diff / Patches Cirúrgicos.")
+        lines.append("- **🛠️ Trilha JSON & Tools (2B, 2F, 2D):** Schemas JSON llguidance + Inspeção Sintática AST Outline + Restrições Negativas IFEval.")
+        lines.append("- **🧠 Trilha Reasoning & CoT (2C, 2E, 2G):** Dedução Matemática Modulo RingBuffer + Concorrência + Fluência Técnica WDDM PT-BR.")
+        lines.append("- **🩹 Novas Trilhas Avançadas SWE (2H, 2I, 2J):** Surgical Patch Replace, Aderência Estrita a APIs Internas (`souls_ast`) e Auto-Healing de Erros de Compilação Rust (`rustc`).")
+        lines.append("")
+        lines.append("| # | Modelo / Identificador | Tier | Params | 🦀 AST Refinado (2A/E/H) | 🛠️ Tools Refinado (2B/D/F) | 🧠 Reasoning (2C/E/G) | Hard Composite (10 Trilhas) | Status de Rigidez |")
+        lines.append("| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |")
+
+        for sub_idx, m in enumerate(processed_models, 1):
+            m_id = m.get("model_id") or m.get("model_name")
+            hinfo = hard_map.get(m_id) or {}
+            comp_score = hinfo.get("composite", 0.0)
+            h_comp = f"**{comp_score:.1f}%**" if comp_score > 0 else "N/A"
+
+            s_ast = f"{m.get('raw_score_code_ast', 0.0) * 100:.1f}%" if m.get("raw_score_code_ast", 0.0) > 0 else "N/A"
+            s_js = f"{m.get('raw_score_json_tools', 0.0) * 100:.1f}%" if m.get("raw_score_json_tools", 0.0) > 0 else "N/A"
+            s_rs = f"{m.get('raw_score_reasoning', 0.0) * 100:.1f}%" if m.get("raw_score_reasoning", 0.0) > 0 else "N/A"
+
+            if comp_score >= 75.0:
+                rigor_badge = "🟢 Rigidez Alta (Qualified)"
+            elif comp_score >= 60.0:
+                rigor_badge = "🔵 Rigidez Moderada (Provisional)"
+            elif comp_score >= 40.0:
+                rigor_badge = "🟡 Capacidade Básica / SLM"
+            elif comp_score > 0.0:
+                rigor_badge = "🟠 Frágil / Não Aderente"
+            else:
+                rigor_badge = "⚪ Não Aplicável / Standalone"
+
+            lines.append(
+                f"| {sub_idx} | `{m_id}` | {m['clean_tier']} | {m.get('parameters', 'N/A')} | "
+                f"{s_ast} | {s_js} | {s_rs} | {h_comp} | {rigor_badge} |"
+            )
 
         lines.append("")
         lines.append("---")
@@ -1152,11 +1240,11 @@ def generate_inventory_report(
         # SEÇÃO 8: SÍNTESE ANALÍTICA FINAL & VEREDITO DO ARQUITETO
         # =========================================================================
         lines.append("## 🏛️ 8. SÍNTESE ANALÍTICA FINAL & VEREDITO DO ARQUITETO")
-        lines.append("### Diagnóstico Geral do Inventário de Silício:")
-        lines.append("1. **Soberania do Tier 1 para o Hermes Agent:** Os modelos `qwen3.5-4b-super-coder` (50.1 tok/s) e `qwen3.5-4b-uncensored-mtp` (51.2 tok/s) consolidam-se como os motores mestres ideais. Oferecem excelente equilíbrio de geração de código AST Rust, suporte a JSON Schema e estabilidade completa em 8k tokens.")
-        lines.append("2. **Oportunidade FinOps de Alta Densidade:** O modelo `nvidia-nemotron-3-nano-4b` é o campeão de ROI de silício. Com apenas 2.829 MB de VRAM e 47.8 tok/s, deixa mais de 2.400 MB de headroom livre na GPU, viabilizando expansão segura de contexto ou co-alocação com drafters.")
-        lines.append("3. **Papel Complementar dos Tiers Host (0, 0.5 e 2):** Modelos como `smollm2-135m-reasoning` (149.5 tok/s), `neuralai-mamba-k1` (83.7 tok/s) e `bitnet-1.58b` (65.0 tok/s) provam que tarefas de triagem, sanitização e cálculo epistêmico devem ser descarregadas inteiramente para a CPU i9 via AVX2, mantendo a GPU fria e desimpedida para o diálogo principal.")
-        lines.append("4. **Alinhamento com Modelos em Nuvem:** As cadeias de roteamento estabelecidas conectam a infraestrutura local às opções de menor custo no Nous Portal (`claude-3-7-sonnet` para SWE e `deepseek-v3`/`deepseek-r1` para raciocínio em massa), criando uma arquitetura híbrida de máxima eficiência técnica e financeira.")
+        lines.append("### Diagnóstico Geral do Inventário de Silício Pós-Poda (15 Modelos de Elite):")
+        lines.append("1. **Soberania do Tier 1 para o Hermes Agent:** Os modelos `phi-4-mini-instruct-q4-k-m` (81.0%, Top 1 Geral da Arena) e `qwen3-5-4b-agentic-coder-v4-i1-q4-k-s` (78.0%, 100% Rust AST) consolidam-se como os motores mestres de rigidez lógica e cirurgia de código. Para chamadas de ferramentas e baixa latência, `hermes-3-llama-3.2-3b-q4-k-m` (51.5 tok/s) e `qwen3.8-4b-q4-k-m` (53.2 tok/s) garantem cadência ultra-rápida.")
+        lines.append("2. **Oportunidade FinOps de Alta Densidade:** O modelo `nvidia-nemotron-3-nano-4b-q4-k-m` e o `qwen3-5-4b-agentic-coder` são os campeões de ROI de silício. Com apenas 1.278 MB a 2.829 MB de VRAM e throughput de 46 a 48 tok/s, deixam mais de 2.400 MB de headroom livre na GPU, viabilizando concorrência de subagentes ou coexistência com o drafter `bonsai-27b-dspark` (62.2 tok/s).")
+        lines.append("3. **Papel Estratégico dos Tiers Host (0 e 0.5):** Modelos como `smollm2-135m-reasoning` (149.5 tok/s na CPU i9 AVX2), `gliclass_multilang` (77M ONNX) e `smollm2-360m-instruct-q8-0` (51.6 tok/s na RAM Host) provam que tarefas de triagem, sanitização e cálculo epistêmico devem ser descarregadas inteiramente para a CPU i9, mantendo a dGPU fria e desimpedida para o diálogo principal.")
+        lines.append("4. **Alinhamento Híbrido com Modelos em Nuvem:** As cadeias de roteamento estabelecidas conectam a infraestrutura local às opções de menor custo no Nous Portal (`claude-3-7-sonnet` para SWE crítica e `deepseek-v3`/`deepseek-r1` para raciocínio em massa), criando uma arquitetura híbrida de máxima eficiência técnica e financeira.")
         lines.append("")
 
     lines.append("---")

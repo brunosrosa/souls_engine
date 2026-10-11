@@ -23,8 +23,9 @@ pub use batteries::{
     run_speculative_draft, BenchmarkType,
 };
 pub use discovery::{
-    default_model_directories, enrich_with_gguf_metadata, inspect_model_file, resolve_vault_db_path,
-    scan_local_models, VaultManager,
+    default_hermes_models_dir, default_model_directories, enrich_with_gguf_metadata,
+    inspect_model_file, resolve_vault_db_path, scan_local_models, sync_hermes_model_links,
+    HermesSyncReport, VaultManager,
 };
 pub use domain::{
     ArenaInferEngine, CognitiveEvalResult, ContextPressureResult, EngineType, HardwareProfileResult,
@@ -42,6 +43,7 @@ pub use reporters::{
     print_model_list_table, print_pressure_table, print_speculative_table, print_vision_table,
 };
 
+use std::path::Path;
 use std::sync::Arc;
 use souls_inference_runtime::{HardwareWatchdog, InferenceRuntime};
 
@@ -77,6 +79,12 @@ impl ArenaRunner {
         let models = self.discover_models();
         let vault = self.connect_vault().await?;
         vault.sync_models(&models).await
+    }
+
+    /// Synchronizes active models with the Hermes Agent models folder via zero-byte HardLinks.
+    pub fn sync_hermes_links(&self, custom_hermes_dir: Option<&Path>) -> Result<HermesSyncReport, ArenaError> {
+        let models = self.discover_models();
+        sync_hermes_model_links(&models, custom_hermes_dir)
     }
 
     /// Executes Type 1 HardwareProfile on a target model descriptor.
@@ -231,8 +239,17 @@ mod tests {
         let pt_res = run_cognitive_eval(&desc, &engine, "pt").await.unwrap();
         assert_eq!(pt_res.track, "PortugueseTechnicalFluency (2G)");
 
+        let patch_res = run_cognitive_eval(&desc, &engine, "patch").await.unwrap();
+        assert_eq!(patch_res.track, "SurgicalPatch (2H)");
+
+        let api_res = run_cognitive_eval(&desc, &engine, "api").await.unwrap();
+        assert_eq!(api_res.track, "ApiAntiHallucination (2I)");
+
+        let heal_res = run_cognitive_eval(&desc, &engine, "heal").await.unwrap();
+        assert_eq!(heal_res.track, "CompilerAutoHeal (2J)");
+
         let hard_suite = run_cognitive_eval(&desc, &engine, "hard").await.unwrap();
-        assert_eq!(hard_suite.track, "HardEvalDiscriminatoryComposite (2H)");
+        assert_eq!(hard_suite.track, "HardEvalDiscriminatoryComposite (Canonical 10-Track)");
     }
 }
 

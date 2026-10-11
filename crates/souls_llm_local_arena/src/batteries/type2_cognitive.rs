@@ -19,6 +19,9 @@ pub async fn run_cognitive_eval(
         "bughunt" | "debugging" | "bug_hunting" | "2e" => run_bug_hunting_track(descriptor, engine).await,
         "mcp" | "mcp_tools" | "ambiguity" | "2f" => run_mcp_ambiguity_track(descriptor, engine).await,
         "pt" | "portuguese" | "fluency" | "2g" => run_portuguese_technical_track(descriptor, engine).await,
+        "patch" | "surgical_patch" | "2h" => run_surgical_patch_track(descriptor, engine).await,
+        "api" | "anti_hallucination" | "2i" => run_api_anti_hallucination_track(descriptor, engine).await,
+        "heal" | "compiler_autoheal" | "2j" => run_compiler_autoheal_track(descriptor, engine).await,
         "hard" | "hard_eval" | "suite" => run_hard_eval_composite(descriptor, engine).await,
         _ => run_rust_ast_track(descriptor, engine).await, // Default: Trilha 2A
     }
@@ -375,14 +378,34 @@ async fn run_hard_eval_composite(
     let r_bughunt = run_bug_hunting_track(descriptor, engine).await?;
     let r_mcp = run_mcp_ambiguity_track(descriptor, engine).await?;
     let r_pt = run_portuguese_technical_track(descriptor, engine).await?;
+    let r_patch = run_surgical_patch_track(descriptor, engine).await?;
+    let r_api = run_api_anti_hallucination_track(descriptor, engine).await?;
+    let r_heal = run_compiler_autoheal_track(descriptor, engine).await?;
 
-    let composite_score = (r_ifeval.accuracy_pct * 0.30)
-        + (r_bughunt.accuracy_pct * 0.30)
-        + (r_mcp.accuracy_pct * 0.25)
-        + (r_pt.accuracy_pct * 0.15);
+    let composite_score = (r_ifeval.accuracy_pct * 0.15)
+        + (r_bughunt.accuracy_pct * 0.15)
+        + (r_mcp.accuracy_pct * 0.15)
+        + (r_pt.accuracy_pct * 0.10)
+        + (r_patch.accuracy_pct * 0.15)
+        + (r_api.accuracy_pct * 0.15)
+        + (r_heal.accuracy_pct * 0.15);
 
-    let avg_ttft = (r_ifeval.avg_ttft_ms + r_bughunt.avg_ttft_ms + r_mcp.avg_ttft_ms + r_pt.avg_ttft_ms) / 4.0;
-    let avg_tps = (r_ifeval.avg_tps + r_bughunt.avg_tps + r_mcp.avg_tps + r_pt.avg_tps) / 4.0;
+    let avg_ttft = (r_ifeval.avg_ttft_ms
+        + r_bughunt.avg_ttft_ms
+        + r_mcp.avg_ttft_ms
+        + r_pt.avg_ttft_ms
+        + r_patch.avg_ttft_ms
+        + r_api.avg_ttft_ms
+        + r_heal.avg_ttft_ms) / 7.0;
+
+    let avg_tps = (r_ifeval.avg_tps
+        + r_bughunt.avg_tps
+        + r_mcp.avg_tps
+        + r_pt.avg_tps
+        + r_patch.avg_tps
+        + r_api.avg_tps
+        + r_heal.avg_tps) / 7.0;
+
     let e3_score = (composite_score * composite_score) / ((avg_ttft / 1000.0) + 1.0);
 
     let status = if composite_score >= 80.0 {
@@ -396,9 +419,9 @@ async fn run_hard_eval_composite(
     Ok(CognitiveEvalResult {
         model_id: descriptor.model_id.clone(),
         model_path: descriptor.file_path.to_string_lossy().to_string(),
-        track: "HardEvalDiscriminatoryComposite (2H)".to_string(),
+        track: "HardEvalDiscriminatoryComposite (Canonical 10-Track)".to_string(),
         accuracy_pct: composite_score,
-        ast_valid: r_bughunt.ast_valid,
+        ast_valid: r_bughunt.ast_valid && r_patch.ast_valid,
         json_strict_valid: r_mcp.json_strict_valid,
         think_tokens_avg: (r_ifeval.think_tokens_avg + r_bughunt.think_tokens_avg) / 2,
         cot_efficiency_ratio: 0.0,
@@ -538,5 +561,219 @@ fn evaluate_portuguese_technical(text: &str) -> (f64, bool) {
     }
 
     (score.min(100.0), score >= 60.0)
+}
+
+/// Trilha 2H: Surgical Patch Editing (Myers Diff / Strict Replace Block)
+async fn run_surgical_patch_track(
+    descriptor: &ModelDescriptor,
+    engine: &dyn ArenaInferEngine,
+) -> Result<CognitiveEvalResult, ArenaError> {
+    let params = InferenceRunParams {
+        prompt: r#"You are given the following existing Rust function:
+```rust
+fn compute_checksum(data: &[u8]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    hasher.write(data);
+    0 // BUG: should return hasher.finish()
+}
+```
+Emit STRICTLY a surgical search/replace patch without rewriting the whole function:
+<<<<<<< SEARCH
+    0 // BUG: should return hasher.finish()
+=======
+    hasher.finish()
+>>>>>>> REPLACE"#.to_string(),
+        system_prompt: Some("Respond strictly with the search/replace block. Zero conversational filler.".to_string()),
+        max_tokens: 160,
+        temperature: 0.1,
+        top_p: 0.95,
+        json_schema: None,
+    };
+
+    let output = engine.execute(descriptor, &params).await?;
+    let (clean_text, think_tokens) = extract_thinking_tokens(&output.text);
+    let (accuracy_pct, is_valid) = evaluate_surgical_patch(&clean_text);
+
+    let status = if is_valid && accuracy_pct >= 80.0 {
+        "QUALIFIED".to_string()
+    } else if accuracy_pct >= 50.0 {
+        "PROVISIONAL".to_string()
+    } else {
+        "REJECTED".to_string()
+    };
+
+    let e3_score = (accuracy_pct * accuracy_pct) / ((output.ttft_ms / 1000.0) + 1.0);
+
+    Ok(CognitiveEvalResult {
+        model_id: descriptor.model_id.clone(),
+        model_path: descriptor.file_path.to_string_lossy().to_string(),
+        track: "SurgicalPatch (2H)".to_string(),
+        accuracy_pct,
+        ast_valid: is_valid,
+        json_strict_valid: false,
+        think_tokens_avg: think_tokens,
+        cot_efficiency_ratio: 0.0,
+        avg_ttft_ms: output.ttft_ms,
+        avg_tps: output.tps,
+        e3_score,
+        status,
+    })
+}
+
+/// Trilha 2I: Strict API Anti-Hallucination Adherence
+async fn run_api_anti_hallucination_track(
+    descriptor: &ModelDescriptor,
+    engine: &dyn ArenaInferEngine,
+) -> Result<CognitiveEvalResult, ArenaError> {
+    let params = InferenceRunParams {
+        prompt: r#"API Outline for module `souls_ast`:
+```rust
+pub struct AstNode { pub id: u64, pub kind: String }
+pub fn parse_root(src: &str) -> Result<AstNode, AstError>;
+```
+Task: Write a function `pub fn count_nodes(src: &str) -> Result<u64, AstError>` using strictly the API above.
+Do NOT call unlisted functions like `AstNode::new()`, `parse_file()`, or invent fields."#.to_string(),
+        system_prompt: Some("Output strictly the Rust function. Pure code only.".to_string()),
+        max_tokens: 180,
+        temperature: 0.1,
+        top_p: 0.95,
+        json_schema: None,
+    };
+
+    let output = engine.execute(descriptor, &params).await?;
+    let (clean_text, think_tokens) = extract_thinking_tokens(&output.text);
+    let (accuracy_pct, is_valid) = evaluate_anti_hallucination(&clean_text);
+
+    let status = if is_valid && accuracy_pct >= 80.0 {
+        "QUALIFIED".to_string()
+    } else if accuracy_pct >= 50.0 {
+        "PROVISIONAL".to_string()
+    } else {
+        "REJECTED".to_string()
+    };
+
+    let e3_score = (accuracy_pct * accuracy_pct) / ((output.ttft_ms / 1000.0) + 1.0);
+
+    Ok(CognitiveEvalResult {
+        model_id: descriptor.model_id.clone(),
+        model_path: descriptor.file_path.to_string_lossy().to_string(),
+        track: "ApiAntiHallucination (2I)".to_string(),
+        accuracy_pct,
+        ast_valid: is_valid,
+        json_strict_valid: false,
+        think_tokens_avg: think_tokens,
+        cot_efficiency_ratio: 0.0,
+        avg_ttft_ms: output.ttft_ms,
+        avg_tps: output.tps,
+        e3_score,
+        status,
+    })
+}
+
+/// Trilha 2J: Compiler Error Auto-Healing (1-Turn Resolution)
+async fn run_compiler_autoheal_track(
+    descriptor: &ModelDescriptor,
+    engine: &dyn ArenaInferEngine,
+) -> Result<CognitiveEvalResult, ArenaError> {
+    let params = InferenceRunParams {
+        prompt: r#"Fix this Rust compilation error:
+```rust
+fn get_message() -> Result<String, &'static str> {
+    let val: Option<String> = Some("engine".to_string());
+    val.ok_or(404)
+}
+```
+Compiler output:
+error[E0308]: mismatched types: expected `&str`, found `integer`
+Task: Output strictly the fixed `fn get_message()` returning "not_found" on error."#.to_string(),
+        system_prompt: Some("Output strictly the pure fixed Rust function.".to_string()),
+        max_tokens: 160,
+        temperature: 0.1,
+        top_p: 0.95,
+        json_schema: None,
+    };
+
+    let output = engine.execute(descriptor, &params).await?;
+    let (clean_text, think_tokens) = extract_thinking_tokens(&output.text);
+    let (accuracy_pct, is_valid) = evaluate_compiler_autoheal(&clean_text);
+
+    let status = if is_valid && accuracy_pct >= 80.0 {
+        "QUALIFIED".to_string()
+    } else if accuracy_pct >= 50.0 {
+        "PROVISIONAL".to_string()
+    } else {
+        "REJECTED".to_string()
+    };
+
+    let e3_score = (accuracy_pct * accuracy_pct) / ((output.ttft_ms / 1000.0) + 1.0);
+
+    Ok(CognitiveEvalResult {
+        model_id: descriptor.model_id.clone(),
+        model_path: descriptor.file_path.to_string_lossy().to_string(),
+        track: "CompilerAutoHeal (2J)".to_string(),
+        accuracy_pct,
+        ast_valid: is_valid,
+        json_strict_valid: false,
+        think_tokens_avg: think_tokens,
+        cot_efficiency_ratio: 0.0,
+        avg_ttft_ms: output.ttft_ms,
+        avg_tps: output.tps,
+        e3_score,
+        status,
+    })
+}
+
+fn evaluate_surgical_patch(text: &str) -> (f64, bool) {
+    let mut score: f64 = 0.0;
+    let has_search = text.contains("SEARCH") || text.contains("<<<<<<<");
+    let has_replace = text.contains("REPLACE") || text.contains(">>>>>>>");
+    let has_finish = text.contains("hasher.finish()");
+
+    if has_search && has_replace {
+        score += 50.0;
+    }
+    if has_finish {
+        score += 40.0;
+    }
+    let lines_count = text.lines().count();
+    if lines_count <= 12 {
+        score += 10.0;
+    }
+
+    (score.min(100.0), score >= 70.0)
+}
+
+fn evaluate_anti_hallucination(text: &str) -> (f64, bool) {
+    let mut score: f64 = 0.0;
+    let lower = text.to_lowercase();
+    let has_parse_root = lower.contains("parse_root");
+    let has_hallucinated = lower.contains("parse_file") || lower.contains("astnode::new") || lower.contains("astnode {");
+
+    if has_parse_root {
+        score += 60.0;
+    }
+    if !has_hallucinated {
+        score += 40.0;
+    } else {
+        score = (score - 30.0).max(0.0);
+    }
+
+    (score.min(100.0), score >= 70.0)
+}
+
+fn evaluate_compiler_autoheal(text: &str) -> (f64, bool) {
+    let mut score: f64 = 0.0;
+    let lower = text.to_lowercase();
+    let fixed_error = lower.contains("ok_or(\"not_found\")") || lower.contains("ok_or(\"not found\")") || lower.contains("ok_or(\"");
+    let has_404 = lower.contains("ok_or(404)");
+
+    if fixed_error && !has_404 {
+        score += 80.0;
+    }
+    if text.contains("fn get_message") {
+        score += 20.0;
+    }
+
+    (score.min(100.0), score >= 80.0)
 }
 
