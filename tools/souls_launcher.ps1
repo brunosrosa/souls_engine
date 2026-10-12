@@ -8,7 +8,19 @@ $ErrorActionPreference = "SilentlyContinue"
 
 $brandingDir = "Z:\souls_engine\assets\branding"
 $serverUrl = "http://127.0.0.1:9123"
-
+# Inicia souls_server.exe se não estiver em execução
+$running = Get-Process -Name "souls_server" -ErrorAction SilentlyContinue
+if (-not $running) {
+    $serverExe = "Z:\souls_engine\target\x86_64-pc-windows-msvc\debug\souls_server.exe"
+    if (-not (Test-Path $serverExe)) {
+        $serverExe = "Z:\souls_engine\target\debug\souls_server.exe"
+    }
+    if (Test-Path $serverExe) {
+        Write-Host "Iniciando daemon headless souls_server.exe..." -ForegroundColor Cyan
+        Start-Process -FilePath $serverExe -WindowStyle Hidden
+        Start-Sleep -Milliseconds 800
+    }
+}
 # Carrega ícones multi-resolução
 $icons = @{
     "cyan"   = [System.Drawing.Icon]::new((Join-Path $brandingDir "souls_icon_cyan.ico"))
@@ -47,6 +59,12 @@ $itemCheckpoint.add_Click({
         Invoke-RestMethod -Uri "$serverUrl/api/v1/system/checkpoint" -Method Post | Out-Null
         $notifyIcon.ShowBalloonTip(2000, "Souls Engine", "WAL SQLite compactado com sucesso!", [System.Windows.Forms.ToolTipIcon]::Info)
     } catch {}
+})
+
+$itemStopServer = $contextMenu.Items.Add("🛑 Parar Servidor Daemon")
+$itemStopServer.add_Click({
+    Stop-Process -Name "souls_server" -Force -ErrorAction SilentlyContinue
+    $notifyIcon.ShowBalloonTip(2000, "Souls Engine", "Daemon souls_server encerrado.", [System.Windows.Forms.ToolTipIcon]::Info)
 })
 
 $contextMenu.Items.Add("-") | Out-Null
