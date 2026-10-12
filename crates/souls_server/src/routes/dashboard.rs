@@ -173,24 +173,30 @@ pub async fn hermes_preset_handler(
             backup_created = true;
         }
 
-        // Se o arquivo existir, tenta ler e substituir o model
         if let Ok(content) = fs::read_to_string(&hermes_cfg_path) {
-            let updated = if content.contains("model:") {
-                let lines: Vec<&str> = content.lines().collect();
-                let mut new_lines = Vec::new();
-                for line in lines {
-                    if line.trim_start().starts_with("model:") {
-                        new_lines.push(format!("model: \"{}\"", target_model));
-                    } else {
-                        new_lines.push(line.to_string());
+            let mut inside_top_model = false;
+            let mut new_lines = Vec::new();
+
+            for line in content.lines() {
+                if line.starts_with("model:") {
+                    inside_top_model = true;
+                    new_lines.push(line.to_string());
+                    continue;
+                }
+
+                if inside_top_model {
+                    if line.starts_with("  default:") {
+                        new_lines.push(format!("  default: \"{}\"", target_model));
+                        continue;
+                    } else if !line.starts_with(" ") && !line.is_empty() {
+                        inside_top_model = false;
                     }
                 }
-                new_lines.join("\n")
-            } else {
-                format!("model: \"{}\"\n{}", target_model, content)
-            };
 
-            let _ = fs::write(&hermes_cfg_path, updated);
+                new_lines.push(line.to_string());
+            }
+
+            let _ = fs::write(&hermes_cfg_path, new_lines.join("\n"));
         }
     }
 
