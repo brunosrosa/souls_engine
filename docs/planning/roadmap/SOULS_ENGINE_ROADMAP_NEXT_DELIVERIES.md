@@ -170,10 +170,10 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 │ Sessão 10│ Bloco H: Des-staging  │ [CONCLUÍDA] 14 tools des-stagadas, sandbox, │
 │          │ Ferramentas Domínio 6 │ LEAN compress/dedup/fill, 23/23 testes PASS │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 11│ Bloco I: Skills &     │ [PRÓXIMA] Homologação das 15 Skills e estei-│
-│          │ Curadoria Viva Cofre  │ ra viva de 498 notas Obsidian raw->wiki     │
+│ Sessão 11│ Bloco I: Skills &     │ [CONCLUÍDA] 15 Skills testadas (100% PASS), │
+│          │ Curadoria Viva Cofre  │ esteira viva 498 notas Obsidian raw->wiki   │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 12│ Bloco J: Fix Banco,   │ Correção Foreign Key Cloud Arena sync,      │
+│ Sessão 12│ Bloco J: Fix Banco,   │ [PRÓXIMA] Correção FK Cloud Arena sync,     │
 │          │ Dashboard SSE & Config│ telemetria SSE viva e souls_config.toml     │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
 │ Sessão 13│ Bloco K: Simbiose     │ Linkagem desktop-plugins Hermes, launcher   │
@@ -481,14 +481,20 @@ flowchart LR
   - Zero warnings de formatação ou CRLF (`git diff --check` limpo). Binário `souls_server.exe` reconstruído e operando em `127.0.0.1:9123`.
 
 
-### 11.3 Sessão 11 (Bloco I): Homologação Comportamental das 15 Skills & Curadoria Viva do Obsidian
-* **Objetivo:** Validar o alinhamento ético e os reflexos operacionais autônomos dos agentes.
+### 11.3 Sessão 11 (Bloco I): Homologação Comportamental das 15 Skills & Curadoria Viva do Obsidian [CONCLUÍDA]
+* **Objetivo:** Validar o alinhamento ético e os reflexos operacionais autônomos dos agentes no Two-Stage Switchboard e esteira do cofre Obsidian.
 * **Bateria de Verificação de Skills:**
-  - `obsidian-privacy-shield`: Submissão de prompts com dados de saúde ou finanças; o agente deve abortar envio para nuvens abertas e desviar compulsoriamente para processamento local na dGPU / CPU i9.
-  - `souls-code-surgeon`: Proibição estrita de leitura de arquivos inteiros; imposição do fluxo `outline` $\rightarrow$ `symbol` $\rightarrow$ `edit`.
+  - `tools/test_skills_behavior.ps1`: **15/15 Skills Aprovadas (100% PASS)** com latência média de **18.73 ms**.
+  - `obsidian-privacy-shield`: Dados de saúde e finanças interceptados; garantia de roteamento estritamente local (`LOCAL_ONLY`) na dGPU / CPU i9 bare-metal.
+  - `souls-code-surgeon`: Proibição estrita de leitura de arquivos inteiros; indução do fluxo `outline` $\rightarrow$ `symbol` $\rightarrow$ `edit`.
+  - `souls-hardware-watchdog`: Monitoramento termodinâmico contínuo e contenção de VRAM sob o teto útil de 5.2GB do WDDM.
   - `agent-self-learning-loop`: Teste de ciclo de auto-patch `/learn`, registrando lições aprendidas em regras duradouras.
 * **Ponto de Auditoria 5 (Esteira Viva do Obsidian Vault):**
-  - Execução de `curate_obsidian.ps1` no lote de 498 documentos em `raw/`, validando a formatação YAML, links bidirecionais `[[...]]`, log em `wiki/log.md` e manifesto SHA-256.
+  - Execução de `tools/curate_obsidian.ps1` no acervo real do Arquiteto em `C:\Users\rosas\OneDrive\Documentos\Obisidian DB\raw`: **498 documentos escaneados e catalogados**.
+  - 2 arquivos sensíveis demarcados com isolamento criptográfico `LOCAL_ONLY 🔒`.
+  - Manifesto criptográfico `wiki/raw_manifest.json` com cálculo SHA-256 de integridade e log cronológico em `wiki/log.md`.
+  - Relatório oficial consolidado em [docs/homologation/SOULS_ENGINE_SKILLS_AND_OBSIDIAN_HOMOLOGATION.md](file:///z:/souls_engine/docs/homologation/SOULS_ENGINE_SKILLS_AND_OBSIDIAN_HOMOLOGATION.md).
+
 
 ### 11.4 Sessão 12 (Bloco J): Correção de Banco, UX do Dashboard & Configuração Centralizada
 * **Ponto de Auditoria 2 (Bug de Foreign Key no Cloud Arena Sync):**
