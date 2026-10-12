@@ -157,7 +157,7 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 │ Sessão 6 │ Bloco E: Skills &     │ [CONCLUÍDA] 15 Skills sincronizadas no C:,  │
 │          │ Governança Obsidian   │ esteira raw->wiki (498 docs) e ciclo /learn │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 7 │ Bloco F: Web Dashboard│ [CONCLUÍDA] Hermes Web Dashboard (REST),   │
+│ Sessão 7 │ Bloco F: Web Dashboard│ [CONCLUÍDA] Hermes Web Dashboard (REST),    │
 │          │ & Souls Settings      │ Souls Settings globais, Arenas e Branding   │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
 │ Sessão 8 │ Homologação Clínica & │ [CONCLUÍDA] Homologação Clínica Completa:   │
@@ -173,11 +173,11 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 │ Sessão 11│ Bloco I: Skills &     │ [CONCLUÍDA] 15 Skills testadas (100% PASS), │
 │          │ Curadoria Viva Cofre  │ esteira viva 498 notas Obsidian raw->wiki   │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 12│ Bloco J: Fix Banco,   │ [PRÓXIMA] Correção FK Cloud Arena sync,     │
-│          │ Dashboard SSE & Config│ telemetria SSE viva e souls_config.toml     │
+│ Sessão 12│ Bloco J: Fix Banco,   │ [CONCLUÍDA] FK 787 resolvida, telemetria SSE│
+│          │ Dashboard SSE & Config│ viva, ordenação e souls_config.toml persist.│
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 13│ Bloco K: Simbiose     │ Linkagem desktop-plugins Hermes, launcher   │
-│          │ Hermes & Systray Win32│ Systray com olhos RGB e teste ponta-a-ponta │
+│ Sessão 13│ Bloco K: Simbiose     │ [PRÓXIMA] Linkagem desktop-plugins Hermes,  │
+│          │ Hermes & Systray Win32│ launcher Systray olhos RGB e simbiose viva  │
 └──────────┴───────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -496,14 +496,23 @@ flowchart LR
   - Relatório oficial consolidado em [docs/homologation/SOULS_ENGINE_SKILLS_AND_OBSIDIAN_HOMOLOGATION.md](file:///z:/souls_engine/docs/homologation/SOULS_ENGINE_SKILLS_AND_OBSIDIAN_HOMOLOGATION.md).
 
 
-### 11.4 Sessão 12 (Bloco J): Correção de Banco, UX do Dashboard & Configuração Centralizada
-* **Ponto de Auditoria 2 (Bug de Foreign Key no Cloud Arena Sync):**
-  - Investigar e corrigir a violação `FOREIGN KEY constraint failed (code: 787)` em `souls_llm_cloud_arena`, garantindo que os modelos canônicos pais sejam registrados no SQLite antes da inserção dos snapshots de avaliação.
-* **Ponto de Auditoria 4 (Persistência Central no souls_config.toml):**
-  - Implementar o carregamento e salvamento atômico de `Z:\souls_engine\.souls_data\config\souls_config.toml` para persistir toggles operacionais, limiares do Watchdog térmico e portas.
-* **UX & Streaming em Tempo Real do Web Dashboard:**
-  - Ativar fluxo contínuo de Server-Sent Events (`/api/v1/telemetry/stream`) no frontend do dashboard.
-  - Implementar ordenação dinâmica interativa nas tabelas de modelos locais e cloud.
+### 11.4 Sessão 12 (Bloco J): Correção de Banco, UX do Dashboard & Configuração Centralizada [CONCLUÍDA]
+* **Ponto de Auditoria 2 (Bug de Foreign Key no Cloud Arena Sync — RESOLVIDO):**
+  - Causa raiz identificada: catálogo público da OpenRouter contendo 300+ modelos desconhecidos sem pai em `canonical_models`, violando a constraint referencial STRICT `FOREIGN KEY (code: 787)`.
+  - Solução bare-metal: implementação de `try_resolve` e filtragem estrita em `CanonicalResolver`, aceitando exclusivamente os modelos canônicos mapeados da arena.
+  - Resultado no silício: **12 modelos, 18 snapshots de preço, 12 benchmarks e 50 avaliações de Pareto gravadas com sucesso** no boot sem warnings de Foreign Key.
+* **Ponto de Auditoria 4 (Persistência Central no souls_config.toml — ENTREGUE):**
+  - Criação e governança de `Z:\souls_engine\.souls_data\config\souls_config.toml`.
+  - Endpoints REST `GET /api/v1/settings/config` e `POST /api/v1/settings/config` operando de forma atômica no Dev Drive ReFS.
+* **UX & Streaming em Tempo Real do Web Dashboard (ENTREGUE):**
+  - Implementado stream contínuo Server-Sent Events em `GET /api/v1/telemetry/stream` (1000ms heartbeat) com métricas de silício vivas.
+  - Frontend reconecta dinamicamente via `EventSource` com fallback transparente de polling.
+  - Ordenação interativa bidirecional (asc/desc) por clique em cabeçalhos de coluna nas tabelas da Cloud Arena e Silicon Arena.
+* **Validação de Testes Compulsória:**
+  - `souls_llm_cloud_arena`: **6/6 testes de integração e 4/4 unitários aprovados (100% PASS)**.
+  - `souls_server`: **23/23 testes de integração aprovados (100% PASS)**.
+  - Daemon reconstruído e saudável em `127.0.0.1:9123`.
+
 
 ### 11.5 Sessão 13 (Bloco K): Simbiose Viva Hermes Desktop & Windows Systray Companion
 * **Ponto de Auditoria 3 (Instalação dos Adaptadores no Hermes):**

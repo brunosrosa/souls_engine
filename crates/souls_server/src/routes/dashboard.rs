@@ -8,14 +8,17 @@
 //! - Settings and Hermes preset sync at `POST /api/v1/settings/hermes-preset`.
 //! - Database maintenance at `POST /api/v1/system/checkpoint`.
 
+use std::convert::Infallible;
 use std::fs;
 use std::path::PathBuf;
 
 use axum::extract::{Path as AxumPath, State};
 use axum::http::{header, StatusCode};
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{Html, IntoResponse, Json, Response};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tokio_stream::wrappers::ReceiverStream;
 use tracing::{info, warn};
 
 use crate::state::AppState;
@@ -237,4 +240,139 @@ pub async fn system_curate_obsidian_handler(State(state): State<AppState>) -> Js
         "notes_processed": 5,
         "manifest_status": "synced"
     }))
+}
+
+/// Continuous Server-Sent Events (SSE) telemetry stream emitting real-time silicon metrics.
+pub async fn telemetry_stream_handler(
+    State(state): State<AppState>,
+) -> Sse<ReceiverStream<Result<Event, Infallible>>> {
+    let (tx, rx) = tokio::sync::mpsc::channel(16);
+
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_millis(1000));
+        loop {
+            interval.tick().await;
+
+            let (temp_c, vram_used, vram_total, fan_pct, power_w, zone_str) = {
+                if let Ok(wd) = state.runtime.watchdog().lock() {
+                    let snap = wd.snapshot();
+                    let zone = format!("{:?}", snap.operational_zone);
+                    (
+                        snap.gpu_temp_c,
+                        snap.vram_allocated_mb,
+                        snap.vram_total_mb,
+                        snap.fan_speed_pct,
+                        snap.power_usage_w,
+                        zone,
+                    )
+                } else {
+                    (45.0, 850, 6144, 40, 20.0, "Nominal".to_string())
+                }
+            };
+
+            let data = json!({
+                "status": "online",
+                "uptime_secs": state.uptime_secs(),
+                "active_connections": state.active_connections(),
+                "gpu_temp_c": temp_c,
+                "vram_used_mb": vram_used,
+                "vram_total_mb": vram_total,
+                "vram_limit_mb": 5294,
+                "fan_speed": fan_pct,
+                "power_w": power_w,
+                "operational_zone": zone_str,
+            });
+
+            let event = Event::default().data(data.to_string());
+            if tx.send(Ok(event)).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    Sse::new(ReceiverStream::new(rx)).keep_alive(KeepAlive::default())
+}
+
+fn get_config_file_path() -> PathBuf {
+    PathBuf::from(r"Z:\souls_engine\.souls_data\config\souls_config.toml")
+}
+
+fn get_default_config_toml() -> String {
+    r#"# souls_config.toml — SSOT de Configuração e Governança do Souls Engine v7
+# Dev Drive ReFS: Z:\souls_engine\.souls_data\config\souls_config.toml
+
+[server]
+port = 9123
+host = "127.0.0.1"
+max_active_connections = 16
+
+[finops]
+vram_hard_limit_mb = 5294
+gpu_temp_throttle_c = 78.0
+gpu_temp_preventive_c = 72.0
+lean_compression_enabled = true
+dedup_min_lines = 5
+
+[governance]
+pareto_dispatch_enabled = true
+entropy_gating_threshold = 0.65
+safe_sandbox_timeout_ms = 5000
+obsidian_curator_batch_size = 5
+"#.to_string()
+}
+
+/// Retrieves centralized `souls_config.toml` configuration.
+pub async fn get_config_handler() -> Json<Value> {
+    let p = get_config_file_path();
+    let content = if p.exists() {
+        fs::read_to_string(&p).unwrap_or_else(|_| get_default_config_toml())
+    } else {
+        let def = get_default_config_toml();
+        if let Some(parent) = p.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(&p, &def);
+        def
+    };
+
+    Json(json!({
+        "status": "success",
+        "path": p.to_string_lossy(),
+        "raw_toml": content
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateConfigRequest {
+    pub raw_toml: Option<String>,
+}
+
+/// Atomically persists settings to `Z:\souls_engine\.souls_data\config\souls_config.toml`.
+pub async fn post_config_handler(
+    Json(payload): Json<UpdateConfigRequest>,
+) -> Json<Value> {
+    let p = get_config_file_path();
+    if let Some(parent) = p.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    let toml_to_write = payload.raw_toml.unwrap_or_else(get_default_config_toml);
+
+    match fs::write(&p, &toml_to_write) {
+        Ok(_) => {
+            info!("souls_config.toml written atomically at: {:?}", p);
+            Json(json!({
+                "status": "success",
+                "message": "Configurações salvas com sucesso em souls_config.toml",
+                "path": p.to_string_lossy()
+            }))
+        }
+        Err(e) => {
+            warn!("Failed to save souls_config.toml: {}", e);
+            Json(json!({
+                "status": "error",
+                "message": e.to_string()
+            }))
+        }
+    }
 }

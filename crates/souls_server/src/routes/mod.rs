@@ -23,8 +23,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/dashboard", get(dashboard::dashboard_html_handler))
         .route("/dashboard/icon/:color", get(dashboard::dashboard_icon_handler))
         .route("/api/v1/telemetry", get(dashboard::telemetry_handler))
+        .route("/api/v1/telemetry/stream", get(dashboard::telemetry_stream_handler))
         .route("/api/v1/models/local", get(dashboard::local_models_handler))
         .route("/api/v1/settings/hermes-preset", post(dashboard::hermes_preset_handler))
+        .route("/api/v1/settings/config", get(dashboard::get_config_handler).post(dashboard::post_config_handler))
         .route("/api/v1/system/checkpoint", post(dashboard::system_checkpoint_handler))
         .route("/api/v1/system/curate-obsidian", post(dashboard::system_curate_obsidian_handler))
         // Core API Endpoints

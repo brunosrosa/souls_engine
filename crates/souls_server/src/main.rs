@@ -1189,6 +1189,39 @@ impl FixtureService {
             .unwrap();
         let resp_ckpt = app.clone().oneshot(req_ckpt).await.unwrap();
         assert_eq!(resp_ckpt.status(), StatusCode::OK);
+
+        // 8. Testa GET /api/v1/settings/config (souls_config.toml)
+        let req_cfg = Request::builder()
+            .uri("/api/v1/settings/config")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_cfg = app.clone().oneshot(req_cfg).await.unwrap();
+        assert_eq!(resp_cfg.status(), StatusCode::OK);
+        let bytes_cfg = to_bytes(resp_cfg.into_body(), usize::MAX).await.unwrap();
+        let json_cfg: serde_json::Value = serde_json::from_slice(&bytes_cfg).unwrap();
+        assert_eq!(json_cfg["status"], "success");
+        assert!(json_cfg["raw_toml"].as_str().unwrap().contains("port = 9123"));
+
+        // 9. Testa POST /api/v1/settings/config (atualização atômica)
+        let req_post_cfg = Request::builder()
+            .uri("/api/v1/settings/config")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(r##"{"raw_toml":"# souls_config.toml\n[server]\nport = 9123\n"}"##))
+            .unwrap();
+        let resp_post_cfg = app.clone().oneshot(req_post_cfg).await.unwrap();
+        assert_eq!(resp_post_cfg.status(), StatusCode::OK);
+
+        // 10. Testa GET /api/v1/telemetry/stream (Server-Sent Events)
+        let req_stream = Request::builder()
+            .uri("/api/v1/telemetry/stream")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_stream = app.clone().oneshot(req_stream).await.unwrap();
+        assert_eq!(resp_stream.status(), StatusCode::OK);
+        assert_eq!(resp_stream.headers().get("content-type").unwrap(), "text/event-stream");
     }
 
     #[tokio::test]
