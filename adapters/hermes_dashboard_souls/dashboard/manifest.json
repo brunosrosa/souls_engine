@@ -1,0 +1,18 @@
+{
+  "id": "souls_dashboard",
+  "name": "Souls Engine",
+  "description": "Painel de Observabilidade Bare-Metal, Telemetria de Silício e Governança do Souls Engine",
+  "version": "7.0.0",
+  "icon": "Cpu",
+  "category": "system",
+  "route": "/souls-dashboard",
+  "entry": "dist/index.js",
+  "sidebar": {
+    "label": "Souls Engine",
+    "icon": "Cpu",
+    "order": 10
+  },
+  "permissions": [
+    "network:localhost"
+  ]
+}

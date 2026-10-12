@@ -1104,4 +1104,87 @@ impl FixtureService {
         assert_eq!(mcp_val["id"], 50);
         assert!(!mcp_val["result"]["isError"].as_bool().unwrap());
     }
+
+    #[tokio::test]
+    async fn test_dashboard_html_and_telemetry_endpoints() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Testa GET / (SPA HTML)
+        let req_root = Request::builder()
+            .uri("/")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_root = app.clone().oneshot(req_root).await.unwrap();
+        assert_eq!(resp_root.status(), StatusCode::OK);
+        let bytes_root = to_bytes(resp_root.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(bytes_root.to_vec()).unwrap();
+        assert!(html.contains("Souls Engine v7"));
+        assert!(html.contains("Silício Físico"));
+
+        // 2. Testa GET /dashboard
+        let req_dash = Request::builder()
+            .uri("/dashboard")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_dash = app.clone().oneshot(req_dash).await.unwrap();
+        assert_eq!(resp_dash.status(), StatusCode::OK);
+
+        // 3. Testa GET /dashboard/icon/cyan
+        let req_icon = Request::builder()
+            .uri("/dashboard/icon/cyan")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_icon = app.clone().oneshot(req_icon).await.unwrap();
+        assert_eq!(resp_icon.status(), StatusCode::OK);
+        assert_eq!(resp_icon.headers().get("content-type").unwrap(), "image/png");
+
+        // 4. Testa GET /api/v1/telemetry
+        let req_telemetry = Request::builder()
+            .uri("/api/v1/telemetry")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_telemetry = app.clone().oneshot(req_telemetry).await.unwrap();
+        assert_eq!(resp_telemetry.status(), StatusCode::OK);
+        let bytes_telemetry = to_bytes(resp_telemetry.into_body(), usize::MAX).await.unwrap();
+        let json_telemetry: serde_json::Value = serde_json::from_slice(&bytes_telemetry).unwrap();
+        assert_eq!(json_telemetry["status"], "online");
+        assert_eq!(json_telemetry["port"], 9123);
+        assert_eq!(json_telemetry["vram_limit_mb"], 5294);
+
+        // 5. Testa GET /api/v1/models/local
+        let req_models = Request::builder()
+            .uri("/api/v1/models/local")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_models = app.clone().oneshot(req_models).await.unwrap();
+        assert_eq!(resp_models.status(), StatusCode::OK);
+        let bytes_models = to_bytes(resp_models.into_body(), usize::MAX).await.unwrap();
+        let json_models: serde_json::Value = serde_json::from_slice(&bytes_models).unwrap();
+        assert!(json_models["models"].as_array().unwrap().len() >= 4);
+
+        // 6. Testa POST /api/v1/settings/hermes-preset
+        let req_preset = Request::builder()
+            .uri("/api/v1/settings/hermes-preset")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"preset_id":"balanced"}"#))
+            .unwrap();
+        let resp_preset = app.clone().oneshot(req_preset).await.unwrap();
+        assert_eq!(resp_preset.status(), StatusCode::OK);
+
+        // 7. Testa POST /api/v1/system/checkpoint
+        let req_ckpt = Request::builder()
+            .uri("/api/v1/system/checkpoint")
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+        let resp_ckpt = app.clone().oneshot(req_ckpt).await.unwrap();
+        assert_eq!(resp_ckpt.status(), StatusCode::OK);
+    }
 }

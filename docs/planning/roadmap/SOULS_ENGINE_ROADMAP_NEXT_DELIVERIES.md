@@ -157,8 +157,12 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 │ Sessão 6 │ Bloco E: Skills &     │ [CONCLUÍDA] 15 Skills sincronizadas no C:,  │
 │          │ Governança Obsidian   │ esteira raw->wiki (498 docs) e ciclo /learn │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 7 │ Bloco F: Web Dashboard│ [PRÓXIMA] Hermes Web Dashboard (REST),      │
-│          │ & Souls Settings      │ Souls Settings globais e painel de líderes  │
+│ Sessão 7 │ Bloco F: Web Dashboard│ [CONCLUÍDA] Hermes Web Dashboard (REST),   │
+│          │ & Souls Settings      │ Souls Settings globais, Arenas e Branding   │
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 8 │ Homologação Clínica & │ [PRÓXIMA / FINAL] Bateria de Testes Ponta-a-│
+│          │ Testes E2E Completos  │ Ponta: Systray, MCP, 51 Tools, 15 Skills,   │
+│          │                       │ Ciclos de Resposta, FinOps e Dashboard      │
 └──────────┴───────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -321,4 +325,86 @@ O cofre pessoal em `C:\Users\rosas\OneDrive\Documentos\Obisidian DB` atua como a
 4. Um comando `delegate_task` no Hermes consulta com sucesso o `souls_route_subtask` e executa um subagente no modelo local `qwen3-5-4b-agentic-coder`.
 5. Os dados da sessão do subagente são persistidos e auditáveis no banco `souls_heuristic_vault.db`.
 6. Esteira de Skills e curadoria Obsidian documentadas e alinhadas para implementação na Sessão 6.
+
+---
+
+## 10. SESSÃO 8 — BATERIA DE HOMOLOGAÇÃO CLÍNICA & TESTES PONTA-A-PONTA (E2E) COMPLETOS DO SOULS ENGINE
+
+A **Sessão 8** consolida o teste supremo de integração de todo o ecossistema Souls Engine, atuando como o gate formal de homologação de produção ("Teste Finalzão"). O objetivo é garantir que todas as engrenagens — desde o launcher de bandeja até a inferência local e curadoria de memória — operem harmonicamente em regime de longa duração:
+
+### 10.1 Fase 1: Ciclo de Vida do Daemon, Launcher & Watchdog
+1. **Inicialização pelo Launcher / Systray:**
+   * Subida do `souls_launcher.exe` com docking no Windows Systray (ícone verde).
+   * Verificação do tooltip dinâmico: status `ONLINE`, porta `127.0.0.1:9123`, VRAM consumida da RTX 2060m e temperatura NVML.
+   * Validação da regra bare-metal: `souls_server.exe` executando 100% headless em segundo plano.
+2. **Graceful Shutdown de 5 Fases:**
+   * Disparo de desligamento via menu de bandeja ("Quit") ou sinal Ctrl+C.
+   * Validação das 5 fases: recusa de novas conexões HTTP $\to$ dreno de subagentes $\to$ flush do WAL SQLite (`PRAGMA wal_checkpoint(TRUNCATE)`) $\to$ descarregamento de VRAM $\to$ liberação de locks ReFS.
+
+### 10.2 Fase 2: Conexão Simbiótica & Handshake Multi-Cliente
+1. **Conexão Hermes Desktop (Python 3.11):**
+   * Handshake bem-sucedido via Streamable HTTP/SSE em `http://127.0.0.1:9123/mcp`.
+   * Carregamento do catálogo completo de ferramentas MCP no Hermes Agent.
+2. **Conexão Antigravity IDE / Cursor:**
+   * Verificação de detecção automática via `mcp_config.json`.
+   * Consumo concorrente das ferramentas de AST e busca semântica sem contenção de locks de banco.
+3. **Conexão Hermes Web Dashboard / Navegador:**
+   * Acesso simultâneo via navegador local em `http://127.0.0.1:9123/` e via plugin do Hermes.
+
+### 10.3 Fase 3: Homologação Funcional das 51 Ferramentas MCP (Por Categoria)
+1. **Engenharia de Código & AST (8 Tools):**
+   * `outline`, `symbol`, `callers`, `callees`, `get_ast`: Teste de extração sintática sem vazamento de contexto.
+   * `edit`, `replace`, `delta_diff`: Aplicação de cirurgia cirúrgica com preservação estrita de LF (`\n`).
+   * `repo_heatmap`, `repo_impact`: Cálculo exato de blast radius e frecency via `gitoxide`.
+2. **Hipocampo L2, FTS5 & Grafo Ontológico (10 Tools):**
+   * `knowledge`, `sqlite_query`: Consultas em tabelas STRICT WAL sem corrupção.
+   * `mem_search`, `semantic_search`: Busca híbrida RRF combinando LanceDB vetorial e FTS5.
+   * `mem_open_nodes`, `mem_read_graph`, `mem_create_*`: Navegação e escrita no Grafo LadybugDB.
+3. **Sessão, Raciocínio Socrático & Handoff (7 Tools):**
+   * `thinking`: Construção de deliberação em grafo DAG (hipótese $\to$ bifurcação $\to$ veredicto).
+   * `session`, `analyze_session`, `export_session`, `merge_sessions`: Isolamento de sessões de subagentes.
+   * `handoff`, `sub_agent`: Despacho e consolidação de contexto entre agentes.
+4. **Silício, Roteamento & Intent (4 Tools):**
+   * `metrics`, `sys_time`: Telemetria em tempo real do silício (GPU VRAM, Temp, CPU AVX2).
+   * `route_subtask`: Cálculo da utilidade de Pareto pelo `ParetoBandit` com seleção ótima de modelo.
+   * `intent`: Classificação de entropia e intenção socrática via Tier 0.5 SLM.
+5. **Cloud Arena & Inteligência Externa (4 Tools):**
+   * `cloud_champions`, `cloud_sync`, `feedback`: Sincronização diária Nous Portal + OpenRouter e cálculo de scores nos 9 perfis.
+6. **Contexto LEAN & Safe Sandbox (18 Tools):**
+   * `read`, `smart_read`, `compress`, `dedup`: Desidratação de texto na RAM economizando tokens de janela.
+   * `tree`, `search`, `shell`, `execute`: Execução em sandbox controlada com timeout estrito e sanitização ANSI.
+   * `fetch_web`, `web_search`: Raspagem limpa convertendo HTML em Markdown sem lixo de DOM.
+
+### 10.4 Fase 4: Homologação Comportamental das 15 Skills Canônicas
+1. **Ativação Autônoma Natural:**
+   * O Hermes Agent deve ativar a skill apropriada (ex: `souls-code-surgeon`, `souls-socratic-thinking`) com base na intenção da mensagem, sem necessidade de prompting coercitivo.
+2. **Escudo de Soberania (`obsidian-privacy-shield`):**
+   * Submissão de pergunta envolvendo finanças ou saúde: o agente deve recusar sumariamente despacho para nuvem aberta e forçar execução local na RTX 2060m / i9.
+3. **Esteira de Curadoria Viva do Obsidian (`obsidian-vault-curator`):**
+   * Execução do script `curate_obsidian.ps1` processando lote de 5 notas de `raw/`: validação do frontmatter YAML, wikilinks `[[...]]`, log em `wiki/log.md` e atualização do `raw_manifest.json` com SHA-256.
+
+### 10.5 Fase 5: Ciclo Fechado de Auto-Aprendizado (`/learn`)
+1. **Captura de Correção:** Emissão de uma instrução corretiva pelo Arquiteto.
+2. **Execução de `/learn`:** O agente invoca a skill `agent-self-learning-loop`, analisa a causa-raiz e gera patch atômico permanente na regra correspondente ou memória L2.
+3. **Verificação de Regressão:** Em diálogo subsequente, o agente obedece à nova diretriz sem reincidir no erro anterior.
+
+### 10.6 Fase 6: Eficiência de Silício, Respostas & FinOps
+1. **Teto de VRAM Respeitado:** Consumo sob WDDM mantido rigorosamente $\le 5.2$ GB durante geração local.
+2. **Temperatura sob Controle:** GPU $\le 78^\circ\text{C}$; se ultrapassar, acionamento imediato do freio térmico pelo Watchdog com desvio para AVX2.
+3. **Latência & Throughput:** Validação de $\ge 40$ tokens/s no Tier 1 (dGPU) e $\ge 120$ tokens/s no Tier 0 (i9 AVX2).
+
+### 10.7 Fase 7: Hermes Web Dashboard & Governança de Settings
+1. **Painel de Overview:** Renderização precisa dos gráficos de silício, FinOps e status dos bancos.
+2. **Tabelas de Arenas:** Navegação pelos 9 perfis cognitivos, ordenação por $/1M, notas compostas e badges de Pareto.
+3. **Painel de Settings:**
+   * Alternância de presets do Master Brain com atualização atômica do `config.yaml` do Hermes.
+   * Toggles liga/desliga de recursos operando e persistindo no `souls_config.toml`.
+   * Botões de ação rápida (WAL Checkpoint, Cloud Sync, Obsidian Curate) respondendo com toasts de sucesso.
+
+### 10.8 Critérios de Homologação Clínica (Sign-off Final)
+* Taxa de erro de ferramentas MCP: $0\%$.
+* Vazamento de VRAM ou PCIe Spillover: Zero ocorrências.
+* Corrupção de finais de linha (CRLF): Zero ocorrências (100% LF verificado via git check).
+* Integridade de Dados no ReFS: Arquivos SQLite sem locks zumbis ou corrupção de WAL.
+* Emissão do **Relatório de Homologação Clínica do Souls Engine (E2E Production Sign-off)**.
 

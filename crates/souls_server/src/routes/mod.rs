@@ -2,6 +2,7 @@
 
 pub mod chat;
 pub mod cloud;
+pub mod dashboard;
 pub mod health;
 pub mod models;
 
@@ -17,6 +18,16 @@ use crate::state::AppState;
 /// Constructs the primary Axum router.
 pub fn build_router(state: AppState) -> Router {
     Router::new()
+        // Dashboard & Branding Web Endpoints
+        .route("/", get(dashboard::dashboard_html_handler))
+        .route("/dashboard", get(dashboard::dashboard_html_handler))
+        .route("/dashboard/icon/:color", get(dashboard::dashboard_icon_handler))
+        .route("/api/v1/telemetry", get(dashboard::telemetry_handler))
+        .route("/api/v1/models/local", get(dashboard::local_models_handler))
+        .route("/api/v1/settings/hermes-preset", post(dashboard::hermes_preset_handler))
+        .route("/api/v1/system/checkpoint", post(dashboard::system_checkpoint_handler))
+        .route("/api/v1/system/curate-obsidian", post(dashboard::system_curate_obsidian_handler))
+        // Core API Endpoints
         .route("/health", get(health::health_handler))
         .route("/v1/models", get(models::models_handler))
         .route("/v1/chat/completions", post(chat::chat_completions_handler))

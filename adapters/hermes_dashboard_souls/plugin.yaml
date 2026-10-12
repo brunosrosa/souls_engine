@@ -1,0 +1,21 @@
+# plugin.yaml — Manifesto Canônico do Plugin Hermes Dashboard Souls
+name: souls_dashboard
+version: 7.0.0
+description: Painel de Observabilidade Bare-Metal, Telemetria de Silício e Governança do Souls Engine
+author: Arquiteto Souls & Hermes
+entrypoint: dashboard.plugin_api:router
+
+routes:
+  - path: /dashboard
+    type: web_view
+    target: http://127.0.0.1:9123/dashboard
+  - path: /telemetry
+    type: api_proxy
+    target: http://127.0.0.1:9123/api/v1/telemetry
+
+ui:
+  title: Souls Engine
+  icon: Cpu
+  category: system
+  manifest: dashboard/manifest.json
+  bundle: dashboard/dist/index.js
