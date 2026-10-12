@@ -86,7 +86,10 @@ impl OpenRouterClient {
         let mut snapshots = Vec::new();
 
         for item in payload.data {
-            let canonical_id = resolver.resolve(&item.id);
+            let canonical_id = match resolver.try_resolve(&item.id) {
+                Some(id) => id,
+                None => continue,
+            };
 
             let (prompt_price_m, completion_price_m) = if let Some(p) = item.pricing {
                 let prompt_val = parse_price_value(p.prompt);

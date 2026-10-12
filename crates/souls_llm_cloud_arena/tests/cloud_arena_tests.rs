@@ -220,3 +220,18 @@ async fn test_full_coordinator_pipeline_in_memory() {
     assert!(report.contains("Design & Multimodal UI"));
     assert!(report.contains("Líder (Qualidade)"));
 }
+
+#[test]
+fn test_foreign_key_protection_against_unknown_models() {
+    let resolver = CanonicalResolver::new();
+
+    // Modelos conhecidos resolvem perfeitamente
+    assert_eq!(resolver.try_resolve("anthropic/claude-3-7-sonnet:beta"), Some("claude-3-7-sonnet".to_string()));
+    assert_eq!(resolver.try_resolve("deepseek/deepseek-chat"), Some("deepseek-v3".to_string()));
+    assert_eq!(resolver.try_resolve("openai/gpt-4o"), Some("gpt-4o".to_string()));
+
+    // Modelos desconhecidos fora da arena retornam None para blindar FK SQLite
+    assert_eq!(resolver.try_resolve("random-provider/some-random-unknown-model"), None);
+    assert_eq!(resolver.try_resolve("mistralai/mistral-large-2407"), None);
+    assert_eq!(resolver.try_resolve("cohere/command-r-plus"), None);
+}

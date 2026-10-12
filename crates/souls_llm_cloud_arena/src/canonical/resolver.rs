@@ -2,22 +2,25 @@
 //!
 //! Mapeia strings heterogêneas dos provedores para o ID canônico correspondente.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Default)]
 pub struct CanonicalResolver {
     aliases: HashMap<String, String>,
+    known_canonicals: HashSet<String>,
 }
 
 impl CanonicalResolver {
     pub fn new() -> Self {
         let mut resolver = Self {
             aliases: HashMap::new(),
+            known_canonicals: HashSet::new(),
         };
 
         // Carrega seed de aliases inicial
         for item in crate::canonical::seed_aliases::get_initial_seed_models() {
             let canon_id = item.model.id.clone();
+            resolver.known_canonicals.insert(canon_id.clone());
             // Mapeia o próprio ID canônico para ele mesmo
             resolver.register_alias(&canon_id, &canon_id);
             for (alias, _) in item.aliases {
@@ -31,6 +34,21 @@ impl CanonicalResolver {
     /// Registra um alias explícito.
     pub fn register_alias(&mut self, alias: &str, canonical_id: &str) {
         self.aliases.insert(alias.to_lowercase().trim().to_string(), canonical_id.to_string());
+    }
+
+    /// Verifica se um ID é reconhecido como modelo canônico suportado na Cloud Arena.
+    pub fn is_known_canonical(&self, canonical_id: &str) -> bool {
+        self.known_canonicals.contains(canonical_id)
+    }
+
+    /// Tenta resolver uma string de modelo apenas se ela pertencer a um modelo canônico suportado.
+    pub fn try_resolve(&self, raw: &str) -> Option<String> {
+        let resolved = self.resolve(raw);
+        if self.is_known_canonical(&resolved) {
+            Some(resolved)
+        } else {
+            None
+        }
     }
 
     /// Resolve uma string de modelo para o ID canônico correspondente.

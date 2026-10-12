@@ -80,7 +80,10 @@ impl NousPortalClient {
 
                 if let Some(items) = payload.data {
                     for item in items {
-                        let canonical_id = resolver.resolve(&item.id);
+                        let canonical_id = match resolver.try_resolve(&item.id) {
+                            Some(id) => id,
+                            None => continue,
+                        };
                         let (prompt_price, comp_price, cache_read, cache_write) = if let Some(p) = item.pricing {
                             // Se a API retornar por token unitário, converte para 1M tokens
                             let p_prompt = if p.prompt.unwrap_or(0.0) < 0.01 {
