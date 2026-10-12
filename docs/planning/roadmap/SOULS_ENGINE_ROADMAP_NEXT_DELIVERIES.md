@@ -129,20 +129,23 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 ┌────────────────────────────────────────────────────────────────────────────────┐
 │                   SEQUÊNCIA CANÔNICA DE SESSÕES DE TRABALHO                    │
 ├──────────┬───────────────────────┬─────────────────────────────────────────────┤
-│ Sessão 1 │ Bloco B: Daemon Base  │ Levantamento de souls_server.exe (:9123)    │
+│ Sessão 1 │ Bloco B: Daemon Base  │ [CONCLUÍDA] souls_server.exe (:9123)        │
 │          │                       │ Transporte Axum SSE loopback + health check │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 2 │ Bloco D: Cérebro L3   │ Transplante de session_manager, pareto_     │
-│          │                       │ bandit e souls_memory (SQLite STRICT)       │
+│ Sessão 2 │ Bloco D: Cérebro L3   │ [CONCLUÍDA] Cérebro souls_memory (SQLite    │
+│          │                       │ STRICT WAL + LanceDB + LadybugDB)           │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 3 │ Bloco C: Conexão Viva │ Configuração do Hermes Desktop config.yaml, │
-│          │                       │ junction points e teste ao vivo do MCP      │
+│ Sessão 3 │ Bloco C: Conexão Viva │ [CONCLUÍDA] Hermes Desktop config.yaml,     │
+│          │                       │ SOUL.md FinOps, models junction & MCP live  │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 4 │ Bloco D: AST & NVML   │ Transplante de souls_ast (outlines) e       │
-│          │                       │ souls_inference_runtime (NVML Watchdog)     │
+│ Sessão 4 │ Bloco D: AST & NVML   │ [PRÓXIMA] Transplante souls_ast (outlines)  │
+│          │                       │ e souls_inference_runtime (NVML Watchdog)   │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
 │ Sessão 5 │ Bloco A: Cloud Arena  │ Implementação de souls_llm_cloud_arena e    │
 │          │                       │ ingestão de APIs externas (Nous/OpenRouter) │
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 6 │ Bloco E: Skills &     │ Ecossistema de Skills MCP, Curadoria Raw->  │
+│          │ Governança Obsidian   │ Wiki no Obsidian DB e ciclo evolutivo /learn│
 └──────────┴───────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -175,10 +178,113 @@ Diferente do chat mestre interativo (que permanece fixo intradiálogo conforme o
 * **Cron Jobs de Manutenção:** Rotinas periódicas de limpeza, indexação e sumarização são absorvidas compulsoriamente pelo Tier 0 (`smollm2-135m` a 149 TPS no i9) com custo financeiro zero e impacto térmico nulo na dGPU.
 * **Subagentes de Suporte:** O `souls_route_subtask` decide dinamicamente se despacha a microtarefa para a RTX 2060m (`qwen3.5-agentic-coder` a 46 TPS) ou para a nuvem mais eficiente da Fronteira de Pareto.
 
+### 5.4 Evolução Futura: Launcher Systray & Observabilidade de Bandeja (Windows Companion)
+Como evolução ergonômica pós-consolidação headless, o ecossistema ganhará um **Windows Companion Launcher** (`souls_launcher.exe` / systray opcional):
+1. **Papel de Encapsulamento:** Atua como maestro e guardião de processo, inicializando o daemon mestre `souls_server.exe` em segundo plano e garantindo que todas as 9 crates estejam orquestradas sob o mesmo ciclo de vida.
+2. **Ícone & Tooltip Dinâmico na Bandeja:**
+   * Ícone temático no Windows Systray com indicação visual de status (Verde: Online/Ocioso, Âmbar: Subagente em execução, Vermelho: Alerta térmico $\ge 78^\circ\text{C}$).
+   * Tooltip ao pairar o mouse (*hover*): exibe em tempo real o status do daemon, porta ativa (`127.0.0.1:9123`), VRAM consumida da RTX 2060m (ex: `1.8 GB / 5.2 GB`) e temperatura da GPU.
+3. **Menu de Botão Direito (Context Menu):**
+   * *Status & Métricas:* Abre relatório rápido de FinOps e acertos de prefix cache.
+   * *Settings (Configurações Futuras):* Alternar presets operacionais do `config.yaml` do Hermes.
+   * *Ver Logs do Daemon:* Atalho direto para `Z:\souls_engine\.souls_data\spool\souls_server.log`.
+   * *Reiniciar Daemon:* Flush atômico do WAL (`PRAGMA wal_checkpoint(TRUNCATE)`) e reinicialização limpa.
+   * *Quit (Sair):* Executa o teardown gracioso com `shutdown()` em todas as crates e encerra os serviços.
+4. **Isolamento Arquitetural (Preservação da Linha Vermelha 1):** O binário mestre `souls_server.exe` continua sendo **100% headless** e compilável isoladamente para servidores/containers. O Systray Companion opera como um processo cliente Win32 leve (`windows-sys = "0.59"`) desacoplado, sem introduzir frameworks pesados como Tauri ou Electron no daemon principal.
+
 ---
 
-## 6. CRITÉRIOS DE CONCLUSÃO (DEFINITION OF DONE)
+## 6. MAPA EXAUSTIVO DE STATUS CLÍNICO DAS 51 FERRAMENTAS MCP
+
+Para erradicar qualquer ambiguidade sobre stubs e implementações profundas, o quadro abaixo mapeia o ciclo de entrega de cada uma das 51 ferramentas operacionais:
+
+| Garra MCP | Crate Rust | Status Atual | Sessão de Ativação Plena |
+| :--- | :--- | :--- | :--- |
+| `tool_search`, `routes` | `souls_server` | **LIVE_PRODUCTION** | Sessão 1 (Concluída) |
+| `route_subtask` | `souls_model_router` | **LIVE_PRODUCTION** | Sessão 1 (Concluída) |
+| `metrics`, `sys_time` | `souls_inference_runtime` / `souls_core` | **LIVE_PRODUCTION** | Sessão 1 (Concluída) |
+| `handoff`, `sub_agent` | `souls_memory` | **LIVE_PRODUCTION** | Sessão 3 (Concluída) |
+| `thinking`, `session`, `analyze_session`, `export_session`, `merge_sessions` | `souls_memory` | **LIVE_PRODUCTION** | Sessão 3 (Concluída) |
+| `knowledge`, `sqlite_query` | `souls_memory` | **LIVE_PRODUCTION** | Sessão 3 (Concluída) |
+| `mem_search`, `mem_open_nodes`, `mem_read_graph`, `mem_create_*`, `mem_delete_*` | `souls_memory` | **LIVE_PRODUCTION** | Sessão 3 (Concluída) |
+| `semantic_search` | `souls_memory` | **LIVE_PRODUCTION** | Sessão 3 (Concluída) |
+| `outline`, `symbol`, `callers`, `callees`, `get_ast`, `edit`, `replace`, `delta_diff` | `souls_ast` | Staging estruturado; transplante Tree-sitter e Myers Diff | **Sessão 4 (AST & Hardware)** |
+| `repo_heatmap`, `repo_impact` | `souls_ast` | Staging estruturado; transplante `gitoxide` (Frecency) | **Sessão 4 (AST & Hardware)** |
+| `intent` | `souls_inference_runtime` | Staging estruturado; transplante ONNX / logit probing | **Sessão 4 (AST & Hardware)** |
+| `read`, `smart_read`, `multi_read`, `compress`, `dedup`, `fill`, `stub_fill`, `headroom_retrieve` | `souls_core` | Staging estruturado; transplante compressão LEAN & CCR | **Sessão 5 (Contexto & Sandbox)** |
+| `tree`, `search`, `shell`, `execute`, `fetch_web`, `web_search`, `repo_meta` | `souls_core` | Staging estruturado; transplante sandbox e HTTP scraper | **Sessão 5 (Contexto & Sandbox)** |
+| `feedback` | `souls_llm_cloud_arena` | Staging estruturado; transplante Cloud Arena & APIs externas | **Sessão 6 (Cloud Arena)** |
+
+---
+
+## 7. INTEGRAÇÃO MULTI-CLIENTE: HERMES AGENT & IDES (ANTIGRAVITY / CURSOR)
+
+Após a conclusão da **Sessão 3**, o Souls Engine não atenderá apenas o Hermes Agent Desktop, mas se tornará imediatamente utilizável por **qualquer ambiente de desenvolvimento**:
+
+1. **Hermes Agent Desktop (Python 3.11):** Consome o endpoint `http://127.0.0.1:9123/mcp` (Streamable HTTP) ou `/sse` para orquestração executiva de subagentes e memória L3.
+2. **Antigravity IDE / Cursor / Claude Desktop / Windsurf:**
+   * Basta registrar o Souls Engine na configuração de MCP (`mcp_config.json` ou UI de MCP):
+     ```json
+     {
+       "mcpServers": {
+         "souls_engine": {
+           "url": "http://127.0.0.1:9123/mcp",
+           "transport": "http"
+         }
+       }
+     }
+     ```
+   * **Benefícios Imediatos na IDE:**
+     - A IDE ganha acesso nativo ao `route_subtask` para orientar modelos locais sem gastar créditos de API.
+     - Acesso ao raciocínio socrático em grafo DAG (`thinking`).
+     - Acesso ao cofre de memórias e fatos de arquitetura no SQLite ReFS (`knowledge`, `mem_*`).
+     - Acesso ao profiler de hardware em tempo real da RTX 2060m (`metrics`).
+
+---
+
+## 8. BLOCO E: ENGENHARIA DE SKILLS, PROTOCOLOS AGÊNTICOS & CURADORIA DO OBSIDIAN DB
+
+A maturidade do ecossistema transcende as ferramentas atômicas MCP (`tools`): ele requer **Skills procedimentais** que orquestrem o comportamento dos agentes (Hermes Agent e Antigravity CLI/IDE), assegurem disciplina de protocolos e unifiquem a base viva de conhecimento:
+
+### 8.1 Playbooks de Skills Especializadas para as Ferramentas MCP do Souls Engine
+Desenvolvimento e refinamento de skills canônicas em `%LOCALAPPDATA%\hermes\skills\` e `.agents/skills/`:
+1. **`souls-ast-dehydration` (FinOps de Contexto):**
+   * Obriga o agente a nunca utilizar `read_file` em arquivos inteiros para inspeção estrutural.
+   * Padroniza o fluxo: `souls_ast_outline` (extrai assinaturas e tipos) $\to$ `souls_ast_slice` (extrai apenas o método alvo) $\to$ economia comprovada de 70% a 85% de tokens.
+2. **`souls-subagent-dispatch` (Orquestração de Subagentes & Silício):**
+   * Obriga a consulta a `souls_route_subtask` antes de qualquer `delegate_task`.
+   * Registra o payload de transição via `handoff` e monitora o ciclo de vida com `sub_agent`.
+3. **`souls-socratic-thinking` (Cognição em Grafo DAG):**
+   * Guia o agente a registrar hipóteses e bifurcações em `thinking` antes de executar refatorações complexas.
+   * Valida a coerência da cadeia de raciocínio via `analyze_session`.
+
+### 8.2 Curadoria Enciclopédica do Obsidian DB (`raw/` $\to$ Wiki Estruturada)
+O cofre pessoal em `C:\Users\rosas\OneDrive\Documentos\Obisidian DB` atua como a Memória Fria de Longo Prazo do Arquiteto. Para transformá-lo em uma Wiki de alto valor sem poluição ou perda de fidelidade:
+1. **Zona Sagrada `raw/` (Fontes Brutas Imutáveis):**
+   * O diretório `raw/` abriga anotações livres, transcrições brutas, recortes e fontes externas.
+   * O Antigravity CLI e os subagentes do Hermes tratam o `raw/` em modo estritamente **Read-Only**.
+   * Os agentes do Hermes podem gravar novos relatórios de sessões e aprendizados brutos em `raw/sessions/`.
+2. **Esteira de Curadoria e Criação de Verbetes (Antigravity CLI):**
+   * O Antigravity CLI executa a leitura minuciosa de cada documento bruto no `raw/` sem suprimir detalhes conceituais.
+   * Sintetiza "verbetes" hiperconectados (wikilinks `[[Conceito]]`), notas conceituais atômicas e MOCs (*Maps of Content*) na área principal da Wiki.
+3. **Manifesto de Progresso & Rotina Incremental:**
+   * Manutenção de um índice de auditoria (`wiki_manifest.json` ou `_INDEX.md`) rastreando:
+     - Documentos do `raw/` 100% processados.
+     - Documentos em processamento / pendentes.
+     - Grafo de links cruzados gerados.
+   * Rotina periódica / agendada (`cron` ou comando dedicado) para detectar novos arquivos adicionados ao `raw/` e disparar a curadoria incremental.
+
+### 8.3 Ciclo Evolutivo de Aprendizado Contínuo (`/learn` e Auto-Refinamento)
+* As correções operacionais e os novos padrões descobertos em sessões de trabalho devem ser capturados via comando `/learn`.
+* A esteira de governança alimenta periodicamente as skills do Hermes Agent e as regras da IDE, evitando regressões de comportamento e refinando a inteligência prática de trabalho.
+
+---
+
+## 9. CRITÉRIOS DE CONCLUSÃO (DEFINITION OF DONE)
 1. Binário `souls_server.exe` compilando sem warnings e respondendo no `localhost:9123`.
-2. O Hermes Agent Desktop se conecta ao servidor MCP e visualiza as 30 ferramentas.
-3. Um comando `delegate_task` no Hermes consulta com sucesso o `souls_route_subtask` e executa um subagente no modelo local `qwen3-5-4b-agentic-coder`.
-4. Os dados da sessão do subagente são persistidos e auditáveis no banco `souls_heuristic_vault.db`.
+2. O Hermes Agent Desktop se conecta ao servidor MCP e visualiza as ferramentas ativas.
+3. A IDE (Antigravity / Cursor) se conecta com sucesso ao mesmo endpoint MCP loopback.
+4. Um comando `delegate_task` no Hermes consulta com sucesso o `souls_route_subtask` e executa um subagente no modelo local `qwen3-5-4b-agentic-coder`.
+5. Os dados da sessão do subagente são persistidos e auditáveis no banco `souls_heuristic_vault.db`.
+6. Esteira de Skills e curadoria Obsidian documentadas e alinhadas para implementação na Sessão 6.
+

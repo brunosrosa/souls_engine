@@ -202,6 +202,56 @@ pub async fn dispatch_jsonrpc(
                 "metrics" => Ok(handlers::handle_metrics(state)),
                 "routes" => Ok(handlers::handle_routes()),
                 "tool_search" => Ok(handlers::handle_tool_search(args)),
+                "handoff" => {
+                    handlers::handle_handoff(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "sub_agent" => {
+                    handlers::handle_sub_agent(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "thinking" => {
+                    handlers::handle_thinking(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "analyze_session" => {
+                    handlers::handle_analyze_session(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "export_session" => {
+                    handlers::handle_export_session(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "knowledge" => {
+                    handlers::handle_knowledge(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "sqlite_query" => {
+                    handlers::handle_sqlite_query(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "semantic_search" => {
+                    handlers::handle_semantic_search(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "mem_create_entities" => {
+                    handlers::handle_mem_create_entities(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "mem_create_relations" => {
+                    handlers::handle_mem_create_relations(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
                 other => {
                     // Check if known canonical tool
                     let tools = get_canonical_tools();

@@ -1,0 +1,19 @@
+graph TD
+    classDef done fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+    classDef ready fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+    classDef waiting fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff;
+
+    T1["TASK-LIVE-001<br/>Junction Point NTFS"]:::done
+    T2["TASK-LIVE-002<br/>Hermes config.yaml"]:::done
+    T3["TASK-LIVE-003<br/>Hermes SOUL.md FinOps"]:::done
+    T4["TASK-LIVE-004<br/>MCP Handlers Reais"]:::done
+    T5["TASK-LIVE-005<br/>Roteamento no Dispatcher"]:::done
+    T6["TASK-LIVE-006<br/>Testes de Integração MCP"]:::done
+    T7["TASK-LIVE-007<br/>Verificação Compulsória"]:::done
+
+    T4 --> T5
+    T5 --> T6
+    T1 --> T7
+    T2 --> T7
+    T3 --> T7
+    T6 --> T7

@@ -606,4 +606,295 @@ mod tests {
         let post_resp = app.oneshot(post_req).await.unwrap();
         assert_eq!(post_resp.status(), StatusCode::ACCEPTED);
     }
+
+    #[tokio::test]
+    async fn test_mcp_knowledge_and_sqlite_query() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Create epistemic knowledge
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/call",
+            "params": {
+                "name": "knowledge",
+                "arguments": {
+                    "id": "fact_hermes_001",
+                    "session_id": "sess_test",
+                    "category": "architecture",
+                    "content": "Souls Engine communicates with Hermes Agent on port 9123.",
+                    "partition": "STABLE"
+                }
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(val["id"], 10);
+        assert!(!val["result"]["isError"].as_bool().unwrap());
+
+        // 2. Query via sqlite_query (read-only)
+        let query_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {
+                "name": "sqlite_query",
+                "arguments": {
+                    "query": "SELECT id, category, content FROM epistemic_memories WHERE id = 'fact_hermes_001'"
+                }
+            }
+        });
+
+        let query_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&query_payload).unwrap()))
+            .unwrap();
+
+        let query_resp = app.clone().oneshot(query_req).await.unwrap();
+        assert_eq!(query_resp.status(), StatusCode::OK);
+        let query_bytes = to_bytes(query_resp.into_body(), usize::MAX).await.unwrap();
+        let query_val: serde_json::Value = serde_json::from_slice(&query_bytes).unwrap();
+        assert_eq!(query_val["id"], 11);
+        let rows = query_val["result"]["structuredContent"]["rows"].as_array().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["id"], "fact_hermes_001");
+
+        // 3. Search via semantic_search (FTS5)
+        let search_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 12,
+            "method": "tools/call",
+            "params": {
+                "name": "semantic_search",
+                "arguments": {
+                    "query": "Hermes Agent",
+                    "limit": 5
+                }
+            }
+        });
+
+        let search_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&search_payload).unwrap()))
+            .unwrap();
+
+        let search_resp = app.oneshot(search_req).await.unwrap();
+        assert_eq!(search_resp.status(), StatusCode::OK);
+        let search_bytes = to_bytes(search_resp.into_body(), usize::MAX).await.unwrap();
+        let search_val: serde_json::Value = serde_json::from_slice(&search_bytes).unwrap();
+        assert_eq!(search_val["id"], 12);
+        let matches = search_val["result"]["structuredContent"]["matches"].as_array().unwrap();
+        assert!(!matches.is_empty(), "FTS5 search should find indexed Hermes memory");
+    }
+
+    #[tokio::test]
+    async fn test_mcp_sub_agent_and_thinking_cycle() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Spawn sub-agent
+        let spawn_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 20,
+            "method": "tools/call",
+            "params": {
+                "name": "sub_agent",
+                "arguments": {
+                    "action": "spawn",
+                    "parent_session_id": "test_sess_01",
+                    "task_description": "Analyze compiler logs",
+                    "assigned_tier": "Tier1"
+                }
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&spawn_payload).unwrap()))
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(val["id"], 20);
+        let agent_id = val["result"]["structuredContent"]["agent_id"].as_str().unwrap();
+
+        // 2. Register socratic thinking
+        let think_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 21,
+            "method": "tools/call",
+            "params": {
+                "name": "thinking",
+                "arguments": {
+                    "session_id": "test_sess_01",
+                    "thought": "Initial hypothesis regarding borrow checker constraint.",
+                    "thought_number": 1,
+                    "total_thoughts": 2,
+                    "next_thought_needed": true
+                }
+            }
+        });
+
+        let think_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&think_payload).unwrap()))
+            .unwrap();
+
+        let think_resp = app.clone().oneshot(think_req).await.unwrap();
+        assert_eq!(think_resp.status(), StatusCode::OK);
+
+        // 3. Analyze session coherence
+        let analyze_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 22,
+            "method": "tools/call",
+            "params": {
+                "name": "analyze_session",
+                "arguments": {
+                    "session_id": "test_sess_01"
+                }
+            }
+        });
+
+        let analyze_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&analyze_payload).unwrap()))
+            .unwrap();
+
+        let analyze_resp = app.clone().oneshot(analyze_req).await.unwrap();
+        assert_eq!(analyze_resp.status(), StatusCode::OK);
+        let an_bytes = to_bytes(analyze_resp.into_body(), usize::MAX).await.unwrap();
+        let an_val: serde_json::Value = serde_json::from_slice(&an_bytes).unwrap();
+        assert_eq!(an_val["result"]["structuredContent"]["total_thoughts"], 1);
+
+        // 4. Create handoff
+        let handoff_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 23,
+            "method": "tools/call",
+            "params": {
+                "name": "handoff",
+                "arguments": {
+                    "source_session_id": "test_sess_01",
+                    "target_agent_id": agent_id,
+                    "context_summary": "Handing off analysis results.",
+                    "variables": { "exit_code": 0 }
+                }
+            }
+        });
+
+        let handoff_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&handoff_payload).unwrap()))
+            .unwrap();
+
+        let handoff_resp = app.oneshot(handoff_req).await.unwrap();
+        assert_eq!(handoff_resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_ladybug_entities_and_relations() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Create entity
+        let entity_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 30,
+            "method": "tools/call",
+            "params": {
+                "name": "mem_create_entities",
+                "arguments": {
+                    "name": "HermesOrchestrator",
+                    "entity_type": "daemon",
+                    "metadata_json": "{\"language\":\"python\"}"
+                }
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&entity_payload).unwrap()))
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // 2. Create target entity
+        let target_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 31,
+            "method": "tools/call",
+            "params": {
+                "name": "mem_create_entities",
+                "arguments": {
+                    "name": "SoulsEngineServer",
+                    "entity_type": "daemon",
+                    "metadata_json": "{\"language\":\"rust\"}"
+                }
+            }
+        });
+
+        let target_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&target_payload).unwrap()))
+            .unwrap();
+
+        let target_resp = app.clone().oneshot(target_req).await.unwrap();
+        assert_eq!(target_resp.status(), StatusCode::OK);
+
+        // 3. Create relation
+        let rel_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 32,
+            "method": "tools/call",
+            "params": {
+                "name": "mem_create_relations",
+                "arguments": {
+                    "source": "HermesOrchestrator",
+                    "target": "SoulsEngineServer",
+                    "relationship": "communicates_with"
+                }
+            }
+        });
+
+        let rel_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&rel_payload).unwrap()))
+            .unwrap();
+
+        let rel_resp = app.oneshot(rel_req).await.unwrap();
+        assert_eq!(rel_resp.status(), StatusCode::OK);
+    }
 }

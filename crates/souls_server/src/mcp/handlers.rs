@@ -233,3 +233,385 @@ pub fn handle_staging_fallback(tool_name: &str) -> Value {
         "staging": true
     })
 }
+
+/// Handles `handoff` inter-agent context transfer.
+pub async fn handle_handoff(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let sub_mgr = state.memory.sub_agent_manager();
+
+    if let Some(target_agent_id) = args.get("target_agent_id").and_then(Value::as_str) {
+        if !args.contains_key("context_summary") {
+            let res = sub_mgr.get_handoff(target_agent_id).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+            return Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": serde_json::to_string_pretty(&res).unwrap_or_default()
+                }],
+                "structuredContent": res,
+                "isError": false
+            }));
+        }
+    }
+
+    let source_session = args.get("source_session_id").and_then(Value::as_str).unwrap_or("main");
+    let target_agent = args.get("target_agent_id").and_then(Value::as_str).unwrap_or("anon_sub");
+    let summary = args.get("context_summary").and_then(Value::as_str).unwrap_or("");
+    let variables = args.get("variables").cloned().unwrap_or(json!({}));
+
+    let record = sub_mgr
+        .create_handoff(source_session, target_agent, summary, variables)
+        .await
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": format!("Handoff payload '{}' created successfully for agent '{}'.", record.id, record.target_agent_id)
+        }],
+        "structuredContent": record,
+        "isError": false
+    }))
+}
+
+/// Handles `sub_agent` lifecycle management and diaries.
+pub async fn handle_sub_agent(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let sub_mgr = state.memory.sub_agent_manager();
+    let action = args.get("action").and_then(Value::as_str).unwrap_or("spawn");
+
+    match action {
+        "spawn" => {
+            let parent_session = args.get("parent_session_id").and_then(Value::as_str).unwrap_or("main");
+            let task_desc = args.get("task_description").and_then(Value::as_str).unwrap_or("general subagent task");
+            let assigned_tier = args.get("assigned_tier").and_then(Value::as_str).unwrap_or("Tier1");
+
+            let record = sub_mgr
+                .spawn_subagent(parent_session, task_desc, assigned_tier)
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!("Sub-agent '{}' spawned successfully (status: {:?}, tier: {}).", record.agent_id, record.status, record.assigned_tier)
+                }],
+                "structuredContent": record,
+                "isError": false
+            }))
+        }
+        "diary" => {
+            let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("anon");
+            let session_id = args.get("session_id").and_then(Value::as_str).unwrap_or("main");
+            let content = args.get("content").and_then(Value::as_str).unwrap_or("");
+
+            let record = sub_mgr
+                .record_diary(agent_id, session_id, content)
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!("Diary note recorded for sub-agent '{}'.", record.agent_id)
+                }],
+                "structuredContent": record,
+                "isError": false
+            }))
+        }
+        "update_status" => {
+            let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("");
+            let status_str = args.get("status").and_then(Value::as_str).unwrap_or("RUNNING");
+            let status = souls_memory::SubAgentStatus::from_str_strict(status_str)
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            let record = sub_mgr
+                .update_status(agent_id, status)
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!("Sub-agent '{}' status updated to {:?}.", record.agent_id, record.status)
+                }],
+                "structuredContent": record,
+                "isError": false
+            }))
+        }
+        "list" => {
+            let parent_session = args.get("parent_session_id").and_then(Value::as_str).unwrap_or("main");
+            let list = sub_mgr
+                .list_subagents_by_parent(parent_session)
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!("Found {} sub-agents for session '{}'.", list.len(), parent_session)
+                }],
+                "structuredContent": list,
+                "isError": false
+            }))
+        }
+        _ => Err(McpDomainError::InternalEnginePanic),
+    }
+}
+
+/// Handles `thinking` socratic reasoning step.
+pub async fn handle_thinking(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let session_id = args.get("session_id").and_then(Value::as_str).unwrap_or("main");
+    let thought = args.get("thought").and_then(Value::as_str).unwrap_or("");
+    let thought_number = args.get("thought_number").and_then(Value::as_u64).unwrap_or(1) as u32;
+    let total_thoughts = args.get("total_thoughts").and_then(Value::as_u64).unwrap_or(3) as u32;
+    let next_thought_needed = args.get("next_thought_needed").and_then(Value::as_bool).unwrap_or(true);
+    let is_revision = args.get("is_revision").and_then(Value::as_bool);
+    let revises_thought = args.get("revises_thought").and_then(Value::as_u64).map(|v| v as u32);
+    let branch_from_thought = args.get("branch_from_thought").and_then(Value::as_u64).map(|v| v as u32);
+    let branch_id = args.get("branch_id").and_then(Value::as_str).map(String::from);
+
+    let engine_lock = state.memory.get_or_create_thinking_engine(session_id).await;
+    let mut engine = engine_lock.write().await;
+
+    let input = souls_memory::SocraticThoughtInput {
+        thought: thought.to_string(),
+        thought_number,
+        total_thoughts,
+        next_thought_needed,
+        is_revision,
+        revises_thought,
+        branch_from_thought,
+        branch_id,
+    };
+
+    let record = engine.add_thought(input).map_err(|_| McpDomainError::InternalEnginePanic)?;
+    let _ = engine.persist_to_db(&*state.memory.pool()).await;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": format!("Socratic Step #{}/{} registered (branch: '{}', revision: {}).", record.thought_number, record.total_thoughts, record.branch_id, record.is_revision)
+        }],
+        "structuredContent": record,
+        "isError": false
+    }))
+}
+
+/// Handles `analyze_session` coherence inspection.
+pub async fn handle_analyze_session(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let session_id = args.get("session_id").and_then(Value::as_str).unwrap_or("main");
+    let engine_lock = state.memory.get_or_create_thinking_engine(session_id).await;
+    let engine = engine_lock.read().await;
+    let analysis = engine.analyze_coherence();
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&analysis).unwrap_or_default()
+        }],
+        "structuredContent": analysis,
+        "isError": false
+    }))
+}
+
+/// Handles `export_session` markdown/json consolidation.
+pub async fn handle_export_session(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let session_id = args.get("session_id").and_then(Value::as_str).unwrap_or("main");
+    let format = args.get("format").and_then(Value::as_str).unwrap_or("markdown");
+    let engine_lock = state.memory.get_or_create_thinking_engine(session_id).await;
+    let engine = engine_lock.read().await;
+
+    if format == "json" {
+        let json_val = engine.export_json();
+        Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": serde_json::to_string_pretty(&json_val).unwrap_or_default()
+            }],
+            "structuredContent": json_val,
+            "isError": false
+        }))
+    } else {
+        let md = engine.export_markdown();
+        Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": md
+            }],
+            "structuredContent": { "session_id": session_id, "markdown": md },
+            "isError": false
+        }))
+    }
+}
+
+/// Handles `knowledge` epistemic facts.
+pub async fn handle_knowledge(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let id = args.get("id").and_then(Value::as_str);
+
+    if let Some(id_str) = id {
+        if !args.contains_key("content") {
+            let fact = state.memory.get_epistemic_memory(id_str).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+            return Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": serde_json::to_string_pretty(&fact).unwrap_or_default()
+                }],
+                "structuredContent": fact,
+                "isError": false
+            }));
+        }
+    }
+
+    let fact_id = id.map(String::from).unwrap_or_else(|| format!("fact_{:x}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()));
+    let session_id = args.get("session_id").and_then(Value::as_str).unwrap_or("main");
+    let category = args.get("category").and_then(Value::as_str).unwrap_or("general");
+    let content = args.get("content").and_then(Value::as_str).unwrap_or("");
+    let partition_str = args.get("partition").and_then(Value::as_str).unwrap_or("STABLE");
+    let partition = if partition_str.eq_ignore_ascii_case("evolving") {
+        souls_memory::EpistemicPartition::Evolving
+    } else {
+        souls_memory::EpistemicPartition::Stable
+    };
+
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+    let record = souls_memory::EpistemicMemoryRecord {
+        id: fact_id,
+        session_id: session_id.to_string(),
+        category: category.to_string(),
+        content: content.to_string(),
+        partition,
+        salience: 1.0,
+        access_count: 0,
+        source_ref: args.get("source_ref").and_then(Value::as_str).map(String::from),
+        created_at: now,
+        last_accessed_at: now,
+        updated_at: now,
+    };
+
+    state.memory.upsert_epistemic_memory(&record).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": format!("Epistemic fact '{}' persisted successfully in partition {:?}.", record.id, record.partition)
+        }],
+        "structuredContent": record,
+        "isError": false
+    }))
+}
+
+/// Handles `sqlite_query` read-only queries.
+pub async fn handle_sqlite_query(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let query = args.get("query").and_then(Value::as_str).unwrap_or("");
+    let rows = state.memory.execute_read_only_query(query).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&rows).unwrap_or_default()
+        }],
+        "structuredContent": { "rows": rows, "count": rows.len() },
+        "isError": false
+    }))
+}
+
+/// Handles `semantic_search` hybrid retrieval.
+pub async fn handle_semantic_search(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let query = args.get("query").and_then(Value::as_str).unwrap_or("");
+    let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(5) as usize;
+
+    let matches = state.memory.search_epistemic_fts5(query, limit).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&matches).unwrap_or_default()
+        }],
+        "structuredContent": { "matches": matches, "query": query },
+        "isError": false
+    }))
+}
+
+/// Handles `mem_create_entities` on LadybugDB.
+pub async fn handle_mem_create_entities(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let pool = state.memory.pool();
+    let name = args.get("name").and_then(Value::as_str).unwrap_or("entity");
+    let node_type = args.get("entity_type").and_then(Value::as_str).unwrap_or("concept");
+    let metadata_json = args.get("metadata_json").and_then(Value::as_str).unwrap_or("{}");
+
+    let node = souls_memory::OntologicalNode {
+        id: format!("node_{name}"),
+        node_type: node_type.to_string(),
+        canonical_name: name.to_string(),
+        metadata_json: metadata_json.to_string(),
+        banned_patterns: Vec::new(),
+    };
+
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+    state.memory.ladybug().insert_node(&pool, node.clone(), now).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": format!("LadybugDB ontological entity '{}' created.", node.canonical_name)
+        }],
+        "structuredContent": node,
+        "isError": false
+    }))
+}
+
+/// Handles `mem_create_relations` on LadybugDB.
+pub async fn handle_mem_create_relations(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let pool = state.memory.pool();
+    let source = args.get("source").and_then(Value::as_str).unwrap_or("");
+    let target = args.get("target").and_then(Value::as_str).unwrap_or("");
+    let relationship = args.get("relationship").and_then(Value::as_str).unwrap_or("relates_to");
+
+    let edge = souls_memory::OntologicalEdge {
+        source_id: format!("node_{source}"),
+        target_id: format!("node_{target}"),
+        relationship: relationship.to_string(),
+        weight: 1.0,
+    };
+
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+    state.memory.ladybug().insert_edge(&pool, edge.clone(), now).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": format!("LadybugDB relation '{} -> {} ({})' created.", source, target, relationship)
+        }],
+        "structuredContent": edge,
+        "isError": false
+    }))
+}
+
