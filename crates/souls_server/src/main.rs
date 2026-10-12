@@ -1190,4 +1190,95 @@ impl FixtureService {
         let resp_ckpt = app.clone().oneshot(req_ckpt).await.unwrap();
         assert_eq!(resp_ckpt.status(), StatusCode::OK);
     }
+
+    #[tokio::test]
+    async fn test_mcp_domain6_and_extended_tools() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // Helper macro/closure to call tools
+        let call_tool = |name: &'static str, args: serde_json::Value| {
+            let app_clone = app.clone();
+            async move {
+                let payload = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": 100,
+                    "method": "tools/call",
+                    "params": {
+                        "name": name,
+                        "arguments": args
+                    }
+                });
+
+                let req = Request::builder()
+                    .uri("/mcp")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                    .unwrap();
+
+                let resp = app_clone.oneshot(req).await.unwrap();
+                assert_eq!(resp.status(), StatusCode::OK);
+                let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+                let json_val: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                assert_eq!(json_val["id"], 100);
+                assert!(!json_val["result"]["isError"].as_bool().unwrap());
+                json_val["result"].clone()
+            }
+        };
+
+        // 1. Testa 'compress'
+        let res_compress = call_tool("compress", serde_json::json!({
+            "text": "// Comment line\nfn test() {\n    let a = 1; // inline comment\n\n\n    return a;\n}"
+        })).await;
+        let text_comp = res_compress["content"][0]["text"].as_str().unwrap();
+        assert!(text_comp.contains("fn test()"));
+        assert!(!text_comp.contains("// Comment line"));
+
+        // 2. Testa 'dedup' e 'fill'
+        let repeated_text = "line 1\nline 2\nline 3\nline 4\nline 5\ncode\nline 1\nline 2\nline 3\nline 4\nline 5";
+        let res_dedup = call_tool("dedup", serde_json::json!({
+            "text": repeated_text,
+            "min_lines": 5
+        })).await;
+        let dedup_out = res_dedup["content"][0]["text"].as_str().unwrap();
+        assert!(dedup_out.contains("DEDUP_BLOCK_"));
+
+        let res_fill = call_tool("fill", serde_json::json!({
+            "text": dedup_out
+        })).await;
+        let fill_out = res_fill["content"][0]["text"].as_str().unwrap();
+        assert_eq!(fill_out, repeated_text);
+
+        // 3. Testa 'tree'
+        let res_tree = call_tool("tree", serde_json::json!({
+            "path": "Z:/souls_engine",
+            "max_depth": 2
+        })).await;
+        assert!(res_tree["content"][0]["text"].as_str().unwrap().contains("crates/"));
+
+        // 4. Testa 'search'
+        let res_search = call_tool("search", serde_json::json!({
+            "path": "Z:/souls_engine/crates/souls_server",
+            "query": "build_router",
+            "file_pattern": "*.rs"
+        })).await;
+        assert!(res_search["content"][0]["text"].as_str().unwrap().contains("build_router"));
+
+        // 5. Testa 'session'
+        let res_session = call_tool("session", serde_json::json!({
+            "action": "status"
+        })).await;
+        assert_eq!(res_session["structuredContent"]["status"], "active");
+
+        // 6. Testa 'feedback'
+        let res_fb = call_tool("feedback", serde_json::json!({})).await;
+        assert!(res_fb["structuredContent"]["vram_free_mb"].as_u64().unwrap() > 0);
+
+        // 7. Testa 'mem_read_graph'
+        let res_graph = call_tool("mem_read_graph", serde_json::json!({
+            "limit": 10
+        })).await;
+        assert!(res_graph["structuredContent"]["nodes"].is_array());
+    }
 }

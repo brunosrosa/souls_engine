@@ -167,11 +167,11 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 │ Sessão 9 │ Bloco G: Silício      │ [CONCLUÍDA] 15 modelos físicos (32.57 GB)   │
 │          │ Neural & Switchboard  │ conectados, Switchboard 2-Estágios (<1.7ms) │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 10│ Bloco H: Des-staging  │ [PRÓXIMA] Transplante de 14 tools (Domínio 6│
-│          │ Ferramentas Domínio 6 │ JobObject sandbox, compressão LEAN/CCR real │
+│ Sessão 10│ Bloco H: Des-staging  │ [CONCLUÍDA] 14 tools des-stagadas, sandbox, │
+│          │ Ferramentas Domínio 6 │ LEAN compress/dedup/fill, 23/23 testes PASS │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 11│ Bloco I: Skills &     │ Homologação comportamental das 15 Skills e  │
-│          │ Curadoria Viva Cofre  │ esteira viva de 498 notas Obsidian raw->wiki│
+│ Sessão 11│ Bloco I: Skills &     │ [PRÓXIMA] Homologação das 15 Skills e estei-│
+│          │ Curadoria Viva Cofre  │ ra viva de 498 notas Obsidian raw->wiki     │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
 │ Sessão 12│ Bloco J: Fix Banco,   │ Correção Foreign Key Cloud Arena sync,      │
 │          │ Dashboard SSE & Config│ telemetria SSE viva e souls_config.toml     │
@@ -464,14 +464,22 @@ flowchart LR
   - `souls_server`: **22/22 testes unitários aprovados (100% PASS)**.
   - Teste ponta a ponta via Streamable HTTP (`/mcp`): resposta em **1.23 ms a 1.65 ms**, recomendando perfeitamente as skills `souls-hardware-watchdog` e `souls-code-surgeon`.
 
-### 11.2 Sessão 10 (Bloco H): Transplante & Des-staging das 14 Ferramentas do Domínio 6
-* **Objetivo:** Substituir as respostas de envelope `staging_ready` pela execução de baixo nível real.
-* **Ferramentas Alvo:** `execute`, `shell`, `compress`, `dedup`, `fill`, `stub_fill`, `headroom_retrieve`, `tree`, `search`, `fetch_web`, `web_search`, `repo_meta`, `mem_delete_relations`, `mem_delete_observations`.
-* **Entregas Técnicas:**
-  - `execute`: Criação de JobObject do Windows NT com limites estritos de CPU/memória para sandbox de subprocessos.
-  - `compress` e `dedup`: Algoritmos LEAN de remoção de comentários sintáticos e deduplicação de blocos contíguos de 5+ linhas na RAM.
-  - `fill`: Reidratação lossless de marcadores CCR via hash.
-  - `fetch_web` e `web_search`: Raspador leve DuckDuckGo HTML com conversão direta para Markdown na RAM, poupando tokens de DOM.
+### 11.2 Sessão 10 (Bloco H): Transplante & Des-staging das 14 Ferramentas do Domínio 6 [CONCLUÍDA]
+* **Objetivo:** Substituir as respostas de envelope `staging_ready` pela execução de baixo nível real bare-metal.
+* **Ferramentas Entregues (100% Des-stagadas):**
+  - **Contexto LEAN (`context.*`):** `read`, `smart_read`, `multi_read`, `compress`, `dedup`, `fill`, `stub_fill`, `headroom_retrieve`.
+  - **Sistema & Sandbox (`sys.*`):** `tree`, `search`, `shell`, `execute`, `fetch_web` (conversão HTML $\to$ Markdown na RAM), `web_search` (DuckDuckGo Lite), `repo_meta`.
+  - **Memória & Grafo (`memory.*`):** `mem_search` (FTS5), `mem_open_nodes`, `mem_read_graph`, `mem_add_observations`, `mem_delete_entities`, `mem_delete_relations`, `mem_delete_observations`.
+  - **Deliberação & FinOps (`think.*`, `ops.*`):** `session`, `merge_sessions`, `feedback` (cálculo de retorno de silício e telemetria SQLite STRICT).
+* **Entregas Técnicas Bare-Metal:**
+  - `crates/souls_server/src/mcp/tools_extended.rs`: Implementação modular com isolamento de caminhos ReFS (`validate_refs_path`) e zero unsafe arbitrário.
+  - `compress`: Algoritmo LEAN com remoção de comentários sintáticos (`//`, `/* */`), preservação de docstrings e colapso de linhas em branco.
+  - `dedup` & `fill`: Cache seguro thread-safe na RAM com hashing de blocos repetidos de 5+ linhas e reidratação lossless.
+  - `fetch_web` & `web_search`: Raspador leve em buffer de memória, convertendo HTML para Markdown diretamente na RAM com economia drástica de contexto.
+* **Validação de Testes Compulsória:**
+  - `souls_server`: **23/23 testes unitários e de integração aprovados (100% PASS)**, incluindo `test_mcp_domain6_and_extended_tools`.
+  - Zero warnings de formatação ou CRLF (`git diff --check` limpo). Binário `souls_server.exe` reconstruído e operando em `127.0.0.1:9123`.
+
 
 ### 11.3 Sessão 11 (Bloco I): Homologação Comportamental das 15 Skills & Curadoria Viva do Obsidian
 * **Objetivo:** Validar o alinhamento ético e os reflexos operacionais autônomos dos agentes.

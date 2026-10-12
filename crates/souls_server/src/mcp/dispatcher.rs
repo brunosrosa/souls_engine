@@ -12,6 +12,7 @@ use souls_protocol::error::{JsonRpcError, JsonRpcResponse, McpDomainError};
 
 use crate::mcp::handlers;
 use crate::mcp::registry::{get_canonical_tools, list_tools};
+use crate::mcp::tools_extended;
 use crate::state::AppState;
 
 /// Standard MCP protocol version.
@@ -278,6 +279,40 @@ pub async fn dispatch_jsonrpc(
                         .await
                         .map_err(|e| e.to_jsonrpc_error())
                 }
+
+                // DOMAIN 6: CONTEXT LEAN
+                "read" => tools_extended::handle_read(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "smart_read" => tools_extended::handle_smart_read(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "multi_read" => tools_extended::handle_multi_read(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "compress" => tools_extended::handle_compress(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "dedup" => tools_extended::handle_dedup(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "fill" => tools_extended::handle_fill(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "stub_fill" => tools_extended::handle_stub_fill(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "headroom_retrieve" => tools_extended::handle_headroom_retrieve(args).await.map_err(|e| e.to_jsonrpc_error()),
+
+                // DOMAIN 6: SYSTEM, SEARCH & SANDBOX
+                "tree" => tools_extended::handle_tree(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "search" => tools_extended::handle_search(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "shell" => tools_extended::handle_shell(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "execute" => tools_extended::handle_execute(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "fetch_web" => tools_extended::handle_fetch_web(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "web_search" => tools_extended::handle_web_search(args).await.map_err(|e| e.to_jsonrpc_error()),
+                "repo_meta" => tools_extended::handle_repo_meta(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+
+                // DOMAIN 3: EXTENDED MEMORY & LADYBUG GRAPH
+                "mem_search" => tools_extended::handle_mem_search(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+                "mem_open_nodes" => tools_extended::handle_mem_open_nodes(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+                "mem_read_graph" => tools_extended::handle_mem_read_graph(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+                "mem_add_observations" => tools_extended::handle_mem_add_observations(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+                "mem_delete_entities" => tools_extended::handle_mem_delete_entities(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+                "mem_delete_relations" => tools_extended::handle_mem_delete_relations(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+                "mem_delete_observations" => tools_extended::handle_mem_delete_observations(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+
+                // DOMAIN 4 & 5: EXTENDED THINKING & OPS
+                "session" => tools_extended::handle_session(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+                "merge_sessions" => tools_extended::handle_merge_sessions(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+                "feedback" => tools_extended::handle_feedback(state, args).await.map_err(|e| e.to_jsonrpc_error()),
+
                 other => {
                     // Check if known canonical tool
                     let tools = get_canonical_tools();
