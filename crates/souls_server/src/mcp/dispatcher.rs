@@ -77,11 +77,12 @@ pub fn validate_refs_path(path_str: &str) -> Result<(), McpDomainError> {
 /// Validates all path-like fields inside tool arguments.
 fn validate_tool_arguments_paths(args: &serde_json::Map<String, Value>) -> Result<(), McpDomainError> {
     for (k, v) in args {
-        if (k.contains("path") || k == "dir" || k == "file") && v.is_string() {
+        let k_lower = k.to_lowercase();
+        if (k_lower.contains("path") || k_lower.contains("dir") || k_lower.contains("file")) && v.is_string() {
             if let Some(path_str) = v.as_str() {
                 validate_refs_path(path_str)?;
             }
-        } else if k == "paths" && v.is_array() {
+        } else if (k_lower.contains("paths") || k_lower.contains("files")) && v.is_array() {
             if let Some(arr) = v.as_array() {
                 for item in arr {
                     if let Some(path_str) = item.as_str() {
@@ -201,7 +202,7 @@ pub async fn dispatch_jsonrpc(
                 "sys_time" => Ok(handlers::handle_sys_time()),
                 "metrics" => Ok(handlers::handle_metrics(state)),
                 "routes" => Ok(handlers::handle_routes()),
-                "tool_search" => Ok(handlers::handle_tool_search(args)),
+                "tool_search" => Ok(handlers::handle_tool_search(state, args).await),
                 "cloud_champions" => {
                     handlers::handle_cloud_champions(state, args)
                         .await

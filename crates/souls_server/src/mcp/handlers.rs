@@ -191,18 +191,19 @@ pub fn handle_routes() -> Value {
     })
 }
 
-/// Handles `tool_search` meta-tool query.
-pub fn handle_tool_search(args: &serde_json::Map<String, Value>) -> Value {
+/// Handles `tool_search` meta-tool query using Two-Stage Semantic Switchboard.
+pub async fn handle_tool_search(state: &AppState, args: &serde_json::Map<String, Value>) -> Value {
     let namespace = args.get("namespace").and_then(Value::as_str);
-    let query = args.get("query").and_then(Value::as_str);
-    let result = crate::mcp::registry::search_tools(namespace, query);
+    let query = args.get("query").and_then(Value::as_str).unwrap_or("");
+
+    let decision = crate::mcp::switchboard::evaluate_switchboard(state, query, namespace).await;
 
     json!({
         "content": [{
             "type": "text",
-            "text": serde_json::to_string_pretty(&result).unwrap_or_default()
+            "text": serde_json::to_string_pretty(&decision).unwrap_or_default()
         }],
-        "structuredContent": result,
+        "structuredContent": decision,
         "isError": false
     })
 }
@@ -521,7 +522,23 @@ pub async fn handle_sqlite_query(
     state: &AppState,
     args: &serde_json::Map<String, Value>,
 ) -> Result<Value, McpDomainError> {
-    let query = args.get("query").and_then(Value::as_str).unwrap_or("");
+    let query = args
+        .get("query")
+        .or_else(|| args.get("sql"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+
+    if query.trim().is_empty() {
+        return Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": "[]"
+            }],
+            "structuredContent": { "rows": [], "count": 0 },
+            "isError": false
+        }));
+    }
+
     let rows = state.memory.execute_read_only_query(query).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({
@@ -560,8 +577,54 @@ pub async fn handle_mem_create_entities(
     args: &serde_json::Map<String, Value>,
 ) -> Result<Value, McpDomainError> {
     let pool = state.memory.pool();
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+    let mut created_nodes = Vec::new();
+
+    if let Some(entities_arr) = args.get("entities").and_then(Value::as_array) {
+        for ent in entities_arr {
+            let ent_obj = match ent.as_object() {
+                Some(o) => o,
+                None => continue,
+            };
+            let name = ent_obj.get("name").and_then(Value::as_str).unwrap_or("");
+            if name.is_empty() {
+                continue;
+            }
+            let node_type = ent_obj
+                .get("entity_type")
+                .or_else(|| ent_obj.get("entityType"))
+                .and_then(Value::as_str)
+                .unwrap_or("concept");
+            let metadata = ent_obj.get("metadata_json").and_then(Value::as_str).unwrap_or("{}");
+
+            let node = souls_memory::OntologicalNode {
+                id: format!("node_{name}"),
+                node_type: node_type.to_string(),
+                canonical_name: name.to_string(),
+                metadata_json: metadata.to_string(),
+                banned_patterns: Vec::new(),
+            };
+
+            let _ = state.memory.ladybug().insert_node(&pool, node.clone(), now).await;
+            created_nodes.push(node);
+        }
+
+        return Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": format!("LadybugDB processed {} entities.", created_nodes.len())
+            }],
+            "structuredContent": { "created_count": created_nodes.len(), "entities": created_nodes },
+            "isError": false
+        }));
+    }
+
     let name = args.get("name").and_then(Value::as_str).unwrap_or("entity");
-    let node_type = args.get("entity_type").and_then(Value::as_str).unwrap_or("concept");
+    let node_type = args
+        .get("entity_type")
+        .or_else(|| args.get("entityType"))
+        .and_then(Value::as_str)
+        .unwrap_or("concept");
     let metadata_json = args.get("metadata_json").and_then(Value::as_str).unwrap_or("{}");
 
     let node = souls_memory::OntologicalNode {
@@ -572,7 +635,6 @@ pub async fn handle_mem_create_entities(
         banned_patterns: Vec::new(),
     };
 
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
     state.memory.ladybug().insert_node(&pool, node.clone(), now).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({
@@ -591,9 +653,82 @@ pub async fn handle_mem_create_relations(
     args: &serde_json::Map<String, Value>,
 ) -> Result<Value, McpDomainError> {
     let pool = state.memory.pool();
-    let source = args.get("source").and_then(Value::as_str).unwrap_or("");
-    let target = args.get("target").and_then(Value::as_str).unwrap_or("");
-    let relationship = args.get("relationship").and_then(Value::as_str).unwrap_or("relates_to");
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+    let mut created_edges = Vec::new();
+
+    if let Some(relations_arr) = args.get("relations").and_then(Value::as_array) {
+        for rel in relations_arr {
+            let rel_obj = match rel.as_object() {
+                Some(o) => o,
+                None => continue,
+            };
+            let source = rel_obj
+                .get("source")
+                .or_else(|| rel_obj.get("from"))
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let target = rel_obj
+                .get("target")
+                .or_else(|| rel_obj.get("to"))
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let relationship = rel_obj
+                .get("relationship")
+                .or_else(|| rel_obj.get("relationType"))
+                .and_then(Value::as_str)
+                .unwrap_or("relates_to");
+
+            if source.is_empty() || target.is_empty() {
+                continue;
+            }
+
+            let edge = souls_memory::OntologicalEdge {
+                source_id: format!("node_{source}"),
+                target_id: format!("node_{target}"),
+                relationship: relationship.to_string(),
+                weight: 1.0,
+            };
+
+            let _ = state.memory.ladybug().insert_edge(&pool, edge.clone(), now).await;
+            created_edges.push(edge);
+        }
+
+        return Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": format!("LadybugDB processed {} relations.", created_edges.len())
+            }],
+            "structuredContent": { "created_count": created_edges.len(), "relations": created_edges },
+            "isError": false
+        }));
+    }
+
+    let source = args
+        .get("source")
+        .or_else(|| args.get("from"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let target = args
+        .get("target")
+        .or_else(|| args.get("to"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let relationship = args
+        .get("relationship")
+        .or_else(|| args.get("relationType"))
+        .and_then(Value::as_str)
+        .unwrap_or("relates_to");
+
+    if source.is_empty() || target.is_empty() {
+        return Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": "Skipped creating relation with empty source or target node."
+            }],
+            "structuredContent": { "status": "skipped", "reason": "empty_nodes" },
+            "isError": false
+        }));
+    }
 
     let edge = souls_memory::OntologicalEdge {
         source_id: format!("node_{source}"),
@@ -602,7 +737,6 @@ pub async fn handle_mem_create_relations(
         weight: 1.0,
     };
 
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
     state.memory.ladybug().insert_edge(&pool, edge.clone(), now).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({

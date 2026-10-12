@@ -100,12 +100,30 @@ impl LlamaLogitProber {
     /// Resolves canonical model paths for CPU SLM probing.
     fn resolve_slm_model_path() -> Option<PathBuf> {
         let candidates = [
+            // Local physical models inventory (C:\Users\rosas\llm_local_models\)
+            "C:/Users/rosas/llm_local_models/tier_0_bootstrap/smollm2-135m-reasoning-5k-q4-k-m/SmolLM2-135M-Reasoning-5K-Q4_K_M.gguf",
+            "C:/Users/rosas/llm_local_models/tier_05_epistemic/smollm2-360m-instruct-q8-0/smollm2-360m-instruct-q8_0.gguf",
+            "C:/Users/rosas/llm_local_models/tier_4_speculative_draft/qwen2-5-coder-0-5b-instruct-q4-k-m/Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf",
+            "C:/Users/rosas/llm_local_models/tier_1_master_dgpu/phi-4-mini-instruct-q4-k-m/Phi-4-mini-instruct-Q4_K_M.gguf",
+            // Dev Drive ReFS local paths
+            "Z:/souls_engine/.souls_data/models/smollm2-135m-q4_k_m.gguf",
             "Z:/souls_engine/.souls_data/models/gemma-2b-it-q4_k_m.gguf",
             "Z:/souls_engine/.souls_data/models/phi-4-mini-q4_k_m.gguf",
             ".souls_data/models/gemma-2b-it-q4_k_m.gguf",
             "models/gemma-2b-it-q4_k_m.gguf",
             "../models/gemma-2b-it-q4_k_m.gguf",
         ];
+
+        if let Ok(custom_dir) = std::env::var("SOULS_LOCAL_MODELS_DIR") {
+            let custom_p = PathBuf::from(custom_dir);
+            if custom_p.exists() {
+                for entry in Self::walkdir_models(&custom_p, "gguf") {
+                    if entry.exists() {
+                        return Some(entry);
+                    }
+                }
+            }
+        }
 
         for c in candidates {
             let p = PathBuf::from(c);
@@ -114,6 +132,22 @@ impl LlamaLogitProber {
             }
         }
         None
+    }
+
+    /// Walk helper for dynamic directory discovery.
+    fn walkdir_models(dir: &Path, ext: &str) -> Vec<PathBuf> {
+        let mut results = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() && path.extension().is_some_and(|e| e == ext) {
+                    results.push(path);
+                } else if path.is_dir() {
+                    results.extend(Self::walkdir_models(&path, ext));
+                }
+            }
+        }
+        results
     }
 
     /// Extracts raw logits on CPU using forward-only prefill, computing Shannon entropy.

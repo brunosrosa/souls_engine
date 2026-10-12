@@ -177,12 +177,29 @@ impl OrtClassifierEngine {
     /// Resolves canonical model search locations.
     fn resolve_gliclass_model_path() -> Option<PathBuf> {
         let candidates = [
+            "C:/Users/rosas/llm_local_models/gliclass_multilang.onnx",
+            "C:/Users/rosas/llm_local_models/modernbert_embed.onnx",
             "Z:/souls_engine/.souls_data/models/gliclass_multilang.onnx",
+            "Z:/souls_engine/.souls_data/models/modernbert_embed.onnx",
             ".souls_data/models/gliclass_multilang.onnx",
             "models/gliclass_multilang.onnx",
             "../models/gliclass_multilang.onnx",
             "resources/models/gliclass_multilang.onnx",
         ];
+
+        if let Ok(custom_dir) = std::env::var("SOULS_LOCAL_MODELS_DIR") {
+            let custom_p = PathBuf::from(custom_dir);
+            if custom_p.exists() {
+                let onnx_p = custom_p.join("gliclass_multilang.onnx");
+                if onnx_p.exists() {
+                    return Some(onnx_p);
+                }
+                let modernbert_p = custom_p.join("modernbert_embed.onnx");
+                if modernbert_p.exists() {
+                    return Some(modernbert_p);
+                }
+            }
+        }
 
         for c in candidates {
             let p = PathBuf::from(c);

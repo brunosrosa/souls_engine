@@ -8,6 +8,7 @@ pub mod dispatcher;
 pub mod handlers;
 pub mod registry;
 pub mod session;
+pub mod switchboard;
 pub mod transport;
 
 pub use session::McpSessionManager;

@@ -257,6 +257,7 @@ mod tests {
             "messages": [
                 {"role": "user", "content": "Write a rust function for entropy."}
             ],
+            "max_tokens": 16,
             "stream": false
         });
 
@@ -293,6 +294,7 @@ mod tests {
             "response_format": {
                 "type": "json_object"
             },
+            "max_tokens": 16,
             "stream": false
         });
 
@@ -325,6 +327,7 @@ mod tests {
             "messages": [
                 {"role": "user", "content": "Hello streaming world"}
             ],
+            "max_tokens": 16,
             "stream": true
         });
 

@@ -833,6 +833,7 @@ pub fn list_tools(full_mode: bool) -> Value {
 }
 
 /// Dynamic discovery meta-tool search handler.
+#[allow(dead_code)]
 pub fn search_tools(namespace: Option<&str>, query: Option<&str>) -> Value {
     let tools = get_canonical_tools();
     let query_lower = query.map(|q| q.to_lowercase());

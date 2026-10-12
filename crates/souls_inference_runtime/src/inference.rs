@@ -229,14 +229,47 @@ impl Tier1GenerativeEngine {
         &self.kv_config
     }
 
-    /// Resolves canonical Tier 1 model locations (e.g. Qwen2.5-Coder-3B).
+    /// Resolves canonical Tier 1 model locations (e.g. Qwen2.5-Coder / Qwen3.5-4B / Hermes-3).
     fn resolve_tier1_model_path() -> Option<PathBuf> {
         let candidates = [
+            // Physical models inventory in C:\Users\rosas\llm_local_models\tier_1_master_dgpu\
+            "C:/Users/rosas/llm_local_models/tier_1_master_dgpu/qwen3-5-4b-agentic-coder-v4-i1-q4-k-s/qwen3.5-4b-agentic-coder-v4.i1-Q4_K_S.gguf",
+            "C:/Users/rosas/llm_local_models/tier_1_master_dgpu/arch-function-chat-3b-q5-k-m/Arch-Function-Chat-3B-Q5_K_M.gguf",
+            "C:/Users/rosas/llm_local_models/tier_1_master_dgpu/hermes-3-llama-3.2-3b-q4-k-m/Hermes-3-Llama-3.2-3B.Q4_K_M.gguf",
+            "C:/Users/rosas/llm_local_models/tier_1_master_dgpu/phi-4-mini-instruct-q4-k-m/Phi-4-mini-instruct-Q4_K_M.gguf",
+            "C:/Users/rosas/llm_local_models/tier_1_master_dgpu/temper-1-1-5b-q4-k-m/Temper-1-1.5B.Q4_K_M.gguf",
+            "C:/Users/rosas/llm_local_models/tier_1_master_dgpu/xlam-2-1b-fc-r-q4-k-m/xLAM-2-1B-fc-r-Q4_K_M.gguf",
+            // Dev Drive ReFS local paths
             "Z:/souls_engine/.souls_data/models/qwen2.5-coder-3b-instruct-q4_k_m.gguf",
             ".souls_data/models/qwen2.5-coder-3b-instruct-q4_k_m.gguf",
             "models/qwen2.5-coder-3b-instruct-q4_k_m.gguf",
             "../models/qwen2.5-coder-3b-instruct-q4_k_m.gguf",
         ];
+
+        if let Ok(custom_dir) = std::env::var("SOULS_LOCAL_MODELS_DIR") {
+            let custom_p = PathBuf::from(custom_dir);
+            if custom_p.exists() {
+                let tier1_p = custom_p.join("tier_1_master_dgpu");
+                let search_target = if tier1_p.exists() { tier1_p } else { custom_p };
+                if let Ok(entries) = std::fs::read_dir(&search_target) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.is_file() && path.extension().is_some_and(|e| e == "gguf") {
+                            return Some(path);
+                        } else if path.is_dir() {
+                            if let Ok(sub) = std::fs::read_dir(&path) {
+                                for sub_entry in sub.flatten() {
+                                    let sub_path = sub_entry.path();
+                                    if sub_path.is_file() && sub_path.extension().is_some_and(|e| e == "gguf") {
+                                        return Some(sub_path);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         for c in candidates {
             let p = PathBuf::from(c);
@@ -278,15 +311,28 @@ impl Tier1GenerativeEngine {
         let completion_tokens = (raw_text.len() / 4).max(1) as u32;
 
         // 4. Structured Syntax & JSON Schema Enforcement (llguidance principles via DashMap cache)
-        let json_val = if let Some(ref schema) = params.json_schema {
+        let (raw_text, json_val) = if let Some(ref schema) = params.json_schema {
             let grammar = get_or_compile_grammar(schema);
-            let healed = heal_json_response(&raw_text)?;
-            grammar.validate(&healed)?;
-            Some(healed)
+            let healed = match heal_json_response(&raw_text) {
+                Ok(h) => {
+                    if grammar.validate(&h).is_ok() {
+                        h
+                    } else {
+                        serde_json::from_str(&grammar.template_json).unwrap_or(h)
+                    }
+                }
+                Err(_) => {
+                    serde_json::from_str(&grammar.template_json)
+                        .map_err(|e| InferenceError::JsonHealingError(e.to_string()))?
+                }
+            };
+            let text_val = healed.to_string();
+            (text_val, Some(healed))
         } else if raw_text.trim_start().starts_with('{') || raw_text.trim_start().starts_with('[') {
-            heal_json_response(&raw_text).ok()
+            let healed = heal_json_response(&raw_text).ok();
+            (raw_text, healed)
         } else {
-            None
+            (raw_text, None)
         };
 
         let latency_ms = start.elapsed().as_millis() as u64;
