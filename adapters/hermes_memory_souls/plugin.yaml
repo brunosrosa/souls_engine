@@ -1,0 +1,15 @@
+# plugin.yaml — Manifesto Canônico do Plugin Hermes Memory Souls (v7)
+name: souls_memory
+version: 7.0.0
+description: Integração do Hipocampo Bare-Metal L2, FrankenSQLite STRICT WAL e Grafo LadybugDB com o Hermes Agent
+author: Arquiteto Souls & Hermes
+entrypoint: souls_memory:adapter
+
+mcp:
+  transport: streamable_http
+  endpoint: http://127.0.0.1:9123/mcp
+
+features:
+  - epistemic_truth_versioning
+  - hybrid_rrf_search
+  - ladybug_knowledge_graph
