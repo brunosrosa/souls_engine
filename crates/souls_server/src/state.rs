@@ -13,6 +13,8 @@ use souls_inference_runtime::InferenceRuntime;
 use souls_memory::SoulsMemoryStore;
 use souls_model_router::ParetoBanditRouter;
 
+use souls_llm_cloud_arena::CloudArenaCoordinator;
+
 /// RAII Guard that increments active connection count on creation
 /// and atomically decrements it on drop, preventing leaks on early returns or panics.
 #[derive(Debug)]
@@ -40,6 +42,7 @@ pub struct AppState {
     pub memory: Arc<SoulsMemoryStore>,
     pub runtime: Arc<InferenceRuntime>,
     pub router: Arc<ParetoBanditRouter>,
+    pub cloud_arena: Arc<CloudArenaCoordinator>,
     pub mcp_sessions: Arc<crate::mcp::McpSessionManager>,
     active_connections: Arc<AtomicUsize>,
     start_time: Instant,
@@ -51,11 +54,13 @@ impl AppState {
         memory: Arc<SoulsMemoryStore>,
         runtime: Arc<InferenceRuntime>,
         router: Arc<ParetoBanditRouter>,
+        cloud_arena: Arc<CloudArenaCoordinator>,
     ) -> Self {
         Self {
             memory,
             runtime,
             router,
+            cloud_arena,
             mcp_sessions: Arc::new(crate::mcp::McpSessionManager::new()),
             active_connections: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),

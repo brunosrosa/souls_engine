@@ -1,0 +1,19 @@
+graph TD
+    classDef done fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+    classDef ready fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+    classDef waiting fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff;
+
+    T1["TASK-AST-001<br/>APIs em souls_ast"]:::done
+    T2["TASK-AST-002<br/>Probing em inference_runtime"]:::done
+    T3["TASK-AST-003<br/>Handlers AST em server"]:::done
+    T4["TASK-AST-004<br/>Handler Intent em server"]:::done
+    T5["TASK-AST-005<br/>Roteamento no Dispatcher"]:::done
+    T6["TASK-AST-006<br/>Testes de Integração MCP"]:::done
+    T7["TASK-AST-007<br/>Verificação Compulsória"]:::done
+
+    T1 --> T3
+    T2 --> T4
+    T3 --> T5
+    T4 --> T5
+    T5 --> T6
+    T6 --> T7

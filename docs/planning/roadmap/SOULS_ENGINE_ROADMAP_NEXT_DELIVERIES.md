@@ -40,14 +40,24 @@ flowchart TD
 ## 2. MATRIZ DE PENDÊNCIAS, ENTREGAS & MAPA DE TRANSPLANTE (`_donor/`)
 
 ### Bloco A: `souls_llm_cloud_arena` (Benchmarking e Rastreio de APIs de Nuvem)
-* **Status Atual:** Especificação concluída em `docs/architecture/llm_benchmark_cost_matrix_crate_specification.md`.
+* **Status Atual:** 100% Concluído e Homologado (10 crates canônicas, 9 testes unitários/integração na crate e 21 no souls_server).
 * **Fontes Canônicas no `_donor/`:**
   * `_donor/souls_mc_core/src/finops/iron_cost.rs`: Lógica de precificação ponderada e conversão de tokens.
   * `_donor/souls_mc_protocol/src/metrics.rs`: DTOs de telemetria e custo por milhão de tokens.
-* **Entregas Pendentes:**
-  1. **Coletor de Preços e Limites:** Ingestão de tabelas de preços de provedores de nuvem (Nous Portal, OpenRouter, Anthropic) com precificação granular ($P_{\text{cache}}$, $P_{\text{in}}$, $P_{\text{out}}$).
-  2. **Cálculo de Custo Ponderado ($C_{\text{task}}$):** Implementação dos pesos específicos por perfil (Coding: 0.4/0.4/0.2, Agentic: 0.6/0.3/0.1, Reasoning: 0.2/0.4/0.4, Fast: 0.1/0.8/0.1).
-  3. **Unificação na Fronteira de Pareto:** Persistência em `cloud_models` permitindo ao `ParetoBandit` comparar o $V_{\text{task}}$ de silício local ($C_{\text{silicon}}$) com o $V_{\text{task}}$ de nuvem ($C_{\text{task}}$) sob a mesma equação logarítmica normalizada.
+* **Entregas Canônicas da Sessão 5:**
+  1. **Topologia:** Criação formal da 10ª crate do workspace: `crates/souls_llm_cloud_arena` (`#![forbid(unsafe_code)]`).
+  2. **Ingestores de Mercado:** Nous Portal API (`/v1/models`), OpenRouter API (`/api/v1/models` com modo público anônimo e suporte a token) e ingestão de benchmarks cognitivos consolidados (LMSYS Arena Elo, SWE-bench, BFCL, IFEval, GPQA, LiveBench).
+  3. **A Taxonomia Cognitiva Unificada (ADR-009):**
+     * **Executive / Master Brain ($S_{\text{executive}}$):** Modelo de fronteira e voz mestre do Hermes. 0.30 Hard Elo + 0.25 IFEval + 0.20 BFCL + 0.15 GPQA + 0.10 Context Coherence.
+     * **Coding & SWE ($S_{\text{coding}}$):** 0.40 Coding + 0.25 BFCL + 0.20 Hard Elo + 0.15 IFEval.
+     * **Autonomous Agentic ($S_{\text{agentic}}$):** 0.45 BFCL + 0.30 IFEval + 0.15 Hard Elo + 0.10 TPS.
+     * **Deep Reasoning ($S_{\text{reasoning}}$):** 0.45 GPQA + 0.35 Hard Elo + 0.20 IFEval.
+     * **Fast / Triage ($S_{\text{fast}}$):** 0.40 TPS Norm + 0.30 TTFT Norm + 0.15 IFEval + 0.15 Coding Elo.
+     * **Design & Multimodal UI ($S_{\text{design}}$):** 0.40 Frontend/Visual SWE + 0.30 VQA/Multimodal + 0.15 IFEval + 0.15 Throughput.
+     * **Facetas Especializadas de Suporte:** `Research & Deep Synthesis` ($S_{\text{research}}$), `Security & Code Audit` ($S_{\text{security}}$) e `Technical Writing & Obsidian Curator` ($S_{\text{curation}}$).
+  4. **Ciclo de Atualização e Resiliência:** Sincronização diária assíncrona em segundo plano na inicialização do daemon `souls_server` (se `last_update < today`), com fallback gracioso mantendo cache local se houver falha de rede + ferramenta MCP `cloud_arena_sync` e endpoint REST `/api/v1/cloud/champions`.
+  5. **Persistência SSOT:** Tabelas SQLite STRICT WAL em `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (`canonical_models`, `model_aliases`, `pricing_telemetry_snapshots`, `benchmark_snapshots`, `daily_evaluations`).
+  6. **Integração e Visualização Futura (Sessão 7):** As recomendações do Master Brain e Campeões de Nuvem serão consumidas visualmente no Web Dashboard do Hermes (`hermes dashboard`) e como fonte SSOT para os arquivos de configuração do Hermes Agent.
 
 ---
 
@@ -138,14 +148,17 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 │ Sessão 3 │ Bloco C: Conexão Viva │ [CONCLUÍDA] Hermes Desktop config.yaml,     │
 │          │                       │ SOUL.md FinOps, models junction & MCP live  │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 4 │ Bloco D: AST & NVML   │ [PRÓXIMA] Transplante souls_ast (outlines)  │
+│ Sessão 4 │ Bloco D: AST & NVML   │ [CONCLUÍDA] Transplante souls_ast (outlines)│
 │          │                       │ e souls_inference_runtime (NVML Watchdog)   │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 5 │ Bloco A: Cloud Arena  │ Implementação de souls_llm_cloud_arena e    │
-│          │                       │ ingestão de APIs externas (Nous/OpenRouter) │
+│ Sessão 5 │ Bloco A: Cloud Arena  │ [CONCLUÍDA] Ingestão Nous/OpenRouter,       │
+│          │                       │ 9 perfis, fronteira Pareto e sync diário    │
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
-│ Sessão 6 │ Bloco E: Skills &     │ Ecossistema de Skills MCP, Curadoria Raw->  │
-│          │ Governança Obsidian   │ Wiki no Obsidian DB e ciclo evolutivo /learn│
+│ Sessão 6 │ Bloco E: Skills &     │ [CONCLUÍDA] 15 Skills sincronizadas no C:,  │
+│          │ Governança Obsidian   │ esteira raw->wiki (498 docs) e ciclo /learn │
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 7 │ Bloco F: Web Dashboard│ [PRÓXIMA] Hermes Web Dashboard (REST),      │
+│          │ & Souls Settings      │ Souls Settings globais e painel de líderes  │
 └──────────┴───────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -192,6 +205,18 @@ Como evolução ergonômica pós-consolidação headless, o ecossistema ganhará
    * *Quit (Sair):* Executa o teardown gracioso com `shutdown()` em todas as crates e encerra os serviços.
 4. **Isolamento Arquitetural (Preservação da Linha Vermelha 1):** O binário mestre `souls_server.exe` continua sendo **100% headless** e compilável isoladamente para servidores/containers. O Systray Companion opera como um processo cliente Win32 leve (`windows-sys = "0.59"`) desacoplado, sem introduzir frameworks pesados como Tauri ou Electron no daemon principal.
 
+### 5.5 Bloco F: Hermes Web Dashboard & Souls Settings (Observabilidade & Governança Unificada)
+Como evolução futura formalizada para a **Sessão 7**:
+1. **Web Dashboard Oficial do Hermes Agent (Plugin REST):**
+   * Interface web integrada consumindo os endpoints REST do `souls_server` (`/api/v1/cloud/champions`, `/api/v1/telemetry`, `/api/v1/memory/*`).
+   * Visualização interativa dos 5 perfis cognitivos, tabelas comparativas de preços Nous Portal vs. OpenRouter e Fronteira de Pareto em tempo real.
+   * Gráficos comparativos de ROI Amortecido ($V_{\text{task}}$), economia obtida com modelos locais na RTX 2060m versus custo evitado em nuvem ($C_{\text{task}}$).
+2. **Souls Settings & Governança de Agentes:**
+   * Painel de configuração geral para o Souls Engine e perfis do Hermes Agent.
+   * Alternância dinâmica de modelos para subagentes, perfis especializados e chat mestre.
+   * Gerenciamento e calibração de API keys, limiares de fallback térmico da dGPU e políticas de retenção do Langevin Decay.
+3. **Preservação da Regra Headless:** Toda a camada gráfica reside estritamente no front-end web do Hermes Dashboard (ou cliente web do usuário), garantindo conformidade absoluta com a Linha Vermelha 1 do `AGENTS.md` (Zero Desktop UI nativa no binário Rust).
+
 ---
 
 ## 6. MAPA EXAUSTIVO DE STATUS CLÍNICO DAS 51 FERRAMENTAS MCP
@@ -208,9 +233,9 @@ Para erradicar qualquer ambiguidade sobre stubs e implementações profundas, o 
 | `knowledge`, `sqlite_query` | `souls_memory` | **LIVE_PRODUCTION** | Sessão 3 (Concluída) |
 | `mem_search`, `mem_open_nodes`, `mem_read_graph`, `mem_create_*`, `mem_delete_*` | `souls_memory` | **LIVE_PRODUCTION** | Sessão 3 (Concluída) |
 | `semantic_search` | `souls_memory` | **LIVE_PRODUCTION** | Sessão 3 (Concluída) |
-| `outline`, `symbol`, `callers`, `callees`, `get_ast`, `edit`, `replace`, `delta_diff` | `souls_ast` | Staging estruturado; transplante Tree-sitter e Myers Diff | **Sessão 4 (AST & Hardware)** |
-| `repo_heatmap`, `repo_impact` | `souls_ast` | Staging estruturado; transplante `gitoxide` (Frecency) | **Sessão 4 (AST & Hardware)** |
-| `intent` | `souls_inference_runtime` | Staging estruturado; transplante ONNX / logit probing | **Sessão 4 (AST & Hardware)** |
+| `outline`, `symbol`, `callers`, `callees`, `get_ast`, `edit`, `replace`, `delta_diff` | `souls_ast` | **LIVE_PRODUCTION** | Sessão 4 (Concluída) |
+| `repo_heatmap`, `repo_impact` | `souls_ast` | **LIVE_PRODUCTION** | Sessão 4 (Concluída) |
+| `intent` | `souls_inference_runtime` | **LIVE_PRODUCTION** | Sessão 4 (Concluída) |
 | `read`, `smart_read`, `multi_read`, `compress`, `dedup`, `fill`, `stub_fill`, `headroom_retrieve` | `souls_core` | Staging estruturado; transplante compressão LEAN & CCR | **Sessão 5 (Contexto & Sandbox)** |
 | `tree`, `search`, `shell`, `execute`, `fetch_web`, `web_search`, `repo_meta` | `souls_core` | Staging estruturado; transplante sandbox e HTTP scraper | **Sessão 5 (Contexto & Sandbox)** |
 | `feedback` | `souls_llm_cloud_arena` | Staging estruturado; transplante Cloud Arena & APIs externas | **Sessão 6 (Cloud Arena)** |
@@ -244,39 +269,48 @@ Após a conclusão da **Sessão 3**, o Souls Engine não atenderá apenas o Herm
 
 ## 8. BLOCO E: ENGENHARIA DE SKILLS, PROTOCOLOS AGÊNTICOS & CURADORIA DO OBSIDIAN DB
 
-A maturidade do ecossistema transcende as ferramentas atômicas MCP (`tools`): ele requer **Skills procedimentais** que orquestrem o comportamento dos agentes (Hermes Agent e Antigravity CLI/IDE), assegurem disciplina de protocolos e unifiquem a base viva de conhecimento:
+A maturidade do ecossistema transcende as ferramentas atômicas MCP (`tools`): ele requer **Skills procedimentais** que orquestrem o comportamento dos agentes (Hermes Agent e Antigravity CLI/IDE), assegurem disciplina de protocolos e unifiquem a base viva de conhecimento sem necessidade de microgerenciamento humano:
 
-### 8.1 Playbooks de Skills Especializadas para as Ferramentas MCP do Souls Engine
-Desenvolvimento e refinamento de skills canônicas em `%LOCALAPPDATA%\hermes\skills\` e `.agents/skills/`:
-1. **`souls-ast-dehydration` (FinOps de Contexto):**
-   * Obriga o agente a nunca utilizar `read_file` em arquivos inteiros para inspeção estrutural.
-   * Padroniza o fluxo: `souls_ast_outline` (extrai assinaturas e tipos) $\to$ `souls_ast_slice` (extrai apenas o método alvo) $\to$ economia comprovada de 70% a 85% de tokens.
-2. **`souls-subagent-dispatch` (Orquestração de Subagentes & Silício):**
-   * Obriga a consulta a `souls_route_subtask` antes de qualquer `delegate_task`.
-   * Registra o payload de transição via `handoff` e monitora o ciclo de vida com `sub_agent`.
-3. **`souls-socratic-thinking` (Cognição em Grafo DAG):**
-   * Guia o agente a registrar hipóteses e bifurcações em `thinking` antes de executar refatorações complexas.
-   * Valida a coerência da cadeia de raciocínio via `analyze_session`.
+### 8.1 Matriz de 22 Skills Canônicas (7 Domínios Operacionais)
+Para cobrir as 52 ferramentas MCP, 3 camadas de memória e fluxos de auto-aprendizado:
+1. **Domínio A (Engenharia de Código & AST):** `souls-code-surgeon`, `souls-structural-diff`, `souls-blast-radius`, `souls-safe-sandbox`.
+2. **Domínio B (Hipocampo L2 & Grafo Ontológico):** `souls-memory-triad`, `souls-knowledge-vault`, `souls-ontology-graph`, `souls-langevin-decay`.
+3. **Domínio C (Deliberação Cognitiva & Socrático):** `souls-socratic-thinking`, `souls-intent-probing`, `souls-speculative-branch`.
+4. **Domínio D (Silício, FinOps & Orquestração):** `souls-subagent-dispatch`, `souls-hardware-watchdog`, `souls-cloud-arena-advisor`.
+5. **Domínio E (Contexto Lean, Compressão & Web):** `souls-context-lean`, `souls-web-intelligence`.
+6. **Domínio F (Memória Fria do Obsidian DB):** `obsidian-vault-curator`, `obsidian-manifest-tracker`, `obsidian-privacy-shield`, `obsidian-session-logger`.
+7. **Domínio G (Auto-Refinamento & Aprendizado):** `agent-self-learning-loop`, `agent-skill-evolution`.
 
-### 8.2 Curadoria Enciclopédica do Obsidian DB (`raw/` $\to$ Wiki Estruturada)
-O cofre pessoal em `C:\Users\rosas\OneDrive\Documentos\Obisidian DB` atua como a Memória Fria de Longo Prazo do Arquiteto. Para transformá-lo em uma Wiki de alto valor sem poluição ou perda de fidelidade:
+### 8.2 Topologia Resiliente de Persistência no Disco `C:` (ADR-005 Emenda 3.3)
+Para garantir imunidade a desmontagens da unidade virtual `Z:` (Dev Drive ReFS):
+* **Lar Primário das Skills (Hermes):** `%LOCALAPPDATA%\hermes\skills\` (subpastas `souls-engine/` e `obsidian-curator/`).
+* **Espelho Global (Antigravity):** `C:\Users\rosas\.gemini\config\skills/`.
+* **Backup Soberano (Git):** `Z:\souls_engine\.agents\skills/`.
+* **Script de Curadoria:** `C:\Users\rosas\OneDrive\Documentos\Obisidian DB\scripts\curate_obsidian.ps1` (reside diretamente no cofre e viaja com o OneDrive).
+
+### 8.3 Curadoria Enciclopédica do Obsidian DB (`raw/` $\to$ `wiki/`)
+O cofre pessoal em `C:\Users\rosas\OneDrive\Documentos\Obisidian DB` atua como a Memória Fria de Longo Prazo do Arquiteto:
 1. **Zona Sagrada `raw/` (Fontes Brutas Imutáveis):**
    * O diretório `raw/` abriga anotações livres, transcrições brutas, recortes e fontes externas.
    * O Antigravity CLI e os subagentes do Hermes tratam o `raw/` em modo estritamente **Read-Only**.
-   * Os agentes do Hermes podem gravar novos relatórios de sessões e aprendizados brutos em `raw/sessions/`.
-2. **Esteira de Curadoria e Criação de Verbetes (Antigravity CLI):**
-   * O Antigravity CLI executa a leitura minuciosa de cada documento bruto no `raw/` sem suprimir detalhes conceituais.
-   * Sintetiza "verbetes" hiperconectados (wikilinks `[[Conceito]]`), notas conceituais atômicas e MOCs (*Maps of Content*) na área principal da Wiki.
-3. **Manifesto de Progresso & Rotina Incremental:**
-   * Manutenção de um índice de auditoria (`wiki_manifest.json` ou `_INDEX.md`) rastreando:
-     - Documentos do `raw/` 100% processados.
-     - Documentos em processamento / pendentes.
-     - Grafo de links cruzados gerados.
-   * Rotina periódica / agendada (`cron` ou comando dedicado) para detectar novos arquivos adicionados ao `raw/` e disparar a curadoria incremental.
+   * Respeito absoluto às regras de privacidade: dados de `raw/financas/` e `raw/saude/` são processados **100% localmente** (GPU/CPU bare-metal, sem envio para nuvens abertas).
+2. **Esteira de Curadoria e Criação de Verbetes:**
+   * Sintetiza "verbetes" hiperconectados (wikilinks `[[Conceito]]`), notas conceituais atômicas em `wiki/concepts/`, entidades em `wiki/entities/` e resumos em `wiki/summaries/`.
+   * Adiciona compulsoriamente frontmatter YAML padronizado (`type`, `tags`, `last_updated`, `reviewed`).
+   * Registra todas as operações autônomas no diário incremental `wiki/log.md`.
+3. **Manifesto de Progresso & Rastreamento com SHA-256:**
+   * O arquivo `C:\Users\rosas\OneDrive\Documentos\Obisidian DB\wiki\raw_manifest.json` mapeia cada arquivo de `raw/` com seu hash SHA-256, status (`PENDING`, `IN_PROGRESS`, `CURATED`, `SKIPPED`) e lista de verbetes derivados.
+4. **Modelo de Disparo Híbrido:**
+   * **Sob Demanda:** Executável via PowerShell / CLI a qualquer momento (`pwsh scripts/curate_obsidian.ps1`).
+   * **Agendamento Automático:** Suporte a disparo periódico via cron do Hermes Agent (`%LOCALAPPDATA%\hermes\cron`).
+   * **Lotes Seguros:** Processamento estritamente limitado a no máximo 5 arquivos por rodada (respeitando o limite de autonomia de $\le 10$ arquivos do `AGENTS.md` do cofre).
 
-### 8.3 Ciclo Evolutivo de Aprendizado Contínuo (`/learn` e Auto-Refinamento)
-* As correções operacionais e os novos padrões descobertos em sessões de trabalho devem ser capturados via comando `/learn`.
-* A esteira de governança alimenta periodicamente as skills do Hermes Agent e as regras da IDE, evitando regressões de comportamento e refinando a inteligência prática de trabalho.
+### 8.4 Ciclo Evolutivo de Aprendizado Contínuo (`/learn` e Auto-Refinamento)
+* As correções operacionais e novos padrões descobertos em sessões de trabalho são capturados via comando `/learn`.
+* A esteira de governança classifica o destino da aprendizagem:
+  - Convenção de código $\to$ `.agents/rules/` ou `AGENTS.md`.
+  - Procedimento de ferramenta $\to$ arquivo `SKILL.md` correspondente.
+  - Fato ou decisão duradoura $\to$ SQLite `epistemic_memories` (L2) e Obsidian `wiki/` (L3).
 
 ---
 

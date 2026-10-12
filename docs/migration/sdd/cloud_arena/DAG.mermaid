@@ -1,0 +1,9 @@
+flowchart TD
+    T1[1. Setup Crate & Workspace Cargo] --> T2[2. Storage SQLite STRICT WAL]
+    T1 --> T3[3. Canonical Slug Resolver]
+    T2 --> T4[4. Sources HTTP Nous, OpenRouter & Benchmarks]
+    T3 --> T4
+    T4 --> T5[5. Analytics 5 Perfis & Pareto Frontier]
+    T5 --> T6[6. Daily Sync & CLI souls_cloud_arena]
+    T6 --> T7[7. souls_server Integration REST & MCP]
+    T7 --> T8[8. Workspace Verification cargo check/test]

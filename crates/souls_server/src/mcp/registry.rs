@@ -767,6 +767,50 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 "additionalProperties": false
             }),
         },
+        // ops.* Cloud Arena tools
+        ToolMeta {
+            name: "cloud_champions",
+            namespace: "ops",
+            description: "Consulta os modelos campeões da Fronteira de Pareto nos 5 perfis cognitivos (Coding, Agentic, Reasoning, Fast, Design).",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "profile": {
+                        "type": "string",
+                        "enum": ["all", "coding", "agentic", "reasoning", "fast", "design"],
+                        "default": "all",
+                        "description": "Perfil de carga alvo para filtrar os campeões de nuvem."
+                    },
+                    "date": {
+                        "type": "string",
+                        "description": "Data específica do snapshot no formato YYYY-MM-DD (padrão: hoje)."
+                    }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "cloud_arena_sync",
+            namespace: "ops",
+            description: "Dispara sincronização sob demanda dos preços e benchmarks de modelos em nuvem (Nous Portal e OpenRouter).",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "force": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Se verdadeiro, força a sincronização mesmo se já executada hoje."
+                    },
+                    "date": {
+                        "type": "string",
+                        "description": "Data específica para registrar a avaliação no formato YYYY-MM-DD."
+                    }
+                },
+                "additionalProperties": false
+            }),
+        },
     ]
 }
 

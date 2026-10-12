@@ -110,8 +110,9 @@ Abaixo consta a relação exaustiva de todas as ferramentas operacionais do Soul
 | 46    | **`execute`**                 | `sys`         | Executor isolado em sandbox de sistema operacional (AppContainer/JobObject).                            | `souls_core`              | `LIVE_PRODUCTION`      | **0.32 ms**         |
 | 47    | **`fetch_web`**               | `sys`         | Scraper assíncrono via `reqwest` com conversor de HTML para Markdown limpo.                             | `souls_core`              | `LIVE_PRODUCTION`      | **~ 1.5 s**         |
 | 48    | **`web_search`**              | `sys`         | Motor de busca DuckDuckGo HTML com extração direta de snippets sem tracking.                            | `souls_core`              | `LIVE_PRODUCTION`      | **909.64 ms**       |
-| 49    | **`repo_meta`**               | `sys`         | Extrai metadados estruturais de repositórios Git via `gix` / `octocrab`.                                | `souls_core`              | `LIVE_PRODUCTION`      | **1.73 s**          |
 | 50    | **`routes`**                  | `sys`         | Inspeciona rotas ativas do daemon Axum e status de ganchos IPC/SSE.                                     | `souls_server`            | `UPGRADE_CANDIDATE`    | **< 2.0 ms**        |
+| 51    | **`cloud_champions`**         | `ops`         | Consulta os modelos campeões da Fronteira de Pareto por perfil (Executive, Coding, etc.) da Cloud Arena.| `souls_server`            | `LIVE_PRODUCTION`      | **< 2.0 ms**        |
+| 52    | **`cloud_arena_sync`**        | `ops`         | Dispara sincronização sob demanda de tarifas e benchmarks do Nous Portal e OpenRouter.                  | `souls_server`            | `LIVE_PRODUCTION`      | **~ 1.2 s**         |
 
 ## 3. CONTRATOS DETALHADOS POR NAMESPACE FUNCIONAL
 
@@ -469,6 +470,51 @@ Permite ao agente descobrir, pesquisar e inspecionar os esquemas JSON exatos das
 #### 3.5.5 `routes` _(UPGRADE CANDIDATE)_
 
 - **Racional de Investigação:** No legado, mapeava canais IPC entre Tauri e Svelte. No Souls Engine v7, sua função é inspecionar e expor a tabela viva de rotas do servidor Axum (`/mcp`, `/api/v1/*`), portas ativas e estado dos ganchos SSE, permitindo diagnóstico imediato pelo operador ou pelo Hermes.
+
+#### 3.5.6 Cloud Arena & Inteligência de Mercado: `cloud_champions` & `cloud_arena_sync` (ADR-009)
+
+- **`cloud_champions`:**
+  - **Descrição:** Retorna os modelos líderes da Fronteira de Pareto nos perfis cognitivos canônicos (Executive/Master Brain, Coding, Agentic, Reasoning, Fast, Design, etc.). Consumido pelo Hermes Agent para calibrar a configuração do modelo default e por subagentes para seleção de especialistas.
+  - **JSON Schema (`inputSchema`):**
+    ```json
+    {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string",
+          "enum": ["all", "executive", "coding", "agentic", "reasoning", "fast", "design", "research", "security", "curation"],
+          "default": "all",
+          "description": "Perfil cognitivo alvo para filtrar os campeões de nuvem."
+        },
+        "date": {
+          "type": "string",
+          "description": "Data específica do snapshot no formato YYYY-MM-DD (padrão: hoje)."
+        }
+      },
+      "additionalProperties": false
+    }
+    ```
+
+- **`cloud_arena_sync`:**
+  - **Descrição:** Dispara sincronização em segundo plano das tabelas de tarifas e benchmarks do Nous Research Portal e OpenRouter.
+  - **JSON Schema (`inputSchema`):**
+    ```json
+    {
+      "type": "object",
+      "properties": {
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Se verdadeiro, força a sincronização mesmo se já executada hoje."
+        },
+        "date": {
+          "type": "string",
+          "description": "Data específica para registrar a avaliação no formato YYYY-MM-DD."
+        }
+      },
+      "additionalProperties": false
+    }
+    ```
 
 ## 4. ENVELOPES CANÔNICOS DE TRANSPORTE JSON-RPC 2.0
 

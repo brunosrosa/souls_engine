@@ -79,8 +79,39 @@ pub async fn bootstrap_engine(data_dir: &Path) -> Result<AppState, Box<dyn std::
     // 4. Bootstrap InferenceRuntime
     let runtime = InferenceRuntime::new();
 
-    let state = AppState::new(Arc::new(memory), Arc::new(runtime), Arc::new(router));
-    info!("All 8 workspace crates successfully bound into AppState.");
+    // 5. Bootstrap CloudArenaCoordinator (Nuvem, 5 perfis cognitivos e Fronteira de Pareto)
+    let cloud_config = if data_dir == Path::new(":memory:") {
+        souls_llm_cloud_arena::CloudArenaConfig {
+            database_path: PathBuf::from(":memory:"),
+            ..souls_llm_cloud_arena::CloudArenaConfig::load()
+        }
+    } else {
+        souls_llm_cloud_arena::CloudArenaConfig::load()
+    };
+
+    let cloud_arena = if data_dir == Path::new(":memory:") {
+        souls_llm_cloud_arena::CloudArenaCoordinator::from_pool(cloud_config, (*pool).clone())
+    } else {
+        souls_llm_cloud_arena::CloudArenaCoordinator::new(cloud_config).await?
+    };
+
+    let cloud_arena_arc = Arc::new(cloud_arena);
+
+    // Dispara a sincronização diária em background (não-bloqueante no boot do daemon)
+    let cloud_bg = Arc::clone(&cloud_arena_arc);
+    tokio::spawn(async move {
+        if let Err(err) = cloud_bg.sync_if_needed().await {
+            tracing::warn!("Cloud Arena background sync notice: {err}");
+        }
+    });
+
+    let state = AppState::new(
+        Arc::new(memory),
+        Arc::new(runtime),
+        Arc::new(router),
+        cloud_arena_arc,
+    );
+    info!("All 10 workspace crates successfully bound into AppState.");
 
     Ok(state)
 }
@@ -151,7 +182,16 @@ mod tests {
         let router = ParetoBanditRouter::new((*pool).clone(), atomic_telemetry, ParetoWeights::default());
         let runtime = InferenceRuntime::new();
 
-        AppState::new(Arc::new(memory), Arc::new(runtime), Arc::new(router))
+        let cloud_config = souls_llm_cloud_arena::CloudArenaConfig {
+            database_path: std::path::PathBuf::from(":memory:"),
+            ..souls_llm_cloud_arena::CloudArenaConfig::load()
+        };
+        let cloud_arena = Arc::new(souls_llm_cloud_arena::CloudArenaCoordinator::from_pool(
+            cloud_config,
+            (*pool).clone(),
+        ));
+
+        AppState::new(Arc::new(memory), Arc::new(runtime), Arc::new(router), cloud_arena)
     }
 
     #[tokio::test]
@@ -451,7 +491,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 51, "Full mode must expose all 51 canonical tools");
+        assert_eq!(tools_full.len(), 53, "Full mode must expose all 53 canonical tools");
     }
 
     #[tokio::test]
@@ -896,5 +936,172 @@ mod tests {
 
         let rel_resp = app.oneshot(rel_req).await.unwrap();
         assert_eq!(rel_resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_ast_outline_and_symbol_integration() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let test_file_path = "Z:/souls_engine/crates/souls_server/src/test_fixture_ast.rs";
+        let test_code = r#"
+pub struct FixtureService {
+    pub name: String,
+}
+
+impl FixtureService {
+    pub fn process_data(&self) -> bool {
+        let _temp = 100;
+        let _val = 200;
+        true
+    }
+}
+"#;
+        std::fs::write(test_file_path, test_code).expect("write test fixture");
+
+        // 1. Outline call
+        let outline_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 40,
+            "method": "tools/call",
+            "params": {
+                "name": "outline",
+                "arguments": {
+                    "path": test_file_path,
+                    "include_private": true
+                }
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&outline_payload).unwrap()))
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(val["id"], 40);
+        assert!(!val["result"]["isError"].as_bool().unwrap());
+        assert!(val["result"]["structuredContent"]["saved_tokens_pct"].as_f64().unwrap() > 0.0);
+
+        // 2. Symbol call
+        let symbol_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 41,
+            "method": "tools/call",
+            "params": {
+                "name": "symbol",
+                "arguments": {
+                    "path": test_file_path,
+                    "symbol_query": "process_data"
+                }
+            }
+        });
+
+        let sym_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&symbol_payload).unwrap()))
+            .unwrap();
+
+        let sym_resp = app.clone().oneshot(sym_req).await.unwrap();
+        assert_eq!(sym_resp.status(), StatusCode::OK);
+        let sym_bytes = to_bytes(sym_resp.into_body(), usize::MAX).await.unwrap();
+        let sym_val: serde_json::Value = serde_json::from_slice(&sym_bytes).unwrap();
+        assert_eq!(sym_val["id"], 41);
+        assert_eq!(sym_val["result"]["structuredContent"]["symbol_name"], "process_data");
+
+        // Clean up fixture file
+        let _ = std::fs::remove_file(test_file_path);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_intent_probing_integration() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 42,
+            "method": "tools/call",
+            "params": {
+                "name": "intent",
+                "arguments": {
+                    "prompt": "pub fn refactor_ast_slice(tree: &SyntaxTree) -> Result<()>"
+                }
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(val["id"], 42);
+        assert!(!val["result"]["isError"].as_bool().unwrap());
+        assert_eq!(val["result"]["structuredContent"]["intent"], "code");
+        assert_eq!(val["result"]["structuredContent"]["vram_mb"], 0);
+    }
+
+    #[tokio::test]
+    async fn test_cloud_champions_rest_and_mcp_integration() {
+        let state = create_test_state().await;
+        // Seed initial sync on test state
+        let _ = state.cloud_arena.force_sync(Some("2026-10-12")).await;
+
+        let app = build_router(state);
+
+        // 1. REST GET /api/v1/cloud/champions
+        let req = Request::builder()
+            .uri("/api/v1/cloud/champions?date=2026-10-12")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(val["status"], "success");
+        assert_eq!(val["profiles_count"], 5);
+
+        // 2. MCP tools/call cloud_champions
+        let mcp_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 50,
+            "method": "tools/call",
+            "params": {
+                "name": "cloud_champions",
+                "arguments": {
+                    "profile": "coding",
+                    "date": "2026-10-12"
+                }
+            }
+        });
+
+        let mcp_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&mcp_payload).unwrap()))
+            .unwrap();
+
+        let mcp_resp = app.clone().oneshot(mcp_req).await.unwrap();
+        assert_eq!(mcp_resp.status(), StatusCode::OK);
+        let mcp_bytes = to_bytes(mcp_resp.into_body(), usize::MAX).await.unwrap();
+        let mcp_val: serde_json::Value = serde_json::from_slice(&mcp_bytes).unwrap();
+        assert_eq!(mcp_val["id"], 50);
+        assert!(!mcp_val["result"]["isError"].as_bool().unwrap());
     }
 }

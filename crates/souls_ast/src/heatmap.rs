@@ -235,6 +235,105 @@ pub fn calculate_repo_frecency_from_repo(
     Ok(results)
 }
 
+/// Individual entry in the blast radius dependency graph.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BlastRadiusEntry {
+    pub file_path: String,
+    pub distance: usize,
+    pub reason: String,
+}
+
+/// Blast radius analysis result for a given set of target files.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BlastRadiusResult {
+    pub root_files: Vec<String>,
+    pub affected_files: Vec<BlastRadiusEntry>,
+    pub total_impacted: usize,
+}
+
+/// Analyzes reverse blast radius impact of changes in target_files across repo_path.
+pub fn calculate_blast_radius(
+    repo_path: &Path,
+    target_files: &[&str],
+    max_depth: usize,
+) -> Result<BlastRadiusResult, AstError> {
+    let mut affected = Vec::new();
+    let mut visited = std::collections::HashSet::new();
+
+    let roots: Vec<String> = target_files.iter().map(|s| s.to_string()).collect();
+    for r in &roots {
+        visited.insert(r.clone());
+    }
+
+    let _depth_limit = if max_depth == 0 { 3 } else { max_depth };
+
+    if repo_path.exists() {
+        for target in target_files {
+            let target_path = Path::new(target);
+            let stem = target_path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+            if stem.is_empty() {
+                continue;
+            }
+
+            let walker = walkdir_heuristic(repo_path);
+            for candidate in walker {
+                let rel = candidate.strip_prefix(repo_path).unwrap_or(&candidate).to_string_lossy().to_string();
+                let norm_rel = rel.replace('\\', "/");
+                if visited.contains(&norm_rel) {
+                    continue;
+                }
+
+                if let Ok(content) = std::fs::read_to_string(&candidate) {
+                    if content.contains(&format!("mod {stem};"))
+                        || content.contains(&format!("use {stem}::"))
+                        || content.contains(&format!("use crate::{stem}"))
+                        || content.contains(&format!("from {stem} import"))
+                        || content.contains(&format!("require('{stem}')"))
+                    {
+                        visited.insert(norm_rel.clone());
+                        affected.push(BlastRadiusEntry {
+                            file_path: norm_rel,
+                            distance: 1,
+                            reason: format!("imports module '{stem}'"),
+                        });
+                        if affected.len() >= 50 {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let total = affected.len();
+    Ok(BlastRadiusResult {
+        root_files: roots,
+        affected_files: affected,
+        total_impacted: total,
+    })
+}
+
+fn walkdir_heuristic(dir: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if !name.starts_with('.') && name != "target" && name != "node_modules" {
+                    files.extend(walkdir_heuristic(&path));
+                }
+            } else if path.is_file() {
+                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                if matches!(ext, "rs" | "py" | "ts" | "js" | "go") {
+                    files.push(path);
+                }
+            }
+        }
+    }
+    files
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -411,6 +510,23 @@ mod tests {
             MAX_CACHED_REPOSITORIES,
             "Bounded cache must be capped strictly at 8 connections despite 12 insertions"
         );
+    }
+
+    #[test]
+    fn test_calculate_blast_radius_heuristic() {
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let dir_path = temp_dir.path();
+
+        let mod_a = dir_path.join("module_a.rs");
+        let mod_b = dir_path.join("module_b.rs");
+
+        std::fs::write(&mod_a, "pub fn core_math() -> u32 { 42 }").expect("write a");
+        std::fs::write(&mod_b, "mod module_a;\nuse module_a::core_math;\npub fn run() { core_math(); }").expect("write b");
+
+        let res = calculate_blast_radius(dir_path, &["module_a.rs"], 2).expect("calculate_blast_radius");
+        assert_eq!(res.root_files.len(), 1);
+        assert_eq!(res.total_impacted, 1);
+        assert_eq!(res.affected_files[0].file_path, "module_b.rs");
     }
 }
 

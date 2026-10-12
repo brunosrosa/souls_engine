@@ -1,4 +1,4 @@
-# CRATES_SPECIFICATION.md — Dicionário e Matriz Arquitetural das 9 Crates Canônicas (v7)
+# CRATES_SPECIFICATION.md — Dicionário e Matriz Arquitetural das 10 Crates Canônicas (v7)
 
 > **ESTATUS DO DOCUMENTO:** CANÔNICO E OBRIGATÓRIO (DOCS-AS-GUARDRAILS)
 > **APLICAÇÃO:** Todos os agentes de IA (Cursor, Windsurf, Claude Code) e engenheiros humanos.
@@ -8,10 +8,10 @@
 
 O workspace do Souls Engine é concebido como um **Grafo Acíclico Dirigido (DAG)** de dependências estáticas de alta performance, projetado para compilação nativa no Windows 11 MSVC (`x86_64-pc-windows-msvc`) sobre Dev Drive ReFS (`Z:\souls_engine`).
 
-### 1.1 A Lei Inegociável da Topologia de 9 Crates
+### 1.1 A Lei Inegociável da Topologia de 10 Crates
 
-O workspace é composto por **exatamente 9 crates canônicas**. É expressamente proibido:
-1. Adicionar crates satélites temporárias ou auxiliares.
+O workspace é composto por **exatamente 10 crates canônicas** (formalizadas pelo Arquiteto Humano no protocolo `/grill-me` da Sessão 5). É expressamente proibido:
+1. Adicionar crates satélites temporárias ou auxiliares fora das 10 canônicas.
 2. Fundir ou colapsar crates existentes.
 3. Criar dependências circulares diretas ou indiretas.
 
@@ -20,19 +20,20 @@ O workspace é composto por **exatamente 9 crates canônicas**. É expressamente
 A tabela abaixo define a matriz estrita de importações permitidas no workspace. Qualquer adição de dependência cruzada fora desta matriz requer aprovação humana prévia e emissão de ADR.
 
 
-| **Crate de Origem**           | **Dependências Permitidas no Workspace (Pode Importar)**                  | **Crates que Podem Importá-la (Pode ser Importada por)**                                                                                     | **Nível Arquitetural**                 |
-| ----------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| **`souls_protocol`**          | _(Nenhuma dependência de workspace)_                                      | Todas as 8 crates do workspace                                                                                                               | **Nível 0 (Fundação Pura)**            |
-| **`souls_core`**              | `souls_protocol`                                                          | `souls_ast`, `souls_memory`, `souls_inference_runtime`, `souls_model_router`, `souls_llm_local_arena`, `souls_anthropophagy`, `souls_server` | **Nível 1 (Infraestrutura Base)**      |
-| **`souls_ast`**               | `souls_protocol`, `souls_core`                                            | `souls_anthropophagy`, `souls_server`                                                                                                        | **Nível 2 (Análise Estática)**         |
-| **`souls_memory`**            | `souls_protocol`, `souls_core`                                            | `souls_anthropophagy`, `souls_model_router`, `souls_server`                                                                                  | **Nível 2 (Persistência & Hipocampo)** |
-| **`souls_inference_runtime`** | `souls_protocol`, `souls_core`                                            | `souls_llm_local_arena`, `souls_model_router`, `souls_server`                                                                                | **Nível 2 (Silício & Runtimes)**       |
-| **`souls_model_router`**      | `souls_protocol`, `souls_core`, `souls_memory`, `souls_inference_runtime` | `souls_server`                                                                                                                               | **Nível 3 (Inteligência FinOps)**      |
-| **`souls_llm_local_arena`**   | `souls_protocol`, `souls_core`, `souls_inference_runtime`                 | `souls_server`                                                                                                                               | **Nível 3 (Benchmarking & Harness)**   |
-| **`souls_anthropophagy`**     | `souls_protocol`, `souls_core`, `souls_ast`, `souls_memory`               | `souls_server`                                                                                                                               | **Nível 3 (Engenharia Reversa)**       |
-| **`souls_server`**            | Todas as 8 crates anteriores                                              | _(Nenhuma — Binário Executável Raiz)_                                                                                                        | **Nível 4 (Aplicação Executável)**     |
+| **Crate de Origem**           | **Dependências Permitidas no Workspace (Pode Importar)**                  | **Crates que Podem Importá-la (Pode ser Importada por)**                                                                                                         | **Nível Arquitetural**                 |
+| ----------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **`souls_protocol`**          | _(Nenhuma dependência de workspace)_                                      | Todas as 9 crates do workspace                                                                                                                                   | **Nível 0 (Fundação Pura)**            |
+| **`souls_core`**              | `souls_protocol`                                                          | `souls_ast`, `souls_memory`, `souls_inference_runtime`, `souls_model_router`, `souls_llm_local_arena`, `souls_llm_cloud_arena`, `souls_anthropophagy`, `souls_server` | **Nível 1 (Infraestrutura Base)**      |
+| **`souls_ast`**               | `souls_protocol`, `souls_core`                                            | `souls_anthropophagy`, `souls_server`                                                                                                                            | **Nível 2 (Análise Estática)**         |
+| **`souls_memory`**            | `souls_protocol`, `souls_core`                                            | `souls_anthropophagy`, `souls_model_router`, `souls_server`                                                                                                      | **Nível 2 (Persistência & Hipocampo)** |
+| **`souls_inference_runtime`** | `souls_protocol`, `souls_core`                                            | `souls_llm_local_arena`, `souls_model_router`, `souls_server`                                                                                                    | **Nível 2 (Silício & Runtimes)**       |
+| **`souls_llm_local_arena`**   | `souls_protocol`, `souls_core`, `souls_inference_runtime`                 | `souls_server`                                                                                                                                                   | **Nível 3 (Benchmarking Silício)**     |
+| **`souls_llm_cloud_arena`**   | `souls_protocol`, `souls_core`                                            | `souls_model_router`, `souls_server`                                                                                                                             | **Nível 3 (Benchmarking Nuvem)**      |
+| **`souls_model_router`**      | `souls_protocol`, `souls_core`, `souls_memory`, `souls_inference_runtime`, `souls_llm_cloud_arena` | `souls_server`                                                                                                                          | **Nível 3 (Inteligência FinOps)**      |
+| **`souls_anthropophagy`**     | `souls_protocol`, `souls_core`, `souls_ast`, `souls_memory`               | `souls_server`                                                                                                                                                   | **Nível 3 (Engenharia Reversa)**       |
+| **`souls_server`**            | Todas as 9 crates anteriores                                              | _(Nenhuma — Binário Executável Raiz)_                                                                                                                            | **Nível 4 (Aplicação Executável)**     |
 
-## 2. ESPECIFICAÇÃO DETALHADA DAS 9 CRATES
+## 2. ESPECIFICAÇÃO DETALHADA DAS 10 CRATES
 
 ### 2.1 `souls_protocol`
 
@@ -330,7 +331,55 @@ cargo check -p souls_llm_local_arena
 cargo test -p souls_llm_local_arena
 ```
 
-### 2.8 `souls_anthropophagy`
+### 2.8 `souls_llm_cloud_arena`
+
+#### Missão Canônica Única
+
+Ingerir, normalizar, persistir e analisar diariamente o custo-benefício e métricas cognitivas de modelos de linguagem (LLMs) em nuvem, cruzando provedores de inferência (Nous Research Portal, OpenRouter) com benchmarks consolidados (LMSYS Arena Elo, SWE-bench, BFCL, IFEval, GPQA, LiveBench) sob os 5 perfis cognitivos ponderados, e calcular a Fronteira de Pareto de nuvem para alimentar o `souls_model_router` e `souls_server`.
+
+#### Grafo de Dependências
+
+- **Dependências do Workspace:** `souls_protocol`, `souls_core`.
+- **Crates Dependentes:** `souls_model_router`, `souls_server`.
+- **Crates Externas Homologadas:** `reqwest` (features `json`, `rustls-tls`), `tokio`, `serde`, `serde_json`, `sqlx` (com SQLite, runtime-tokio), `chrono`, `comfy-table`, `thiserror`.
+
+#### Estrutura Canônica de Módulos (`crates/souls_llm_cloud_arena/src/`)
+
+- `lib.rs`: Ponto de entrada da Cloud Arena e exportação de orquestradores de sincronização.
+- `domain.rs`: Tipos de domínio e DTOs (ModelSnapshot, PricingRecord, BenchmarkRecord, TaskProfile).
+- `config.rs`: Leitor de credenciais (%NOUS_API_KEY%, %OPENROUTER_API_KEY%) com fallbacks graciosos.
+- `error.rs`: Enumeração canônica de erros de ingestão, parsing e persistência.
+- `storage/`: Migrations DDL STRICT e repositório de persistência em `souls_heuristic_vault.db`.
+- `canonical/`: Resolução canônica de modelos e aliases de provedores.
+- `sources/`: Clientes HTTP assíncronos (Nous Portal, OpenRouter e Benchmarks cognitivos).
+- `analytics/`: Matriz de 5 perfis ponderados, normalização de métricas e Fronteira de Pareto.
+- `sync.rs`: Orquestrador de sincronização diária com checagem `last_update < today`.
+- `report/`: Gerador de relatórios Markdown e saídas formatadas para terminal.
+- `bin/souls_cloud_arena.rs`: CLI Standalone executável para disparo e inspeção manual.
+
+#### Superfície Pública Canônica
+
+- `pub struct CloudArenaSync { ... }`
+- `pub async fn sync_if_needed(&self) -> Result<SyncOutcome, CloudArenaError>`
+- `pub async fn force_sync(&self) -> Result<SyncOutcome, CloudArenaError>`
+- `pub async fn get_pareto_champions(&self) -> Result<Vec<ChampionReport>, CloudArenaError>`
+- `pub fn calculate_task_scores(bench: &BenchmarkData, price: &PricingData) -> ProfileEvaluation`
+
+#### Anti-Patterns Estritos (Linhas Vermelhas)
+
+- **PROIBIDO** qualquer uso de código `unsafe` (`#![forbid(unsafe_code)]`).
+- **PROIBIDO** bloquear a thread assíncrona do Tokio com chamadas HTTP síncronas.
+- **PROIBIDO** falhar ou derrubar o daemon se houver timeout ou falta de conectividade externa (resiliência com cache local obrigatória).
+- **PROIBIDO** poluir diretórios fora do Dev Drive ReFS (`Z:\souls_engine\.souls_data\`).
+
+#### Comando de Validação
+
+```
+cargo check -p souls_llm_cloud_arena
+cargo test -p souls_llm_cloud_arena
+```
+
+### 2.9 `souls_anthropophagy`
 
 #### Missão Canônica Única
 
@@ -369,7 +418,7 @@ cargo check -p souls_anthropophagy
 cargo test -p souls_anthropophagy
 ```
 
-### 2.9 `souls_server`
+### 2.10 `souls_server`
 
 #### Missão Canônica Única
 
@@ -377,7 +426,7 @@ Atuar como o daemon executável bare-metal **100% headless** (`souls_server.exe`
 
 #### Grafo de Dependências
 
-- **Dependências do Workspace:** Todas as 8 crates anteriores (`souls_protocol`, `souls_core`, `souls_ast`, `souls_memory`, `souls_inference_runtime`, `souls_model_router`, `souls_llm_local_arena`, `souls_anthropophagy`).
+- **Dependências do Workspace:** Todas as 9 crates anteriores (`souls_protocol`, `souls_core`, `souls_ast`, `souls_memory`, `souls_inference_runtime`, `souls_llm_local_arena`, `souls_llm_cloud_arena`, `souls_model_router`, `souls_anthropophagy`).
 - **Crates Dependentes:** Nenhuma (é a raiz executável do binário).
 - **Crates Externas Homologadas:** `axum`, `tower-http`, `tokio`, `tracing`, `windows-sys` (`0.59`), `serde_json`.
 
@@ -385,7 +434,7 @@ Atuar como o daemon executável bare-metal **100% headless** (`souls_server.exe`
 
 - `main.rs`: Ponto de entrada Win32, inicialização do Tokio Runtime bare-metal e orquestração de shutdown.
 - `routes_mcp.rs`: Transporte Streamable HTTP/SSE servindo o protocolo MCP na rota `/mcp`.
-- `routes_api.rs`: Endpoints REST para o Thin Adapter Python (`/api/v1/memory/*`) e telemetria (`/api/v1/telemetry`).
+- `routes_api.rs`: Endpoints REST para o Thin Adapter Python (`/api/v1/memory/*`), telemetria (`/api/v1/telemetry`) e nuvem (`/api/v1/cloud/*`).
 - `routes_openai.rs`: Endpoint de inferência local compatível com a API da OpenAI para subagentes delegados.
 - `shutdown.rs`: Protocolo ordenado de encerramento em 5 fases (Axum -> MPSC -> SQLite WAL -> LanceDB mmap -> CUDA reset).
 
@@ -413,17 +462,18 @@ cargo test -p souls_server
 
 Para impedir o _Context Rot_ e evitar que agentes misturem responsabilidades de baixo nível, a matriz abaixo define com precisão cirúrgica quais crates têm permissão para manipular determinados subsistemas físicos ou lógicos:
 
-| **Subsistema / Recurso Técnico**          | **Crates AUTORIZADAS**                       | **Crates ESTRITAMENTE PROIBIDAS**                   |
-| ----------------------------------------- | -------------------------------------------- | --------------------------------------------------- |
-| **I/O Físico no Disco (Dev Drive)**       | `souls_core`, `souls_memory`, `souls_server` | `souls_protocol`, `souls_ast`, `souls_model_router` |
-| **Aceleração CUDA & FFI do llama.cpp**    | `souls_inference_runtime`                    | Todas as outras 8 crates                            |
-| **Acesso FFI à NVML (NVIDIA Driver)**     | `souls_inference_runtime`                    | Todas as outras 8 crates                            |
-| **Conexões SQLite & Consultas SQL**       | `souls_memory`                               | Todas as outras 8 crates                            |
-| **Manipulação de Arquivos Arrow/LanceDB** | `souls_memory`                               | Todas as outras 8 crates                            |
-| **Parsing Tree-sitter & Myers Diff**      | `souls_ast`                                  | Todas as outras 8 crates                            |
-| **Servidor HTTP & Rotas de Rede**         | `souls_server`                               | Todas as outras 8 crates                            |
-| **Modelagem Thompson Sampling / Pareto**  | `souls_model_router`                         | Todas as outras 8 crates                            |
-| **Tipagem e Serialização Pura**           | `souls_protocol` (canônica), Todas           | _(Todas consomem `souls_protocol`)_                 |
+| **Subsistema / Recurso Técnico**          | **Crates AUTORIZADAS**                                         | **Crates ESTRITAMENTE PROIBIDAS**                            |
+| ----------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
+| **I/O Físico no Disco (Dev Drive)**       | `souls_core`, `souls_memory`, `souls_server`                   | `souls_protocol`, `souls_ast`, `souls_model_router`          |
+| **Aceleração CUDA & FFI do llama.cpp**    | `souls_inference_runtime`                                      | Todas as outras 9 crates                                     |
+| **Acesso FFI à NVML (NVIDIA Driver)**     | `souls_inference_runtime`                                      | Todas as outras 9 crates                                     |
+| **Conexões SQLite & Consultas SQL**       | `souls_memory`, `souls_llm_local_arena`, `souls_llm_cloud_arena`| `souls_protocol`, `souls_ast`                                |
+| **Manipulação de Arquivos Arrow/LanceDB** | `souls_memory`                                                 | Todas as outras 9 crates                                     |
+| **Parsing Tree-sitter & Myers Diff**      | `souls_ast`                                                    | Todas as outras 9 crates                                     |
+| **Servidor HTTP & Rotas de Rede**         | `souls_server`                                                 | Todas as outras 9 crates                                     |
+| **Modelagem Thompson Sampling / Pareto**  | `souls_model_router`, `souls_llm_cloud_arena`                  | `souls_protocol`, `souls_ast`, `souls_core`                  |
+| **Clientes HTTP Externos (APIs de Nuvem)**| `souls_llm_cloud_arena`                                        | Todas as outras 9 crates                                     |
+| **Tipagem e Serialização Pura**           | `souls_protocol` (canônica), Todas                             | _(Todas consomem `souls_protocol`)_                          |
 
 ## 4. PROTOCOLO DE EXPANSÃO E HIGIENE DO WORKSPACE
 

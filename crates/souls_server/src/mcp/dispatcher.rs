@@ -202,6 +202,16 @@ pub async fn dispatch_jsonrpc(
                 "metrics" => Ok(handlers::handle_metrics(state)),
                 "routes" => Ok(handlers::handle_routes()),
                 "tool_search" => Ok(handlers::handle_tool_search(args)),
+                "cloud_champions" => {
+                    handlers::handle_cloud_champions(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "cloud_arena_sync" => {
+                    handlers::handle_cloud_arena_sync(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
                 "handoff" => {
                     handlers::handle_handoff(state, args)
                         .await
@@ -249,6 +259,21 @@ pub async fn dispatch_jsonrpc(
                 }
                 "mem_create_relations" => {
                     handlers::handle_mem_create_relations(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "outline" => handlers::handle_outline(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "symbol" => handlers::handle_symbol(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "callers" => handlers::handle_callers(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "callees" => handlers::handle_callees(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "get_ast" => handlers::handle_get_ast(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "delta_diff" => handlers::handle_delta_diff(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "edit" => handlers::handle_edit(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "replace" => handlers::handle_replace(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "repo_heatmap" => handlers::handle_repo_heatmap(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "repo_impact" => handlers::handle_repo_impact(state, args).map_err(|e| e.to_jsonrpc_error()),
+                "intent" => {
+                    handlers::handle_intent(state, args)
                         .await
                         .map_err(|e| e.to_jsonrpc_error())
                 }

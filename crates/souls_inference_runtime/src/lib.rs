@@ -93,6 +93,27 @@ impl InferenceRuntime {
         self.prober.probe_logits(prompt)
     }
 
+    /// Combined Tier 0 + Tier 0.5 Intent evaluation and Epistemic entropy probing (0 MB VRAM).
+    pub async fn evaluate_intent(
+        &self,
+        prompt: &str,
+    ) -> Result<serde_json::Value, InferenceError> {
+        let classify = self.infer_tier0_classify(prompt).await?;
+        let probe = self.infer_tier05_probe(prompt).await?;
+
+        Ok(serde_json::json!({
+            "intent": classify.top_label,
+            "confidence": classify.confidence,
+            "entropy": probe.entropy,
+            "binary_entropy": probe.binary_entropy,
+            "circuit_breaker_triggered": probe.circuit_breaker_triggered,
+            "latency_ms": probe.latency_ms + classify.latency_ms,
+            "vram_mb": 0,
+            "source": probe.source,
+            "scores": classify.scores,
+        }))
+    }
+
     /// Tier 1 Generation (dGPU RTX 2060m with Asymmetric KV Cache).
     pub async fn infer_tier1_generate(
         &self,
@@ -187,5 +208,18 @@ mod tests {
             .expect("Tier 1 generation failed");
 
         assert!(!res.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_unified_inference_runtime_evaluate_intent() {
+        let runtime = InferenceRuntime::new();
+        let res = runtime
+            .evaluate_intent("Write a rust parser with nom")
+            .await
+            .expect("evaluate_intent failed");
+
+        assert_eq!(res["intent"], "code");
+        assert_eq!(res["vram_mb"], 0);
+        assert!(res["latency_ms"].as_f64().unwrap() > 0.0);
     }
 }

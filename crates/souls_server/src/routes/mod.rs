@@ -1,6 +1,7 @@
 //! Route definitions and router construction for `souls_server`.
 
 pub mod chat;
+pub mod cloud;
 pub mod health;
 pub mod models;
 
@@ -19,6 +20,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/health", get(health::health_handler))
         .route("/v1/models", get(models::models_handler))
         .route("/v1/chat/completions", post(chat::chat_completions_handler))
+        .route("/api/v1/cloud/champions", get(cloud::cloud_champions_handler))
+        .route("/api/v1/cloud/sync", post(cloud::cloud_sync_handler))
         // Modern Streamable HTTP endpoint (MCP 2025-03-26+)
         .route("/mcp", post(mcp_post_handler).get(mcp_get_handler))
         // Legacy HTTP+SSE endpoints (MCP 2024-11-05)

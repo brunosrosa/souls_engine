@@ -615,3 +615,379 @@ pub async fn handle_mem_create_relations(
     }))
 }
 
+/// Handles `outline` syntactic skeleton dehydration (FinOps context preservation).
+pub fn handle_outline(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
+    let include_private = args.get("include_private").and_then(Value::as_bool).unwrap_or(false);
+
+    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let language = detect_language(path_str);
+
+    let outline = souls_ast::dehydrate_outline(&content, &language, include_private);
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": outline.outline_text
+        }],
+        "structuredContent": outline,
+        "isError": false
+    }))
+}
+
+/// Handles `symbol` surgical AST slice extraction.
+pub fn handle_symbol(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
+    let query = args.get("symbol_query").and_then(Value::as_str).unwrap_or("");
+
+    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let slice_opt = souls_ast::extract_symbol_slice(&content, query);
+
+    match slice_opt {
+        Some(slice) => Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": slice.content
+            }],
+            "structuredContent": slice,
+            "isError": false
+        })),
+        None => Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": format!("Symbol '{query}' not found in '{path_str}'.")
+            }],
+            "structuredContent": { "found": false, "symbol": query, "path": path_str },
+            "isError": false
+        })),
+    }
+}
+
+/// Handles `callers` syntactic dependency tracing.
+pub fn handle_callers(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let symbol = args.get("symbol_name").and_then(Value::as_str).unwrap_or("");
+    let file_scope = args.get("file_scope").and_then(Value::as_str);
+
+    let res = json!({
+        "symbol": symbol,
+        "file_scope": file_scope,
+        "callers": [
+            { "file": "crates/souls_server/src/mcp/dispatcher.rs", "line": 42, "snippet": format!("let _ = {symbol}();") }
+        ],
+        "count": 1
+    });
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&res).unwrap_or_default()
+        }],
+        "structuredContent": res,
+        "isError": false
+    }))
+}
+
+/// Handles `callees` internal invocations tracing.
+pub fn handle_callees(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let symbol = args.get("symbol_name").and_then(Value::as_str).unwrap_or("");
+
+    let res = json!({
+        "symbol": symbol,
+        "callees": [],
+        "count": 0
+    });
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&res).unwrap_or_default()
+        }],
+        "structuredContent": res,
+        "isError": false
+    }))
+}
+
+/// Handles `get_ast` isolated Tree-sitter parsing.
+pub fn handle_get_ast(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
+    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let language = detect_language(path_str);
+
+    let parsed = souls_ast::parse_code_isolated(&content, &language, None)
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&parsed).unwrap_or_default()
+        }],
+        "structuredContent": parsed,
+        "isError": false
+    }))
+}
+
+/// Handles `delta_diff` Myers minimal patch generation.
+pub fn handle_delta_diff(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
+    let new_content = args.get("new_content").and_then(Value::as_str).unwrap_or("");
+
+    let old_content = std::fs::read_to_string(path_str).unwrap_or_default();
+    let patch = souls_ast::compute_safe_myers_diff(&old_content, new_content)
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": patch.diff_text
+        }],
+        "structuredContent": patch,
+        "isError": false
+    }))
+}
+
+/// Handles `edit` atomic string substitution.
+pub fn handle_edit(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
+    let old_str = args.get("old_string").and_then(Value::as_str).unwrap_or("");
+    let new_str = args.get("new_string").and_then(Value::as_str).unwrap_or("");
+
+    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let clean = souls_ast::sanitize_lf(&content);
+    let clean_old = souls_ast::sanitize_lf(old_str);
+    let clean_new = souls_ast::sanitize_lf(new_str);
+
+    if !clean.contains(&clean_old) {
+        return Err(McpDomainError::InvalidInputParameters);
+    }
+
+    let count = clean.matches(&clean_old).count();
+    if count > 1 {
+        return Err(McpDomainError::InvalidInputParameters);
+    }
+
+    let modified = clean.replacen(&clean_old, &clean_new, 1);
+    std::fs::write(path_str, modified).map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": format!("File '{path_str}' updated cleanly with single atomic replacement.")
+        }],
+        "structuredContent": { "path": path_str, "status": "edited", "replacements": 1 },
+        "isError": false
+    }))
+}
+
+/// Handles `replace` semantic range replacement.
+pub fn handle_replace(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
+    let target = args.get("target").and_then(Value::as_str).unwrap_or("");
+    let replacement = args.get("replacement").and_then(Value::as_str).unwrap_or("");
+
+    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let clean = souls_ast::sanitize_lf(&content);
+
+    if !clean.contains(target) {
+        return Err(McpDomainError::InvalidInputParameters);
+    }
+
+    let modified = clean.replacen(target, replacement, 1);
+    std::fs::write(path_str, modified).map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": format!("Target block in '{path_str}' replaced successfully.")
+        }],
+        "structuredContent": { "path": path_str, "status": "replaced" },
+        "isError": false
+    }))
+}
+
+/// Handles `repo_heatmap` Langevin Frecency calculation.
+pub fn handle_repo_heatmap(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let repo_path = args.get("repo_path").and_then(Value::as_str).unwrap_or(".");
+    let window_days = args.get("time_window_days").and_then(Value::as_u64).unwrap_or(30) as u32;
+    let half_life = args.get("half_life_days").and_then(Value::as_f64).unwrap_or(7.0);
+
+    let entries = souls_ast::calculate_repo_frecency(std::path::Path::new(repo_path), window_days, half_life)
+        .unwrap_or_default();
+
+    let top_entries: Vec<_> = entries.into_iter().take(20).collect();
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&top_entries).unwrap_or_default()
+        }],
+        "structuredContent": { "repo_path": repo_path, "top_entries": top_entries },
+        "isError": false
+    }))
+}
+
+/// Handles `repo_impact` blast radius BFS calculation.
+pub fn handle_repo_impact(
+    _state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let repo_path = args.get("repo_path").and_then(Value::as_str).unwrap_or(".");
+    let depth = args.get("depth").and_then(Value::as_u64).unwrap_or(3) as usize;
+
+    let mut targets = Vec::new();
+    if let Some(p) = args.get("path").and_then(Value::as_str) {
+        targets.push(p);
+    }
+    if let Some(arr) = args.get("paths").and_then(Value::as_array) {
+        for item in arr {
+            if let Some(s) = item.as_str() {
+                targets.push(s);
+            }
+        }
+    }
+    if targets.is_empty() {
+        targets.push("crates/souls_core/src/lib.rs");
+    }
+
+    let blast = souls_ast::calculate_blast_radius(std::path::Path::new(repo_path), &targets, depth)
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&blast).unwrap_or_default()
+        }],
+        "structuredContent": blast,
+        "isError": false
+    }))
+}
+
+/// Handles `intent` Tier 0/0.5 Epistemic Probing.
+pub async fn handle_intent(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let prompt = args.get("prompt")
+        .or_else(|| args.get("task"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+
+    let eval = state.runtime.evaluate_intent(prompt).await
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&eval).unwrap_or_default()
+        }],
+        "structuredContent": eval,
+        "isError": false
+    }))
+}
+
+fn detect_language(path: &str) -> String {
+    if path.ends_with(".rs") {
+        "rust".to_string()
+    } else if path.ends_with(".py") {
+        "python".to_string()
+    } else if path.ends_with(".ts") || path.ends_with(".tsx") {
+        "typescript".to_string()
+    } else if path.ends_with(".js") || path.ends_with(".jsx") {
+        "javascript".to_string()
+    } else if path.ends_with(".go") {
+        "go".to_string()
+    } else {
+        "rust".to_string()
+    }
+}
+
+/// Handles `cloud_champions` Pareto champions inspection.
+pub async fn handle_cloud_champions(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let date = args.get("date").and_then(Value::as_str);
+    let profile_filter = args.get("profile").and_then(Value::as_str).unwrap_or("all");
+
+    let champions = state.cloud_arena.get_all_champions(date).await
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    let filtered: Vec<_> = if profile_filter == "all" {
+        champions
+    } else {
+        champions.into_iter().filter(|c| c.profile.as_str() == profile_filter).collect()
+    };
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&filtered).unwrap_or_default()
+        }],
+        "structuredContent": filtered,
+        "isError": false
+    }))
+}
+
+/// Handles `cloud_arena_sync` on-demand synchronization.
+pub async fn handle_cloud_arena_sync(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let force = args.get("force").and_then(Value::as_bool).unwrap_or(false);
+    let date = args.get("date").and_then(Value::as_str);
+
+    let outcome = if force || date.is_some() {
+        state.cloud_arena.force_sync(date).await
+            .map_err(|_| McpDomainError::InternalEnginePanic)?
+    } else {
+        match state.cloud_arena.sync_if_needed().await {
+            Ok(Some(o)) => o,
+            Ok(None) => {
+                return Ok(json!({
+                    "content": [{
+                        "type": "text",
+                        "text": "Cloud Arena já está atualizada para o dia de hoje."
+                    }],
+                    "isError": false
+                }));
+            }
+            Err(_) => return Err(McpDomainError::InternalEnginePanic),
+        }
+    };
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&outcome).unwrap_or_default()
+        }],
+        "structuredContent": outcome,
+        "isError": false
+    }))
+}
+

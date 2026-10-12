@@ -1,6 +1,11 @@
-# Especificação Técnica: Crate `llm-cost-matrix`
+# Especificação Técnica: Crate `souls_llm_cloud_arena` (v7 Canônica)
 
-Documento de especificação técnica e plano de execução para implementação de uma ferramenta CLI / crate em Rust (`llm-cost-matrix`) responsável por ingerir, normalizar, persistir e analisar diariamente o custo-benefício de modelos de linguagem (LLMs) em nuvem, cruzando provedores de inferência (Nous Research Portal, OpenRouter) com benchmarks consolidados (LMSYS, BFCL, IFEval, SWE-bench).
+> **ESTATUS DO DOCUMENTO:** CANÔNICO E RATIFICADO (DOCS-AS-GUARDRAILS)  
+> **CRATE IMPLEMENTADA:** `crates/souls_llm_cloud_arena`  
+> **ADRS VINCULADOS:** `ADR-008`, `ADR-009` (Taxonomia de 9 Facetas e Master Brain).  
+> **BANCO SSOT:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db`  
+
+Documento de especificação técnica e arquitetura de engenharia da crate em Rust `souls_llm_cloud_arena` (10ª crate canônica do workspace), responsável por ingerir, normalizar, persistir e analisar diariamente o custo-benefício de modelos de linguagem (LLMs) em nuvem, cruzando provedores de inferência (Nous Research Portal, OpenRouter) com benchmarks cognitivos consolidados (LMSYS Arena, BFCL, IFEval, SWE-bench, GPQA, LiveBench).
 
 ---
 
@@ -8,11 +13,11 @@ Documento de especificação técnica e plano de execução para implementação
 
 O objetivo da crate é eliminar escolhas arbitrárias de modelos de IA em ambientes de produção através de um pipeline diário de dados com as seguintes responsabilidades:
 
-1. **Ingestão Automática:** Consumir catálogos de modelos, precificação detalhada (input, output, cache read/write) e telemetria operacional (latência, throughput) de APIs públicas e autenticadas.
-2. **Resolução Canônica de Entidades:** Normalizar slugs heterogêneos de diferentes plataformas para identificadores canônicos padronizados.
-3. **Persistência Relacional:** Salvar snapshots temporais em banco SQLite local (`sqlite3` com WAL habilitado).
-4. **Scoring Multidimensional:** Calcular índices compostos ponderados por caso de uso (ex.: Coding, Tool Calling / Agentes, Deep Reasoning, RAG / ETL de alto volume).
-5. **Fronteira de Pareto e Relatório:** Identificar modelos dominantes (não superados em custo e qualidade simultaneamente) e gerar relatórios diários em Markdown, JSON e visualização de terminal.
+1. **Ingestão Automática & Resiliência:** Consumir catálogos de modelos, precificação detalhada (input, output, cache read/write) e telemetria operacional de APIs (Nous Portal e OpenRouter) com fallback offline integrado.
+2. **Resolução Canônica de Entidades:** Normalizar slugs heterogêneos de diferentes plataformas para identificadores canônicos padronizados via tabela de aliases.
+3. **Persistência Relacional STRICT:** Salvar snapshots temporais em banco SQLite local (`souls_heuristic_vault.db`) com WAL e tabelas `STRICT`.
+4. **Scoring Multidimensional de 9 Facetas (ADR-009):** Calcular índices compostos ponderados por caso de uso, com destaque central para o **Executive / Master Brain** (a mente e voz principal do Hermes Agent), além de Coding, Agentic, Reasoning, Fast, Design, Research, Security e Curation.
+5. **Fronteira de Pareto e Relatório:** Identificar modelos dominantes (não superados em custo e qualidade simultaneamente) e expor os campeões via CLI (`souls_cloud_arena.exe`), endpoints REST (`/api/v1/cloud/champions`) e ferramentas MCP (`cloud_champions`).
 
 ---
 
@@ -165,21 +170,45 @@ Para agregar pontuações com diferentes escalas (Elos de 1000 a 1400 e percentu
 
 $$S_{\text{norm}}(x) = \frac{x - x_{\min}}{x_{\max} - x_{\min}} \times 100$$
 
-### 5.2. Nota Composta Específica por Perfil ($S_{\text{task}}$)
+### 5.2. As 9 Facetas Cognitivas Canônicas ($S_{\text{task}}$ — ADR-009)
 
-Cada caso de uso demanda pesos distintos para cada dimensão cognitiva:
+Cada caso de uso demanda pesos específicos para as dimensões cognitivas e operacionais:
 
-#### A. Perfil: Engenharia de Software / Coding
+#### 1. Perfil: Executive / Master Brain ($S_{\text{executive}}$)
+> **Alvo:** Modelo mestre e voz principal do Hermes Agent. Sparring cognitivo com o Arquiteto Humano, decomposição estratégica, fidelidade a guardrails e retenção de longo contexto.  
+$$S_{\text{executive}} = 0.30 \cdot S_{\text{norm}}(\text{Hard Elo}) + 0.25 \cdot S(\text{IFEval}) + 0.20 \cdot S(\text{BFCL}) + 0.15 \cdot S(\text{GPQA}) + 0.10 \cdot S(\text{ContextCoherence})$$
+
+#### 2. Perfil: Engenharia de Software & Coding ($S_{\text{coding}}$)
+> **Alvo:** Geração de código Rust/Python com AST estrita, patches cirúrgicos e refatorações complexas.  
 $$S_{\text{coding}} = 0.40 \cdot S_{\text{norm}}(\text{Coding Elo}) + 0.25 \cdot S(\text{BFCL}) + 0.20 \cdot S_{\text{norm}}(\text{Hard Elo}) + 0.15 \cdot S(\text{IFEval})$$
 
-#### B. Perfil: Agentes Autônomos e Tool Calling
+#### 3. Perfil: Agentes Autônomos & Tool Calling ($S_{\text{agentic}}$)
+> **Alvo:** Subagentes de execução de ferramentas MCP, emissão JSON rigorosa e encadeamento autônomo.  
 $$S_{\text{agentic}} = 0.45 \cdot S(\text{BFCL}) + 0.30 \cdot S(\text{IFEval}) + 0.15 \cdot S_{\text{norm}}(\text{Hard Elo}) + 0.10 \cdot S_{\text{norm}}(\text{Throughput})$$
 
-#### C. Perfil: Raciocínio Profundo e Arquitetura
+#### 4. Perfil: Raciocínio Profundo & Arquitetura ($S_{\text{reasoning}}$)
+> **Alvo:** Deduções matemáticas, análise de concorrência, provas formais e planejamento de DAGs.  
 $$S_{\text{reasoning}} = 0.45 \cdot S(\text{GPQA}) + 0.35 \cdot S_{\text{norm}}(\text{Hard Elo}) + 0.20 \cdot S(\text{IFEval})$$
 
-#### D. Perfil: ETL de Alto Volume e Extração Estruturada
-$$S_{\text{etl}} = 0.50 \cdot S(\text{IFEval}) + 0.30 \cdot S_{\text{norm}}(\text{Throughput}) + 0.20 \cdot S_{\text{norm}}(\text{General Elo})$$
+#### 5. Perfil: Triagem Rápida & Probes de Host ($S_{\text{fast}}$)
+> **Alvo:** Classificação instantânea de intenção, streaming sem latência percebida e probes heurísticos.  
+$$S_{\text{fast}} = 0.40 \cdot S_{\text{norm}}(\text{Throughput}) + 0.30 \cdot S_{\text{norm}}(\text{TTFT}) + 0.15 \cdot S(\text{IFEval}) + 0.15 \cdot S_{\text{norm}}(\text{Coding Elo})$$
+
+#### 6. Perfil: Design & Multimodal UI ($S_{\text{design}}$)
+> **Alvo:** Engenharia de frontend moderno, UI web rica, tokens visuais e raciocínio multimodal VQA.  
+$$S_{\text{design}} = 0.40 \cdot S_{\text{norm}}(\text{Frontend SWE}) + 0.30 \cdot S(\text{VQA Multimodal}) + 0.15 \cdot S(\text{IFEval}) + 0.15 \cdot S_{\text{norm}}(\text{Throughput})$$
+
+#### 7. Perfil: Research & Deep Synthesis ($S_{\text{research}}$)
+> **Alvo:** Ingestão de repositórios gigantescos, whitepapers, síntese densa sem degradação de atenção em 128k-1M tokens.  
+$$S_{\text{research}} = 0.40 \cdot S(\text{NIAH Context}) + 0.30 \cdot S_{\text{norm}}(\text{Summarization Elo}) + 0.20 \cdot S_{\text{norm}}(\text{Hard Elo}) + 0.10 \cdot S(\text{IFEval})$$
+
+#### 8. Perfil: Security & Code Audit ($S_{\text{security}}$)
+> **Alvo:** Análise de vulnerabilidades, detecção de race conditions, vazamento de memória e auditoria pré-commit.  
+$$S_{\text{security}} = 0.45 \cdot S(\text{SecEval / CyberMetric}) + 0.30 \cdot S(\text{Diff Reasoning}) + 0.15 \cdot S_{\text{norm}}(\text{Hard Elo}) + 0.10 \cdot S(\text{IFEval})$$
+
+#### 9. Perfil: Technical Writing & Obsidian Curator ($S_{\text{curation}}$)
+> **Alvo:** Curadoria do Obsidian DB (`C:\Users\rosas\OneDrive\Documentos\Obisidian DB`), geração de verbetes estruturados, ADRs e bilinguismo canônico.  
+$$S_{\text{curation}} = 0.40 \cdot S_{\text{norm}}(\text{Writing Elo}) + 0.30 \cdot S(\text{MT-Bench Format}) + 0.20 \cdot S(\text{IFEval}) + 0.10 \cdot S_{\text{norm}}(\text{TTFT})$$
 
 ### 5.3. Custo Ponderado da Carga de Trabalho ($C_{\text{task}}$)
 
@@ -187,18 +216,23 @@ O custo ponderado por 1M tokens varia conforme a proporção típica de tokens d
 
 $$C_{\text{task}} = (w_{\text{cache}} \cdot P_{\text{cache}}) + (w_{\text{in}} \cdot P_{\text{in}}) + (w_{\text{out}} \cdot P_{\text{out}})$$
 
-| Perfil | $w_{\text{cache}}$ | $w_{\text{in}}$ | $w_{\text{out}}$ | Justificativa |
+| Perfil | $w_{\text{cache}}$ | $w_{\text{in}}$ | $w_{\text{out}}$ | Racional de Engenharia |
 |---|---|---|---|---|
-| **Coding** | 0.40 | 0.40 | 0.20 | Arquivos de código longos com saídas médias |
-| **Agentic** | 0.60 | 0.30 | 0.10 | Histórico acumulado e prompts de ferramentas; saídas JSON curtas |
+| **Executive** | 0.50 | 0.35 | 0.15 | Prompt de sistema amplo, histórico de sessão longo e respostas diretivas |
+| **Coding** | 0.40 | 0.40 | 0.20 | Arquivos de código longos com saídas cirúrgicas |
+| **Agentic** | 0.60 | 0.30 | 0.10 | Histórico acumulado e esquemas de tools; saídas JSON compactas |
 | **Reasoning** | 0.20 | 0.40 | 0.40 | Contextos medianos, cadeias longas de raciocínio (Chain-of-Thought) |
-| **High-Volume ETL** | 0.10 | 0.80 | 0.10 | Documentos gigantescos para extrações curtas |
+| **Fast** | 0.10 | 0.80 | 0.10 | Triagem imediata, sem histórico prévio relevante |
+| **Design** | 0.30 | 0.40 | 0.30 | Componentes visuais, tokens CSS e marcação estruturada |
+| **Research** | 0.70 | 0.25 | 0.05 | Ingestão massiva de documentos com cache de prefixo intenso |
+| **Security** | 0.40 | 0.50 | 0.10 | Diffs extensos e árvores AST com relatórios focados |
+| **Curation** | 0.30 | 0.40 | 0.30 | Análise de notas raw e reescrita de verbetes de wiki |
 
-### 5.4. Cálculo de Retorno sobre Custo (Índice de ROI Amortecido)
+### 5.4. Cálculo de Retorno sobre Custo (Índice de ROI Amortecido Logarítmico)
 
-Para evitar que modelos ultra-baratos com nota baixa dominem a classificação devido à divisão por números próximos de zero, usa-se amortecimento logarítmico:
+Para alinhar com a fórmula adotada no `souls_model_router` para custos de silício local, utiliza-se amortecimento logarítmico:
 
-$$V_{\text{task}} = \frac{S_{\text{task}}}{\ln(1 + C_{\text{task}})}$$
+$$V_{\text{task}} = \frac{S_{\text{task}}}{1.0 + \ln(1.0 + C_{\text{task}})}$$
 
 ### 5.5. Algoritmo da Fronteira de Pareto
 Um modelo $A$ domina um modelo $B$ se:

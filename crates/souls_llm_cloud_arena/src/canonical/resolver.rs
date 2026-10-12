@@ -1,0 +1,95 @@
+//! # resolver.rs — Resolução Canônica de Slugs e Entidades
+//!
+//! Mapeia strings heterogêneas dos provedores para o ID canônico correspondente.
+
+use std::collections::HashMap;
+
+#[derive(Clone, Default)]
+pub struct CanonicalResolver {
+    aliases: HashMap<String, String>,
+}
+
+impl CanonicalResolver {
+    pub fn new() -> Self {
+        let mut resolver = Self {
+            aliases: HashMap::new(),
+        };
+
+        // Carrega seed de aliases inicial
+        for item in crate::canonical::seed_aliases::get_initial_seed_models() {
+            let canon_id = item.model.id.clone();
+            // Mapeia o próprio ID canônico para ele mesmo
+            resolver.register_alias(&canon_id, &canon_id);
+            for (alias, _) in item.aliases {
+                resolver.register_alias(alias, &canon_id);
+            }
+        }
+
+        resolver
+    }
+
+    /// Registra um alias explícito.
+    pub fn register_alias(&mut self, alias: &str, canonical_id: &str) {
+        self.aliases.insert(alias.to_lowercase().trim().to_string(), canonical_id.to_string());
+    }
+
+    /// Resolve uma string de modelo para o ID canônico correspondente.
+    pub fn resolve(&self, raw: &str) -> String {
+        let normalized = raw.to_lowercase().trim().to_string();
+
+        // 1. Verificação direta no mapa de aliases
+        if let Some(canonical) = self.aliases.get(&normalized) {
+            return canonical.clone();
+        }
+
+        // 2. Normalização heurística de fallback
+        let without_tag = if let Some((base, _)) = normalized.split_once(':') {
+            base
+        } else {
+            &normalized
+        };
+
+        if let Some(canonical) = self.aliases.get(without_tag) {
+            return canonical.clone();
+        }
+
+        // Remove prefixo de fornecedor (ex: "anthropic/claude-3-7-sonnet" -> "claude-3-7-sonnet")
+        let without_prefix = if let Some((_, model)) = without_tag.split_once('/') {
+            model
+        } else {
+            without_tag
+        };
+
+        if let Some(canonical) = self.aliases.get(without_prefix) {
+            return canonical.clone();
+        }
+
+        // Normalização de pontos para hífens (ex: "claude-3.7-sonnet" -> "claude-3-7-sonnet")
+        let dashed = without_prefix.replace('.', "-").replace('_', "-");
+        if let Some(canonical) = self.aliases.get(&dashed) {
+            return canonical.clone();
+        }
+
+        // Fallback: retorna o nome normalizado limpo
+        dashed
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_canonical_resolution() {
+        let resolver = CanonicalResolver::new();
+
+        assert_eq!(resolver.resolve("anthropic/claude-3-7-sonnet:beta"), "claude-3-7-sonnet");
+        assert_eq!(resolver.resolve("anthropic/claude-3.7-sonnet"), "claude-3-7-sonnet");
+        assert_eq!(resolver.resolve("deepseek/deepseek-chat"), "deepseek-v3");
+        assert_eq!(resolver.resolve("deepseek/deepseek-reasoner"), "deepseek-r1");
+        assert_eq!(resolver.resolve("nousresearch/hermes-3-llama-3.1-405b"), "hermes-3-llama-3.1-405b");
+        assert_eq!(resolver.resolve("qwen/qwen-2.5-coder-32b-instruct"), "qwen-2.5-coder-32b");
+        assert_eq!(resolver.resolve("openai/gpt-4o"), "gpt-4o");
+        assert_eq!(resolver.resolve("openai/o3-mini"), "o3-mini");
+    }
+}

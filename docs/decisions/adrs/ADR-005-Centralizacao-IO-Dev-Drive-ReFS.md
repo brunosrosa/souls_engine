@@ -152,6 +152,17 @@ FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE
 | **Risco Teórico de Perda de Telemetria em Crash do SO** | Se a máquina sofrer queda abrupta de energia (_hard power-off_), os últimos 5 segundos de telemetria em RAM podem ser perdidos. | O pipeline MPSC é restrito a dados não críticos (telemetria e métricas FinOps). Memórias epistêmicas duradouras (`on_pre_compress` e transações explícitas) executam _commit_ síncrono imediato com confirmação WAL. |
 | **Incompatibilidade com Versões Antigas do Windows**    | O Dev Drive com ReFS é um recurso nativo restrito ao Windows 11 (build 22621+).                                                 | O Souls Engine foi formalmente especificado para operar em ambiente bare-metal Windows 11 nativo, tornando a restrição irrelevante para o escopo do projeto.                                                         |
 
+### 3.3 Emenda Canônica: Resiliência de Skills e Scripts contra Desmontagem de `Z:`
+
+Para sanar a fragilidade operacional decorrente de reinicializações do Windows onde a unidade virtual `Z:` (ReFS) pode estar temporariamente desmontada:
+1. **Segregação Rigorosa: I/O de Alto Volume vs. Conhecimento Procedural:**
+   - **No Dev Drive ReFS (`Z:\souls_engine\.souls_data\`):** Residem exclusivamente os bancos de dados de alto throughput (`souls_heuristic_vault.db`, `souls_state.db`, LanceDB e spool de telemetria), onde o CoW e a isenção de antivírus do ReFS são vitais para o silício.
+   - **No Disco de Sistema (`C:\`):** Residem os playbooks procedurais de texto estático (`SKILL.md`) consumidos pelo Hermes Agent (`%LOCALAPPDATA%\hermes\skills\`) e Antigravity Global (`~/.gemini\config\skills\`), garantindo que os agentes nunca fiquem "amnésicos" mesmo com a partição `Z:` desmontada.
+2. **Localização Canônica da Esteira do Obsidian:**
+   - Como o cofre reside em `C:\Users\rosas\OneDrive\Documentos\Obisidian DB\`, os scripts de curadoria (`scripts/curate_obsidian.ps1`) e o manifesto de progresso (`wiki/raw_manifest.json`) acompanham o cofre no drive `C:`, operando de forma autônoma e imune ao status de montagem de `Z:`.
+3. **Backup Soberano em Git:**
+   - A pasta `Z:\souls_engine\.agents\skills/` funciona como repositório de controle de versão (SSOT em Git), sendo sincronizada com os locais de execução no `C:\`.
+
 ## 4. LINHAS VERMELHAS E GUARDRAILS PARA AGENTES DE IA
 
 Qualquer agente de IA operando no repositório (Cursor, Windsurf, Claude Code, etc.) deve aderir estritamente às seguintes restrições:

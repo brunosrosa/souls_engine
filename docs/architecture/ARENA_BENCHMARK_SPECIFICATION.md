@@ -252,4 +252,21 @@ A crate `souls_llm_local_arena` opera em duas fases de ciclo de vida:
 
 ---
 
+## 9. HARMONIZAÇÃO DE FACETAS COGNITIVAS: LOCAL ARENA VS CLOUD ARENA (ADR-009)
+
+Conforme ratificado no [ADR-009](file:///Z:/souls_engine/docs/decisions/adrs/ADR-009-Taxonomia-Cognitiva-Unificada-9-Perfis-Master-Brain.md), a taxonomia cognitiva de 9 facetas unifica a linguagem do sistema:
+
+1. **O Silício Local Não Disputa o Master Brain:**
+   Os modelos locais sob a dGPU RTX 2060m (teto útil de 5.294 MB) e CPU Intel i9 não concorrem ao posto de `Executive / Master Brain`. O Master Brain exige modelos de fronteira com janelas de raciocínio de ponta e aderência estrita a guardrails complexos de diálogo com o operador humano, rodando na nuvem.
+2. **Especialização de Silício para Subagentes Delegados:**
+   Cada um dos 15 modelos locais do inventário ativo é emparelhado com facetas operacionais específicas para execução com custo financeiro zero (\$0.00):
+   * **`Fast / Triage`:** `smollm2-135m`, `glis-multilang`, `phi-4-mini` (Tier 0 e Tier 0.5 na CPU Host).
+   * **`Coding & SWE`:** `nvidia-nemotron-3-nano-4b`, `qwen3-5-4b-agentic-coder` (Tier 1 na dGPU).
+   * **`Autonomous Agentic`:** `arch-function-chat-3b`, `hy-mt2-7b` (Tier 1 na dGPU).
+   * **`Obsidian Curation & Writing`:** `hermes-3-llama-3.2-3b`, `qwen2.5-3b` (Tier 0.5 ou Tier 2 CPU offload).
+3. **Despacho Transparente pelo `souls_model_router`:**
+   O despachante de subagentes pode receber requisições parametrizadas pela mesma faceta (ex.: `task_profile="coding"`), comparando na mesma fronteira o custo de silício local ($C_{\text{silicon}}$) com as tarifas de nuvem ($C_{\text{task}}$) da `souls_llm_cloud_arena`.
+
+---
+
 *Especificação aprovada sob os guardrails constitucionais do Souls Engine v7.*

@@ -25,6 +25,14 @@ A interação entre o operador humano e o Souls Engine é uma **parceria de pens
 - O sistema não assume passividade subserviente nem alucina concordâncias vazias.
 - Ele questiona premissas frágeis, calcula o raio de impacto de refatorações, aponta contradições ontológicas em decisões passadas e fornece alternativas de implementação com custos FinOps explícitos.
 - A inteligência gerada é sempre ancorada na realidade física do hardware e na integridade matemática do código.
+
+### 1.2.1 A Soberania do Master Brain (A Mente Executiva e Juiz de Diálogo — ADR-009)
+
+Para que o *cognitive sparring* e a prótese de função executiva funcionem sem atrito ou regressão de contexto:
+- O modelo primário que conduz o diálogo mestre com o Arquiteto Humano (**Master Brain**) deve pertencer compulsoriamente à fronteira dos modelos mais inteligentes do mercado (Frontier Tier).
+- É terminantemente proibido rebaixar a mente mestre a modelos ultraleves em nome de economia irrisória de tokens: a perda de disciplina de guardrails ou alucinação em contratos arquiteturais custa ordens de magnitude mais caro em *Flow-Debt* humano.
+- Modelos de custo ultra-baixo e especializados atuam estritamente como **Workers e Subagentes Delegados** (`delegate_task`), orquestrados sob a regência do Master Brain e orientados pela `souls_llm_cloud_arena`.
+
 ### 1.3 O Paradoxo do Silêncio e a Simbiose com o Hermes Agent
 
 Diferente de sistemas legados que tentavam construir interfaces gráficas pesadas, janelas flutuantes e consoles coloridos:
