@@ -140,10 +140,32 @@ async fn main() -> ExitCode {
             l
         }
         Err(err) => {
+            // Probing if an active healthy instance is already operating
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_millis(800))
+                .build()
+                .ok();
+
+            if let Some(c) = client {
+                let health_url = format!("http://{}/health", addr);
+                if let Ok(resp) = c.get(&health_url).send().await {
+                    if resp.status().is_success() {
+                        info!("NOTICE: Another active Souls Engine instance is already operating healthy on {addr}. Redundant launch exited cleanly.");
+                        println!("Souls Engine já está em execução e respondendo normalmente em http://{addr}.");
+                        return ExitCode::SUCCESS;
+                    }
+                }
+            }
+
             eprintln!("CRITICAL: Failed to bind TCP listener to {addr}: {err}");
+            eprintln!("Dica: A porta {addr} pode estar presa por um processo órfão ou zumbi. Execute `stop_souls.bat` para forçar a liberação.");
             return ExitCode::from(1);
         }
     };
+
+    // Record PID file for process tracking and zombie cleanup
+    let pid_file = data_dir.join("souls_server.pid");
+    let _ = std::fs::write(&pid_file, std::process::id().to_string());
 
     // Run Axum with graceful shutdown on interrupt signal
     if let Err(err) = axum::serve(listener, app)
@@ -157,6 +179,9 @@ async fn main() -> ExitCode {
     if let Err(err) = execute_graceful_shutdown(&state).await {
         eprintln!("Shutdown protocol warning: {err}");
     }
+
+    // Clean up PID file
+    let _ = std::fs::remove_file(&pid_file);
 
     info!("=== SOULS ENGINE v7 Daemon Shutdown Cleanly (ExitCode::SUCCESS) ===");
     ExitCode::SUCCESS
