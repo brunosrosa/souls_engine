@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::time::Duration;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
-use sqlx::{Connection, Pool, Sqlite, SqliteConnection};
+use sqlx::{Connection, Pool, Row, Sqlite, SqliteConnection};
 use tracing::{info, instrument};
 
 use crate::error::MemoryError;
@@ -157,6 +157,76 @@ CREATE TABLE IF NOT EXISTS session_checkpoints (
 
 CREATE INDEX IF NOT EXISTS idx_checkpoint_session 
     ON session_checkpoints (session_id, created_at DESC);
+
+-- 8. Sub-Agent Lifecycle Sessions
+CREATE TABLE IF NOT EXISTS sub_agent_sessions (
+    agent_id TEXT PRIMARY KEY NOT NULL,
+    parent_session_id TEXT NOT NULL,
+    task_description TEXT NOT NULL,
+    assigned_tier TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('SPAWNED', 'RUNNING', 'COMPLETED', 'FAILED', 'KILLED')),
+    created_at INTEGER NOT NULL,
+    completed_at INTEGER
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_subagent_parent 
+    ON sub_agent_sessions (parent_session_id, status);
+
+-- 9. Handoff Payloads (Transição de Contexto entre Agentes)
+CREATE TABLE IF NOT EXISTS handoff_payloads (
+    id TEXT PRIMARY KEY NOT NULL,
+    source_session_id TEXT NOT NULL,
+    target_agent_id TEXT NOT NULL,
+    context_summary TEXT NOT NULL,
+    variables_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_handoff_target 
+    ON handoff_payloads (target_agent_id);
+
+-- 10. Sub-Agent Operational Diaries
+CREATE TABLE IF NOT EXISTS sub_agent_diaries (
+    id TEXT PRIMARY KEY NOT NULL,
+    agent_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (agent_id) REFERENCES sub_agent_sessions(agent_id) ON DELETE CASCADE
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_diaries_agent 
+    ON sub_agent_diaries (agent_id, created_at ASC);
+
+-- 11. Socratic Thinking Sessions (DAG Metacognitivo)
+CREATE TABLE IF NOT EXISTS socratic_sessions (
+    session_id TEXT PRIMARY KEY NOT NULL,
+    paradigm TEXT NOT NULL,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+) STRICT;
+
+-- 12. Socratic Thoughts (Nós da Árvore de Raciocínio)
+CREATE TABLE IF NOT EXISTS socratic_thoughts (
+    thought_id TEXT PRIMARY KEY NOT NULL,
+    session_id TEXT NOT NULL,
+    thought_number INTEGER NOT NULL,
+    total_thoughts INTEGER NOT NULL,
+    thought_content TEXT NOT NULL,
+    is_revision INTEGER NOT NULL DEFAULT 0,
+    revises_thought INTEGER,
+    branch_from_thought INTEGER,
+    branch_id TEXT NOT NULL DEFAULT 'main',
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES socratic_sessions(session_id) ON DELETE CASCADE
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_thoughts_session_order 
+    ON socratic_thoughts (session_id, thought_number ASC);
+CREATE INDEX IF NOT EXISTS idx_thoughts_branch 
+    ON socratic_thoughts (session_id, branch_id);
 "#;
 
 /// Configures and bootstraps an NT-safe FrankenSQLite connection pool with required PRAGMAs.
@@ -272,6 +342,181 @@ pub async fn drain_pool_and_exclusive_checkpoint(
 
     info!("Pool drained and exclusive WAL checkpoint (TRUNCATE) completed successfully.");
     Ok(())
+}
+
+/// Executes an ultra-safe read-only SQL query on the FrankenSQLite STRICT database.
+/// Strictly enforces that the statement is a pure SELECT or WITH query and rejects any mutation commands.
+pub async fn execute_read_only_query(
+    pool: &Pool<Sqlite>,
+    query: &str,
+) -> Result<Vec<serde_json::Value>, MemoryError> {
+    let trimmed = query.trim();
+    let lower = trimmed.to_lowercase();
+
+    // 1. Must start with SELECT or WITH
+    if !lower.starts_with("select") && !lower.starts_with("with") {
+        return Err(MemoryError::ReadOnlyViolation(format!(
+            "Query must start with SELECT or WITH. Received: '{trimmed}'"
+        )));
+    }
+
+    // 2. Reject mutation keywords
+    let forbidden_keywords = [
+        "insert ", "update ", "delete ", "drop ", "alter ", "create ", "attach ",
+        "detach ", "pragma ", "vacuum ", "reindex ", "replace ",
+    ];
+    for kw in forbidden_keywords {
+        if lower.contains(kw) {
+            return Err(MemoryError::ReadOnlyViolation(format!(
+                "Forbidden mutation keyword '{kw}' detected in query: '{trimmed}'"
+            )));
+        }
+    }
+
+    // 3. Execute query and convert rows dynamically into JSON objects
+    use sqlx::Column;
+    let rows = sqlx::query(trimmed).fetch_all(pool).await?;
+    let mut results = Vec::with_capacity(rows.len());
+
+    for row in rows {
+        let mut map = serde_json::Map::new();
+        for col in row.columns() {
+            let col_name = col.name();
+            if let Ok(val) = row.try_get::<String, _>(col_name) {
+                map.insert(col_name.to_string(), serde_json::Value::String(val));
+            } else if let Ok(val) = row.try_get::<i64, _>(col_name) {
+                map.insert(col_name.to_string(), serde_json::json!(val));
+            } else if let Ok(val) = row.try_get::<f64, _>(col_name) {
+                map.insert(col_name.to_string(), serde_json::json!(val));
+            } else if let Ok(val) = row.try_get::<Option<String>, _>(col_name) {
+                map.insert(
+                    col_name.to_string(),
+                    val.map(serde_json::Value::String).unwrap_or(serde_json::Value::Null),
+                );
+            } else {
+                map.insert(col_name.to_string(), serde_json::Value::Null);
+            }
+        }
+        results.push(serde_json::Value::Object(map));
+    }
+
+    Ok(results)
+}
+
+/// Upserts an epistemic memory record into the FrankenSQLite database.
+pub async fn upsert_epistemic_memory(
+    pool: &Pool<Sqlite>,
+    record: &souls_protocol::EpistemicMemoryRecord,
+) -> Result<(), MemoryError> {
+    let partition_str = match record.partition {
+        souls_protocol::EpistemicPartition::Stable => "STABLE",
+        souls_protocol::EpistemicPartition::Evolving => "EVOLVING",
+    };
+
+    sqlx::query(
+        r#"
+        INSERT INTO epistemic_memories
+        (id, session_id, category, content, partition, salience, access_count, source_ref, created_at, last_accessed_at, updated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+        ON CONFLICT(id) DO UPDATE SET
+            category = excluded.category,
+            content = excluded.content,
+            salience = excluded.salience,
+            access_count = excluded.access_count,
+            source_ref = excluded.source_ref,
+            updated_at = excluded.updated_at
+        "#,
+    )
+    .bind(&record.id)
+    .bind(&record.session_id)
+    .bind(&record.category)
+    .bind(&record.content)
+    .bind(partition_str)
+    .bind(record.salience as f64)
+    .bind(record.access_count)
+    .bind(&record.source_ref)
+    .bind(record.created_at)
+    .bind(record.last_accessed_at)
+    .bind(record.updated_at)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+/// Retrieves an epistemic memory record by ID.
+pub async fn get_epistemic_memory(
+    pool: &Pool<Sqlite>,
+    id: &str,
+) -> Result<Option<souls_protocol::EpistemicMemoryRecord>, MemoryError> {
+    let row = sqlx::query(
+        r#"
+        SELECT id, session_id, category, content, partition, salience, access_count, source_ref, created_at, last_accessed_at, updated_at
+        FROM epistemic_memories
+        WHERE id = ?1
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(r) = row {
+        let part_str: String = r.get(4);
+        let partition = match part_str.as_str() {
+            "STABLE" => souls_protocol::EpistemicPartition::Stable,
+            "EVOLVING" => souls_protocol::EpistemicPartition::Evolving,
+            other => return Err(MemoryError::InvalidPartition(other.to_string())),
+        };
+
+        Ok(Some(souls_protocol::EpistemicMemoryRecord {
+            id: r.get(0),
+            session_id: r.get(1),
+            category: r.get(2),
+            content: r.get(3),
+            partition,
+            salience: r.get::<f64, _>(5) as f32,
+            access_count: r.get(6),
+            source_ref: r.get(7),
+            created_at: r.get(8),
+            last_accessed_at: r.get(9),
+            updated_at: r.get(10),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Performs BM25 lexical search over epistemic memories via SQLite FTS5.
+pub async fn search_epistemic_fts5(
+    pool: &Pool<Sqlite>,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<(String, String, String)>, MemoryError> {
+    let sanitized_query = query.replace(['"', '*', ':', '\''], "");
+    let trimmed = sanitized_query.trim();
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let rows = sqlx::query(
+        r#"
+        SELECT id, content, category
+        FROM epistemic_memories_fts
+        WHERE epistemic_memories_fts MATCH ?1
+        LIMIT ?2
+        "#,
+    )
+    .bind(trimmed)
+    .bind(limit as i64)
+    .fetch_all(pool)
+    .await?;
+
+    let results = rows
+        .into_iter()
+        .map(|r| (r.get(0), r.get(1), r.get(2)))
+        .collect();
+
+    Ok(results)
 }
 
 impl crate::SoulsMemoryStore {
@@ -459,5 +704,74 @@ mod tests {
         let _ = std::fs::remove_file(&wal_path);
         let _ = std::fs::remove_dir_all(test_dir);
     }
+
+    #[tokio::test]
+    async fn test_read_only_query_rejection_and_execution() {
+        let pool = create_in_memory_sqlite_pool().await.unwrap();
+
+        // 1. Insert memory for query
+        let mem = souls_protocol::EpistemicMemoryRecord {
+            id: "mem_ro_1".to_string(),
+            session_id: "sess_ro".to_string(),
+            category: "readonly".to_string(),
+            content: "Safe read only test".to_string(),
+            partition: souls_protocol::EpistemicPartition::Stable,
+            salience: 1.0,
+            access_count: 0,
+            source_ref: None,
+            created_at: 100,
+            last_accessed_at: 100,
+            updated_at: 100,
+        };
+        upsert_epistemic_memory(&pool, &mem).await.unwrap();
+
+        // 2. Safe SELECT query should succeed
+        let rows = execute_read_only_query(&pool, "SELECT id, content FROM epistemic_memories WHERE id = 'mem_ro_1'")
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["id"], "mem_ro_1");
+        assert_eq!(rows[0]["content"], "Safe read only test");
+
+        // 3. Mutation statements must be rejected
+        let drop_res = execute_read_only_query(&pool, "DROP TABLE epistemic_memories").await;
+        assert!(matches!(drop_res, Err(MemoryError::ReadOnlyViolation(_))));
+
+        let insert_res = execute_read_only_query(&pool, "INSERT INTO epistemic_memories (id) VALUES ('x')").await;
+        assert!(matches!(insert_res, Err(MemoryError::ReadOnlyViolation(_))));
+
+        let update_res = execute_read_only_query(&pool, "UPDATE epistemic_memories SET salience = 0").await;
+        assert!(matches!(update_res, Err(MemoryError::ReadOnlyViolation(_))));
+    }
+
+    #[tokio::test]
+    async fn test_new_strict_tables_validation() {
+        let pool = create_in_memory_sqlite_pool().await.unwrap();
+
+        // Attempt invalid status in sub_agent_sessions (CHECK constraint violation)
+        let bad_sub = sqlx::query(
+            "INSERT INTO sub_agent_sessions (agent_id, parent_session_id, task_description, assigned_tier, status, created_at) VALUES ('a1', 'p1', 'task', 'Tier1', 'INVALID_STATUS', 100)"
+        )
+        .execute(&pool)
+        .await;
+        assert!(bad_sub.is_err(), "Invalid status must violate CHECK constraint");
+
+        // Valid subagent insertion
+        let valid_sub = sqlx::query(
+            "INSERT INTO sub_agent_sessions (agent_id, parent_session_id, task_description, assigned_tier, status, created_at) VALUES ('a1', 'p1', 'task', 'Tier1', 'SPAWNED', 100)"
+        )
+        .execute(&pool)
+        .await;
+        assert!(valid_sub.is_ok());
+
+        // Attempt non-integer in socratic_thoughts total_thoughts (STRICT violation)
+        let bad_thought = sqlx::query(
+            "INSERT INTO socratic_thoughts (thought_id, session_id, thought_number, total_thoughts, thought_content, created_at) VALUES ('t1', 's1', 1, 'NOT_INT', 'content', 100)"
+        )
+        .execute(&pool)
+        .await;
+        assert!(bad_thought.is_err(), "Non-integer must violate STRICT mode");
+    }
 }
+
 

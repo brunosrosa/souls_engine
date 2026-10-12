@@ -4,6 +4,7 @@
 //! Listens on `127.0.0.1:9123` via Axum and Tokio multithread runtime.
 //! Zero UI, Zero Systray, strictly ReFS/NVMe bare-metal execution.
 
+mod mcp;
 mod routes;
 mod shutdown;
 mod state;
@@ -364,5 +365,245 @@ mod tests {
         // Without env or args, fallback should be Z:\souls_engine\.souls_data
         let dir = resolve_data_dir();
         assert!(dir.to_str().unwrap().contains(".souls_data"));
+    }
+
+    #[tokio::test]
+    async fn test_mcp_initialize_streamable_http() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05"
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(val["jsonrpc"], "2.0");
+        assert_eq!(val["id"], 1);
+        assert_eq!(val["result"]["protocolVersion"], "2024-11-05");
+        assert_eq!(val["result"]["serverInfo"]["name"], "souls_mcp");
+        assert_eq!(val["result"]["serverInfo"]["version"], "7.2.0");
+        assert!(val["result"]["capabilities"]["tools"]["listChanged"].as_bool().unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_mcp_tools_list_progressive_disclosure() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Level 0 default compact boot (7 tools)
+        let payload_compact = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/list",
+            "params": {}
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload_compact).unwrap()))
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        let tools_compact = val["result"]["tools"].as_array().unwrap();
+        assert_eq!(tools_compact.len(), 7, "Level 0 must expose exactly 7 boot tools");
+
+        // 2. Full mode (52 tools)
+        let payload_full = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/list",
+            "params": {
+                "mode": "full"
+            }
+        });
+
+        let req_full = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload_full).unwrap()))
+            .unwrap();
+
+        let resp_full = app.oneshot(req_full).await.unwrap();
+        assert_eq!(resp_full.status(), StatusCode::OK);
+        let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
+        let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
+        let tools_full = val_full["result"]["tools"].as_array().unwrap();
+        assert_eq!(tools_full.len(), 51, "Full mode must expose all 51 canonical tools");
+    }
+
+    #[tokio::test]
+    async fn test_mcp_tool_search_meta() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "tool_search",
+                "arguments": {
+                    "namespace": "ops",
+                    "query": "route"
+                }
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(val["id"], 4);
+        assert!(!val["result"]["isError"].as_bool().unwrap());
+        let matched = val["result"]["structuredContent"]["matched_count"].as_u64().unwrap();
+        assert!(matched >= 1, "tool_search should find route_subtask in ops");
+    }
+
+    #[tokio::test]
+    async fn test_mcp_route_subtask_execution() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {
+                "name": "souls_mcp.route_subtask",
+                "arguments": {
+                    "task_type": "coding",
+                    "estimated_tokens": 800
+                }
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(val["id"], 5);
+        assert!(!val["result"]["isError"].as_bool().unwrap());
+        let model_id = val["result"]["structuredContent"]["model_id"].as_str().unwrap();
+        assert!(!model_id.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_mcp_refs_path_containment_violation() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {
+                "name": "outline",
+                "arguments": {
+                    "path": "C:\\Windows\\System32\\calc.exe"
+                }
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(val["id"], 6);
+        assert_eq!(val["error"]["code"], -32008, "Escape to C: must yield RefsPathLeakViolation (-32008)");
+    }
+
+    #[tokio::test]
+    async fn test_mcp_legacy_sse_handshake() {
+        use tokio_stream::StreamExt;
+
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // GET /sse initiates stream
+        let req = Request::builder()
+            .uri("/sse")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.headers().get("content-type").unwrap(), "text/event-stream");
+
+        let mut stream = resp.into_body().into_data_stream();
+        let first_chunk = stream.next().await.unwrap().unwrap();
+        let body_str = String::from_utf8_lossy(&first_chunk);
+        assert!(body_str.contains("event: endpoint"));
+        assert!(body_str.contains("/messages?sessionId=mcp-"));
+
+        // Extract session ID from endpoint data
+        let session_prefix = "/messages?sessionId=";
+        let idx = body_str.find(session_prefix).unwrap();
+        let rest = &body_str[idx + session_prefix.len()..];
+        let session_id = rest.lines().next().unwrap().trim();
+
+        // Send POST to /messages with the session ID
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "ping"
+        });
+
+        let post_req = Request::builder()
+            .uri(format!("/messages?sessionId={session_id}"))
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let post_resp = app.oneshot(post_req).await.unwrap();
+        assert_eq!(post_resp.status(), StatusCode::ACCEPTED);
     }
 }

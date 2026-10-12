@@ -1,0 +1,21 @@
+flowchart TD
+    classDef pending fill:#2d3748,stroke:#4a5568,stroke-width:2px,color:#fff;
+    classDef active fill:#2b6cb0,stroke:#3182ce,stroke-width:2px,color:#fff;
+    classDef done fill:#2f855a,stroke:#38a169,stroke-width:2px,color:#fff;
+
+    T1["TASK-001: McpSessionManager & Keep-Alive 15s<br/>(crates/souls_server/src/mcp/session.rs)"]:::done
+    T2["TASK-002: Catálogo 51 Ferramentas & tool_search<br/>(crates/souls_server/src/mcp/registry.rs)"]:::done
+    T3["TASK-003: Handlers Ativos & Fallbacks Staging<br/>(crates/souls_server/src/mcp/handlers.rs)"]:::done
+    T4["TASK-004: Despachante JSON-RPC & Validador ReFS<br/>(crates/souls_server/src/mcp/dispatcher.rs)"]:::done
+    T5["TASK-005: Transporte Axum Dual-Mount (/mcp + /sse)<br/>(crates/souls_server/src/mcp/transport.rs)"]:::done
+    T6["TASK-006: Vinculação AppState & Roteamento Axum<br/>(crates/souls_server/src/state.rs, routes/mod.rs)"]:::done
+    T7["TASK-007: Suíte de Testes TDD & Validação Cargo<br/>(cargo check & cargo test -p souls_server)"]:::done
+
+    T2 --> T3
+    T1 --> T4
+    T2 --> T4
+    T3 --> T4
+    T1 --> T5
+    T4 --> T5
+    T5 --> T6
+    T6 --> T7

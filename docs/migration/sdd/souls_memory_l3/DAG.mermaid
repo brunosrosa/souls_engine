@@ -1,0 +1,21 @@
+graph TD
+    classDef done fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+    classDef ready fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+    classDef waiting fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff;
+
+    T1["TASK-MEM-001<br/>Extensão DDL STRICT SQLite"]:::done
+    T2["TASK-MEM-002<br/>CRUD Assíncrono sqlx"]:::done
+    T3["TASK-MEM-003<br/>session_manager.rs"]:::done
+    T4["TASK-MEM-004<br/>thinking.rs (DAG Socrático)"]:::done
+    T5["TASK-MEM-005<br/>mpsc_bridge.rs"]:::done
+    T6["TASK-MEM-006<br/>SoulsMemoryStore lib.rs"]:::done
+    T7["TASK-MEM-007<br/>Verificação & Testes TDD"]:::done
+
+    T1 --> T2
+    T2 --> T3
+    T2 --> T4
+    T2 --> T5
+    T3 --> T6
+    T4 --> T6
+    T5 --> T6
+    T6 --> T7

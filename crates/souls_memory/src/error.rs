@@ -32,4 +32,23 @@ pub enum MemoryError {
 
     #[error("Invalid partition value: '{0}'. Expected 'STABLE' or 'EVOLVING'")]
     InvalidPartition(String),
+
+    #[error("Read-only violation: mutation query rejected '{0}'")]
+    ReadOnlyViolation(String),
+
+    #[error("Overthinking threshold breached: {current} thoughts exceed limit {limit} without HITL authorization")]
+    OverthinkingThresholdBreached { current: u32, limit: u32 },
+
+    #[error("Invalid revision targeting thought #{target}: thought does not exist or invalid sequence")]
+    InvalidThoughtRevision { target: u32 },
+
+    #[error("Session '{0}' not found")]
+    SessionNotFound(String),
+
+    #[error("Sub-agent '{0}' not found")]
+    SubAgentNotFound(String),
+
+    #[error("Handoff payload '{0}' not found")]
+    HandoffNotFound(String),
 }
+

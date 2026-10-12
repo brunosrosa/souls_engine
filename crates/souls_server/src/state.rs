@@ -40,6 +40,7 @@ pub struct AppState {
     pub memory: Arc<SoulsMemoryStore>,
     pub runtime: Arc<InferenceRuntime>,
     pub router: Arc<ParetoBanditRouter>,
+    pub mcp_sessions: Arc<crate::mcp::McpSessionManager>,
     active_connections: Arc<AtomicUsize>,
     start_time: Instant,
 }
@@ -55,6 +56,7 @@ impl AppState {
             memory,
             runtime,
             router,
+            mcp_sessions: Arc::new(crate::mcp::McpSessionManager::new()),
             active_connections: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),
         }
