@@ -19,6 +19,7 @@ wasmtime = { version = "29", features = ["wat", "component-model"] }
 wasmtime-wasi = { version = "29" }
 memmap2 = "0.9"
 bumpalo = "3.16"
+dashmap = "6.1"
 
 [dev-dependencies]
 tempfile = "3.10"

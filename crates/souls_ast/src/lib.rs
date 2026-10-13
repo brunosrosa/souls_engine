@@ -1,10 +1,12 @@
 //! `souls_ast` — Static analysis, dehydrated outlines, Myers diff, and gitoxide heatmap.
 
+pub mod call_graph;
 pub mod error;
 pub mod heatmap;
 pub mod myers;
 pub mod treesitter;
 
+pub use call_graph::{CallGraphNode, CallGraphStore, SymbolEntry, SymbolKind};
 pub use error::AstError;
 pub use heatmap::{
     calculate_blast_radius, calculate_repo_frecency, BlastRadiusEntry, BlastRadiusResult,
