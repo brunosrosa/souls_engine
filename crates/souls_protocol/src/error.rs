@@ -1,10 +1,15 @@
-//! McpDomainError and JSON-RPC 2.0 transport envelopes for Souls Engine (v7).
+//! McpDomainError, ProtocolError and error envelopes for Souls Engine (v7).
 //!
 //! Maps domain errors to the non-negotiable JSON-RPC error code range (-32000..=-32099)
 //! as specified in ADR-041 and MCP_TOOL_CONTRACTS.md.
+//!
+//! Re-exports JSON-RPC envelope types from `mcp` for complete backwards compatibility.
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+// Re-export MCP envelope and result structures for backwards compatibility
+pub use crate::mcp::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, McpToolResult, ToolCallResult, ToolContentBlock};
 
 /// Unified domain error matrix for the Souls MCP bus.
 #[derive(Error, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,35 +116,6 @@ impl McpDomainError {
     }
 }
 
-/// Standardized JSON-RPC 2.0 Error Object.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct JsonRpcError {
-    pub code: i32,
-    pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<serde_json::Value>,
-}
-
-impl JsonRpcError {
-    #[must_use]
-    pub fn new(code: i32, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-            data: None,
-        }
-    }
-
-    #[must_use]
-    pub fn with_data(code: i32, message: impl Into<String>, data: serde_json::Value) -> Self {
-        Self {
-            code,
-            message: message.into(),
-            data: Some(data),
-        }
-    }
-}
-
 impl From<McpDomainError> for JsonRpcError {
     fn from(err: McpDomainError) -> Self {
         err.to_jsonrpc_error()
@@ -152,74 +128,17 @@ impl From<&McpDomainError> for JsonRpcError {
     }
 }
 
-/// Canonical JSON-RPC 2.0 Request envelope.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct JsonRpcRequest<T = serde_json::Value> {
-    pub jsonrpc: String,
-    pub id: serde_json::Value,
-    pub method: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub params: Option<T>,
-}
+/// Generic protocol-level errors occurring during serialization, parsing or envelope transport.
+#[derive(Error, Debug)]
+pub enum ProtocolError {
+    #[error("JSON serialization or deserialization failure: {0}")]
+    Serialization(#[from] serde_json::Error),
 
-impl<T> JsonRpcRequest<T> {
-    pub fn new(id: serde_json::Value, method: impl Into<String>, params: Option<T>) -> Self {
-        Self {
-            jsonrpc: "2.0".to_string(),
-            id,
-            method: method.into(),
-            params,
-        }
-    }
-}
+    #[error("Invalid JSON-RPC 2.0 version header: expected '2.0', found '{0}'")]
+    InvalidVersion(String),
 
-/// Canonical JSON-RPC 2.0 Response envelope.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct JsonRpcResponse<T = serde_json::Value> {
-    pub jsonrpc: String,
-    pub id: serde_json::Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<JsonRpcError>,
-}
-
-impl<T> JsonRpcResponse<T> {
-    #[must_use]
-    pub fn success(id: serde_json::Value, result: T) -> Self {
-        Self {
-            jsonrpc: "2.0".to_string(),
-            id,
-            result: Some(result),
-            error: None,
-        }
-    }
-
-    #[must_use]
-    pub fn error(id: serde_json::Value, error: JsonRpcError) -> Self {
-        Self {
-            jsonrpc: "2.0".to_string(),
-            id,
-            result: None,
-            error: Some(error),
-        }
-    }
-}
-
-/// Envelope for MCP tool invocation content output.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ToolCallResult {
-    pub content: Vec<ToolContentBlock>,
-    #[serde(rename = "isError", default)]
-    pub is_error: bool,
-}
-
-/// Content block types supported by MCP tool responses.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ToolContentBlock {
-    #[serde(rename = "text")]
-    Text { text: String },
+    #[error("Missing mandatory field in protocol envelope: '{0}'")]
+    MissingField(String),
 }
 
 #[cfg(test)]
@@ -227,29 +146,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_response_constructors() {
-        let resp_ok = JsonRpcResponse::success(serde_json::json!(1), "hello".to_string());
-        assert_eq!(resp_ok.result, Some("hello".to_string()));
-        assert!(resp_ok.error.is_none());
+    fn test_mcp_domain_error_conversion() {
+        let err = McpDomainError::RefsPathLeakViolation;
+        assert_eq!(err.jsonrpc_code(), -32008);
+        assert_eq!(McpDomainError::from_code(-32008), Some(McpDomainError::RefsPathLeakViolation));
 
-        let err = JsonRpcError::new(-32000, "Internal error");
-        let resp_err = JsonRpcResponse::<()>::error(serde_json::json!(2), err);
-        assert!(resp_err.result.is_none());
-        assert_eq!(resp_err.error.as_ref().map(|e| e.code), Some(-32000));
+        let rpc_err = err.to_jsonrpc_error();
+        assert_eq!(rpc_err.code, -32008);
+        assert!(rpc_err.message.contains("RefsPathLeakViolation"));
     }
 
     #[test]
-    fn test_tool_call_result_serde() {
-        let result = ToolCallResult {
-            content: vec![ToolContentBlock::Text {
-                text: "fn main() {}".to_string(),
-            }],
-            is_error: false,
-        };
-
-        let json = serde_json::to_string(&result).expect("serialization failed");
-        assert!(json.contains(r#""type":"text""#));
-        let de: ToolCallResult = serde_json::from_str(&json).expect("deserialization failed");
-        assert_eq!(result, de);
+    fn test_error_with_data() {
+        let err = McpDomainError::InvalidInputParameters;
+        let rpc_err = err.to_jsonrpc_error_with_data(serde_json::json!({"field": "path"}));
+        assert_eq!(rpc_err.code, -32007);
+        assert!(rpc_err.data.is_some());
     }
 }
