@@ -54,6 +54,31 @@ pub fn resolve_data_dir() -> PathBuf {
     PathBuf::from("Z:/souls_engine/.souls_data")
 }
 
+/// Auto-attaches Dev Drive VHDX if target ReFS volume is unmounted.
+fn ensure_dev_drive_mounted(target_dir: &Path) {
+    #[cfg(windows)]
+    {
+        let target_str = target_dir.to_string_lossy().to_uppercase();
+        if target_str.starts_with("Z:") || target_str.starts_with("Z:/") || target_str.starts_with("Z:\\") {
+            if !Path::new("Z:\\").exists() {
+                let vhdx = Path::new("C:\\dev_projects\\Souls_FORGE.vhdx");
+                if vhdx.exists() {
+                    tracing::warn!("Dev Drive Z:\\ is unmounted. Auto-attaching VHDX: {}", vhdx.display());
+                    let _ = std::process::Command::new("powershell")
+                        .args(&[
+                            "-NoProfile",
+                            "-NonInteractive",
+                            "-Command",
+                            "Mount-DiskImage -ImagePath 'C:\\dev_projects\\Souls_FORGE.vhdx' -NoDriveLetter:$false",
+                        ])
+                        .output();
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                }
+            }
+        }
+    }
+}
+
 /// Initializes engine subsystems and creates the shared `AppState`.
 pub async fn bootstrap_engine(data_dir: &Path) -> Result<AppState, Box<dyn std::error::Error + Send + Sync>> {
     info!("Bootstrapping Souls Engine bare-metal subsystems at: {:?}", data_dir);
@@ -62,6 +87,7 @@ pub async fn bootstrap_engine(data_dir: &Path) -> Result<AppState, Box<dyn std::
     let memory = if data_dir == Path::new(":memory:") {
         SoulsMemoryStore::new_in_memory().await?
     } else {
+        ensure_dev_drive_mounted(data_dir);
         std::fs::create_dir_all(data_dir)?;
         let db_path = data_dir.join("souls_memory.db");
         SoulsMemoryStore::new(&db_path, 16).await?

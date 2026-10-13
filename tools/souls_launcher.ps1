@@ -8,10 +8,23 @@ $ErrorActionPreference = "SilentlyContinue"
 
 $brandingDir = "Z:\souls_engine\assets\branding"
 $serverUrl = "http://127.0.0.1:9123"
-# Inicia souls_engine.exe ou souls_server.exe se não estiver em execução
+
+# 1. Garante que o Dev Drive ReFS esteja montado
+$vhdxPath = "C:\dev_projects\Souls_FORGE.vhdx"
+if (-not (Test-Path "Z:\") -and (Test-Path $vhdxPath)) {
+    Write-Host "Dev Drive ReFS (Z:) não encontrado. Montando VHDX: $vhdxPath..." -ForegroundColor Yellow
+    Mount-DiskImage -ImagePath $vhdxPath -NoDriveLetter:$false -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 1200
+}
+
+# 2. Inicia souls_engine.exe ou souls_server.exe se não estiver em execução
 $running = Get-Process -Name "souls_engine", "souls_server" -ErrorAction SilentlyContinue
 if (-not $running) {
     $candidates = @(
+        "$env:LOCALAPPDATA\Programs\SoulsEngine\souls_engine.exe",
+        "$env:LOCALAPPDATA\Programs\SoulsEngine\souls_server.exe",
+        "$env:LOCALAPPDATA\souls_engine\souls_engine.exe",
+        "$env:LOCALAPPDATA\souls_engine\souls_server.exe",
         "Z:\souls_engine\target\release\souls_engine.exe",
         "Z:\souls_engine\target\x86_64-pc-windows-msvc\release\souls_engine.exe",
         "Z:\souls_engine\target\release\souls_server.exe",
