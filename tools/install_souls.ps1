@@ -6,7 +6,7 @@ param(
     [string]$InstallDir = "$env:LOCALAPPDATA\SoulsEngine",
     [string]$SourceDir  = "Z:\souls_engine",
     [string]$VhdxPath   = "C:\dev_projects\Souls_FORGE.vhdx",
-    [string]$ModelsDir  = "C:\Users\rosas\llm_local_models",
+    [string]$ModelsDir  = "$env:USERPROFILE\llm_local_models",
     [switch]$SkipBuild
 )
 
@@ -16,6 +16,12 @@ Write-Host "==========================================================" -Foregro
 Write-Host " 🚀 INSTALADOR MESTRE & SETUP SIMBIÓTICO — SOULS ENGINE v7 " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "Destino de Instalação: $InstallDir" -ForegroundColor Yellow
+Write-Host "Diretório de Modelos:  $ModelsDir" -ForegroundColor Yellow
+
+# Assegura a pasta de modelos universais
+if (-not (Test-Path $ModelsDir)) {
+    New-Item -ItemType Directory -Path $ModelsDir -Force | Out-Null
+}
 
 # ============================================================================
 # ETAPA 1: VERIFICAÇÃO E MONTAGEM DO DEV DRIVE REFS (Z:)
@@ -144,9 +150,12 @@ Write-Host "  ✓ Scripts operacionais (start_souls.bat, stop_souls.bat) configu
 
 # 4. Configuração global centralizada souls_config.toml
 $globalConfigPath = Join-Path $configDir "souls_config.toml"
-if (-not (Test-Path $globalConfigPath)) {
-    $tomlContent = @"
+$formattedModelsDir = $ModelsDir.Replace('\', '/')
+$tomlContent = @"
 # souls_config.toml — Configuração Global Canônica do Souls Engine v7
+
+[workspace]
+root = "Z:/souls_engine"
 
 [storage]
 data_dir = "Z:/souls_engine/.souls_data"
@@ -154,7 +163,7 @@ database_path = "Z:/souls_engine/.souls_data/souls_memory.db"
 lancedb_path = "Z:/souls_engine/.souls_data/souls_vectors.lance"
 
 [models]
-models_dir = "C:/Users/rosas/llm_local_models"
+models_dir = "$formattedModelsDir"
 
 [server]
 host = "127.0.0.1"
@@ -165,9 +174,8 @@ streamable_http = true
 gpu_target = "RTX 2060m"
 vram_ceiling_mb = 5294
 "@
-    Set-Content -Path $globalConfigPath -Value $tomlContent -Encoding UTF8
-    Write-Host "  ✓ Criado arquivo de configuração inicial em $globalConfigPath." -ForegroundColor Green
-}
+Set-Content -Path $globalConfigPath -Value $tomlContent -Encoding UTF8
+Write-Host "  ✓ Atualizado arquivo de configuração global em $globalConfigPath." -ForegroundColor Green
 
 # ============================================================================
 # ETAPA 4: CRIAÇÃO DE ATALHOS NO MENU INICIAR E ÁREA DE TRABALHO

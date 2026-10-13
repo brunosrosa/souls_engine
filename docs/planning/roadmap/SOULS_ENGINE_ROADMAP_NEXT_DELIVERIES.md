@@ -234,7 +234,12 @@ Como evolução futura formalizada para a **Sessão 7**:
    * Painel de configuração geral para o Souls Engine e perfis do Hermes Agent.
    * Alternância dinâmica de modelos para subagentes, perfis especializados e chat mestre.
    * Gerenciamento e calibração de API keys, limiares de fallback térmico da dGPU e políticas de retenção do Langevin Decay.
-3. **Preservação da Regra Headless:** Toda a camada gráfica reside estritamente no front-end web do Hermes Dashboard (ou cliente web do usuário), garantindo conformidade absoluta com a Linha Vermelha 1 do `AGENTS.md` (Zero Desktop UI nativa no binário Rust).
+### 5.6 RFC-007: Crate souls_llm_inventory (Model Hub, Profiling de Silício & Download Manager)
+Como evolução formalizada via RFC-007 (`docs/architecture/RFC_SOULS_LLM_INVENTORY.md`):
+1. **Desacoplamento de Ciclo de Vida de Pesos:** Separa a gestão física de arquivos `.gguf`/`.onnx` em disco do runtime de execução (`souls_inference_runtime`).
+2. **Padrão de Armazenamento Universal:** Catálogo canônico universal em `%USERPROFILE%\llm_local_models` (sem caminhos hardcoded de usuário), tolerante a diretório vazio e com criação idempotente.
+3. **Profiling de Silício Adaptativo:** Mapeamento automático de viabilidade na GPU física (ex: teto útil de 5.294 MB sob WDDM na RTX 2060m) classificando modelos em `OptimalVram`, `PartialCpuOffload` (AVX2) ou `IncompatibleSpillover`.
+4. **Download Manager Assíncrono:** Suporte nativo a HTTP Range (resume de downloads pesados), verificação de hash SHA-256 e broadcast de progresso em tempo real via SSE no Web Dashboard.
 
 ---
 

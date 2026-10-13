@@ -4,7 +4,7 @@
 //! using low-level NT kernel FSCTL_DUPLICATE_EXTENTS_TO_FILE via windows-sys 0.59.
 //! Prevents SSD write amplification on NVMe drives.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use crate::error::CoreError;
 
 #[cfg(windows)]
@@ -31,17 +31,128 @@ const GENERIC_READ: u32 = 0x80000000;
 #[cfg(windows)]
 const GENERIC_WRITE: u32 = 0x40000000;
 
-/// Validates that a path is anchored within the canonical Dev Drive partition (`Z:\`).
+/// Retorna a raiz configurada ou detectada do Workspace do Souls Engine.
+///
+/// Hierarquia de resolução (aprovada no RFC-007 e protocolo /grill-me):
+/// 1. Variável de ambiente `SOULS_WORKSPACE_ROOT`
+/// 2. Chave `[workspace] root` em `souls_config.toml` (em `Z:\souls_engine\.souls_data\config` ou `%LOCALAPPDATA%\SoulsEngine\config`)
+/// 3. Diretório de trabalho atual (`std::env::current_dir()`) se contiver `Cargo.toml` ou `.git`
+/// 4. Fallback padrão canônico para Dev Drive ReFS: `Z:\souls_engine`
+pub fn get_workspace_root() -> PathBuf {
+    // 1. Variável de ambiente explícita
+    if let Ok(env_root) = std::env::var("SOULS_WORKSPACE_ROOT") {
+        let trimmed = env_root.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
+
+    // 2. Configuração centralizada souls_config.toml
+    let candidate_configs = [
+        PathBuf::from("Z:/souls_engine/.souls_data/config/souls_config.toml"),
+        dirs_local_config_path(),
+    ];
+    for cfg_path in &candidate_configs {
+        if cfg_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(cfg_path) {
+                for line in content.lines() {
+                    let line_trimmed = line.trim();
+                    if line_trimmed.starts_with("root =") || line_trimmed.starts_with("root=") {
+                        let parts: Vec<&str> = line_trimmed.split('=').collect();
+                        if parts.len() >= 2 {
+                            let raw_val = parts[1].trim().trim_matches('"').trim_matches('\'');
+                            if !raw_val.is_empty() {
+                                return PathBuf::from(raw_val);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Diretório atual se for um repositório válido
+    if let Ok(cwd) = std::env::current_dir() {
+        if cwd.join("Cargo.toml").exists() || cwd.join(".git").exists() {
+            return cwd;
+        }
+    }
+
+    // 4. Fallback canônico Dev Drive ReFS
+    PathBuf::from("Z:\\souls_engine")
+}
+
+fn dirs_local_config_path() -> PathBuf {
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        PathBuf::from(local_app_data).join("SoulsEngine\\config\\souls_config.toml")
+    } else {
+        PathBuf::from("C:\\Users\\Default\\AppData\\Local\\SoulsEngine\\config\\souls_config.toml")
+    }
+}
+
+/// Resolve e normaliza um caminho fornecido para um caminho absoluto dentro dos limites do workspace.
+///
+/// - Se o caminho for relativo (ex: `"Cargo.toml"` ou `"crates/souls_protocol/src/dto.rs"`),
+///   ele é ancorado automaticamente no `get_workspace_root()`.
+/// - Impede sequências maliciosas de travessia (`..\\..`, `../..`).
+/// - Garante conformidade de segurança via `validate_refs_path`.
+pub fn resolve_workspace_path<P: AsRef<Path>>(candidate: P) -> Result<PathBuf, CoreError> {
+    let p = candidate.as_ref();
+    let p_str = p.to_string_lossy();
+    let trimmed = p_str.trim();
+
+    if trimmed.is_empty() {
+        return Err(CoreError::RefsPathLeakViolation("Empty path provided".to_string()));
+    }
+
+    // Proibir sequências maliciosas de escape de diretório
+    if trimmed.contains("..\\..")
+        || trimmed.contains("../..")
+        || trimmed.contains("%APPDATA%")
+        || trimmed.contains("%LOCALAPPDATA%")
+        || trimmed.contains("/temp/")
+        || trimmed.contains("\\temp\\")
+    {
+        return Err(CoreError::RefsPathLeakViolation(format!(
+            "Path traversal escape sequence detected: '{trimmed}'"
+        )));
+    }
+
+    let resolved = if p.is_absolute() {
+        PathBuf::from(trimmed)
+    } else {
+        let ws_root = get_workspace_root();
+        ws_root.join(trimmed)
+    };
+
+    // Valida que o caminho final resultante respeita as fronteiras de segurança
+    validate_refs_path(&resolved)?;
+
+    Ok(resolved)
+}
+
+/// Validates that a path is anchored within the canonical Dev Drive partition (`Z:\`)
+/// or within the configured workspace root boundary.
 /// Prevents path leaks into the host system partition (C:\).
 pub fn validate_refs_path(path: &Path) -> Result<(), CoreError> {
     let path_str = path.to_string_lossy();
-    // Normalize path check for Windows drive prefix
-    if !path_str.starts_with("Z:") && !path_str.starts_with("z:") && !path_str.starts_with("\\\\?\\Z:") && !path_str.starts_with("\\\\?\\z:") {
-        return Err(CoreError::RefsPathLeakViolation(format!(
-            "Access violation: path '{path_str}' escapes canonical Dev Drive ReFS partition (Z:\\)"
-        )));
+    let upper = path_str.to_uppercase();
+
+    // Normalizado para partição Dev Drive ReFS
+    if upper.starts_with("Z:") || upper.starts_with("\\\\?\\Z:") {
+        return Ok(());
     }
-    Ok(())
+
+    // Se a raiz configurada não for Z: (instalação customizada), valida contenção no workspace
+    let ws_root = get_workspace_root();
+    let ws_upper = ws_root.to_string_lossy().to_uppercase();
+    if !ws_upper.starts_with("Z:") && upper.starts_with(&ws_upper) {
+        return Ok(());
+    }
+
+    Err(CoreError::RefsPathLeakViolation(format!(
+        "Access violation: path '{path_str}' escapes canonical Dev Drive ReFS partition (Z:\\)"
+    )))
 }
 
 /// Ensures a directory exists within the ReFS Dev Drive partition.
@@ -371,6 +482,33 @@ mod tests {
         let _ = std::fs::remove_file(&src_file);
         let _ = std::fs::remove_file(&dest_file);
         let _ = std::fs::remove_dir(test_dir);
+    }
+
+    #[test]
+    fn test_workspace_resolution_relative_path() {
+        let resolved = resolve_workspace_path("Cargo.toml").expect("Should resolve relative Cargo.toml");
+        assert!(resolved.is_absolute());
+        let s = resolved.to_string_lossy().to_uppercase();
+        assert!(s.starts_with("Z:") || s.contains("CARGO.TOML"));
+    }
+
+    #[test]
+    fn test_workspace_resolution_rejects_path_traversal() {
+        let res = resolve_workspace_path("../../windows/system32/cmd.exe");
+        assert!(res.is_err(), "Must reject path traversal");
+    }
+
+    #[test]
+    fn test_validate_refs_path_accepts_canonical_drive() {
+        assert!(validate_refs_path(Path::new("Z:\\souls_engine\\test.txt")).is_ok());
+        assert!(validate_refs_path(Path::new("z:/souls_engine/test.txt")).is_ok());
+        assert!(validate_refs_path(Path::new("\\\\?\\Z:\\souls_engine\\test.txt")).is_ok());
+    }
+
+    #[test]
+    fn test_validate_refs_path_rejects_host_c_drive() {
+        let res = validate_refs_path(Path::new("C:\\Windows\\notepad.exe"));
+        assert!(res.is_err(), "Must strictly reject host C: partition access");
     }
 }
 

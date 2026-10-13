@@ -6,7 +6,10 @@ Add-Type -AssemblyName System.Drawing
 
 $ErrorActionPreference = "SilentlyContinue"
 
-$brandingDir = "Z:\souls_engine\assets\branding"
+$brandingDir = Join-Path $PSScriptRoot "assets\branding"
+if (-not (Test-Path $brandingDir)) {
+    $brandingDir = "Z:\souls_engine\assets\branding"
+}
 $serverUrl = "http://127.0.0.1:9123"
 
 # 1. Garante que o Dev Drive ReFS esteja montado
@@ -36,7 +39,8 @@ if (-not $running) {
     if ($serverExe) {
         $exeName = [System.IO.Path]::GetFileName($serverExe)
         Write-Host "Iniciando daemon headless $exeName..." -ForegroundColor Cyan
-        Start-Process -FilePath $serverExe -WindowStyle Hidden
+        $workDir = if (Test-Path "Z:\souls_engine") { "Z:\souls_engine" } else { [System.IO.Path]::GetDirectoryName($serverExe) }
+        Start-Process -FilePath $serverExe -WorkingDirectory $workDir -WindowStyle Hidden
         Start-Sleep -Milliseconds 800
     }
 }
