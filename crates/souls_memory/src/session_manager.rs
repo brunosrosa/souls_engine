@@ -37,14 +37,15 @@ impl SubAgentStatus {
     }
 
     pub fn from_str_strict(s: &str) -> Result<Self, MemoryError> {
-        match s {
+        let normalized = s.trim().to_ascii_uppercase();
+        match normalized.as_str() {
             "SPAWNED" => Ok(Self::Spawned),
             "RUNNING" => Ok(Self::Running),
             "COMPLETED" => Ok(Self::Completed),
             "FAILED" => Ok(Self::Failed),
             "KILLED" => Ok(Self::Killed),
-            other => Err(MemoryError::Database(sqlx::Error::Decode(
-                format!("Invalid SubAgentStatus: '{other}'").into(),
+            _ => Err(MemoryError::Database(sqlx::Error::Decode(
+                format!("Invalid SubAgentStatus: '{s}'").into(),
             ))),
         }
     }
@@ -465,5 +466,15 @@ mod tests {
         let list = manager.list_subagents_by_parent("sess_parent_1").await.unwrap();
         assert_eq!(list.len(), 1);
         assert_eq!(list[0].agent_id, session.agent_id);
+    }
+
+    #[test]
+    fn test_subagent_status_resilient_parsing() {
+        assert_eq!(SubAgentStatus::from_str_strict("spawned").unwrap(), SubAgentStatus::Spawned);
+        assert_eq!(SubAgentStatus::from_str_strict("  Running  ").unwrap(), SubAgentStatus::Running);
+        assert_eq!(SubAgentStatus::from_str_strict("Completed").unwrap(), SubAgentStatus::Completed);
+        assert_eq!(SubAgentStatus::from_str_strict("failed").unwrap(), SubAgentStatus::Failed);
+        assert_eq!(SubAgentStatus::from_str_strict("KILLED").unwrap(), SubAgentStatus::Killed);
+        assert!(SubAgentStatus::from_str_strict("invalid_status").is_err());
     }
 }
