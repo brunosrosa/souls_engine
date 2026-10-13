@@ -3,7 +3,6 @@
 //! Central Model Context Protocol dispatch engine with alias normalization,
 //! Dev Drive ReFS containment validation, panic encapsulation, and async telemetry.
 
-use std::path::Path;
 use std::time::Instant;
 use serde_json::{json, Value};
 use tracing::{debug, warn};
@@ -48,29 +47,10 @@ pub fn validate_refs_path(path_str: &str) -> Result<(), McpDomainError> {
         return Ok(());
     }
 
-    // Prohibit toxic drive escapes and env var references
-    if trimmed.contains("..\\..")
-        || trimmed.contains("../..")
-        || trimmed.starts_with("C:")
-        || trimmed.starts_with("c:")
-        || trimmed.contains("%APPDATA%")
-        || trimmed.contains("%LOCALAPPDATA%")
-        || trimmed.contains("/temp/")
-        || trimmed.contains("\\temp\\")
-    {
-        warn!("RefsPathLeakViolation intercepted: path escape attempt '{trimmed}'");
-        return Err(McpDomainError::RefsPathLeakViolation);
-    }
-
-    // If path is absolute, must strictly begin with Z:\ or Z:/
-    let p = Path::new(trimmed);
-    if p.is_absolute() {
-        let normalized = trimmed.replace('/', "\\");
-        if !normalized.to_uppercase().starts_with("Z:\\") {
-            warn!("RefsPathLeakViolation intercepted: absolute path outside Z: drive '{trimmed}'");
-            return Err(McpDomainError::RefsPathLeakViolation);
-        }
-    }
+    souls_core::fs::resolve_workspace_path(trimmed).map_err(|e| {
+        warn!("RefsPathLeakViolation intercepted: path escape attempt '{trimmed}': {e}");
+        McpDomainError::RefsPathLeakViolation
+    })?;
 
     Ok(())
 }

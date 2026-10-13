@@ -103,6 +103,14 @@ if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 }
 
+# Encerra qualquer daemon ativo antes de atualizar arquivos
+$running = Get-Process -Name "souls_server", "souls_engine" -ErrorAction SilentlyContinue
+if ($running) {
+    Write-Host "  -> Encerrando daemon ativo antes de atualizar binários..." -ForegroundColor Yellow
+    Stop-Process -Name "souls_server", "souls_engine" -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 1200
+}
+
 # 1. Copia binários com identidade dupla
 $installedServerExe = Join-Path $InstallDir "souls_server.exe"
 $installedEngineExe = Join-Path $InstallDir "souls_engine.exe"

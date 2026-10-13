@@ -835,7 +835,8 @@ pub fn handle_outline(
     let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
     let include_private = args.get("include_private").and_then(Value::as_bool).unwrap_or(false);
 
-    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let resolved = souls_core::fs::resolve_workspace_path(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let content = std::fs::read_to_string(&resolved).map_err(|_| McpDomainError::InvalidInputParameters)?;
     let language = detect_language(path_str);
 
     let outline = souls_ast::dehydrate_outline(&content, &language, include_private);
@@ -858,7 +859,8 @@ pub fn handle_symbol(
     let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
     let query = args.get("symbol_query").and_then(Value::as_str).unwrap_or("");
 
-    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let resolved = souls_core::fs::resolve_workspace_path(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let content = std::fs::read_to_string(&resolved).map_err(|_| McpDomainError::InvalidInputParameters)?;
     let slice_opt = souls_ast::extract_symbol_slice(&content, query);
 
     match slice_opt {
@@ -994,7 +996,8 @@ pub fn handle_get_ast(
     args: &serde_json::Map<String, Value>,
 ) -> Result<Value, McpDomainError> {
     let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
-    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let resolved = souls_core::fs::resolve_workspace_path(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let content = std::fs::read_to_string(&resolved).map_err(|_| McpDomainError::InvalidInputParameters)?;
     let language = detect_language(path_str);
 
     let parsed = souls_ast::parse_code_isolated(&content, &language, None)
@@ -1018,7 +1021,8 @@ pub fn handle_delta_diff(
     let path_str = args.get("path").and_then(Value::as_str).unwrap_or("");
     let new_content = args.get("new_content").and_then(Value::as_str).unwrap_or("");
 
-    let old_content = std::fs::read_to_string(path_str).unwrap_or_default();
+    let resolved = souls_core::fs::resolve_workspace_path(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let old_content = std::fs::read_to_string(&resolved).unwrap_or_default();
     let patch = souls_ast::compute_safe_myers_diff(&old_content, new_content)
         .map_err(|_| McpDomainError::InternalEnginePanic)?;
 
@@ -1041,7 +1045,8 @@ pub fn handle_edit(
     let old_str = args.get("old_string").and_then(Value::as_str).unwrap_or("");
     let new_str = args.get("new_string").and_then(Value::as_str).unwrap_or("");
 
-    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let resolved = souls_core::fs::resolve_workspace_path(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let content = std::fs::read_to_string(&resolved).map_err(|_| McpDomainError::InvalidInputParameters)?;
     let clean = souls_ast::sanitize_lf(&content);
     let clean_old = souls_ast::sanitize_lf(old_str);
     let clean_new = souls_ast::sanitize_lf(new_str);
@@ -1056,7 +1061,7 @@ pub fn handle_edit(
     }
 
     let modified = clean.replacen(&clean_old, &clean_new, 1);
-    std::fs::write(path_str, modified).map_err(|_| McpDomainError::InternalEnginePanic)?;
+    std::fs::write(&resolved, modified).map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({
         "content": [{
@@ -1077,7 +1082,8 @@ pub fn handle_replace(
     let target = args.get("target").and_then(Value::as_str).unwrap_or("");
     let replacement = args.get("replacement").and_then(Value::as_str).unwrap_or("");
 
-    let content = std::fs::read_to_string(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let resolved = souls_core::fs::resolve_workspace_path(path_str).map_err(|_| McpDomainError::InvalidInputParameters)?;
+    let content = std::fs::read_to_string(&resolved).map_err(|_| McpDomainError::InvalidInputParameters)?;
     let clean = souls_ast::sanitize_lf(&content);
 
     if !clean.contains(target) {
@@ -1085,7 +1091,7 @@ pub fn handle_replace(
     }
 
     let modified = clean.replacen(target, replacement, 1);
-    std::fs::write(path_str, modified).map_err(|_| McpDomainError::InternalEnginePanic)?;
+    std::fs::write(&resolved, modified).map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({
         "content": [{
@@ -1106,7 +1112,8 @@ pub fn handle_repo_heatmap(
     let window_days = args.get("time_window_days").and_then(Value::as_u64).unwrap_or(30) as u32;
     let half_life = args.get("half_life_days").and_then(Value::as_f64).unwrap_or(7.0);
 
-    let entries = souls_ast::calculate_repo_frecency(std::path::Path::new(repo_path), window_days, half_life)
+    let resolved_repo = souls_core::fs::resolve_workspace_path(repo_path).unwrap_or_else(|_| std::path::PathBuf::from(repo_path));
+    let entries = souls_ast::calculate_repo_frecency(&resolved_repo, window_days, half_life)
         .unwrap_or_default();
 
     let top_entries: Vec<_> = entries.into_iter().take(20).collect();
@@ -1144,7 +1151,8 @@ pub fn handle_repo_impact(
         targets.push("crates/souls_core/src/lib.rs");
     }
 
-    let blast = souls_ast::calculate_blast_radius(std::path::Path::new(repo_path), &targets, depth)
+    let resolved_repo = souls_core::fs::resolve_workspace_path(repo_path).unwrap_or_else(|_| std::path::PathBuf::from(repo_path));
+    let blast = souls_ast::calculate_blast_radius(&resolved_repo, &targets, depth)
         .map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({

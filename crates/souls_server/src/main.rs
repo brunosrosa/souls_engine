@@ -144,11 +144,83 @@ pub async fn bootstrap_engine(data_dir: &Path) -> Result<AppState, Box<dyn std::
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().collect();
+
+    // CLI Flags de controle rápido e UX
+    for arg in &args[1..] {
+        match arg.as_str() {
+            "-v" | "--version" => {
+                println!("Souls Engine v7.2.0 (Bare-Metal MSVC x86_64)");
+                println!("Daemon Identity: souls_server / souls_engine");
+                println!("Subsystems: Axum HTTP/SSE (:9123) + FrankenSQLite STRICT WAL + LanceDB L3 + Ladybug Graph");
+                return ExitCode::SUCCESS;
+            }
+            "-h" | "--help" => {
+                println!("Souls Engine v7.2.0 — Bare-Metal Engine & MCP Server");
+                println!("Uso: souls_engine.exe [OPÇÕES]\n");
+                println!("Opções:");
+                println!("  -v, --version         Exibe versão do produto, compilador e arquitetura");
+                println!("  -s, --status          Verifica conectividade e telemetria do daemon em execução");
+                println!("      --stop            Encerra todas as instâncias ativas do daemon");
+                println!("      --data-dir <DIR>  Define o diretório de dados persistentes");
+                println!("  -h, --help            Exibe esta mensagem de ajuda");
+                return ExitCode::SUCCESS;
+            }
+            "-s" | "--status" => {
+                let client = reqwest::Client::builder()
+                    .timeout(std::time::Duration::from_millis(1500))
+                    .build()
+                    .unwrap_or_default();
+                match client.get(format!("http://127.0.0.1:{}/health", CANONICAL_SERVER_PORT)).send().await {
+                    Ok(resp) if resp.status().is_success() => {
+                        println!("● Souls Engine Daemon: ONLINE & HEALTHY (127.0.0.1:{})", CANONICAL_SERVER_PORT);
+                        if let Ok(body) = resp.text().await {
+                            println!("{}", body);
+                        }
+                        return ExitCode::SUCCESS;
+                    }
+                    _ => {
+                        println!("○ Souls Engine Daemon: OFFLINE (Porta {} não responde)", CANONICAL_SERVER_PORT);
+                        return ExitCode::from(1);
+                    }
+                }
+            }
+            "--stop" => {
+                println!("Encerrando daemon Souls Engine...");
+                #[cfg(windows)]
+                {
+                    let _ = std::process::Command::new("taskkill")
+                        .args(&["/F", "/T", "/IM", "souls_server.exe"])
+                        .output();
+                    let _ = std::process::Command::new("taskkill")
+                        .args(&["/F", "/T", "/IM", "souls_engine.exe"])
+                        .output();
+                }
+                println!("Comando de encerramento executado.");
+                return ExitCode::SUCCESS;
+            }
+            _ => {}
+        }
+    }
+
     // 1. Initialize structured logging
     let _guard = souls_core::logging::init_tracing("info");
     info!("=== SOULS ENGINE v7 — Headless Daemon (:9123) Boot Sequence ===");
 
     let data_dir = resolve_data_dir();
+
+    // Rotação preventiva de log caso o arquivo exceda 50 MB
+    let log_file = data_dir.join("logs").join("souls_engine.log");
+    if log_file.exists() {
+        if let Ok(meta) = std::fs::metadata(&log_file) {
+            const MAX_LOG_SIZE_BYTES: u64 = 50 * 1024 * 1024; // 50 MB
+            if meta.len() > MAX_LOG_SIZE_BYTES {
+                let rotated = data_dir.join("logs").join("souls_engine.1.log");
+                let _ = std::fs::rename(&log_file, rotated);
+            }
+        }
+    }
+
     let state = match bootstrap_engine(&data_dir).await {
         Ok(s) => s,
         Err(err) => {

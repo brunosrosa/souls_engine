@@ -54,8 +54,8 @@ pub async fn handle_read(args: &serde_json::Map<String, Value>) -> Result<Value,
         .and_then(Value::as_str)
         .ok_or(McpDomainError::InvalidInputParameters)?;
 
-    let path = PathBuf::from(path_str);
-    validate_refs_path(&path).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
+    let path = souls_core::fs::resolve_workspace_path(path_str)
+        .map_err(|_| McpDomainError::RefsPathLeakViolation)?;
 
     let content = tokio::fs::read_to_string(&path).await.map_err(|_| {
         McpDomainError::StructuredFailure
@@ -102,8 +102,8 @@ pub async fn handle_smart_read(args: &serde_json::Map<String, Value>) -> Result<
         .and_then(Value::as_str)
         .ok_or(McpDomainError::InvalidInputParameters)?;
 
-    let path = PathBuf::from(path_str);
-    validate_refs_path(&path).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
+    let path = souls_core::fs::resolve_workspace_path(path_str)
+        .map_err(|_| McpDomainError::RefsPathLeakViolation)?;
 
     let max_tokens = args.get("max_tokens").and_then(Value::as_u64).unwrap_or(4000) as usize;
 
@@ -137,8 +137,8 @@ pub async fn handle_multi_read(args: &serde_json::Map<String, Value>) -> Result<
     let mut validated_paths = Vec::new();
     for p_val in paths_val {
         if let Some(p_str) = p_val.as_str() {
-            let p = PathBuf::from(p_str);
-            validate_refs_path(&p).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
+            let p = souls_core::fs::resolve_workspace_path(p_str)
+                .map_err(|_| McpDomainError::RefsPathLeakViolation)?;
             validated_paths.push(p);
         }
     }
@@ -385,8 +385,8 @@ pub async fn handle_stub_fill(args: &serde_json::Map<String, Value>) -> Result<V
         .and_then(Value::as_str)
         .ok_or(McpDomainError::InvalidInputParameters)?;
 
-    let path = PathBuf::from(path_str);
-    validate_refs_path(&path).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
+    let path = souls_core::fs::resolve_workspace_path(path_str)
+        .map_err(|_| McpDomainError::RefsPathLeakViolation)?;
 
     let mut content = tokio::fs::read_to_string(&path).await.map_err(|_| {
         McpDomainError::StructuredFailure
@@ -465,12 +465,12 @@ pub async fn handle_headroom_retrieve(args: &serde_json::Map<String, Value>) -> 
 
 /// Handles `tree` traversing ReFS directories with toxic path pruning.
 pub async fn handle_tree(args: &serde_json::Map<String, Value>) -> Result<Value, McpDomainError> {
-    let root_str = args.get("path").and_then(Value::as_str).unwrap_or("Z:/souls_engine");
+    let root_str = args.get("path").and_then(Value::as_str).unwrap_or(".");
     let max_depth = args.get("max_depth").and_then(Value::as_u64).unwrap_or(3) as usize;
     let include_hidden = args.get("include_hidden").and_then(Value::as_bool).unwrap_or(false);
 
-    let root_path = PathBuf::from(root_str);
-    validate_refs_path(&root_path).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
+    let root_path = souls_core::fs::resolve_workspace_path(root_str)
+        .map_err(|_| McpDomainError::RefsPathLeakViolation)?;
 
     let mut tree_lines = Vec::new();
     tree_lines.push(format!("{}/", root_path.file_name().unwrap_or_default().to_string_lossy()));
@@ -544,11 +544,11 @@ pub async fn handle_search(args: &serde_json::Map<String, Value>) -> Result<Valu
         .and_then(Value::as_str)
         .ok_or(McpDomainError::InvalidInputParameters)?;
 
-    let root_str = args.get("path").and_then(Value::as_str).unwrap_or("Z:/souls_engine");
+    let root_str = args.get("path").and_then(Value::as_str).unwrap_or(".");
     let file_pattern = args.get("file_pattern").and_then(Value::as_str);
 
-    let root_path = PathBuf::from(root_str);
-    validate_refs_path(&root_path).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
+    let root_path = souls_core::fs::resolve_workspace_path(root_str)
+        .map_err(|_| McpDomainError::RefsPathLeakViolation)?;
 
     let mut matches = Vec::new();
     let mut stack = vec![root_path];
