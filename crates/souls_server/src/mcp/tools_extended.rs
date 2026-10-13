@@ -17,6 +17,7 @@ use souls_core::context_lean::{
     count_tokens, lightweight_cleanup, multi_read_concurrent, smart_read_file,
 };
 use souls_core::fs::validate_refs_path;
+use souls_core::subprocess_guard::{SubprocessConfig, SubprocessGuard};
 use crate::AppState;
 
 /// In-memory thread-safe cache for deduplicated and CCR blocks (ephemeral RAM, 0 MB VRAM).
@@ -638,13 +639,21 @@ pub async fn handle_shell(args: &serde_json::Map<String, Value>) -> Result<Value
 
     let start = Instant::now();
 
-    let exec_fut = tokio::process::Command::new("powershell")
-        .arg("-NoProfile")
-        .arg("-NonInteractive")
-        .arg("-Command")
-        .arg(command)
-        .current_dir(&cwd_path)
-        .output();
+    let cfg = SubprocessConfig::new("powershell")
+        .with_args(vec![
+            "-NoProfile".to_string(),
+            "-NonInteractive".to_string(),
+            "-Command".to_string(),
+            command.to_string(),
+        ])
+        .with_working_dir(cwd_path.to_string_lossy().to_string())
+        .with_kill_on_drop(true);
+
+    let guard = SubprocessGuard::spawn(&cfg)
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    let child = guard.into_child().ok_or(McpDomainError::InternalEnginePanic)?;
+    let exec_fut = child.wait_with_output();
 
     let output = tokio::time::timeout(Duration::from_millis(timeout_ms), exec_fut)
         .await
@@ -688,19 +697,26 @@ pub async fn handle_execute(args: &serde_json::Map<String, Value>) -> Result<Val
 
     let timeout_ms = args.get("timeout_ms").and_then(Value::as_u64).unwrap_or(15_000);
 
-    let mut cmd = tokio::process::Command::new(executable);
-    cmd.current_dir("Z:/souls_engine");
-
+    let mut arg_strings = Vec::new();
     if let Some(arguments) = args.get("arguments").and_then(Value::as_array) {
         for arg in arguments {
             if let Some(a_str) = arg.as_str() {
-                cmd.arg(a_str);
+                arg_strings.push(a_str.to_string());
             }
         }
     }
 
+    let cfg = SubprocessConfig::new(executable)
+        .with_args(arg_strings)
+        .with_working_dir("Z:/souls_engine")
+        .with_kill_on_drop(true);
+
     let start = Instant::now();
-    let exec_fut = cmd.output();
+    let guard = SubprocessGuard::spawn(&cfg)
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    let child = guard.into_child().ok_or(McpDomainError::InternalEnginePanic)?;
+    let exec_fut = child.wait_with_output();
 
     let output = tokio::time::timeout(Duration::from_millis(timeout_ms), exec_fut)
         .await
@@ -1001,12 +1017,14 @@ pub async fn handle_repo_meta(state: &AppState, _args: &serde_json::Map<String, 
 // DOMAIN 3: EXTENDED MEMORY & LADYBUG GRAPH TOOLS (`memory.*`)
 // ============================================================================
 
-/// Handles `mem_search` full-text search across observations.
+/// Handles `mem_search` full-text search across observations with optional LanceDB vector recall.
 pub async fn handle_mem_search(state: &AppState, args: &serde_json::Map<String, Value>) -> Result<Value, McpDomainError> {
     let query = args
         .get("query")
         .and_then(Value::as_str)
         .ok_or(McpDomainError::InvalidInputParameters)?;
+
+    let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(20) as usize;
 
     let pool = state.memory.pool();
     let rows = sqlx::query(
@@ -1027,14 +1045,39 @@ pub async fn handle_mem_search(state: &AppState, args: &serde_json::Map<String, 
         observations.push(json!({
             "entity": entity,
             "observation": obs,
-            "timestamp": ts
+            "timestamp": ts,
+            "source": "sqlite_wal"
         }));
+    }
+
+    // Optional vector search if vector embedding is provided
+    let query_vector: Option<Vec<f32>> = args
+        .get("vector")
+        .or_else(|| args.get("query_vector"))
+        .and_then(Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_f64().map(|f| f as f32))
+                .collect()
+        });
+
+    if let Some(vec) = query_vector {
+        if let Ok(vec_matches) = state.memory.lance_store().search_vectors(vec, limit, None).await {
+            for v_cand in vec_matches {
+                observations.push(json!({
+                    "entity": v_cand.id,
+                    "observation": v_cand.content,
+                    "similarity": v_cand.similarity,
+                    "source": "lancedb_vector"
+                }));
+            }
+        }
     }
 
     Ok(json!({
         "content": [{
             "type": "text",
-            "text": format!("Found {} observation matches in SQLite STRICT WAL.", observations.len())
+            "text": format!("Found {} observation matches (SQLite WAL + LanceDB).", observations.len())
         }],
         "structuredContent": { "query": query, "count": observations.len(), "results": observations },
         "isError": false

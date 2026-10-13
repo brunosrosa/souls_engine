@@ -395,12 +395,44 @@ pub async fn handle_thinking(
     let record = engine.add_thought(input).map_err(|_| McpDomainError::InternalEnginePanic)?;
     let _ = engine.persist_to_db(&*state.memory.pool()).await;
 
+    // Socratic Sheaf Cohomology evaluation over reasoning graph
+    let mut fact_graph = souls_inference_runtime::cohomology::SocraticFactGraph::new();
+    let mut thought_indices = std::collections::HashMap::new();
+    for t in engine.thoughts() {
+        let label = format!("thought_{}", t.thought_number);
+        if let Some(idx) = fact_graph.add_vertex(&label) {
+            thought_indices.insert(t.thought_number, idx);
+        }
+    }
+    for t in engine.thoughts() {
+        if let Some(&curr_idx) = thought_indices.get(&t.thought_number) {
+            if let Some(origin) = t.branch_from_thought {
+                if let Some(&origin_idx) = thought_indices.get(&origin) {
+                    fact_graph.add_edge(origin_idx, curr_idx, souls_inference_runtime::cohomology::RelationKind::DependsOn);
+                }
+            }
+            if let Some(revises) = t.revises_thought {
+                if let Some(&revises_idx) = thought_indices.get(&revises) {
+                    fact_graph.add_edge(revises_idx, curr_idx, souls_inference_runtime::cohomology::RelationKind::ConflictsWith);
+                }
+            }
+        }
+    }
+    let cohomology = souls_inference_runtime::cohomology::compute_cohomology(&fact_graph);
+
+    let mut structured = serde_json::to_value(&record).unwrap_or_default();
+    if let Some(map) = structured.as_object_mut() {
+        map.insert("h1_dimension".to_string(), json!(cohomology.h1_dimension));
+        map.insert("has_contradiction".to_string(), json!(cohomology.has_contradiction));
+        map.insert("cohomology_rank".to_string(), json!(cohomology.rank));
+    }
+
     Ok(json!({
         "content": [{
             "type": "text",
-            "text": format!("Socratic Step #{}/{} registered (branch: '{}', revision: {}).", record.thought_number, record.total_thoughts, record.branch_id, record.is_revision)
+            "text": format!("Socratic Step #{}/{} registered (branch: '{}', revision: {}, H¹: {}).", record.thought_number, record.total_thoughts, record.branch_id, record.is_revision, cohomology.h1_dimension)
         }],
-        "structuredContent": record,
+        "structuredContent": structured,
         "isError": false
     }))
 }
@@ -415,12 +447,44 @@ pub async fn handle_analyze_session(
     let engine = engine_lock.read().await;
     let analysis = engine.analyze_coherence();
 
+    // Socratic Sheaf Cohomology evaluation
+    let mut fact_graph = souls_inference_runtime::cohomology::SocraticFactGraph::new();
+    let mut thought_indices = std::collections::HashMap::new();
+    for t in engine.thoughts() {
+        let label = format!("thought_{}", t.thought_number);
+        if let Some(idx) = fact_graph.add_vertex(&label) {
+            thought_indices.insert(t.thought_number, idx);
+        }
+    }
+    for t in engine.thoughts() {
+        if let Some(&curr_idx) = thought_indices.get(&t.thought_number) {
+            if let Some(origin) = t.branch_from_thought {
+                if let Some(&origin_idx) = thought_indices.get(&origin) {
+                    fact_graph.add_edge(origin_idx, curr_idx, souls_inference_runtime::cohomology::RelationKind::DependsOn);
+                }
+            }
+            if let Some(revises) = t.revises_thought {
+                if let Some(&revises_idx) = thought_indices.get(&revises) {
+                    fact_graph.add_edge(revises_idx, curr_idx, souls_inference_runtime::cohomology::RelationKind::ConflictsWith);
+                }
+            }
+        }
+    }
+    let cohomology = souls_inference_runtime::cohomology::compute_cohomology(&fact_graph);
+
+    let mut enriched_analysis = analysis.clone();
+    if let Some(map) = enriched_analysis.as_object_mut() {
+        map.insert("h1_dimension".to_string(), json!(cohomology.h1_dimension));
+        map.insert("has_contradiction".to_string(), json!(cohomology.has_contradiction));
+        map.insert("cohomology_rank".to_string(), json!(cohomology.rank));
+    }
+
     Ok(json!({
         "content": [{
             "type": "text",
-            "text": serde_json::to_string_pretty(&analysis).unwrap_or_default()
+            "text": serde_json::to_string_pretty(&enriched_analysis).unwrap_or_default()
         }],
-        "structuredContent": analysis,
+        "structuredContent": enriched_analysis,
         "isError": false
     }))
 }
@@ -551,7 +615,7 @@ pub async fn handle_sqlite_query(
     }))
 }
 
-/// Handles `semantic_search` hybrid retrieval.
+/// Handles `semantic_search` hybrid retrieval blending FTS5 BM25 and LanceDB vectors via RRF.
 pub async fn handle_semantic_search(
     state: &AppState,
     args: &serde_json::Map<String, Value>,
@@ -559,14 +623,28 @@ pub async fn handle_semantic_search(
     let query = args.get("query").and_then(Value::as_str).unwrap_or("");
     let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(5) as usize;
 
-    let matches = state.memory.search_epistemic_fts5(query, limit).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+    let query_vector: Option<Vec<f32>> = args
+        .get("vector")
+        .or_else(|| args.get("query_vector"))
+        .and_then(Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_f64().map(|f| f as f32))
+                .collect()
+        });
+
+    let matches = state
+        .memory
+        .hybrid_recall(query, query_vector, limit)
+        .await
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({
         "content": [{
             "type": "text",
             "text": serde_json::to_string_pretty(&matches).unwrap_or_default()
         }],
-        "structuredContent": { "matches": matches, "query": query },
+        "structuredContent": { "matches": matches, "query": query, "limit": limit },
         "isError": false
     }))
 }
@@ -808,16 +886,44 @@ pub fn handle_callers(
     _state: &AppState,
     args: &serde_json::Map<String, Value>,
 ) -> Result<Value, McpDomainError> {
-    let symbol = args.get("symbol_name").and_then(Value::as_str).unwrap_or("");
+    let symbol = args
+        .get("symbol_name")
+        .or_else(|| args.get("symbol"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
     let file_scope = args.get("file_scope").and_then(Value::as_str);
+
+    let store = souls_ast::call_graph::CallGraphStore::new();
+    let callers = store.get_callers(symbol);
+    let sym_entry = store.lookup_symbol(symbol);
+
+    let mut callers_list = Vec::new();
+    for c in &callers {
+        let entry = store.lookup_symbol(c);
+        let (file, line) = match entry {
+            Some(ref e) => (e.file_path.to_string_lossy().to_string(), e.line),
+            None => (file_scope.unwrap_or("unknown").to_string(), 0),
+        };
+        callers_list.push(json!({
+            "caller": c,
+            "file": file,
+            "line": line,
+            "snippet": format!("let _ = {symbol}();")
+        }));
+    }
 
     let res = json!({
         "symbol": symbol,
         "file_scope": file_scope,
-        "callers": [
-            { "file": "crates/souls_server/src/mcp/dispatcher.rs", "line": 42, "snippet": format!("let _ = {symbol}();") }
-        ],
-        "count": 1
+        "symbol_info": sym_entry.map(|e| json!({
+            "qualified_name": e.qualified_name,
+            "kind": e.kind.as_str(),
+            "file": e.file_path.to_string_lossy(),
+            "line": e.line,
+            "col": e.column
+        })),
+        "callers": callers_list,
+        "count": callers.len()
     });
 
     Ok(json!({
@@ -835,12 +941,41 @@ pub fn handle_callees(
     _state: &AppState,
     args: &serde_json::Map<String, Value>,
 ) -> Result<Value, McpDomainError> {
-    let symbol = args.get("symbol_name").and_then(Value::as_str).unwrap_or("");
+    let symbol = args
+        .get("symbol_name")
+        .or_else(|| args.get("symbol"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+
+    let store = souls_ast::call_graph::CallGraphStore::new();
+    let callees = store.get_callees(symbol);
+    let sym_entry = store.lookup_symbol(symbol);
+
+    let mut callees_list = Vec::new();
+    for c in &callees {
+        let entry = store.lookup_symbol(c);
+        let (file, line) = match entry {
+            Some(ref e) => (e.file_path.to_string_lossy().to_string(), e.line),
+            None => ("unknown".to_string(), 0),
+        };
+        callees_list.push(json!({
+            "callee": c,
+            "file": file,
+            "line": line
+        }));
+    }
 
     let res = json!({
         "symbol": symbol,
-        "callees": [],
-        "count": 0
+        "symbol_info": sym_entry.map(|e| json!({
+            "qualified_name": e.qualified_name,
+            "kind": e.kind.as_str(),
+            "file": e.file_path.to_string_lossy(),
+            "line": e.line,
+            "col": e.column
+        })),
+        "callees": callees_list,
+        "count": callees.len()
     });
 
     Ok(json!({

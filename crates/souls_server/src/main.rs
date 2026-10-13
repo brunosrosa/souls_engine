@@ -1339,4 +1339,125 @@ impl FixtureService {
         })).await;
         assert!(res_graph["structuredContent"]["nodes"].is_array());
     }
+
+    #[tokio::test]
+    async fn test_mcp_phase4_connections_integration() {
+        let state = create_test_state().await;
+        let app = build_router(state.clone());
+
+        let call_tool = |tool_name: &'static str, args: serde_json::Value| {
+            let app_clone = app.clone();
+            async move {
+                let payload = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": 999,
+                    "method": "tools/call",
+                    "params": {
+                        "name": tool_name,
+                        "arguments": args
+                    }
+                });
+                let req = Request::builder()
+                    .uri("/mcp")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                    .unwrap();
+                let resp = app_clone.oneshot(req).await.unwrap();
+                assert_eq!(resp.status(), StatusCode::OK);
+                let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+                let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                v["result"].clone()
+            }
+        };
+
+        // 1. Validar Call Graph Store integration (callers e callees)
+        let graph_store = souls_ast::call_graph::CallGraphStore::new();
+        graph_store.insert_symbol(souls_ast::call_graph::SymbolEntry {
+            qualified_name: "test_caller_fn".to_string(),
+            kind: souls_ast::call_graph::SymbolKind::Fn,
+            file_path: std::path::PathBuf::from("crates/souls_server/src/lib.rs"),
+            line: 42,
+            column: 1,
+        });
+        graph_store.insert_symbol(souls_ast::call_graph::SymbolEntry {
+            qualified_name: "test_callee_fn".to_string(),
+            kind: souls_ast::call_graph::SymbolKind::Fn,
+            file_path: std::path::PathBuf::from("crates/souls_server/src/lib.rs"),
+            line: 88,
+            column: 1,
+        });
+        graph_store.insert_edge("test_caller_fn", "test_callee_fn", 1700000000);
+
+        let res_callers = call_tool("callers", serde_json::json!({
+            "symbol": "test_callee_fn"
+        })).await;
+        assert_eq!(res_callers["structuredContent"]["count"], 1);
+        let callers_arr = res_callers["structuredContent"]["callers"].as_array().unwrap();
+        assert_eq!(callers_arr[0]["caller"], "test_caller_fn");
+
+        let res_callees = call_tool("callees", serde_json::json!({
+            "symbol": "test_caller_fn"
+        })).await;
+        assert_eq!(res_callees["structuredContent"]["count"], 1);
+        let callees_arr = res_callees["structuredContent"]["callees"].as_array().unwrap();
+        assert_eq!(callees_arr[0]["callee"], "test_callee_fn");
+
+        // 2. Validar Socratic Cohomology (H¹ e Rouché-Capelli)
+        let res_think1 = call_tool("thinking", serde_json::json!({
+            "session_id": "cohomology_session",
+            "thought": "Premise A: Initial hypothesis holds",
+            "thought_number": 1,
+            "total_thoughts": 3,
+            "next_thought_needed": true
+        })).await;
+        assert_eq!(res_think1["structuredContent"]["h1_dimension"], 0);
+        assert_eq!(res_think1["structuredContent"]["has_contradiction"], false);
+
+        // Step 2 depends on Step 1 (consistent branch)
+        let res_think2 = call_tool("thinking", serde_json::json!({
+            "session_id": "cohomology_session",
+            "thought": "Premise B: Derives consistently from Premise A",
+            "thought_number": 2,
+            "total_thoughts": 3,
+            "next_thought_needed": true,
+            "branch_from_thought": 1
+        })).await;
+        assert_eq!(res_think2["structuredContent"]["h1_dimension"], 0);
+        assert_eq!(res_think2["structuredContent"]["has_contradiction"], false);
+
+        // Step 3 depends on Step 2 but contradicts Step 1 (odd negation cycle)
+        let res_think3 = call_tool("thinking", serde_json::json!({
+            "session_id": "cohomology_session",
+            "thought": "Premise C: Depends on B but refutes root Premise A",
+            "thought_number": 3,
+            "total_thoughts": 3,
+            "next_thought_needed": false,
+            "branch_from_thought": 2,
+            "is_revision": true,
+            "revises_thought": 1
+        })).await;
+        assert!(res_think3["structuredContent"]["h1_dimension"].as_u64().unwrap() >= 1);
+        assert_eq!(res_think3["structuredContent"]["has_contradiction"], true);
+
+        let res_analysis = call_tool("analyze_session", serde_json::json!({
+            "session_id": "cohomology_session"
+        })).await;
+        assert_eq!(res_analysis["structuredContent"]["has_contradiction"], true);
+        assert!(res_analysis["structuredContent"]["h1_dimension"].as_u64().unwrap() >= 1);
+
+        // 3. Validar SubprocessGuard em shell
+        let res_shell = call_tool("shell", serde_json::json!({
+            "command": "Write-Output 'souls_subprocess_guard_ok'"
+        })).await;
+        assert!(res_shell["content"][0]["text"].as_str().unwrap().contains("souls_subprocess_guard_ok"));
+        assert_eq!(res_shell["structuredContent"]["exit_code"], 0);
+
+        // 4. Validar Hybrid Recall (FTS5 + LanceDB)
+        let res_sem = call_tool("semantic_search", serde_json::json!({
+            "query": "non_existent_token_xyz_123",
+            "limit": 5
+        })).await;
+        assert!(res_sem["structuredContent"]["matches"].is_array());
+    }
 }
