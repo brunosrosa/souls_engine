@@ -29,7 +29,7 @@ pub use gguf_mmap::{
 };
 pub use healing::heal_json_response;
 pub use inference::{
-    get_or_compile_grammar, grammar_cache, resolve_llama_bench_binary,
+    get_or_compile_grammar, gpu_execution_lock, grammar_cache, resolve_llama_bench_binary,
     resolve_llama_cli_binary, resolve_llama_completion_binary, CompiledGrammar,
     GenOutput, GenParams, HardwareProfileMetrics, KvCacheConfig, KvCacheType,
     Tier1GenerativeEngine,

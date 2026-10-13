@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,15 @@ use tracing::warn;
 use crate::error::InferenceError;
 use crate::healing::heal_json_response;
 use crate::nvml::HardwareWatchdog;
+
+static GPU_EXECUTION_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+/// Process-wide mutual exclusion lock for GPU VRAM allocation.
+/// Guarantees that only ONE llama-completion process can execute on the dGPU simultaneously.
+#[must_use]
+pub fn gpu_execution_lock() -> &'static Mutex<()> {
+    GPU_EXECUTION_LOCK.get_or_init(|| Mutex::new(()))
+}
 
 /// KV Cache Quantization Types for Upstream llama.cpp.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -376,6 +385,10 @@ impl Tier1GenerativeEngine {
 
     /// Physical generation pass using host llama-completion / llama-cli on designated model weights.
     pub fn execute_model_pass(&self, model_path: &Path, prompt: &str, params: &GenParams) -> String {
+        // Regra de Ouro (AGENTS.md Linha Vermelha 5): Exclusão Mútua de VRAM na RTX 2060m.
+        // Garante que apenas UM processo aloca a GPU por vez, prevenindo vazamento para a RAM e PCIe spillover.
+        let _gpu_guard = gpu_execution_lock().lock().unwrap_or_else(|p| p.into_inner());
+
         if model_path.exists() {
             if let Some(bin) = resolve_llama_completion_binary().or_else(resolve_llama_cli_binary) {
                 let mut cmd = std::process::Command::new(&bin);
