@@ -717,7 +717,12 @@ Para manter a estrita conformidade com as Linhas Vermelhas do `AGENTS.md` e a hi
    - Conectado o `CallGraphStore` de `souls_ast` nos handlers `callers` e `callees` em `mcp/handlers.rs`.
    - Teste de integração de voo da Fase 4 adicionado (`test_mcp_phase4_connections_integration`).
    - 24/24 testes PASS. Commit `464efe2`.
-5. **Fase 5: Empacotamento, Produto & Distribuição [PRÓXIMA ETAPA]:**
-   - Criar `tools/install_souls.ps1` com injeção segura e verificação via `hermes config check`.
-   - Criar manifesto Inno Setup `installer/souls_engine_setup.iss`.
-   - Realizar o teste de voo real com o daemon release `souls_engine.exe` e o Hermes Agent Desktop.
+5. **Fase 5: Empacotamento, Produto & Distribuição [CONCLUÍDA & HOMOLOGADA]:**
+   - Criado e executado o script mestre `tools/install_souls.ps1` instalando o ecossistema em `C:\Users\rosas\AppData\Local\SoulsEngine\`.
+   - Gerados os binários gêmeos release `souls_server.exe` e `souls_engine.exe` (27.1 MB otimizados MSVC LTO/O3).
+   - Auto-montagem transparente do Dev Drive ReFS (`C:\dev_projects\Souls_FORGE.vhdx`) implementada tanto no binário nativo Rust quanto no launcher PowerShell.
+   - Criados atalhos de alta resolução no Menu Iniciar e Desktop com os ícones multi-resolução do mascote Souls Engine.
+   - Injeção cirúrgica no `%LOCALAPPDATA%\hermes\config.yaml` com backup `.bak` e 100% aprovado no `hermes config check`.
+   - Links Junction dos adaptadores de plugins ativos em `%LOCALAPPDATA%\hermes\desktop-plugins\`.
+   - Criado o manifesto Inno Setup `installer/souls_engine_setup.iss` para instalador gráfico de distribuição.
+   - Teste de voo do daemon release instalado aprovado com status `healthy` e VRAM 4503 MB livre no `http://127.0.0.1:9123/health`.

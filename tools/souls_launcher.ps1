@@ -21,10 +21,8 @@ if (-not (Test-Path "Z:\") -and (Test-Path $vhdxPath)) {
 $running = Get-Process -Name "souls_engine", "souls_server" -ErrorAction SilentlyContinue
 if (-not $running) {
     $candidates = @(
-        "$env:LOCALAPPDATA\Programs\SoulsEngine\souls_engine.exe",
-        "$env:LOCALAPPDATA\Programs\SoulsEngine\souls_server.exe",
-        "$env:LOCALAPPDATA\souls_engine\souls_engine.exe",
-        "$env:LOCALAPPDATA\souls_engine\souls_server.exe",
+        "$env:LOCALAPPDATA\SoulsEngine\souls_engine.exe",
+        "$env:LOCALAPPDATA\SoulsEngine\souls_server.exe",
         "Z:\souls_engine\target\release\souls_engine.exe",
         "Z:\souls_engine\target\x86_64-pc-windows-msvc\release\souls_engine.exe",
         "Z:\souls_engine\target\release\souls_server.exe",
