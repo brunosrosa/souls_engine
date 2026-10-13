@@ -97,3 +97,10 @@ A base de código e documentação segue uma divisão linguística estrita:
     - Documentações arquiteturais em `docs/` e manuais técnicos.
     - Architectural Decision Records (ADRs).
     - Comentários conceituais de alto nível que expliquem o "porquê" de decisões complexas de design.
+
+## 8. RESILIÊNCIA OPERACIONAL, SINGLE-INSTANCE & HIGIENE DE CONFIGURAÇÃO
+
+Com base no caderno de post-mortems (`docs/architecture/LESSONS_LEARNED_AND_POSTMORTEM.md`):
+1. **Proibição de Edições Cegas em Arquivos Estruturados (YAML/TOML):** É terminantemente proibido utilizar substituições simplistas de texto (`starts_with`) em arquivos hierárquicos (como o `config.yaml` do Hermes). Toda mutação deve navegar explicitamente até a chave correta para evitar corrupção sintática de blocos filhos.
+2. **Protocolo Single-Instance & Zombie Immunity:** O daemon deve sondar ativamente `http://127.0.0.1:9123/health` caso a porta TCP esteja ocupada. Se a instância já estiver saudável, deve encerrar de forma limpa com código 0 (sem panic). Se for um zumbi, deve instruir o uso de `stop_souls.bat`.
+3. **Dupla Identidade de Binários Nativos:** A esteira de compilação release deve disponibilizar tanto o nome de especificação `souls_server.exe` quanto o executável com identidade de produto `souls_engine.exe`.
