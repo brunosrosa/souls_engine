@@ -700,17 +700,24 @@ Para manter a estrita conformidade com as Linhas Vermelhas do `AGENTS.md` e a hi
 - Todo o material rico do doador (`_donor/souls_mc_anthropophagy` com 11 linters SAST, verificador SPDX, Organ Vault, dissector e swarm) está preservado e catalogado para ser **transplantado em uma sessão monográfica própria e dedicada** após a conclusão das 5 Fases deste roadmap.
 - Nenhum agente deve tentar adiantar ou misturar `souls_anthropophagy` com as demais crates para evitar explosão de contexto e violação da Regra de Crate Única do `AGENTS.md`.
 
-### 16.4 Protocolo de Execução para os Próximos Passos
-Ao receber este roadmap, o agente deve seguir estritamente o seguinte fluxo de trabalho:
-1. **Começar pela Fase 1 (souls_protocol + souls_core):**
-   - Separar `souls_protocol` em seus submódulos formais (`dto.rs`, `mcp.rs`, `lean.rs`, `error.rs`).
-   - Transplantar para `souls_core` os componentes `subprocess_guard.rs`, `pii_redactor.rs` e `panic.rs`.
-   - Validar com `cargo check` e `cargo test` para cada crate individual antes de commitar.
-2. **Avançar para a Fase 2 (souls_memory):**
-   - Transplantar o motor físico LanceDB para `souls_memory/src/lancedb.rs` conectando os embeddings Arrow ao disco ReFS.
-3. **Avançar para a Fase 3 (souls_inference_runtime + souls_ast):**
-   - Transpor `cohomology.rs` para o cérebro socrático e `call_graph.rs` para análise sintática Tree-sitter.
-4. **Avançar para a Fase 4 (souls_server):**
-   - Plugar todas as novas capacidades nas garras MCP do servidor headless.
-5. **Avançar para a Fase 5 (Produto, Instalador & Teste Simbiótico):**
-   - Criar `install_souls.ps1`, manifesto Inno Setup e realizar o teste de voo real com o Hermes Agent Desktop.
+### 16.4 Status da Esteira de Conclusão dos 100% (5 Fases Canônicas)
+1. **Fase 1: Fundações de Segurança & Protocolo [CONCLUÍDA & COMMITADA]:**
+   - `souls_protocol`: Modularizado em `dto.rs`, `mcp.rs`, `lean.rs`, `error.rs` com reexportações retrocompatíveis. 15/15 testes PASS. Commit `07275a9`.
+   - `souls_core`: Implementados `subprocess_guard.rs` (RAII process lifecycle contra zumbis), `pii_redactor.rs` (Aho-Corasick linear O(N) com tokens reversíveis em RAM) e `panic.rs` (`run_safe_task` e `run_safe_sync` sobre `catch_unwind`). 22/22 testes PASS. Commit `26a5a07`.
+2. **Fase 2: Hipocampo L3 Vetorial Físico [CONCLUÍDA & COMMITADA]:**
+   - `souls_memory`: Implementado `lancedb.rs` conectando a tabela Arrow colunar `observations_vector` em `Z:\souls_engine\.souls_data\souls_vectors.lance` operando com 0 MB de VRAM via Arrow memory model em CPU/RAM. Integrado `hybrid_recall` no `SoulsMemoryStore` fundindo FTS5 lexical BM25 e busca vetorial densa LanceDB via RRF (k=60.0). 26/26 testes PASS. Commit `ef24093`.
+3. **Fase 3: Inteligência Matemática Avançada & AST Determinística [CONCLUÍDA & COMMITADA]:**
+   - `souls_inference_runtime`: Implementado `cohomology.rs` com álgebra linear sobre Galois Field GF(2) em `[u64; 4]` ocupando apenas 8.2 KB na stack para detecção de contradições em premissas de grafos socráticos via Rouché-Capelli. Commit `bb75427`.
+   - `souls_ast`: Implementado `call_graph.rs` com grafo de chamadas direcionado (`CallGraphNode`, callers e callees) e índice de símbolos em DashMap lock-free na RAM host. 22/22 testes PASS. Commit `b1b4979`.
+   - **Correção Crítica de Concorrência dGPU:** Implementado `gpu_execution_lock()` (`OnceLock<Mutex<()>>`) em `inference.rs` garantindo exclusão mútua em nível de processo antes de qualquer chamada a `llama-completion.exe`. Commit `f48e033`.
+4. **Fase 4: Amarração de Conexões no Servidor Headless (`souls_server`) [CONCLUÍDA & COMMITADA]:**
+   - Conectado `SubprocessGuard` nos handlers de `shell` e `execute` em `mcp/tools_extended.rs`, com imunidade a zumbis e terminação limpa via RAII Drop.
+   - Conectado `hybrid_recall` no handler `semantic_search` e busca vetorial LanceDB em `mem_search`.
+   - Conectada a avaliação de cohomologia de feixes socráticos (`cohomology::compute_cohomology`) nos handlers `thinking` e `analyze_session`.
+   - Conectado o `CallGraphStore` de `souls_ast` nos handlers `callers` e `callees` em `mcp/handlers.rs`.
+   - Teste de integração de voo da Fase 4 adicionado (`test_mcp_phase4_connections_integration`).
+   - 24/24 testes PASS. Commit `464efe2`.
+5. **Fase 5: Empacotamento, Produto & Distribuição [PRÓXIMA ETAPA]:**
+   - Criar `tools/install_souls.ps1` com injeção segura e verificação via `hermes config check`.
+   - Criar manifesto Inno Setup `installer/souls_engine_setup.iss`.
+   - Realizar o teste de voo real com o daemon release `souls_engine.exe` e o Hermes Agent Desktop.
