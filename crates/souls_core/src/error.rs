@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-/// Core engine errors for bare-metal I/O, ReFS operations, and token budgeting.
+/// Core engine errors for bare-metal I/O, ReFS operations, subprocesses, and task safety.
 #[derive(Error, Debug)]
 pub enum CoreError {
     /// I/O error wrapper.
@@ -24,6 +24,14 @@ pub enum CoreError {
     /// Async task spawn_blocking join error.
     #[error("Task join error: {0}")]
     TaskJoinError(String),
+
+    /// Task panicked and was caught via panic containment barrier.
+    #[error("Internal engine task panicked: {0}")]
+    InternalPanic(String),
+
+    /// Subprocess execution failure, timeout or zombie prevention error.
+    #[error("Subprocess guard error: {0}")]
+    SubprocessError(String),
 
     /// Logging / Tracing initialization failure.
     #[error("Tracing initialization error: {0}")]
