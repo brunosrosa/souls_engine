@@ -3,7 +3,7 @@
 use thiserror::Error;
 
 /// Central error enumeration for all memory operations, including SQLite STRICT,
-/// RRF fusion, LadybugDB graph, and Chyros Langevin metabolism.
+/// LanceDB columnar vector storage, RRF fusion, LadybugDB graph, and Chyros Langevin metabolism.
 #[derive(Debug, Error)]
 pub enum MemoryError {
     #[error("Database error: {0}")]
@@ -14,6 +14,12 @@ pub enum MemoryError {
 
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+
+    #[error("LanceDB vector storage error: {0}")]
+    LanceDb(String),
+
+    #[error("Vector dimension mismatch: expected {expected}, received {received}")]
+    VectorDimensionMismatch { expected: usize, received: usize },
 
     #[error("Ontology violation in LadybugDB: {reason} (violated node: {violated_node})")]
     OntologyViolation {
@@ -51,4 +57,3 @@ pub enum MemoryError {
     #[error("Handoff payload '{0}' not found")]
     HandoffNotFound(String),
 }
-

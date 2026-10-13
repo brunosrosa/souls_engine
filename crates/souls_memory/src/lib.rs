@@ -1,12 +1,14 @@
 //! SOULS ENGINE — Memory Subsystem (Hipocampo L3 Soberano).
 //!
 //! Provides FrankenSQLite STRICT WAL persistence, CPU-accelerated RRF hybrid fusion,
+//! LanceDB columnar vector storage (0 MB VRAM via Arrow Memory Model),
 //! Langevin Decay thermal metabolism with STABLE immunity, LadybugDB ontological causal graph,
 //! delegated sub-agent lifecycle management, turn handoff payloads, and socratic thinking DAG.
 
 pub mod chyros;
 pub mod error;
 pub mod ladybug;
+pub mod lancedb;
 pub mod mpsc_bridge;
 pub mod rrf;
 pub mod session_manager;
@@ -25,6 +27,7 @@ use tracing::info;
 pub use chyros::{ChyrosDaemon, ChyrosMetabolismReport};
 pub use error::MemoryError;
 pub use ladybug::{LadybugOntologyGraph, OntologicalEdge, OntologicalNode};
+pub use lancedb::{get_vector_table_schema, LanceDbVectorStore, VECTOR_DIMENSION};
 pub use mpsc_bridge::{MemoryBridgeOp, MemoryMpscBridge};
 pub use rrf::{LexicalCandidate, RrfFusionEngine, UnifiedMatch, VectorCandidate};
 pub use session_manager::{
@@ -48,6 +51,7 @@ pub struct SoulsMemoryStore {
     pool_swap: Arc<ArcSwap<Pool<Sqlite>>>,
     ladybug: LadybugOntologyGraph,
     rrf: RrfFusionEngine,
+    lance_store: LanceDbVectorStore,
     chyros: Arc<ChyrosDaemon>,
     sub_agent_manager: Arc<SubAgentManager>,
     thinking_sessions: Arc<DashMap<String, Arc<RwLock<ThinkingEngine>>>>,
@@ -68,6 +72,14 @@ impl SoulsMemoryStore {
         ladybug.load_from_db(&pool_arc).await?;
 
         let rrf = RrfFusionEngine::default();
+
+        // Resolve LanceDB vectors directory adjacent to sqlite vault
+        let lance_dir = path
+            .parent()
+            .map(|p| p.join("souls_vectors.lance"))
+            .unwrap_or_else(|| PathBuf::from(r"Z:\souls_engine\.souls_data\souls_vectors.lance"));
+        let lance_store = LanceDbVectorStore::new(lance_dir);
+
         let chyros = Arc::new(ChyrosDaemon::new(&path)?);
         let sub_agent_manager = Arc::new(SubAgentManager::new(pool_arc.clone()));
         let thinking_sessions = Arc::new(DashMap::new());
@@ -78,6 +90,7 @@ impl SoulsMemoryStore {
             pool_swap: Arc::new(ArcSwap::from_pointee((*pool_arc).clone())),
             ladybug,
             rrf,
+            lance_store,
             chyros,
             sub_agent_manager,
             thinking_sessions,
@@ -92,6 +105,9 @@ impl SoulsMemoryStore {
 
         let ladybug = LadybugOntologyGraph::new();
         let rrf = RrfFusionEngine::default();
+        let temp_lance = std::env::temp_dir().join(format!("souls_lance_test_{}", std::process::id()));
+        let lance_store = LanceDbVectorStore::new(temp_lance);
+
         let chyros = Arc::new(ChyrosDaemon::new_in_memory());
         let sub_agent_manager = Arc::new(SubAgentManager::new(pool_arc.clone()));
         let thinking_sessions = Arc::new(DashMap::new());
@@ -102,6 +118,7 @@ impl SoulsMemoryStore {
             pool_swap: Arc::new(ArcSwap::from_pointee((*pool_arc).clone())),
             ladybug,
             rrf,
+            lance_store,
             chyros,
             sub_agent_manager,
             thinking_sessions,
@@ -127,6 +144,11 @@ impl SoulsMemoryStore {
     /// Accesses the RRF fusion engine.
     pub fn rrf(&self) -> &RrfFusionEngine {
         &self.rrf
+    }
+
+    /// Accesses the LanceDB columnar vector store.
+    pub fn lance_store(&self) -> &LanceDbVectorStore {
+        &self.lance_store
     }
 
     /// Accesses the Chyros metabolism daemon.
@@ -202,6 +224,40 @@ impl SoulsMemoryStore {
     ) -> Result<Vec<(String, String, String)>, MemoryError> {
         let pool = self.pool();
         search_epistemic_fts5(&pool, query, limit).await
+    }
+
+    /// Executes full Hybrid Recall fusing FTS5 lexical BM25 and LanceDB vector cosine similarity via RRF.
+    pub async fn hybrid_recall(
+        &self,
+        query: &str,
+        query_vector: Option<Vec<f32>>,
+        limit: usize,
+    ) -> Result<Vec<UnifiedMatch>, MemoryError> {
+        // 1. Lexical retrieval from FTS5
+        let fts_raw = self.search_epistemic_fts5(query, limit * 2).await?;
+        let lexical_candidates: Vec<LexicalCandidate> = fts_raw
+            .into_iter()
+            .enumerate()
+            .map(|(idx, (id, category, content))| LexicalCandidate {
+                id,
+                category,
+                content,
+                score: 1.0 / (idx + 1) as f64,
+            })
+            .collect();
+
+        // 2. Vector retrieval from LanceDB (if embedding provided)
+        let vector_candidates = if let Some(vec) = query_vector {
+            self.lance_store.search_vectors(vec, limit * 2, None).await.unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
+        // 3. Reciprocal Rank Fusion blending
+        let empty_tombstones = std::collections::HashSet::new();
+        let (mut fused, _) = self.rrf.fuse_with_query(query, &lexical_candidates, &vector_candidates, &empty_tombstones);
+        fused.truncate(limit);
+        Ok(fused)
     }
 
     /// Runs a full Chyros Langevin metabolism cycle. If atomic file rotation occurs,
