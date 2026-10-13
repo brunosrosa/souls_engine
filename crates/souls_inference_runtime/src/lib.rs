@@ -8,6 +8,7 @@
 //! - GGUF Parser: Zero-copy O(1) header inspection via `memmap2`.
 //! - Response Healing: Deterministic stack-based JSON repair pipeline.
 
+pub mod cohomology;
 pub mod error;
 pub mod gguf_mmap;
 pub mod healing;
@@ -17,6 +18,10 @@ pub mod nvml;
 pub mod onnx;
 
 // Re-export canonical types and functions
+pub use cohomology::{
+    boost_memory_conflict, compute_cohomology, CohomologyResult, FactEdge, RelationKind,
+    RestrictionMatrix, SocraticFactGraph,
+};
 pub use error::InferenceError;
 pub use gguf_mmap::{
     inspect_gguf_metadata_o1, parse_gguf_slice, BoundedGgufPool, GgufMappedReader,
