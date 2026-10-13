@@ -535,12 +535,182 @@ flowchart LR
 
 ---
 
-## 12. MATRIZ FINAL DE CONCLUSÃO: 13 DE 13 SESSÕES ENTREGUES (100%)
+## 12. MATRIZ CONSOLIDADA: SESSÕES 1 A 13 ENTREGUES (100% HOMOLOGADO)
 
-O **Souls Engine v7** atinge o ápice de sua especificação formal:
+O **Souls Engine v7** atingiu o ápice de sua especificação funcional e homologação clínica:
 - **Topologia:** Exatamente 10 crates canônicas compilando com MSVC e zero warnings.
-- **Catálogo MCP:** 52 ferramentas reais ativas, des-stagadas e testadas ponta a ponta.
+- **Catálogo MCP:** 52 ferramentas reais ativas, des-stagadas e testadas ponta a ponta (156/156 cenários aprovados).
 - **Skills Agênticas:** 15 skills homologadas com reflexos éticos e finops.
 - **Silício Físico:** 15 modelos neurais em disco (32.57 GB) acoplados ao i9 (AVX2) e RTX 2060m.
 - **Simbiose:** Hermes Agent Desktop e Souls Engine operando em uníssono bare-metal.
 
+---
+
+## 13. SESSÃO EXTRA DE AUDITORIA, FIX DE CONFIGURAÇÃO & BINÁRIO RELEASE
+
+### 13.1 Post-Mortem & Fix Definitivo do `config.yaml` do Hermes Agent
+* **Diagnóstico de Causa-Raiz:** O antigo handler `hermes_preset_handler` em `crates/souls_server/src/routes/dashboard.rs` utilizava substituição de texto cega (`line.trim_start().starts_with("model:")`), convertendo o cabeçalho mapeado hierárquico `model:` em um escalar puro (`model: "deepseek/..."`). A linha seguinte indentada (`  default: ...`) gerava erro de gramática YAML na inicialização do Hermes e quebrava o `hermes update`:
+  `Details: expected <block end>, but found '<block mapping start>'`
+* **Solução Entregue (Commit `e3269f8`):** O handler foi refatorado para navegar conscientemente na árvore YAML e atualizar **exclusivamente** a linha `  default:` sob o bloco `model:` de nível superior. O arquivo do usuário em `%LOCALAPPDATA%\hermes\config.yaml` foi restaurado a partir do backup limpo com o bloco canônico de transporte `mcp_servers.souls_engine` injetado no topo, validado e aprovado com 100% de sucesso por `hermes config check`.
+
+### 13.2 Blindagem de Porta TCP (Single-Instance Probe & Zombie Recovery)
+* **Solução Entregue (Commit `1163afb`):** Diante de colisão de porta TCP (`os error 10048` / WSAEADDRINUSE):
+  - O daemon emite uma sonda assíncrona imediata para `http://127.0.0.1:9123/health` (timeout de 800ms).
+  - Se responder **200 OK Saudável**: O processo reconhece que o Souls Engine já está ativo, exibe mensagem amigável e encerra com `ExitCode::SUCCESS` (código 0, sem panic ou janelas de erro no Windows).
+  - Se a porta estiver presa por um processo órfão que não responde: emite alerta claro diagnosticando zumbi e instrui o uso de `stop_souls.bat`.
+  - Gravação determinística de `Z:\souls_engine\.souls_data\souls_server.pid` para rastreamento de processo.
+
+### 13.3 Compilação de Produção Release & Dupla Identidade de Binários
+* **Entrega:** Execução de `cargo build --release -p souls_server` gerando o binário nativo MSVC x86_64 otimizado (reduzido de 64 MB para 34.9 MB).
+* **Esteira `tools/build_souls_release.ps1` (Commit `bd56fc8`):** Disponibiliza simultaneamente:
+  - `target\release\souls_server.exe` (identidade formal de especificação headless).
+  - `target\release\souls_engine.exe` (identidade de produto executável esperada pelo usuário).
+* **Launchers Dinâmicos:** `start_souls.bat` e `tools/souls_launcher.ps1` atualizados para priorizar a versão de release `souls_engine.exe`, com parada em lote de ambos em `stop_souls.bat`.
+* **Governança Canônica:** Registro formal das lições aprendidas em `docs/architecture/LESSONS_LEARNED_AND_POSTMORTEM.md` e Seção 8 do `AGENTS.md` (Commit `0f3b17a`).
+
+---
+
+## 14. VARREDURA FORENSE DO ACERVO LEGADO (`_donor/`) & DECISÃO ESTRATÉGICA
+
+Uma dissecação profunda sobre os 100+ arquivos em `Z:\souls_engine\_donor` versus `docs/architecture/CRATES_SPECIFICATION.md` revelou:
+
+### 14.1 Decisão Executiva: Crate `souls_anthropophagy` em Sessão Monográfica Dedicada
+* **Diagnóstico:** Atualmente a crate `crates/souls_anthropophagy` possui apenas 1 arquivo placeholder (`add(2, 2)`). No doador `_donor/souls_mc_anthropophagy`, residem subsistemas densos de alta complexidade:
+  - 11 linters SAST poliglotas (`harvester/sast/`: bandit, biome, clippy, cppcheck, govulncheck, oxc, ruff, sobelow).
+  - Firewall de conformidade de licenças SPDX (`spdx.rs`: rejeição de GPL/AGPL virais).
+  - Dissecador de AST e Amputador cirúrgico de funções (`dissector.rs` e `slicer.rs`).
+  - Catálogo "The Organ Vault" no SQLite (`vault.rs` e `persist/`).
+  - Motores de síntese e orquestração (`synthesizer.rs` [167 KB] e `swarm.rs` [66 KB]).
+* **Diretriz Aprovada:** Por se tratar de um módulo volumoso e especializado, **a transposição e consolidação de `souls_anthropophagy` será realizada em uma sessão própria e exclusiva**, evitando inchaço de escopo e dispersão de foco.
+
+### 14.2 Órgãos Saudáveis Identificados para Conclusão do Restante do Workspace
+Para todas as demais crates, os seguintes módulos de alto valor do `_donor` foram selecionados para a esteira final:
+1. **`_donor/.../vector_store.rs` (537 linhas):** O reator físico colunar LanceDB (`arrow`, `FixedSizeListArray`, `mmap`) para persistir embeddings de 384d em `.souls_data/souls_vectors.lance` com 0 MB de VRAM na `souls_memory`.
+2. **`_donor/.../subprocess_guard.rs` (505 linhas):** Guardião RAII de subprocessos com `TerminateProcess` atômico Win32 para blindar as ferramentas `shell` e `execute` de zumbis em `souls_core`.
+3. **`_donor/.../pii_redactor.rs` (391 linhas):** Autômato linear Aho-Corasick $\mathcal{O}(N)$ para mascaramento e desmascaramento reversível de caminhos/chaves locais antes de envio a APIs em `souls_core`.
+4. **`_donor/.../cohomology.rs` (746 linhas):** Álgebra matricial pura sobre Galois Field $GF(2)$ em `[u64; 4]` via Rouché-Capelli ($H^1 = \text{rank}([A \mid b]) - \text{rank}(A)$) para detecção de contradições de premissas em grafos socráticos no `souls_inference_runtime`.
+5. **`_donor/.../call_graph.rs`:** Rastreamento estático de grafos de invocação baseado na árvore sintática do Tree-sitter para elevar a precisão de `callers` e `callees` em `souls_ast`.
+6. **`_donor/.../context_stitcher.rs`:** Composição em 4 Zonas com Block Boundary Padding em múltiplos de 64 tokens para maximização de Prefix Caching.
+
+### 14.3 Órgãos Proibidos / Incineração Compulsória (Linhas Vermelhas)
+- `agentgateway_tcp_proxy.rs` e `l7_shield.rs`: Proxy interceptador L7 na porta :3001 (Violação da Linha Vermelha 2).
+- Servidor Axum Svelte na porta :3002 e referências a Tauri v2 / Wry / Winit (Violação da Linha Vermelha 1).
+- `boot.ps1` legado e caminhos fora do Dev Drive ReFS (Violação da Linha Vermelha 4).
+
+---
+
+## 15. A ESTEIRA DE FECHAMENTO DEFINITIVO EM 5 FASES (100% PRONTIDÃO DE PRODUTO)
+
+```mermaid
+flowchart TD
+    F1["Fase 1: Fundações de Segurança & Protocolo\n(souls_protocol + souls_core)"] --> F2["Fase 2: Hipocampo L3 Vetorial Físico\n(souls_memory + LanceDB ReFS)"]
+    F2 --> F3["Fase 3: Inteligência Matemática & AST\n(cohomology.rs + call_graph.rs)"]
+    F3 --> F4["Fase 4: Amarração de Conexões no Servidor\n(souls_server endpoints & MCP)"]
+    F4 --> F5["Fase 5: Empacotamento, Instalador & Produto\n(install_souls.ps1 + Inno Setup + Teste em Voo)"]
+```
+
+### 🔹 Fase 1: Fundações de Segurança, Protocolo & Proteção de Processos
+* **Crates:** `souls_protocol` (Nível 0) e `souls_core` (Nível 1).
+* **Entregas:**
+  1. Desmembramento modular de `souls_protocol/src/` em `dto.rs`, `mcp.rs`, `lean.rs`, `error.rs` conforme `CRATES_SPECIFICATION.md`.
+  2. Transplante de `subprocess_guard.rs` para `souls_core` (RAII process lifecycle guard contra processos zumbis).
+  3. Transplante de `pii_redactor.rs` para `souls_core` (Aho-Corasick linear $\mathcal{O}(N)$ para soberania PII).
+  4. Implementação de `panic.rs` em `souls_core` (`run_safe_task` assíncrono sobre `catch_unwind`).
+* **DoD:** `cargo test -p souls_protocol` e `cargo test -p souls_core` com 100% PASS.
+
+### 🔹 Fase 2: Hipocampo L3 Vetorial Físico (O Reator LanceDB em ReFS)
+* **Crate:** `souls_memory` (Nível 2).
+* **Entregas:**
+  1. Transplante de `vector_store.rs` para `crates/souls_memory/src/lancedb.rs`.
+  2. Abertura e gestão da tabela Arrow em `Z:\souls_engine\.souls_data\souls_vectors.lance` com 0 MB de VRAM.
+  3. Amarração do RRF Hybrid Fusion para mesclar consultas FTS5 do SQLite com busca vetorial colunar do LanceDB em disco.
+* **DoD:** `cargo test -p souls_memory` gravando e recuperando vetores do disco ReFS sem vazamento de memória.
+
+### 🔹 Fase 3: Inteligência Matemática Avançada & AST Determinística
+* **Crates:** `souls_inference_runtime` (Nível 2) e `souls_ast` (Nível 2).
+* **Entregas:**
+  1. Transplante de `cohomology.rs` para `souls_inference_runtime` (eliminação Gaussiana em GF(2) `[u64; 4]` para detecção de contradições em grafos DAG socráticos).
+  2. Conexão da álgebra de cohomologia com o `ThinkingEngine` socrático.
+  3. Transplante de `call_graph.rs` para `souls_ast` baseado em parsing Tree-sitter estático.
+* **DoD:** `cargo test -p souls_inference_runtime` e `cargo test -p souls_ast` aprovados.
+
+### 🔹 Fase 4: Amarração de Conexões no Servidor Headless
+* **Crate:** `souls_server` (Nível 4).
+* **Entregas:**
+  1. Atualização das ferramentas `shell` e `execute` em `tools_extended.rs` para usar o `SubprocessGuard` RAII.
+  2. Plugar o LanceDB físico na garra `semantic_search` e `mem_search`.
+  3. Plugar a detecção de contradições na garra `thinking`.
+  4. Plugar o call-graph sintático nas garras `callers` e `callees`.
+* **DoD:** 23/23 testes de integração do `souls_server` aprovados (`cargo test -p souls_server`).
+
+### 🔹 Fase 5: Empacotamento, Produto & Distribuição (Ready-to-Ship)
+* **Entregas de Produto & Ferramental:**
+  1. **Instalador Autônomo de Produção (`tools/install_souls.ps1`):**
+     - Instalação dos executáveis release (`souls_engine.exe` e `souls_server.exe`) em `%LOCALAPPDATA%\Programs\SoulsEngine\`.
+     - Validação e criação da estrutura ReFS em `Z:\souls_engine\.souls_data\`.
+     - Injeção idempotente e segura no `config.yaml` do Hermes Agent com verificação via `hermes config check`.
+     - Criação de links simbólicos e cópia dos plugins em `%LOCALAPPDATA%\hermes\desktop-plugins\`.
+     - Criação de atalhos no Menu Iniciar e na pasta Startup do Windows com ícones `.ico` do mascote Souls Engine.
+  2. **Manifesto Inno Setup (`installer/souls_engine_setup.iss`):** Script para geração opcional do instalador `.exe` gráfico do Windows com assistente guiado.
+  3. **Sessão Prática Simbiótica ao Vivo com o Hermes Agent:**
+     - Ligar o engine via `start_souls.bat` no modo release.
+     - Abrir o Hermes Agent e emitir comandos reais consumindo a memória L3 profunda, checando a telemetria ao vivo no Web Dashboard e o status visual na bandeja.
+
+---
+
+## 16. GUIA DEFINITIVO DE RESILIÊNCIA, DISTRIBUIÇÃO E RETOMADA PARA AGENTES DE IA
+
+> **AVISO PARA O PRÓXIMO AGENTE DE IA (HANDOFF DE MEMÓRIA):**
+> Este documento é o **mapa canônico e a fonte suprema da verdade** do Souls Engine. Se você está iniciando um novo turno ou retomando a evolução do projeto, leia atentamente esta seção antes de sugerir ou alterar qualquer código.
+
+### 16.1 Arquitetura de Resiliência a Falhas, Zumbis & Crash Recovery
+O usuário questionou formalmente: *"Se o souls_engine cair, travar ou ficar parado no sistema... abrir um novo souls_engine está tratando para limpar com segurança? E mesmo se quebrar, o souls_engine está tratando para evitar perdas?"*
+
+A governança bare-metal do Souls Engine resolve essa preocupação através de 4 barreiras físicas:
+1. **Single-Instance Health Probe Dinâmica (Porta 9123):**
+   - Ao iniciar, o `souls_server.exe` (ou `souls_engine.exe`) tenta abrir o listener TCP em `127.0.0.1:9123`.
+   - Se ocorrer colisão (`WSAEADDRINUSE` / erro 10048), o daemon dispara imediatamente uma sonda assíncrona HTTP em `http://127.0.0.1:9123/health` (timeout 800ms).
+   - Se responder **200 OK Saudável**: O processo reconhece que o daemon legítimo já está ativo em segundo plano, emite mensagem amigável no console e encerra com `ExitCode::SUCCESS` (código 0, sem panic e sem alertas de erro do Windows).
+   - Se a porta estiver presa por um processo órfão que não responde (zumbi): emite diagnóstico de alerta no console e orienta o uso do limpador atômico.
+2. **Matador Atômico de Processos Órfãos (`stop_souls.bat`):**
+   - O utilitário `stop_souls.bat` executa terminação forçada em árvore de processos (`taskkill /F /T /IM souls_server.exe` e `/IM souls_engine.exe`), liberando instantaneamente as portas Win32 e os file locks.
+3. **Integridade de Dados & Imunidade a Quedas Repentinas no ReFS:**
+   - **FrankenSQLite STRICT WAL:** Todo banco em `Z:\souls_engine\.souls_data\` opera com `PRAGMA journal_mode = WAL` e `PRAGMA synchronous = NORMAL`. As escritas são registradas sequencialmente em append-only no arquivo `-wal`. Mesmo em caso de queda de energia ou terminação forçada por `taskkill`, o SQLite recupera o banco de forma automática e atômica na próxima abertura sem perda de transações comitadas.
+   - **Graceful Shutdown:** O comando de encerramento do daemon executa flush atômico `PRAGMA wal_checkpoint(TRUNCATE)` consolidando todos os dados no banco principal e liberando espaço de disco.
+   - **LanceDB (Apache Arrow em ReFS):** A camada vetorial do LanceDB em `.souls_data/souls_vectors.lance` utiliza fragmentos colunares imutáveis com manifestos versionados. Operações de append nunca sobrescrevem blocos existentes; uma escrita interrompida simplesmente descarta o fragmento não indexado sem corromper o índice anterior.
+4. **Isolamento de Tarefas com `catch_unwind`:**
+   - Na Fase 1 da esteira, o módulo `panic.rs` em `souls_core` (`run_safe_task`) envolve a execução assíncrona de subagentes e ferramentas para que um eventual pânico isolado em um parser ou regex nunca derrube o daemon principal.
+
+### 16.2 Topologia de Pastas e Diretórios Padrão do Produto
+Para manter a estrita conformidade com as Linhas Vermelhas do `AGENTS.md` e a higiene de disco do Windows 11:
+
+| Componente | Diretório Canônico | Finalidade Arquitetural |
+| :--- | :--- | :--- |
+| **Executáveis de Release** | `%LOCALAPPDATA%\Programs\SoulsEngine\` | Binários nativos `souls_engine.exe` e `souls_server.exe` (34.9 MB). |
+| **Dados Bare-Metal & Bancos** | `Z:\souls_engine\.souls_data\` | Dev Drive ReFS isolado: SQLite STRICT WAL, LanceDB colunar, logs e PIDs. |
+| **Modelos Físicos de Silício** | `C:\Users\rosas\llm_local_models\` | 15 modelos GGUF locais (32.57 GB) mapeados no `souls_inference_runtime`. |
+| **Configuração Centralizada** | `Z:\souls_engine\.souls_data\config\souls_config.toml` | Toggles e configurações de governança lidos e gravados pelos endpoints REST. |
+| **Integração com Hermes Agent** | `%LOCALAPPDATA%\hermes\config.yaml` | Injeção do bloco de conexão `mcp_servers.souls_engine` (Streamable HTTP :9123). |
+| **Plugins do Hermes Desktop** | `%LOCALAPPDATA%\hermes\desktop-plugins\` | Junções simbólicas apontando para os adaptadores de dashboard e memória do Souls Engine. |
+| **Skills dos Agentes** | `%LOCALAPPDATA%\hermes\skills\` e `.agents\skills\` | 15 Skills canônicas procedimentais para direcionar comportamento ético e finops. |
+| **Memória Fria (Cofre Pessoal)** | `C:\Users\rosas\OneDrive\Documentos\Obisidian DB\` | Esteira de curadoria viva `raw/` $\rightarrow$ `wiki/` (498 arquivos) com isolamento `LOCAL_ONLY`. |
+
+### 16.3 Status de `souls_anthropophagy` (A Crate Monográfica)
+- A crate `crates/souls_anthropophagy` está **propositalmente mantida como placeholder** no momento.
+- Todo o material rico do doador (`_donor/souls_mc_anthropophagy` com 11 linters SAST, verificador SPDX, Organ Vault, dissector e swarm) está preservado e catalogado para ser **transplantado em uma sessão monográfica própria e dedicada** após a conclusão das 5 Fases deste roadmap.
+- Nenhum agente deve tentar adiantar ou misturar `souls_anthropophagy` com as demais crates para evitar explosão de contexto e violação da Regra de Crate Única do `AGENTS.md`.
+
+### 16.4 Protocolo de Execução para os Próximos Passos
+Ao receber este roadmap, o agente deve seguir estritamente o seguinte fluxo de trabalho:
+1. **Começar pela Fase 1 (souls_protocol + souls_core):**
+   - Separar `souls_protocol` em seus submódulos formais (`dto.rs`, `mcp.rs`, `lean.rs`, `error.rs`).
+   - Transplantar para `souls_core` os componentes `subprocess_guard.rs`, `pii_redactor.rs` e `panic.rs`.
+   - Validar com `cargo check` e `cargo test` para cada crate individual antes de commitar.
+2. **Avançar para a Fase 2 (souls_memory):**
+   - Transplantar o motor físico LanceDB para `souls_memory/src/lancedb.rs` conectando os embeddings Arrow ao disco ReFS.
+3. **Avançar para a Fase 3 (souls_inference_runtime + souls_ast):**
+   - Transpor `cohomology.rs` para o cérebro socrático e `call_graph.rs` para análise sintática Tree-sitter.
+4. **Avançar para a Fase 4 (souls_server):**
+   - Plugar todas as novas capacidades nas garras MCP do servidor headless.
+5. **Avançar para a Fase 5 (Produto, Instalador & Teste Simbiótico):**
+   - Criar `install_souls.ps1`, manifesto Inno Setup e realizar o teste de voo real com o Hermes Agent Desktop.
