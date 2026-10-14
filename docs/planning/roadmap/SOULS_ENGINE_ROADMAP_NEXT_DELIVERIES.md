@@ -731,3 +731,155 @@ Para manter a estrita conformidade com as Linhas Vermelhas do `AGENTS.md` e a hi
    - Links Junction dos adaptadores de plugins ativos em `%LOCALAPPDATA%\hermes\desktop-plugins\`.
    - Criado o manifesto Inno Setup `installer/souls_engine_setup.iss` para instalador gráfico de distribuição.
    - Teste de voo do daemon release instalado aprovado com status `healthy` e VRAM 4503 MB livre no `http://127.0.0.1:9123/health`.
+
+---
+
+## 17. SESSÃO EXTRAORDINÁRIA: AUDITORIA, EXPURGO ANACRÔNICO & EQUALIZAÇÃO DA CLOUD ARENA [CONCLUÍDA & HOMOLOGADA]
+
+Durante os testes de observabilidade do Web Dashboard, identificou-se que o modelo `Claude 3.7 Sonnet` figurava incorretamente como Quality Leader na Cloud Arena. Uma auditoria profunda revelou distorções matemáticas de escalas e presença de sementes estáticas antigas.
+
+### 17.1 Diagnóstico da Causa-Raiz (O Bug da Escala 10-60 vs LMSYS Elo)
+1. **Conflito de Escalas em `scoring.rs`:**
+   - Modelos contemporâneos de 2026 (`anthropic/claude-opus-5.5` [57.6], `anthropic/claude-sonnet-5.5` [56.0], `google/gemini-4-argon` [52.6]) utilizam o **Artificial Analysis Intelligence Index**, cuja escala global do estado da arte varia entre **10 e 60**.
+   - A rotina antiga de normalização em `scoring.rs` (`normalize_score_or_elo`) tratava cegamente valores $\le 100.0$ como percentuais diretos (`val / 1.0`), atribuindo scores de apenas 52% a 57% aos modelos mais inteligentes do mundo.
+   - Em contrapartida, o registro legado de `claude-3-7-sonnet` possuía um Elo antigo (1420.0). Por ser $> 100$, caía na conversão de Elo $(1420 - 1000) / 450 \times 100 = 93.3\%$. Isso criava a ilusão matemática de que o modelo antigo superava a fronteira contemporânea.
+2. **Sementes Legadas Re-injetando Modelos Obsoletos:**
+   - O arquivo `seed_aliases.rs` re-inseria a cada sincronização aliases sem namespace de 2024 (`claude-3-7-sonnet`, `claude-3-5-sonnet`, `deepseek-v3`, etc.), poluindo o catálogo canônico.
+
+### 17.2 Solução Matemática e Expurgo Definitivo
+1. **Calibração de Escalas em `crates/souls_llm_cloud_arena/src/scoring.rs`:**
+   - Mapeamento linear rigoroso do índice Artificial Analysis $[10.0, 60.0] \to [0.0, 100.0]$:
+     - Score $57.6 \to 95.2$
+     - Score $56.0 \to 92.0$
+     - Score $52.6 \to 85.2$
+   - Preservação direta de benchmarks percentuais reais quando $> 65.0$ (ex: SWE-bench, BFCL).
+   - Calibração do LMSYS Arena Elo para o intervalo realista da fronteira $[1200.0, 1550.0]$.
+2. **Expurgo e Substituição de Sementes:**
+   - Sementes de `seed_aliases.rs` atualizadas para a fronteira real (`anthropic/claude-opus-5.5`, `anthropic/claude-sonnet-5.5`, `google/gemini-4-argon`, `openai/gpt-6-astra`, `deepseek/deepseek-v4.1-flash`, etc.).
+   - Executado expurgo via SQLite dos 12 IDs legados no banco `souls_heuristic_vault.db`.
+3. **Ingestão Massiva dos 335 Modelos Canônicos Reais:**
+   - Sincronização executada via `souls_cloud_arena sync --force`: **335 modelos canônicos do Nous Portal**, **797 tarifas do OpenRouter**, **335 benchmarks** e **1.675 avaliações ponderadas** persistidas no SQLite STRICT WAL.
+   - Relatório analítico oficial regenerado em [docs/observability/reports/souls_cloud_llms_inventory_summary.md](file:///z:/souls_engine/docs/observability/reports/souls_cloud_llms_inventory_summary.md).
+   - **Novo Pódio de Campeões Homologado:**
+     - **Coding & SWE:** 🏆 **Google: Gemini 4 Argon** (Score: 95.21 | $2.84/M) e 💎 **DeepSeek V4 Flash Vision Exp** (Score: 88.75 | $0.22/M).
+     - **Deep Reasoning:** 🏆 **Google: Gemini 4 Argon** (Score: 95.21 | $4.82/M) e 💎 **Qwen 3.8 Max (0902)** (Score: 88.84 | $3.25/M).
+     - **Agentic Core:** 🏆 **Google: Gemini 4 Argon** (Score: 94.26 | $1.66/M) e 💎 **DeepSeek V4 Flash Vision Exp** (Score: 83.57 | $0.13/M).
+     - **Fast Triage:** 🏆 **DeepSeek V4 Flash Vision Exp** (Score: 93.15 | $0.24/M) e 💎 **inclusionAI: Ling 3.0 Flash VL** (Score: 91.35 | $0.07/M).
+     - **Design & UI:** 🏆 **DeepSeek V4 Flash Vision Exp** (Score: 85.86 | $0.28/M) e 💎 **inclusionAI: Ling 3.0 Flash VL** (Score: 82.56 | $0.08/M).
+   - Reconstrução release de `souls_server.exe` / `souls_engine.exe` com binário atualizado e daemon respondendo em `127.0.0.1:9123/api/v1/cloud/champions`.
+
+---
+
+## 18. MATRIZ DE PENDÊNCIAS RESTANTES & BACKLOG PARA PRÓXIMAS SESSÕES
+
+Com a base bare-metal e a Cloud Arena estabilizadas, este quadro elenca com precisão cirúrgica o que resta realizar, categorizado por necessidade de criação do zero, transplante ou refinamento:
+
+| Componente / Funcionalidade | Natureza da Tarefa | Status Atual | Crate Envolvida | Prioridade / Próxima Sessão |
+| :--- | :--- | :--- | :--- | :--- |
+| **Crate `souls_llm_inventory` (RFC-007)** | **Criação Nova & Desacoplamento** | Proposta e especificada em `RFC_SOULS_LLM_INVENTORY.md`; varredura básica reside hoje em `souls_llm_local_arena` | `crates/souls_llm_inventory` | **Sessão Próxima A (Hub & Downloads)** |
+| **Crate `souls_anthropophagy`** | **Transplante Monográfico** | Placeholder (`add(2, 2)`); 100+ arquivos preservados no doador `_donor/` | `crates/souls_anthropophagy` | **Sessão Próxima B (Monográfica Dedicada)** |
+| **Cockpit Integrador de Modelos no Dashboard** | **Refinamento de Frontend** | APIs REST `/champions` e `/telemetry` prontas; falta card unificado no topo com seleção Local vs Cloud Default/Fallback | Web Dashboard (`crates/souls_server`) | **Sessão Próxima C (UX & Presets)** |
+| **Seletor de Presets do Hermes Agent** | **Refinamento de UX** | Handler seguro de `config.yaml` pronto; falta seletor em 1-clique na interface visual | Web Dashboard / REST | **Sessão Próxima C (UX & Presets)** |
+| **Instalador Gráfico Inno Setup** | **Empacotamento de Produto** | Manifesto `.iss` pronto; falta compilar o binário `.exe` com assistente guiado | Ferramentas / `installer/` | **Sessão Final (Deploy)** |
+
+### 18.1 Detalhamento da Crate `souls_llm_inventory` (RFC-007)
+A ser criada formalmente para cumprir os 4 papéis de gestão de pesos:
+1. **Desacoplamento do Runtime:** Separar a gestão de arquivos em disco (`.gguf`, `.onnx`) do runtime de execução bare-metal (`souls_inference_runtime`).
+2. **Download Manager Assíncrono com SSE:** Implementar download com suporte a HTTP Range (pausa e retomada sem corrupção), validação de hash SHA-256 e emissão de eventos SSE de progresso para o Web Dashboard.
+3. **Profiling de Silício Adaptativo:** Inspeção dinâmica da VRAM livre (NVML) cruzada com os tensores do modelo, classificando em:
+   - `OptimalVram`: Cabe 100% na dGPU RTX 2060m sob o teto WDDM (40-50 tok/s).
+   - `PartialCpuOffload`: Offload parcial para CPU Intel i9 com instruções AVX2 (15-25 tok/s).
+   - `IncompatibleSpillover`: Alerta de risco de barramento PCIe (< 2 tok/s).
+4. **Universalidade do Armazenamento:** Uso canônico de `%USERPROFILE%\llm_local_models` com criação idempotente e tolerância a diretório vazio.
+
+### 18.2 Detalhamento de `souls_anthropophagy` (Transplante Monográfico)
+A ser transplantada em sessão exclusiva para preservar a Regra de Crate Única:
+1. **Harvester & 11 Linters SAST Poliglotas:** Ingestão de Bandit, Biome, Clippy, Cppcheck, Govulncheck, Oxc, Ruff, Sobelow.
+2. **Firewall SPDX de Licenças:** Detecção de licenças permissivas (MIT, Apache-2.0, BSD) e bloqueio de licenças virais (GPL/AGPL).
+3. **The Organ Vault:** Catálogo SQLite para indexação de funções, structs e métodos desacoplados.
+4. **Dissector & Slicer Sintático:** Amputação e reconstituição de código via Tree-sitter.
+
+---
+
+## 19. PROPOSTA ARQUITETURAL & FINOPS: DYNAMIC REASONING EFFORT & TASK-ADAPTIVE THINKING BUDGET
+
+> **NOTA DE PROJETO (IDEIA DO ARQUITETO):**
+> *"Sabe quando tem o 'reasoning'/'effort' do modelo (minimum, low, medium, high, max)? Como isso pode ser dinâmico? E como impacta o output e o valor final da chamada? Como equilibrar para ter a melhor qualidade no menor preço on-the-go entre sessões no Hermes Agent?"*
+
+### 19.1 O Dilema FinOps dos Thinking Tokens
+Modelos contemporâneos de raciocínio profundo (famílias OpenAI `o-series`, Google `Gemini Thinking`, Anthropic `Claude Thinking`, DeepSeek `R1`) introduziram o parâmetro de **esforço de raciocínio** (`reasoning_effort`: `minimum`, `low`, `medium`, `high`, `max` ou `thinking_budget_tokens` de 1.024 a 32.768):
+
+1. **A Assimetria de Custo (The Reasoning Tax):**
+   - Os tokens gerados na cadeia de pensamento interna (*thinking/reasoning tokens*) são cobrados integralmente como **tokens de saída (output tokens)**.
+   - Na maioria dos provedores, os tokens de saída custam de **3x a 5x mais caro** que os tokens de entrada.
+   - Uma chamada com `reasoning_effort: max` pode queimar entre 16.000 e 32.000 tokens invisíveis antes de produzir uma única linha de resposta visível. Uma interação que custaria $0.002 pode saltar para $0.150!
+2. **Impacto na Latência (TTFT e Latência Total):**
+   - Um esforço `high`/`max` faz o Time To First Token (TTFT) disparar de 1.2s para 15s - 30s. Para micro-tarefas ágeis de triagem ou preenchimento de campos, isso colapsa a ergonomia do agente.
+3. **A Armadilha do Super-Raciocínio (Overthinking Trap):**
+   - Para tarefas de baixa entropia cognitiva (ex: formatação de JSON, extração de entidades, docstrings, consultas sintáticas), reasoning alto frequentemente degrada o resultado: o modelo delibera em círculos, inventa exceções teóricas inexistentes e alucina complexidade onde havia simplicidade.
+   - Em contrapartida, tarefas de alta entropia (provas matemáticas, verificação formal de segurança, arquitetura de concorrência multithread) falham catastroficamente se executadas com `reasoning_effort: minimum`.
+
+### 19.2 Mecânica de Calibração Dinâmica Inter-Sessão no Hermes Agent
+
+Como o Hermes Agent opera em loop de orquestração com o Souls Engine, a modulação de esforço de raciocínio pode ser automatizada de forma elegante e transparente:
+
+```mermaid
+flowchart TD
+    UserPrompt["Prompt do Usuário / Tarefa do Hermes"] --> IntentProbe["souls_intent & souls_route_subtask\n(Tier 0.5 SmolLM2 no i9 AVX2 - < 2ms)"]
+    IntentProbe --> EntropyCalc["Cálculo de Entropia de Shannon (H)\n& Complexidade Sintática AST"]
+
+    EntropyCalc -->|H < 0.35 (Trivial/Procedural)| EffortMin["Reasoning: MINIMUM / LOW\nBudget: 1.024 tokens\nEconomia: ~90% em Output"]
+    EntropyCalc -->|0.35 <= H <= 0.70 (Standard SWE)| EffortMed["Reasoning: MEDIUM\nBudget: 4.096 tokens\nEquilíbrio Qualidade/Preço"]
+    EntropyCalc -->|H > 0.70 (Alta Entropia/Formal)| EffortHigh["Reasoning: HIGH / MAX\nBudget: 16.384+ tokens\nResolução Matemática/Segurança"]
+
+    EffortMin --> Dispatch["Despacho no Hermes Agent\n(Parametrização Dinâmica da Chamada)"]
+    EffortMed --> Dispatch
+    EffortHigh --> Dispatch
+```
+
+#### Níveis de Modulação Dinâmica Propostos:
+1. **Nível 1 — Inter-Session Dynamic Calibration (Mudança entre Sessões):**
+   - Antes de iniciar uma nova sessão ou ao receber um novo prompt mestre, o Hermes Agent envia a intenção para o `souls_intent`.
+   - O Souls Engine analisa a entropia e retorna a recomendação formal de modelo e de `recommended_reasoning_effort`.
+   - O Hermes Agent ajusta seus parâmetros de cliente HTTP para aquela sessão específica.
+2. **Nível 2 — Dynamic Subagent Dispatch (Chaveamento Dinâmico em Subagentes):**
+   - Quando o Hermes Agent aciona `delegate_task`, ele obrigatoriamente consulta `souls_route_subtask`.
+   - A resposta JSON do Souls Engine passa a fornecer o DTO estendido:
+     ```json
+     {
+       "canonical_id": "google/gemini-4-argon",
+       "provider": "nous_portal",
+       "recommended_reasoning_effort": "low",
+       "thinking_budget_tokens": 2048,
+       "rationale": "Tarefa procedural de fatiamento de código: entropia 0.28 dispensa deliberação profunda."
+     }
+     ```
+   - O subagente nasce configurado com o budget ideal, prevenindo desperdício orçamentário.
+3. **Nível 3 — Dynamic Fallback Escalation (Escalonamento por Falha):**
+   - Se um subagente rodando em `reasoning: low` falhar em passar nos testes de verificação sintática, o Souls Engine escalona automaticamente a próxima tentativa para `reasoning: high` na mesma sessão, aplicando deliberação profunda apenas como remédio corretivo.
+
+### 19.3 Próximos Passos de Pesquisa & Implementação
+- [ ] Adicionar os campos `reasoning_effort_levels` e `thinking_token_pricing` na tabela `pricing_telemetry_snapshots` do SQLite.
+- [ ] Adicionar o campo `recommended_reasoning_effort` no retorno da ferramenta MCP `souls_route_subtask`.
+- [ ] Conectar o medidor de entropia de Shannon de `souls_inference_runtime` à decisão de budget.
+
+---
+
+## 20. GUIA PRÁTICO DE HOMOLOGAÇÃO IMEDIATA DO HERMES AGENT (O PRIMEIRO VOO SIMBIÓTICO)
+
+Para o Arquiteto Humano que deseja operar o sistema imediatamente com o Hermes Agent:
+
+### 20.1 Garantias de Confiabilidade do Harness Atual
+* **Servidor Headless:** Daemon `souls_engine.exe` ativo em `127.0.0.1:9123` com proteção Single-Instance e detecção assíncrona de colisões TCP.
+* **Integridade Epistêmica:** FrankenSQLite STRICT WAL em ReFS, imune a corrupção por encerramentos forçados (`taskkill`).
+* **Catálogo MCP:** 52 ferramentas ativas e homologadas (156/156 cenários aprovados).
+* **Cloud Arena:** 335 modelos reais do Nous Portal e OpenRouter com scores equalizados contemporâneos.
+* **Reflexos Éticos e FinOps:** 15 Skills sincronizadas em `%LOCALAPPDATA%\hermes\skills\` e `.agents\skills\`.
+* **Memória Fria do Obsidian:** 498 notas mapeadas no `wiki/raw_manifest.json` com integridade SHA-256 e blindagem de privacidade `LOCAL_ONLY`.
+
+### 20.2 Roteiro do Primeiro Voo (Checklist de Validação)
+1. **Conexão:** Inicie o Hermes Agent Desktop (ou terminal). Ele detectará automaticamente o bloco `mcp_servers.souls_engine` configurado em `%LOCALAPPDATA%\hermes\config.yaml`.
+2. **Telemetria de Silício:** Pergunte ao Hermes sobre a GPU e VRAM livre (ele invocará a ferramenta MCP `metrics`).
+3. **Deliberação Socrática:** Solicite uma análise arquitetural de um módulo (ele invocará a ferramenta MCP `thinking`).
+4. **Cirurgia Sintática:** Peça para ele inspecionar uma função (ele obedecerá à skill `souls-code-surgeon`, usando `outline` e `symbol` sem ler arquivos inteiros).
+5. **Auto-Aprendizado (`/learn`):** Diante de qualquer correção ou novo padrão, comande `/learn` para que o Hermes ative a skill `agent-self-learning-loop` e persista o aprendizado permanentemente.
