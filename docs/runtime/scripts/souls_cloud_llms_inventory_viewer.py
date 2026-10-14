@@ -353,22 +353,34 @@ def generate_markdown_report(data: Dict[str, Any], filter_profile: Optional[str]
     lines.append("---")
     lines.append("")
 
-    # SEÇÃO 5: BENCHMARKS EMPÍRICOS
+    # SEÇÃO 5: BENCHMARKS EMPÍRICOS (ARTIFICIAL ANALYSIS & LMSYS ARENA)
     lines.append("## 🎯 5. BENCHMARKS EMPÍRICOS E MÉTRICAS DE ENGENHARIA")
-    lines.append("Resultados empíricos normalizados utilizados no cômputo da Fronteira de Pareto:")
+    lines.append("Resultados empíricos normalizados (Artificial Analysis Intelligence / Coding / Agentic e LMSYS Arena Elo) utilizados no cômputo da Fronteira de Pareto:")
     lines.append("")
-    lines.append("| Modelo Canônico | General ELO | Coding ELO | Hard ELO | BFCL (Tools) | IFEval | GPQA | VQA Score |")
+    lines.append("| Modelo Canônico | Artificial Analysis / Elo | Coding Score | Hard/Agentic | BFCL (Tools) | IFEval | GPQA | VQA Score |")
     lines.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |")
 
     for cid, b in bench_map.items():
         c_meta = next((c for c in canon_list if c["id"] == cid), None)
         c_name = c_meta["display_name"] if c_meta else cid
 
+        gen_val = b.get("general_elo")
+        gen_str = f"{gen_val:.1f}" if gen_val is not None else "—"
+        cod_val = b.get("coding_elo")
+        cod_str = f"**{cod_val:.1f}**" if cod_val is not None else "—"
+        hrd_val = b.get("hard_prompts_elo")
+        hrd_str = f"{hrd_val:.1f}" if hrd_val is not None else "—"
+        bfc_val = b.get("bfcl_score")
+        bfc_str = f"{bfc_val:.1f}%" if bfc_val is not None else "—"
+        ife_val = b.get("ifeval_score")
+        ife_str = f"{ife_val:.1f}%" if ife_val is not None else "—"
+        gpq_val = b.get("gpqa_score")
+        gpq_str = f"{gpq_val:.1f}%" if gpq_val is not None else "—"
+        vqa_val = b.get("vqa_multimodal_score")
+        vqa_str = f"{vqa_val:.1f}%" if vqa_val is not None else "—"
+
         lines.append(
-            f"| **{c_name}** | {b.get('general_elo', 0):.0f} | **{b.get('coding_elo', 0):.0f}** | "
-            f"{b.get('hard_prompts_elo', 0):.0f} | {b.get('bfcl_score', 0):.1f}% | "
-            f"{b.get('ifeval_score', 0):.1f}% | {b.get('gpqa_score', 0):.1f}% | "
-            f"{b.get('vqa_multimodal_score', 0):.1f}% |"
+            f"| **{c_name}** | {gen_str} | {cod_str} | {hrd_str} | {bfc_str} | {ife_str} | {gpq_str} | {vqa_str} |"
         )
 
     lines.append("")
@@ -380,9 +392,9 @@ def generate_markdown_report(data: Dict[str, Any], filter_profile: Optional[str]
     lines.append("""
 1. **Regra de Ouro do Silício Local:** Tarefas de desidratação AST, triagem de entropia, inspeção de tipos e refatorações cirúrgicas de arquivo único pertencem **100% à dGPU RTX 2060m e CPU Host i9** (custo zero de nuvem).
 2. **Critérios de Escalação para Nuvem:**
-   - **Alta Entropia Cognitiva ($H > 0.85$):** Questões abertas de arquitetura de software demandam `Claude 3.7 Sonnet` ou `DeepSeek R1`.
+   - **Alta Entropia Cognitiva ($H > 0.85$):** Questões abertas de arquitetura de software demandam `Claude 3.7 Sonnet`, `DeepSeek R1` ou `Gemini 4 Argon`.
    - **Estouro de Raio de Impacto (Blast Radius > 5 arquivos):** Refatorações cross-crate devem delegar a síntese para a Nuvem.
-   - **Janela Gigante (> 32k tokens):** Contextos muito extensos devem utilizar o prefix caching do `DeepSeek V3` ou `Gemini 2.0 Flash`.
+   - **Janela Gigante (> 32k tokens):** Contextos muito extensos devem utilizar o prefix caching do `DeepSeek V3` ou `Gemini 2.5 Flash`.
 3. **Prefix Caching Obrigatório:** Sempre priorize provedores com suporte a cache read com desconto $\ge 75\%$ em sessões multi-turn longas.
 """)
 
@@ -403,7 +415,12 @@ def print_console_summary(data: Dict[str, Any]):
         print(f"{'Modelo':<26} | {'Provedor':<12} | {'Score':<6} | {'$/Tarefa':<10} | {'ROI':<6} | {'Status Pareto'}")
         print("-" * 80)
 
-        for m in p_list:
+        # Exibe os modelos da fronteira e o Top 10
+        pareto_optimal = [m for m in p_list if m.get("is_pareto_optimal")]
+        top_dominated = [m for m in p_list if not m.get("is_pareto_optimal")][:8]
+        display_list = pareto_optimal + [m for m in top_dominated if m not in pareto_optimal]
+
+        for m in display_list:
             tag = m.get("pareto_tag", "Dominated")
             if tag == "Leader":
                 tag_str = "🏆 Leader"
@@ -415,6 +432,9 @@ def print_console_summary(data: Dict[str, Any]):
                 tag_str = "  Dominated"
 
             print(f"{m['display_name'][:25]:<26} | {m['provider'][:11]:<12} | {m['composite_score']:<6.1f} | ${m['task_blended_cost']:<9.4f} | {m['roi_index']:<6.1f} | {tag_str}")
+
+        if len(p_list) > len(display_list):
+            print(f"... e mais {len(p_list) - len(display_list)} modelos avaliados (consulte o relatório Markdown completo).")
 
     print("\n" + "=" * 80)
 

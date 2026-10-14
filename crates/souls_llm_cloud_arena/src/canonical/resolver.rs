@@ -36,6 +36,25 @@ impl CanonicalResolver {
         self.aliases.insert(alias.to_lowercase().trim().to_string(), canonical_id.to_string());
     }
 
+    /// Registra dinamicamente um modelo canônico suportado na Cloud Arena.
+    pub fn register_canonical(&mut self, canonical_id: &str) {
+        let norm = canonical_id.to_lowercase().trim().to_string();
+        self.known_canonicals.insert(norm.clone());
+        self.register_alias(&norm, &norm);
+
+        // Sem prefixo de fornecedor (ex: "claude-sonnet-5.5" -> "anthropic/claude-sonnet-5.5")
+        if let Some((_, model)) = norm.split_once('/') {
+            self.register_alias(model, &norm);
+        }
+        // Com prefixo de roteador ~ (ex: "~openai/gpt-6-sol" -> "openai/gpt-6-sol")
+        self.register_alias(&format!("~{}", norm), &norm);
+    }
+
+    /// Retorna a lista de todos os IDs canônicos conhecidos.
+    pub fn known_canonicals(&self) -> &HashSet<String> {
+        &self.known_canonicals
+    }
+
     /// Verifica se um ID é reconhecido como modelo canônico suportado na Cloud Arena.
     pub fn is_known_canonical(&self, canonical_id: &str) -> bool {
         self.known_canonicals.contains(canonical_id)
@@ -57,6 +76,12 @@ impl CanonicalResolver {
 
         // 1. Verificação direta no mapa de aliases
         if let Some(canonical) = self.aliases.get(&normalized) {
+            return canonical.clone();
+        }
+
+        // 1.1 Verificação sem prefixo tilde (ex: ~openai/gpt-6-sol -> openai/gpt-6-sol)
+        let without_tilde = normalized.trim_start_matches('~');
+        if let Some(canonical) = self.aliases.get(without_tilde) {
             return canonical.clone();
         }
 

@@ -13,6 +13,16 @@ pub fn normalize_val(val: f64, min: f64, max: f64) -> f64 {
     ((clamped - min) / (max - min)) * 100.0
 }
 
+pub fn normalize_score_or_elo(val: f64) -> f64 {
+    if val <= 100.0 {
+        // Escala percentil/índice (Artificial Analysis Intelligence / Coding / Agentic)
+        val.clamp(0.0, 100.0)
+    } else {
+        // Escala Elo humana (LMSYS Chatbot Arena: 1000 a 1550)
+        normalize_val(val, 1000.0, 1550.0)
+    }
+}
+
 pub fn normalize_ttft(ttft_ms: f64) -> f64 {
     let min = 150.0;
     let max = 2000.0;
@@ -28,12 +38,21 @@ pub fn compute_composite_score(
 ) -> f64 {
     let (bw, _) = get_profile_weights(profile);
 
-    let coding_norm = normalize_val(bench.coding_elo.unwrap_or(1200.0), 1000.0, 1450.0);
-    let hard_norm = normalize_val(bench.hard_prompts_elo.unwrap_or(1200.0), 1000.0, 1450.0);
-    let bfcl_score = bench.bfcl_score.unwrap_or(75.0).clamp(0.0, 100.0);
-    let ifeval_score = bench.ifeval_score.unwrap_or(75.0).clamp(0.0, 100.0);
-    let gpqa_score = bench.gpqa_score.unwrap_or(50.0).clamp(0.0, 100.0);
-    let vqa_score = bench.vqa_multimodal_score.unwrap_or(60.0).clamp(0.0, 100.0);
+    let coding_norm = match bench.coding_elo {
+        Some(v) => normalize_score_or_elo(v),
+        None => bench.general_elo.map(normalize_score_or_elo).unwrap_or(60.0),
+    };
+    let hard_norm = match bench.hard_prompts_elo {
+        Some(v) => normalize_score_or_elo(v),
+        None => bench.general_elo.map(normalize_score_or_elo).unwrap_or(60.0),
+    };
+    let bfcl_score = match bench.bfcl_score {
+        Some(v) => normalize_score_or_elo(v),
+        None => hard_norm,
+    };
+    let ifeval_score = bench.ifeval_score.map(normalize_score_or_elo).unwrap_or(coding_norm);
+    let gpqa_score = bench.gpqa_score.map(normalize_score_or_elo).unwrap_or(hard_norm);
+    let vqa_score = bench.vqa_multimodal_score.map(normalize_score_or_elo).unwrap_or(60.0);
 
     let tps_norm = normalize_val(price.throughput_tps.unwrap_or(60.0), 10.0, 150.0);
     let ttft_norm = normalize_ttft(price.ttft_ms.unwrap_or(500.0));
