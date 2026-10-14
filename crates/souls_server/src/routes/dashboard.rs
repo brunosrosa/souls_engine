@@ -123,6 +123,42 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
 pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> {
     let _guard = state.acquire_connection();
 
+    let inventory = souls_llm_local_arena::LocalModelInventory::scan();
+    if !inventory.is_empty() {
+        let items: Vec<Value> = inventory
+            .list_models()
+            .iter()
+            .map(|m| {
+                let status = if m.is_gpu_accelerated {
+                    "Pronto na dGPU"
+                } else {
+                    "Pronto na CPU (AVX2)"
+                };
+                json!({
+                    "tier": m.tier,
+                    "model": m.model_id,
+                    "name": m.name,
+                    "target": if m.is_gpu_accelerated { "dGPU RTX 2060m" } else { "CPU Host (AVX2)" },
+                    "size_mb": m.size_mb,
+                    "quantization": m.quantization,
+                    "context_window": m.context_window,
+                    "vram": if m.is_gpu_accelerated { format!("{:.1} GB", m.size_mb / 1024.0) } else { "0 MB".to_string() },
+                    "status": status,
+                    "tags": m.tags,
+                    "wddm_safe": m.wddm_safe,
+                    "file_path": m.file_path.to_string_lossy(),
+                })
+            })
+            .collect();
+
+        return Json(json!({
+            "status": "success",
+            "total_models": items.len(),
+            "root_directory": inventory.root_dir.to_string_lossy(),
+            "models": items,
+        }));
+    }
+
     Json(json!({
         "models": [
             { "tier": "Tier 0", "model": "smollm2-135m-instruct", "target": "CPU Host (AVX2)", "tps": "149.2", "ttft": "18", "vram": "0 MB", "status": "Pronto na RAM" },

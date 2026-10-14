@@ -222,7 +222,11 @@ async fn handle_sync_completion(
     let start = Instant::now();
 
     // Execute generation via InferenceRuntime
-    let gen_res = state.runtime.infer_tier1_generate(&prompt, &params).await;
+    let gen_res = if let Some(model_path) = souls_llm_local_arena::LocalModelInventory::scan().resolve_model_path(&model_name) {
+        state.runtime.infer_model_generate(&model_path, &prompt, &params).await.map(|out| out.text)
+    } else {
+        state.runtime.infer_tier1_generate(&prompt, &params).await
+    };
 
     let raw_text = match gen_res {
         Ok(t) => t,
@@ -345,7 +349,11 @@ async fn handle_streaming_completion(
         }
 
         // 2. Generate raw full text or simulated token stream
-        let gen_result = state.runtime.infer_tier1_generate(&prompt, &params).await;
+        let gen_result = if let Some(model_path) = souls_llm_local_arena::LocalModelInventory::scan().resolve_model_path(&stream_model) {
+            state.runtime.infer_model_generate(&model_path, &prompt, &params).await.map(|out| out.text)
+        } else {
+            state.runtime.infer_tier1_generate(&prompt, &params).await
+        };
         let generated_text = match gen_result {
             Ok(text) => text,
             Err(e) => {

@@ -43,14 +43,14 @@ pub async fn ensure_canonical_models_seeded(
 ) -> Result<(), souls_model_router::error::RouterError> {
     ensure_router_tables(pool).await?;
     let active = fetch_active_models(pool).await?;
-    if !active.is_empty() {
+    if active.len() >= 10 {
         return Ok(());
     }
 
-    info!("Cold-start detected in model_registry: seeding canonical local model arms.");
+    info!("Cold-start or sparse registry detected in model_registry: seeding canonical local model arms.");
 
-    // 1. Tier 0: ONNX CPU AVX2 (GLiClass / ModernBERT)
-    upsert_model(
+    // 1. Seed base generic arms
+    let _ = upsert_model(
         pool,
         &ModelRecord {
             model_id: "tier0_onnx_cpu".to_string(),
@@ -67,10 +67,9 @@ pub async fn ensure_canonical_models_seeded(
             success_rate_ema: 1.0,
         },
     )
-    .await?;
+    .await;
 
-    // 2. Tier 0.5: Llama.cpp CPU Logit Probing
-    upsert_model(
+    let _ = upsert_model(
         pool,
         &ModelRecord {
             model_id: "tier05_llama_cpu".to_string(),
@@ -87,10 +86,9 @@ pub async fn ensure_canonical_models_seeded(
             success_rate_ema: 1.0,
         },
     )
-    .await?;
+    .await;
 
-    // 3. Tier 1: Upstream Qwen CUDA with Asymmetric KV Cache
-    upsert_model(
+    let _ = upsert_model(
         pool,
         &ModelRecord {
             model_id: "tier1_qwen_coder_gpu".to_string(),
@@ -107,7 +105,32 @@ pub async fn ensure_canonical_models_seeded(
             success_rate_ema: 1.0,
         },
     )
-    .await?;
+    .await;
+
+    // 2. Discover and seed physical GGUF models from LocalModelInventory
+    let inventory = souls_llm_local_arena::LocalModelInventory::scan();
+    for item in inventory.list_models() {
+        let vram = if item.is_gpu_accelerated { item.size_mb as u32 } else { 0 };
+        let tags_json = serde_json::to_string(&item.tags).unwrap_or_else(|_| "[\"general\"]".to_string());
+        let _ = upsert_model(
+            pool,
+            &ModelRecord {
+                model_id: item.model_id.clone(),
+                provider_type: "LOCAL".to_string(),
+                vram_base_mb: vram,
+                kv_cache_cost_per_k: if item.is_gpu_accelerated { 80 } else { 0 },
+                max_context_window: item.context_window,
+                specialty_tags: tags_json,
+                score_lmarena: if item.tier.contains("Tier 1") { 1350 } else { 1100 },
+                cost_input_per_m: 0.0,
+                cost_output_per_m: 0.0,
+                is_active: true,
+                ema_latency_ms: if item.is_gpu_accelerated { 120 } else { 30 },
+                success_rate_ema: 1.0,
+            },
+        )
+        .await;
+    }
 
     Ok(())
 }
