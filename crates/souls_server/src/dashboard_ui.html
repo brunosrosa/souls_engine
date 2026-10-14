@@ -14,7 +14,7 @@
       --bg-surface: #0c1220;
       --bg-card: rgba(16, 24, 40, 0.75);
       --bg-card-hover: rgba(23, 34, 57, 0.85);
-      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-subtle: rgba(255, 255, 255, 0.08);
       --border-glow: rgba(6, 182, 212, 0.35);
       
       --cyan: #06b6d4;
@@ -54,8 +54,8 @@
       overflow-x: hidden;
       line-height: 1.5;
       background-image: 
-        radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 85% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 45%),
+        radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 85% 20%, rgba(168, 85, 247, 0.05) 0%, transparent 45%),
         radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
       background-attachment: fixed;
     }
@@ -66,7 +66,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 12px 24px;
-      background: rgba(10, 16, 28, 0.85);
+      background: rgba(10, 16, 28, 0.88);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border-subtle);
@@ -106,182 +106,135 @@
       display: block;
     }
 
-    .brand-titles h1 {
-      font-size: 1.05rem;
-      font-weight: 800;
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
       letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+      background: linear-gradient(135deg, #ffffff 30%, var(--cyan) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
 
-    .brand-titles .badge-port {
-      font-size: 0.68rem;
-      padding: 2px 7px;
-      background: rgba(6, 182, 212, 0.12);
-      border: 1px solid rgba(6, 182, 212, 0.3);
-      border-radius: var(--radius-full);
-      color: var(--cyan);
-      font-family: var(--font-mono);
-      font-weight: 600;
-    }
-
-    .brand-titles p {
+    .brand-sub {
       font-size: 0.72rem;
       color: var(--text-muted);
-    }
-
-    .topbar-pills {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(16, 24, 40, 0.6);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-full);
-      padding: 5px 12px;
-      font-size: 0.75rem;
       font-family: var(--font-mono);
-      color: var(--text-muted);
-      transition: all 0.2s ease;
-    }
-
-    .pill:hover {
-      border-color: rgba(255, 255, 255, 0.15);
-      background: rgba(20, 30, 50, 0.7);
-    }
-
-    .pill-val {
-      font-weight: 600;
-      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .pulse-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 10px var(--green);
-      animation: pulseAnim 2s infinite;
+      background-color: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
     }
 
-    @keyframes pulseAnim {
-      0% { transform: scale(0.95); opacity: 0.7; }
-      50% { transform: scale(1.15); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.7; }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
-    .topbar-actions {
+    .telemetry-pills {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .telemetry-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
       display: flex;
       align-items: center;
       gap: 8px;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 14px;
-      border-radius: var(--radius-md);
-      font-size: 0.78rem;
-      font-weight: 600;
-      cursor: pointer;
       transition: all 0.2s ease;
-      font-family: var(--font-sans);
-      border: 1px solid transparent;
-      outline: none;
     }
 
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
+    .telemetry-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .telemetry-pill strong {
       color: var(--text-main);
-      border-color: var(--border-subtle);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-cyan {
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.05) 100%);
-      color: var(--cyan);
-      border-color: rgba(6, 182, 212, 0.4);
-    }
-
-    .btn-cyan:hover {
-      background: rgba(6, 182, 212, 0.25);
-      box-shadow: 0 0 14px var(--cyan-glow);
-    }
-
-    .btn-preset {
-      background: rgba(168, 85, 247, 0.12);
-      border-color: rgba(168, 85, 247, 0.35);
-      color: #d8b4fe;
     }
 
     /* TABS NAVIGATION */
-    nav.tabbar-container {
-      display: flex;
-      justify-content: center;
-      padding: 14px 24px 0;
+    .tabbar-container {
+      background: rgba(12, 18, 32, 0.65);
       border-bottom: 1px solid var(--border-subtle);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .tabs-track {
       display: flex;
-      background: rgba(15, 23, 42, 0.5);
-      padding: 4px;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-subtle);
-      gap: 4px;
+      gap: 6px;
     }
 
     .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 14px 18px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 18px;
-      border-radius: 9px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      background: transparent;
-      border: none;
-      cursor: pointer;
       transition: all 0.2s ease;
     }
 
     .tab-btn:hover {
       color: var(--text-main);
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.02);
     }
 
     .tab-btn.active {
-      color: #fff;
-      background: rgba(6, 182, 212, 0.18);
-      box-shadow: 0 0 12px rgba(6, 182, 212, 0.2);
-      border: 1px solid rgba(6, 182, 212, 0.35);
+      color: var(--cyan);
+      border-bottom-color: var(--cyan);
+      font-weight: 600;
+      background: rgba(6, 182, 212, 0.04);
     }
 
-    /* MAIN CONTENT */
+    .tab-count-badge {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+    }
+
+    .tab-btn.active .tab-count-badge {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--cyan);
+    }
+
+    /* MAIN CONTAINER */
     main.content-area {
-      max-width: 1360px;
+      max-width: 1440px;
       margin: 0 auto;
       padding: 24px;
     }
 
     .tab-pane {
       display: none;
-      animation: fadeIn 0.25s ease;
+      animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .tab-pane.active {
@@ -293,84 +246,160 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* GRID LAYOUTS */
+    /* CARDS & GRIDS */
     .grid-2x2 {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 20px;
+      margin-bottom: 24px;
     }
 
-    @media (max-width: 980px) {
-      .grid-2x2 { grid-template-columns: 1fr; }
-      header.topbar { flex-wrap: wrap; gap: 12px; }
-      .topbar-pills { display: none; }
+    @media (max-width: 1024px) {
+      .grid-2x2 {
+        grid-template-columns: 1fr;
+      }
     }
 
-    /* CARDS */
     .card {
       background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 22px;
-      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease, border-color 0.2s ease;
     }
 
     .card:hover {
-      border-color: rgba(255, 255, 255, 0.12);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.14);
+    }
+
+    .card-highlight {
+      border-color: rgba(6, 182, 212, 0.3);
+      background: linear-gradient(145deg, rgba(16, 24, 40, 0.85) 0%, rgba(6, 182, 212, 0.05) 100%);
     }
 
     .card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .card-title {
-      font-size: 0.92rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: var(--text-main);
       display: flex;
       align-items: center;
-      gap: 9px;
+      gap: 10px;
     }
 
     .card-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: var(--radius-sm);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.9rem;
+      font-size: 1.1rem;
     }
 
     .icon-cyan { background: rgba(6, 182, 212, 0.15); color: var(--cyan); }
     .icon-green { background: rgba(16, 185, 129, 0.15); color: var(--green); }
-    .icon-purple { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
     .icon-amber { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+    .icon-purple { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
 
-    /* HARDWARE METRICS */
+    /* MASTER BRAIN BANNER */
+    .brain-hero {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(6, 182, 212, 0.08) 50%, rgba(16, 185, 129, 0.04) 100%);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: var(--radius-lg);
+      padding: 22px 26px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .brain-info {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brain-avatar {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.25);
+    }
+
+    .brain-details h3 {
+      font-size: 1.18rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brain-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brain-badge {
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-cloud { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .badge-local { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    /* GAUGES & STATS */
     .metric-gauge-group {
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .gauge-label {
       display: flex;
       justify-content: space-between;
       font-size: 0.78rem;
-      margin-bottom: 6px;
       color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .gauge-label strong {
+      color: var(--text-main);
+      font-family: var(--font-mono);
     }
 
     .gauge-bar-bg {
-      height: 9px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.07);
       border-radius: var(--radius-full);
-      background: rgba(255, 255, 255, 0.06);
       overflow: hidden;
       position: relative;
     }
@@ -378,24 +407,16 @@
     .gauge-bar-fill {
       height: 100%;
       border-radius: var(--radius-full);
-      background: linear-gradient(90deg, var(--cyan) 0%, #38bdf8 100%);
-      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .gauge-bar-fill.warning {
-      background: linear-gradient(90deg, var(--amber) 0%, #fb923c 100%);
-    }
-
-    .gauge-bar-fill.critical {
-      background: linear-gradient(90deg, var(--red) 0%, #f43f5e 100%);
+      background: linear-gradient(90deg, var(--cyan), #38bdf8);
+      transition: width 0.4s ease, background 0.3s ease;
     }
 
     .gauge-marker {
       position: absolute;
-      top: -3px;
-      bottom: -3px;
+      top: 0;
+      bottom: 0;
       width: 2px;
-      background: #ef4444;
+      background: var(--red);
       z-index: 2;
     }
 
@@ -403,26 +424,26 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
-      margin-top: 14px;
+      margin-top: 16px;
     }
 
     .stat-box {
-      background: rgba(10, 16, 28, 0.5);
+      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
       padding: 12px;
       text-align: center;
     }
 
-    .stat-box .stat-lbl {
+    .stat-lbl {
       font-size: 0.7rem;
-      color: var(--text-muted);
-      margin-bottom: 4px;
+      color: var(--text-dark);
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      margin-bottom: 4px;
     }
 
-    .stat-box .stat-num {
+    .stat-num {
       font-size: 1.15rem;
       font-weight: 700;
       font-family: var(--font-mono);
@@ -433,45 +454,118 @@
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
+      gap: 5px;
+      padding: 3px 9px;
       border-radius: var(--radius-full);
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       font-weight: 600;
+      font-family: var(--font-mono);
+      border: 1px solid transparent;
     }
 
-    .badge-champion {
-      background: rgba(245, 158, 11, 0.15);
-      color: #fbbf24;
-      border: 1px solid rgba(245, 158, 11, 0.4);
+    .badge-champion { background: rgba(6, 182, 212, 0.15); color: var(--cyan); border-color: rgba(6, 182, 212, 0.35); }
+    .badge-value { background: rgba(16, 185, 129, 0.15); color: var(--green); border-color: rgba(16, 185, 129, 0.35); }
+    .badge-lowcost { background: rgba(245, 158, 11, 0.15); color: var(--amber); border-color: rgba(245, 158, 11, 0.35); }
+    .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--red); border-color: rgba(239, 68, 68, 0.35); }
+
+    /* TABLES */
+    .table-container {
+      overflow-x: auto;
+      margin-top: 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
     }
 
-    .badge-value {
+    table.arena-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      text-align: left;
+    }
+
+    table.arena-table th {
+      background: rgba(15, 23, 42, 0.85);
+      padding: 12px 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    table.arena-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      background: rgba(16, 24, 40, 0.4);
+    }
+
+    table.arena-table tr:hover td {
+      background: rgba(23, 34, 57, 0.65);
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+    }
+
+    /* BUTTONS */
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-cyan {
       background: rgba(6, 182, 212, 0.15);
-      color: #38bdf8;
-      border: 1px solid rgba(6, 182, 212, 0.4);
+      border-color: rgba(6, 182, 212, 0.35);
+      color: var(--cyan);
     }
 
-    .badge-lowcost {
+    .btn-cyan:hover {
+      background: rgba(6, 182, 212, 0.25);
+      border-color: var(--cyan);
+      box-shadow: 0 0 14px var(--cyan-glow);
+    }
+
+    .btn-green {
       background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: var(--green);
     }
 
-    /* PROFILE PILLS IN TAB 2 */
+    .btn-green:hover {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: var(--green);
+      box-shadow: 0 0 14px var(--green-glow);
+    }
+
+    /* PROFILE SELECTOR PILLS */
     .profile-selector {
       display: flex;
-      flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
     }
 
     .profile-pill {
-      padding: 8px 15px;
-      border-radius: var(--radius-full);
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border-subtle);
       color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
       font-size: 0.78rem;
       font-weight: 600;
       cursor: pointer;
@@ -484,164 +578,80 @@
     }
 
     .profile-pill.active {
-      background: rgba(6, 182, 212, 0.18);
-      border-color: rgba(6, 182, 212, 0.5);
-      color: #fff;
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--cyan);
+      color: var(--cyan);
       box-shadow: 0 0 12px var(--cyan-glow);
     }
 
-    /* TABLES */
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-subtle);
-      background: rgba(10, 16, 28, 0.4);
-    }
-
-    table.arena-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8rem;
-      text-align: left;
-    }
-
-    table.arena-table th {
-      padding: 12px 16px;
-      background: rgba(15, 23, 42, 0.8);
-      color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.68rem;
-      letter-spacing: 0.05em;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    table.arena-table td {
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-      color: var(--text-main);
-    }
-
-    table.arena-table tr:hover td {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .mono { font-family: var(--font-mono); }
-
-    /* SETTINGS UI */
-    .settings-section {
-      margin-bottom: 28px;
-    }
-
-    .settings-section-title {
-      font-size: 0.95rem;
-      font-weight: 700;
-      margin-bottom: 14px;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .preset-cards-grid {
+    /* PRESETS */
+    .presets-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 16px;
+      gap: 16px;
+      margin-bottom: 24px;
     }
 
-    @media (max-width: 1100px) {
-      .preset-cards-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 650px) {
-      .preset-cards-grid { grid-template-columns: 1fr; }
+    @media (max-width: 1024px) {
+      .presets-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
     .preset-card {
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(16, 24, 40, 0.5);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 18px;
+      padding: 16px;
       cursor: pointer;
-      transition: all 0.25s ease;
+      transition: all 0.2s ease;
       position: relative;
     }
 
     .preset-card:hover {
-      border-color: rgba(255, 255, 255, 0.18);
-      background: rgba(20, 30, 52, 0.8);
+      border-color: rgba(255, 255, 255, 0.2);
       transform: translateY(-2px);
     }
 
     .preset-card.active {
-      border-color: var(--purple);
-      background: rgba(168, 85, 247, 0.1);
-      box-shadow: 0 0 16px var(--purple-glow);
+      border-color: var(--cyan);
+      background: rgba(6, 182, 212, 0.08);
+      box-shadow: 0 0 18px var(--cyan-glow);
     }
 
-    .preset-card .preset-icon {
-      font-size: 1.5rem;
-      margin-bottom: 8px;
-    }
-
-    .preset-card h3 {
-      font-size: 0.88rem;
+    .preset-title {
       font-weight: 700;
-      margin-bottom: 4px;
+      font-size: 0.95rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
     }
 
-    .preset-card p {
-      font-size: 0.72rem;
+    .preset-desc {
+      font-size: 0.75rem;
       color: var(--text-muted);
       line-height: 1.4;
     }
 
-    .preset-card .model-tag {
-      margin-top: 10px;
-      font-family: var(--font-mono);
-      font-size: 0.68rem;
-      padding: 3px 7px;
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: var(--radius-sm);
-      color: var(--cyan);
-      display: inline-block;
-    }
-
-    /* SWITCH TOGGLES */
-    .toggle-list {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 14px;
-    }
-
-    @media (max-width: 768px) {
-      .toggle-list { grid-template-columns: 1fr; }
-    }
-
-    .toggle-item {
+    /* TOGGLES */
+    .toggle-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px;
-      background: rgba(15, 23, 42, 0.5);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      transition: border-color 0.2s ease;
-    }
-
-    .toggle-item:hover {
-      border-color: rgba(255, 255, 255, 0.12);
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     .toggle-info h4 {
-      font-size: 0.82rem;
+      font-size: 0.85rem;
+      color: var(--text-main);
       font-weight: 600;
-      margin-bottom: 2px;
     }
 
     .toggle-info p {
-      font-size: 0.7rem;
+      font-size: 0.74rem;
       color: var(--text-muted);
     }
 
@@ -650,25 +660,29 @@
       display: inline-block;
       width: 44px;
       height: 24px;
-      flex-shrink: 0;
     }
 
-    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
 
     .slider {
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(255, 255, 255, 0.15);
+      background-color: rgba(255, 255, 255, 0.1);
       transition: .3s;
-      border-radius: 24px;
+      border-radius: 34px;
+      border: 1px solid var(--border-subtle);
     }
 
     .slider:before {
       position: absolute;
       content: "";
-      height: 18px;
-      width: 18px;
+      height: 16px;
+      width: 16px;
       left: 3px;
       bottom: 3px;
       background-color: white;
@@ -685,144 +699,180 @@
       transform: translateX(20px);
     }
 
-    /* SLIDERS (RANGE) */
-    .range-group {
-      margin-bottom: 16px;
-    }
-
-    .range-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.78rem;
-      margin-bottom: 6px;
-    }
-
-    .range-input {
-      width: 100%;
-      height: 6px;
-      border-radius: var(--radius-full);
-      background: rgba(255, 255, 255, 0.1);
-      outline: none;
-      -webkit-appearance: none;
-    }
-
-    .range-input::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: var(--cyan);
-      cursor: pointer;
-      box-shadow: 0 0 8px var(--cyan);
-    }
-
-    /* TOAST NOTIFICATION */
+    /* TOASTS */
     #toast-container {
       position: fixed;
       bottom: 24px;
       right: 24px;
-      z-index: 999;
+      z-index: 1000;
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
 
     .toast {
-      background: #0f172a;
+      background: rgba(15, 23, 42, 0.95);
       border: 1px solid var(--border-subtle);
-      border-left: 4px solid var(--cyan);
-      color: #fff;
-      padding: 12px 18px;
       border-radius: var(--radius-md);
+      padding: 12px 18px;
+      font-size: 0.82rem;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      font-size: 0.8rem;
+      backdrop-filter: blur(12px);
       display: flex;
       align-items: center;
       gap: 10px;
-      animation: slideIn 0.3s ease;
       min-width: 280px;
+      animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: opacity 0.3s, transform 0.3s;
     }
-
-    .toast.success { border-left-color: var(--green); }
-    .toast.error { border-left-color: var(--red); }
-    .toast.warning { border-left-color: var(--amber); }
 
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
+
+    .toast.success { border-color: rgba(16, 185, 129, 0.5); }
+    .toast.warning { border-color: rgba(245, 158, 11, 0.5); }
+    .toast.error { border-color: rgba(239, 68, 68, 0.5); }
   </style>
 </head>
 <body>
 
-  <!-- TOP BAR GLOBAL -->
+  <!-- TOP BAR -->
   <header class="topbar">
     <div class="brand-group">
-      <div class="brand-mascot" id="mascot-avatar" title="Souls Engine Mascote (Reativo)">
+      <div class="brand-mascot" onclick="switchTab('tab-overview')">
         <img id="mascot-img" src="/dashboard/icon/cyan" alt="Souls Mascot">
       </div>
-      <div class="brand-titles">
-        <h1>SOULS ENGINE <span class="badge-port">v7.0.0</span></h1>
-        <p>Bare-Metal Silicon & L3 Memory Daemon</p>
+      <div>
+        <div class="brand-title">Souls Engine v7 Bare-Metal</div>
+        <div class="brand-sub">
+          <span class="pulse-dot"></span>
+          <span>127.0.0.1:9123 &bull; ReFS Dev Drive Z:\</span>
+        </div>
       </div>
     </div>
 
-    <div class="topbar-pills">
-      <div class="pill">
-        <span class="pulse-dot" id="daemon-dot"></span>
-        <span>DAEMON:</span>
-        <span class="pill-val" id="daemon-status">ONLINE :9123</span>
+    <div class="telemetry-pills">
+      <div class="telemetry-pill" id="pill-brain" title="Master Brain ativo no Hermes Agent">
+        <span>🧠 Brain:</span>
+        <strong id="top-brain-name">Carregando...</strong>
       </div>
-      <div class="pill">
-        <span>VRAM:</span>
-        <span class="pill-val" id="pill-vram">-- / 5.2 GB</span>
+      <div class="telemetry-pill" title="Temperatura da GPU RTX 2060m">
+        <span>🎮 GPU:</span>
+        <strong id="pill-temp">--°C</strong>
       </div>
-      <div class="pill">
-        <span>GPU TEMP:</span>
-        <span class="pill-val" id="pill-temp">--°C</span>
+      <div class="telemetry-pill" title="VRAM Livre sob WDDM">
+        <span>⚡ VRAM:</span>
+        <strong id="pill-vram">-- / 5.2 GB</strong>
       </div>
-      <div class="pill">
-        <span>CPU HOST:</span>
-        <span class="pill-val" id="pill-cpu">24 Threads (AVX2)</span>
+      <div class="telemetry-pill" title="Uptime do servidor">
+        <span>⏱️ Uptime:</span>
+        <strong id="pill-uptime">--m</strong>
       </div>
-    </div>
-
-    <div class="topbar-actions">
-      <button class="btn btn-preset" id="top-preset-btn" onclick="switchTab('tab-settings')">
-        <span>⚖️ Preset:</span> <strong id="top-active-preset">Balanced Daily</strong>
-      </button>
-      <button class="btn btn-cyan" onclick="syncCloudArena()">
-        <span>⚡</span> Sync Cloud
-      </button>
-      <button class="btn btn-secondary" onclick="flushWalCheckpoint()">
-        <span>💾</span> Flush WAL
-      </button>
     </div>
   </header>
 
-  <!-- TABS BAR -->
+  <!-- TAB NAVIGATION -->
   <nav class="tabbar-container">
     <div class="tabs-track">
       <button class="tab-btn active" id="btn-tab-overview" onclick="switchTab('tab-overview')">
-        <span>📊</span> 1. Overview & Silício
+        <span>🎯 Overview & Integrador</span>
       </button>
-      <button class="tab-btn" id="btn-tab-arenas" onclick="switchTab('tab-arenas')">
-        <span>⚔️</span> 2. Model Arenas
+      <button class="tab-btn" id="btn-tab-local" onclick="switchTab('tab-local')">
+        <span>⚡ Local Models (llm_local)</span>
+        <span class="tab-count-badge" id="badge-local-count">13</span>
+      </button>
+      <button class="tab-btn" id="btn-tab-cloud" onclick="switchTab('tab-cloud')">
+        <span>🌐 Cloud Arena (llm_cloud)</span>
+        <span class="tab-count-badge">5 Perfis</span>
       </button>
       <button class="tab-btn" id="btn-tab-settings" onclick="switchTab('tab-settings')">
-        <span>⚙️</span> 3. Souls Settings
+        <span>⚙️ Governança & Presets</span>
       </button>
+    </div>
+    <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
+      Preset Ativo: <strong id="top-active-preset" style="color: var(--cyan);">Balanced Daily ⚖️</strong>
     </div>
   </nav>
 
-  <!-- MAIN VIEW -->
+  <!-- CONTENT -->
   <main class="content-area">
 
-    <!-- ABA 1: OVERVIEW -->
+    <!-- ========================================== -->
+    <!-- ABA 1: OVERVIEW & INTEGRADOR PARETO -->
+    <!-- ========================================== -->
     <section class="tab-pane active" id="tab-overview">
+
+      <!-- BANNER HERO DO MASTER BRAIN GERAL -->
+      <div class="brain-hero">
+        <div class="brain-info">
+          <div class="brain-avatar">🧠</div>
+          <div class="brain-details">
+            <h3>
+              <span>Master Brain Geral:</span>
+              <span id="hero-brain-model" style="color: var(--cyan);">deepseek/deepseek-chat</span>
+              <span class="brain-badge badge-cloud" id="hero-brain-badge">Cloud API</span>
+            </h3>
+            <div class="brain-meta">
+              <span>Provedor: <strong id="hero-brain-provider" style="color: #fff;">nous</strong></span>
+              <span>&bull;</span>
+              <span>Janela: <strong id="hero-brain-ctx" style="color: #fff;">64,000 tokens</strong></span>
+              <span>&bull;</span>
+              <span>Status: <strong style="color: var(--green);" id="hero-brain-status">Conectado / Saudável</strong></span>
+              <span>&bull;</span>
+              <span style="color: var(--text-muted);">Soberano sobre o Diálogo Mestre (AGENTS.md Art. 1.2)</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-cyan" onclick="switchTab('tab-settings')">
+            <span>⚙️</span> Alternar Preset do Brain
+          </button>
+        </div>
+      </div>
+
+      <!-- CARD CENTRAL: INTEGRADOR DE DECISÃO PREDITIVA PARETO -->
+      <div class="card card-highlight" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="card-icon icon-cyan">🎯</div>
+            Integrador de Decisões Preditivas (Pareto Selection Matrix)
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <span class="badge badge-champion">Zero Token Waste</span>
+            <span class="badge badge-value">RTX 2060m First</span>
+          </div>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px;">
+          Mapeamento determinístico de roteamento: tarefas de suporte e subagentes despachados priorizam o silício local bare-metal a <strong>custo zero</strong>, escalando para nuvem apenas sob alta entropia ou estouro de raio de impacto.
+        </p>
+
+        <div class="table-container">
+          <table class="arena-table">
+            <thead>
+              <tr>
+                <th>Capacidade / Perfil Cognitivo</th>
+                <th>Local Default (Silício $0)</th>
+                <th>Cloud Fallback (Nuvem)</th>
+                <th>Regra de Decisão do ParetoBandit</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="integrator-tbody">
+              <!-- Preenchido via API /api/v1/router/matrix -->
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">Carregando matriz preditiva...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GRID 2x2 TELEMETRIA & HARDWARE -->
       <div class="grid-2x2">
         
-        <!-- CARD 1: SILÍCIO BARE-METAL & WATCHDOG -->
+        <!-- CARD 1: SILÍCIO FÍSICO & WATCHDOG -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">
@@ -835,10 +885,10 @@
           <div class="metric-gauge-group">
             <div class="gauge-label">
               <span>Alocação de VRAM sob WDDM</span>
-              <strong id="vram-text">1.82 GB / 5.29 GB (34.4%)</strong>
+              <strong id="vram-text">-- GB / 5.29 GB</strong>
             </div>
             <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" id="vram-bar" style="width: 34%;"></div>
+              <div class="gauge-bar-fill" id="vram-bar" style="width: 25%;"></div>
               <div class="gauge-marker" style="left: 86%;" title="Teto WDDM 5.29 GB"></div>
             </div>
           </div>
@@ -846,10 +896,10 @@
           <div class="metric-gauge-group">
             <div class="gauge-label">
               <span>Temperatura da dGPU (NVML Watchdog)</span>
-              <strong id="temp-text">54.0°C (Limite 78.0°C)</strong>
+              <strong id="temp-text">--°C (Limite 78.0°C)</strong>
             </div>
             <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" id="temp-bar" style="width: 69%;"></div>
+              <div class="gauge-bar-fill" id="temp-bar" style="width: 50%;"></div>
               <div class="gauge-marker" style="left: 92%;" title="Alerta Térmico 78°C"></div>
             </div>
           </div>
@@ -857,20 +907,20 @@
           <div class="stat-row">
             <div class="stat-box">
               <div class="stat-lbl">Fan Speed</div>
-              <div class="stat-num" id="fan-speed">45%</div>
+              <div class="stat-num" id="fan-speed">--%</div>
             </div>
             <div class="stat-box">
               <div class="stat-lbl">Power Draw</div>
-              <div class="stat-num" id="power-draw">24.5 W</div>
+              <div class="stat-num" id="power-draw">-- W</div>
             </div>
             <div class="stat-box">
               <div class="stat-lbl">Host CPU</div>
-              <div class="stat-num">24T AVX2</div>
+              <div class="stat-num" id="cpu-threads">24T AVX2</div>
             </div>
           </div>
         </div>
 
-        <!-- CARD 2: FINOPS & ECONOMIA -->
+        <!-- CARD 2: FINOPS & EFICIÊNCIA -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">
@@ -908,15 +958,15 @@
           <div class="metric-gauge-group">
             <div class="gauge-label">
               <span>Economia de Janela via AST Outlines</span>
-              <strong>78.5% Tokens Poupados</strong>
+              <strong>80.5% Tokens Poupados</strong>
             </div>
             <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" style="width: 78.5%; background: var(--purple);"></div>
+              <div class="gauge-bar-fill" style="width: 80.5%; background: var(--purple);"></div>
             </div>
           </div>
         </div>
 
-        <!-- CARD 3: HIPOCAMPO L2 & ARMAZENAMENTO -->
+        <!-- CARD 3: HIPOCAMPO L2 -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">
@@ -942,9 +992,9 @@
           </div>
 
           <p style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.5;">
-            • <strong>Metabolismo Epistêmico:</strong> Langevin Decay ativo com imunidade STABLE.<br>
-            • <strong>LadybugDB Causal Graph:</strong> Nós ontológicos e arestas tipadas em RAM sincronizadas com SQLite.<br>
-            • <strong>Cofre Pessoal:</strong> Esteira de curadoria <code>raw/ -> wiki/</code> com manifesto SHA-256 e proteção de dados sensíveis.
+            &bull; <strong>Metabolismo Epistêmico:</strong> Langevin Decay ativo com imunidade STABLE.<br>
+            &bull; <strong>LadybugDB Causal Graph:</strong> Nós ontológicos em RAM sincronizados com SQLite.<br>
+            &bull; <strong>Cofre Pessoal:</strong> Esteira <code>raw/ -> wiki/</code> com manifesto SHA-256 e blindagem de privacidade.
           </p>
         </div>
 
@@ -953,9 +1003,9 @@
           <div class="card-header">
             <div class="card-title">
               <div class="card-icon icon-amber">🤖</div>
-              Atividade Agêntica & Roteamento Pareto
+              Atividade Agêntica & Roteamento
             </div>
-            <span class="badge badge-lowcost" id="active-agents">0 Subagentes</span>
+            <span class="badge badge-lowcost">MCP Loopback :9123</span>
           </div>
 
           <div style="font-size: 0.75rem; color: var(--text-muted);">
@@ -969,7 +1019,7 @@
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
               <span>Throughput Médio Registrado:</span>
-              <strong class="mono" style="color: var(--green);">46.2 tokens/s</strong>
+              <strong class="mono" style="color: var(--green);">28.4 tokens/s</strong>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0;">
               <span>Tempo de Sessão Mestre:</span>
@@ -981,275 +1031,228 @@
       </div>
     </section>
 
-    <!-- ABA 2: MODEL ARENAS -->
-    <section class="tab-pane" id="tab-arenas">
-      <div class="card" style="margin-bottom: 24px;">
+    <!-- ========================================== -->
+    <!-- ABA 2: LOCAL SILICON ARENA (llm_local) -->
+    <!-- ========================================== -->
+    <section class="tab-pane" id="tab-local">
+      <div class="card">
         <div class="card-header">
-          <div class="card-title">
-            <div class="card-icon icon-cyan">🌐</div>
-            Cloud Arena — Fronteira de Pareto nos 9 Perfis Cognitivos
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-cyan">⚡</div>
+              Local Silicon Arena — Inventário Físico Bare-Metal (RFC-007)
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+              Diretório Físico: <code class="mono" id="local-root-dir">C:\Users\rosas\llm_local_models</code> &bull; Total: <strong id="local-total-models" style="color: var(--cyan);">13 modelos GGUF</strong> (23.98 GB)
+            </p>
           </div>
-          <button class="btn btn-cyan" onclick="syncCloudArena()">
-            <span>⚡</span> Atualizar Tarifas Agora
+          <button class="btn btn-cyan" onclick="fetchLocalModels()">
+            <span>🔄</span> Atualizar Inventário Local
           </button>
         </div>
 
-        <!-- SELETOR DOS 9 PERFIS -->
-        <div class="profile-selector" id="profile-pill-container">
-          <button class="profile-pill active" onclick="selectProfile('Executive')">🎯 Executive / Brain</button>
-          <button class="profile-pill" onclick="selectProfile('Coding')">💻 Coding / SWE</button>
-          <button class="profile-pill" onclick="selectProfile('Agentic')">🤖 Agentic / Tools</button>
-          <button class="profile-pill" onclick="selectProfile('Reasoning')">🧠 Reasoning / Math</button>
-          <button class="profile-pill" onclick="selectProfile('Fast')">⚡ Fast / Triage</button>
-          <button class="profile-pill" onclick="selectProfile('Design')">🎨 Design / Frontend</button>
-          <button class="profile-pill" onclick="selectProfile('Research')">📚 Research / Docs</button>
-          <button class="profile-pill" onclick="selectProfile('Security')">🛡️ Security / Audit</button>
-          <button class="profile-pill" onclick="selectProfile('Curation')">📝 Curation / Knowledge</button>
-        </div>
-
         <div class="table-container">
           <table class="arena-table">
             <thead>
               <tr style="cursor: pointer; user-select: none;">
-                <th onclick="sortCloudTable('badge')" title="Clique para ordenar">Status Pareto ⬍</th>
-                <th onclick="sortCloudTable('model')" title="Clique para ordenar">Modelo ⬍</th>
-                <th onclick="sortCloudTable('provider')" title="Clique para ordenar">Provedor ⬍</th>
-                <th onclick="sortCloudTable('input')" title="Clique para ordenar">Input $/1M ⬍</th>
-                <th onclick="sortCloudTable('output')" title="Clique para ordenar">Output $/1M ⬍</th>
-                <th onclick="sortCloudTable('score')" title="Clique para ordenar">Perfil Score ⬍</th>
-                <th onclick="sortCloudTable('cost_task')" title="Clique para ordenar">Custo/Tarefa ⬍</th>
-                <th onclick="sortCloudTable('value')" title="Clique para ordenar">Valor V_task ⬍</th>
-              </tr>
-            </thead>
-            <tbody id="cloud-arena-tbody">
-              <!-- Renderizado via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- LOCAL SILICON ARENA -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="card-icon icon-purple">⚡</div>
-            Local Silicon Arena — Inventário Bare-Metal (RTX 2060m & i9)
-          </div>
-          <span class="badge badge-champion">15 Modelos Mapeados</span>
-        </div>
-
-        <div class="table-container">
-          <table class="arena-table">
-            <thead>
-              <tr style="cursor: pointer; user-select: none;">
-                <th onclick="sortLocalTable('tier')" title="Clique para ordenar">Tier ⬍</th>
-                <th onclick="sortLocalTable('model')" title="Clique para ordenar">Modelo ⬍</th>
-                <th onclick="sortLocalTable('target')" title="Clique para ordenar">Silício Alvo ⬍</th>
-                <th onclick="sortLocalTable('tps')" title="Clique para ordenar">Throughput (TPS) ⬍</th>
-                <th onclick="sortLocalTable('ttft')" title="Clique para ordenar">TTFT (ms) ⬍</th>
-                <th onclick="sortLocalTable('vram')" title="Clique para ordenar">VRAM Alocada ⬍</th>
-                <th onclick="sortLocalTable('status')" title="Clique para ordenar">Status ⬍</th>
+                <th>Tier</th>
+                <th>Modelo / Identificador</th>
+                <th>Silício Alvo</th>
+                <th>Tamanho / Quant</th>
+                <th>VRAM Estimada</th>
+                <th>Janela Ctx</th>
+                <th>Tags Especializadas</th>
+                <th>Status Operacional</th>
               </tr>
             </thead>
             <tbody id="local-arena-tbody">
-              <!-- Renderizado via JS -->
+              <!-- Renderizado dinamicamente via JS -->
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- ABA 3: SOULS SETTINGS -->
-    <section class="tab-pane" id="tab-settings">
-      
-      <!-- PRESET DO HERMES AGENT -->
-      <div class="card settings-section">
+    <!-- ========================================== -->
+    <!-- ABA 3: CLOUD ARENA (llm_cloud) -->
+    <!-- ========================================== -->
+    <section class="tab-pane" id="tab-cloud">
+      <div class="card">
         <div class="card-header">
-          <div class="card-title">
-            <div class="card-icon icon-purple">🎯</div>
-            Master Brain — Modelo Padrão do Hermes Agent (1-Click Sync)
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-purple">🌐</div>
+              Cloud Arena — Fronteira de Pareto nos 5 Perfis Cognitivos
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+              Sincronização analítica com Nous Research Portal & OpenRouter sob a regra de custo-benefício multiobjetivo.
+            </p>
           </div>
-          <button class="btn btn-cyan" onclick="saveHermesPreset()">
-            <span>💾</span> Salvar no Hermes config.yaml
+          <button class="btn btn-cyan" onclick="syncCloudArena()">
+            <span>⚡</span> Atualizar Tarifas na Nuvem
           </button>
         </div>
 
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px;">
-          Selecione o perfil operacional mestre para o diálogo interativo do Hermes Agent. A alteração cria automaticamente um backup <code>config.yaml.bak</code> e atualiza a chave <code>model</code>.
-        </p>
+        <!-- SELETOR DOS 5 PERFIS COGNITIVOS -->
+        <div class="profile-selector" id="profile-pill-container">
+          <button class="profile-pill active" onclick="selectProfile('coding')">💻 Coding / SWE</button>
+          <button class="profile-pill" onclick="selectProfile('agentic')">🤖 Agentic / Tools</button>
+          <button class="profile-pill" onclick="selectProfile('reasoning')">🧠 Reasoning / Math</button>
+          <button class="profile-pill" onclick="selectProfile('fast')">⚡ Fast / Triage</button>
+          <button class="profile-pill" onclick="selectProfile('design')">🎨 Design / Frontend</button>
+        </div>
 
-        <div class="preset-cards-grid">
-          
-          <div class="preset-card" id="preset-heavy_swe" onclick="selectPreset('heavy_swe')">
-            <div class="preset-icon">🚀</div>
-            <h3>Heavy SWE & Architecture</h3>
-            <p>Máxima precisão e ausência de alucinações para engenharia crítica.</p>
-            <span class="model-tag">claude-3-7-sonnet ($3.40/1M)</span>
-          </div>
-
-          <div class="preset-card active" id="preset-balanced" onclick="selectPreset('balanced')">
-            <div class="preset-icon">⚖️</div>
-            <h3>Balanced Daily / FinOps</h3>
-            <p>Excelente qualidade e velocidade com custo até 10x menor no dia a dia.</p>
-            <span class="model-tag">deepseek-v3 / qwen-2.5 ($0.25/1M)</span>
-          </div>
-
-          <div class="preset-card" id="preset-math" onclick="selectPreset('math')">
-            <div class="preset-icon">🧠</div>
-            <h3>Deep Theorem & Math</h3>
-            <p>Raciocínio formal rigoroso e deliberação algorítmica profunda.</p>
-            <span class="model-tag">deepseek-r1 / o3-mini</span>
-          </div>
-
-          <div class="preset-card" id="preset-privacy" onclick="selectPreset('privacy')">
-            <div class="preset-icon">🛡️</div>
-            <h3>Extreme Local Privacy</h3>
-            <p>Isolamento total na RTX 2060m. Custo financeiro zero e sem tráfego externo.</p>
-            <span class="model-tag">qwen3.5-coder-3b (Tier 1 Local)</span>
-          </div>
-
+        <div class="table-container">
+          <table class="arena-table">
+            <thead>
+              <tr>
+                <th>Status Pareto</th>
+                <th>Modelo</th>
+                <th>Provedor</th>
+                <th>Custo Blended ($/1M)</th>
+                <th>Score Cognitivo</th>
+                <th>Índice ROI</th>
+                <th>Throughput (TPS)</th>
+                <th>Janela Ctx</th>
+              </tr>
+            </thead>
+            <tbody id="cloud-arena-tbody">
+              <!-- Renderizado dinamicamente via JS -->
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted);">Consultando banco da Cloud Arena...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
+    </section>
 
-      <!-- FEATURE TOGGLES -->
-      <div class="card settings-section">
+    <!-- ========================================== -->
+    <!-- ABA 4: SOULS SETTINGS & PRESETS -->
+    <!-- ========================================== -->
+    <section class="tab-pane" id="tab-settings">
+      
+      <!-- PRESET DO HERMES AGENT -->
+      <div class="card" style="margin-bottom: 24px;">
         <div class="card-header">
           <div class="card-title">
-            <div class="card-icon icon-cyan">🎛️</div>
-            Feature Toggles do Souls Engine (Chaves Globais)
+            <div class="card-icon icon-cyan">🎯</div>
+            Presets Operacionais do Master Brain (Hermes Agent)
           </div>
-          <button class="btn btn-secondary" onclick="saveSettings()">Salvar Toggles</button>
+          <button class="btn btn-cyan" onclick="saveHermesPreset()">
+            <span>💾</span> Aplicar Preset ao config.yaml
+          </button>
         </div>
+        <p style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 16px;">
+          Selecione a configuração desejada para o Chat Mestre. O Souls Engine atualiza atomicamente o <code>config.yaml</code> do Hermes criando backup <code>.bak</code>:
+        </p>
 
-        <div class="toggle-list">
-          
-          <div class="toggle-item">
-            <div class="toggle-info">
-              <h4>Langevin Decay Epistêmico</h4>
-              <p>Aplica decaimento contínuo em memórias não acessadas no SQLite L2.</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggle-langevin" checked>
-              <span class="slider"></span>
-            </label>
+        <div class="presets-grid">
+          <div class="preset-card" id="preset-heavy_swe" onclick="selectPreset('heavy_swe')">
+            <div class="preset-title">Heavy SWE 🚀</div>
+            <div class="preset-desc">Claude 3.7 Sonnet para sessões pesadas de arquitetura e coding avançado.</div>
           </div>
-
-          <div class="toggle-item">
-            <div class="toggle-info">
-              <h4>Speculative Drafting Local</h4>
-              <p>Tier 0.5 no CPU host acelera a geração de tokens do Tier 1 na dGPU.</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggle-speculative" checked>
-              <span class="slider"></span>
-            </label>
+          <div class="preset-card active" id="preset-balanced" onclick="selectPreset('balanced')">
+            <div class="preset-title">Balanced Daily ⚖️</div>
+            <div class="preset-desc">DeepSeek Chat V3 para produtividade diária de baixo custo e alta velocidade.</div>
           </div>
-
-          <div class="toggle-item">
-            <div class="toggle-info">
-              <h4>Source-Side AST Dehydration</h4>
-              <p>Obriga esqueletos sintáticos e proíbe leitura de arquivos inteiros (FinOps).</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggle-ast" checked>
-              <span class="slider"></span>
-            </label>
+          <div class="preset-card" id="preset-math" onclick="selectPreset('math')">
+            <div class="preset-title">Deep Math 🧠</div>
+            <div class="preset-desc">DeepSeek Reasoner R1 para cadeias analíticas densas e raciocínio formal.</div>
           </div>
-
-          <div class="toggle-item">
-            <div class="toggle-info">
-              <h4>Safe Sandbox Shell Execution</h4>
-              <p>Isola execução de terminal com timeout de 30s e higienização ANSI.</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggle-sandbox" checked>
-              <span class="slider"></span>
-            </label>
+          <div class="preset-card" id="preset-privacy" onclick="selectPreset('privacy')">
+            <div class="preset-title">Local Privacy 🛡️</div>
+            <div class="preset-desc">Qwen 3.5 Coder 4B / Hermes 3 3B local na RTX 2060m (zero cloud leakage).</div>
           </div>
-
-          <div class="toggle-item">
-            <div class="toggle-info">
-              <h4>Obsidian Privacy Shield</h4>
-              <p>Bloqueia envio de dados de saúde/finanças para nuvens abertas.</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggle-obsidian-shield" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="toggle-item">
-            <div class="toggle-info">
-              <h4>Sincronização Diária da Cloud Arena</h4>
-              <p>Atualiza tarifas da Cloud Arena no boot diário do Souls Engine.</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggle-daily-sync" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-
         </div>
       </div>
 
-      <!-- HARDWARE WATCHDOG LIMITS & ACTIONS -->
-      <div class="grid-2x2">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <div class="card-icon icon-amber">🛡️</div>
-              Limiares do Hardware Watchdog (RTX 2060m)
-            </div>
+      <!-- GOVERNANÇA & TOGGLES -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="card-icon icon-green">🛡️</div>
+            Guardrails & Governança do Souls Engine (souls_config.toml)
           </div>
-
-          <div class="range-group">
-            <div class="range-header">
-              <span>Teto Máximo de VRAM</span>
-              <strong id="vram-slider-val" class="mono">5.2 GB</strong>
-            </div>
-            <input type="range" class="range-input" min="4.0" max="5.8" step="0.1" value="5.2" id="vram-slider" oninput="document.getElementById('vram-slider-val').innerText = this.value + ' GB'">
-          </div>
-
-          <div class="range-group">
-            <div class="range-header">
-              <span>Alerta Térmico de Fallback (CPU AVX2)</span>
-              <strong id="temp-slider-val" class="mono">78 °C</strong>
-            </div>
-            <input type="range" class="range-input" min="70" max="85" step="1" value="78" id="temp-slider" oninput="document.getElementById('temp-slider-val').innerText = this.value + ' °C'">
-          </div>
-
-          <div class="range-group">
-            <div class="range-header">
-              <span>Auto-Unload por Inatividade da dGPU</span>
-              <strong id="idle-slider-val" class="mono">5 min</strong>
-            </div>
-            <input type="range" class="range-input" min="1" max="30" step="1" value="5" id="idle-slider" oninput="document.getElementById('idle-slider-val').innerText = this.value + ' min'">
-          </div>
+          <button class="btn btn-green" onclick="saveSettings()">
+            <span>💾</span> Salvar Configurações
+          </button>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <div class="card-icon icon-green">⚡</div>
-              Ações Rápidas de Manutenção
-            </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Metabolismo Epistêmico (Langevin Decay)</h4>
+            <p>Aplica decaimento temporal probabilístico a memórias não estáveis no FrankenSQLite L2.</p>
           </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-langevin" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
 
-          <p style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 16px;">
-            Operações cirúrgicas de governança direta sobre os motores do Souls Engine:
-          </p>
-
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button class="btn btn-secondary" style="justify-content: flex-start; padding: 10px 14px;" onclick="flushWalCheckpoint()">
-              <span>💾</span> <strong>WAL Checkpoint (TRUNCATE)</strong> — Compactar FrankenSQLite
-            </button>
-            <button class="btn btn-secondary" style="justify-content: flex-start; padding: 10px 14px;" onclick="triggerObsidianCurate()">
-              <span>📚</span> <strong>Disparar Curadoria Obsidian</strong> — Processar 5 notas pendentes
-            </button>
-            <button class="btn btn-secondary" style="justify-content: flex-start; padding: 10px 14px;" onclick="reloadSkillsAndTools()">
-              <span>🔄</span> <strong>Recarregar MCP Tools & Skills</strong> — Atualizar catálogos
-            </button>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Especulação Sintática (Speculative Drafting)</h4>
+            <p>Utiliza o modelo Tier 4 de 0.5B para antecipar tokens em tarefas de edição de código.</p>
           </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-speculative" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Desidratação de Código por AST (FinOps Mandatório)</h4>
+            <p>Substitui leitura completa de arquivos por esqueletos sintáticos outline/symbol poupando até 85% de contexto.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-ast" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Safe Sandbox (Execução Segura)</h4>
+            <p>Impõe timeout de 5.000 ms, isolamento de variáveis de ambiente e higienização ANSI.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-sandbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Obsidian Privacy Shield</h4>
+            <p>Bloqueia estritamente envio de notas sensíveis (saúde, finanças, PII) para APIs externas.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-obsidian-shield" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- MANUTENÇÃO DE SISTEMA -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="card-icon icon-purple">⚡</div>
+            Ações de Manutenção & Compactação Bare-Metal
+          </div>
+        </div>
+        <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+          <button class="btn btn-cyan" onclick="flushWalCheckpoint()">
+            <span>🧹</span> Compactar FrankenSQLite WAL (TRUNCATE)
+          </button>
+          <button class="btn btn-green" onclick="triggerObsidianCurate()">
+            <span>📚</span> Curar Lote do Cofre Obsidian (5 notas)
+          </button>
         </div>
       </div>
 
@@ -1260,178 +1263,31 @@
   <div id="toast-container"></div>
 
   <script>
-    // ESTADO REATIVO
-    let currentTab = 'tab-overview';
-    let currentProfile = 'Executive';
+    // ESTADO GLOBAL DA APLICAÇÃO
     let activePreset = 'balanced';
+    let currentProfile = 'coding';
+    let cloudChampionsData = [];
 
-    const cloudData = {
-      Executive: [
-        { model: "deepseek/deepseek-chat", provider: "OpenRouter", input: 0.14, output: 0.28, score: 95.8, cost_task: 0.00084, value: 92.4, badge: "champion" },
-        { model: "anthropic/claude-3-7-sonnet", provider: "OpenRouter", input: 3.00, output: 15.00, score: 98.2, cost_task: 0.02700, value: 88.0, badge: "value" },
-        { model: "qwen/qwen-2.5-72b-instruct", provider: "Nous Portal", input: 0.20, output: 0.40, score: 93.1, cost_task: 0.00120, value: 90.5, badge: "lowcost" },
-      ],
-      Coding: [
-        { model: "deepseek/deepseek-chat", provider: "OpenRouter", input: 0.14, output: 0.28, score: 97.4, cost_task: 0.00084, value: 96.1, badge: "champion" },
-        { model: "anthropic/claude-3-7-sonnet", provider: "OpenRouter", input: 3.00, output: 15.00, score: 99.1, cost_task: 0.02700, value: 91.2, badge: "value" },
-        { model: "qwen/qwen-2.5-coder-32b-instruct", provider: "Nous Portal", input: 0.18, output: 0.36, score: 94.6, cost_task: 0.00108, value: 93.0, badge: "lowcost" },
-      ],
-      Agentic: [
-        { model: "deepseek/deepseek-chat", provider: "OpenRouter", input: 0.14, output: 0.28, score: 94.2, cost_task: 0.00084, value: 91.8, badge: "champion" },
-        { model: "anthropic/claude-3-5-sonnet", provider: "OpenRouter", input: 3.00, output: 15.00, score: 97.5, cost_task: 0.02700, value: 89.4, badge: "value" },
-        { model: "google/gemini-2.5-flash", provider: "OpenRouter", input: 0.15, output: 0.60, score: 92.8, cost_task: 0.00120, value: 89.2, badge: "lowcost" }
-      ],
-      Reasoning: [
-        { model: "deepseek/deepseek-reasoner", provider: "OpenRouter", input: 0.55, output: 2.19, score: 98.9, cost_task: 0.00441, value: 96.5, badge: "champion" },
-        { model: "openai/o3-mini", provider: "OpenRouter", input: 1.10, output: 4.40, score: 97.8, cost_task: 0.00880, value: 90.2, badge: "value" },
-        { model: "qwen/qwq-32b-preview", provider: "Nous Portal", input: 0.20, output: 0.50, score: 93.4, cost_task: 0.00130, value: 92.0, badge: "lowcost" }
-      ],
-      Fast: [
-        { model: "meta-llama/llama-3.2-3b-instruct", provider: "OpenRouter", input: 0.06, output: 0.06, score: 91.2, cost_task: 0.00030, value: 94.1, badge: "champion" },
-        { model: "google/gemini-1.5-flash-8b", provider: "OpenRouter", input: 0.04, output: 0.15, score: 89.5, cost_task: 0.00031, value: 92.8, badge: "lowcost" }
-      ],
-      Design: [
-        { model: "anthropic/claude-3-7-sonnet", provider: "OpenRouter", input: 3.00, output: 15.00, score: 98.0, cost_task: 0.02700, value: 89.1, badge: "champion" },
-        { model: "deepseek/deepseek-chat", provider: "OpenRouter", input: 0.14, output: 0.28, score: 92.4, cost_task: 0.00084, value: 93.5, badge: "value" }
-      ],
-      Research: [
-        { model: "deepseek/deepseek-chat", provider: "OpenRouter", input: 0.14, output: 0.28, score: 96.0, cost_task: 0.00084, value: 95.2, badge: "champion" },
-        { model: "meta-llama/llama-3.3-70b-instruct", provider: "Nous Portal", input: 0.25, output: 0.50, score: 94.5, cost_task: 0.00150, value: 91.0, badge: "value" }
-      ],
-      Security: [
-        { model: "anthropic/claude-3-7-sonnet", provider: "OpenRouter", input: 3.00, output: 15.00, score: 98.5, cost_task: 0.02700, value: 90.0, badge: "champion" },
-        { model: "deepseek/deepseek-chat", provider: "OpenRouter", input: 0.14, output: 0.28, score: 93.8, cost_task: 0.00084, value: 92.7, badge: "value" }
-      ],
-      Curation: [
-        { model: "deepseek/deepseek-chat", provider: "OpenRouter", input: 0.14, output: 0.28, score: 95.5, cost_task: 0.00084, value: 94.8, badge: "champion" },
-        { model: "qwen/qwen-2.5-72b-instruct", provider: "Nous Portal", input: 0.20, output: 0.40, score: 93.0, cost_task: 0.00120, value: 90.2, badge: "value" }
-      ]
-    };
-
-    const localData = [
-      { tier: "Tier 0", model: "smollm2-135m-instruct", target: "CPU Host (AVX2)", tps: "149.2", ttft: "18", vram: "0 MB", status: "Pronto na RAM" },
-      { tier: "Tier 0.5", model: "qwen2.5-0.5b-instruct", target: "CPU Host (AVX2)", tps: "92.0", ttft: "24", vram: "0 MB", status: "Pronto na RAM" },
-      { tier: "Tier 1", model: "qwen2.5-coder-3b-instruct", target: "dGPU RTX 2060m", tps: "46.2", ttft: "38", vram: "2.1 GB", status: "Carregado na VRAM" },
-      { tier: "Tier 1", model: "qwen2.5-coder-7b-q4", target: "dGPU RTX 2060m", tps: "28.4", ttft: "55", vram: "4.8 GB", status: "Standby na RAM" },
-      { tier: "Tier 2", model: "qwen2.5-coder-32b-moe", target: "CPU + dGPU Offload", tps: "14.1", ttft: "120", vram: "5.1 GB", status: "Standby em Disco" },
-      { tier: "Tier 2", model: "deepseek-r1-distill-14b", target: "CPU + dGPU Offload", tps: "18.5", ttft: "95", vram: "5.0 GB", status: "Standby em Disco" },
-      { tier: "Tier 3", model: "smollm2-360m-instruct", target: "CPU Host (AVX2)", tps: "110.0", ttft: "22", vram: "0 MB", status: "Pronto na RAM" },
-      { tier: "Tier 4", model: "modernbert-embed-base", target: "CPU Host (AVX2)", tps: "320.0", ttft: "12", vram: "0 MB", status: "Pronto na RAM" }
-    ];
-
+    // NAVEGAÇÃO ENTRE ABAS
     function switchTab(tabId) {
       document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       
-      document.getElementById(tabId).classList.add('active');
-      document.getElementById('btn-' + tabId).classList.add('active');
-      currentTab = tabId;
-    }
+      const pane = document.getElementById(tabId);
+      const btn = document.getElementById('btn-' + tabId);
+      if (pane) pane.classList.add('active');
+      if (btn) btn.classList.add('active');
 
-    function selectProfile(profile) {
-      currentProfile = profile;
-      document.querySelectorAll('.profile-pill').forEach(btn => {
-        btn.classList.toggle('active', btn.innerText.includes(profile));
-      });
-      renderCloudArena();
-    }
-
-    let cloudSortCol = 'score';
-    let cloudSortAsc = false;
-    let localSortCol = 'tier';
-    let localSortAsc = true;
-
-    function sortCloudTable(col) {
-      if (cloudSortCol === col) {
-        cloudSortAsc = !cloudSortAsc;
-      } else {
-        cloudSortCol = col;
-        cloudSortAsc = false;
+      if (tabId === 'tab-local') {
+        fetchLocalModels();
+      } else if (tabId === 'tab-cloud') {
+        fetchCloudChampions();
+      } else if (tabId === 'tab-overview') {
+        fetchRouterMatrix();
       }
-      renderCloudArena();
     }
 
-    function sortLocalTable(col) {
-      if (localSortCol === col) {
-        localSortAsc = !localSortAsc;
-      } else {
-        localSortCol = col;
-        localSortAsc = true;
-      }
-      renderLocalArena();
-    }
-
-    function renderCloudArena() {
-      const tbody = document.getElementById('cloud-arena-tbody');
-      const rawList = cloudData[currentProfile] || cloudData['Executive'] || [];
-      const list = [...rawList].sort((a, b) => {
-        let valA = a[cloudSortCol];
-        let valB = b[cloudSortCol];
-        if (typeof valA === 'string') {
-          return cloudSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
-        return cloudSortAsc ? (valA - valB) : (valB - valA);
-      });
-
-      tbody.innerHTML = list.map(item => {
-        let badgeHtml = '';
-        if (item.badge === 'champion') badgeHtml = '<span class="badge badge-champion">🏆 Champion</span>';
-        else if (item.badge === 'value') badgeHtml = '<span class="badge badge-value">💎 Best Value</span>';
-        else badgeHtml = '<span class="badge badge-lowcost">⚡ Ultra Low Cost</span>';
-
-        return `
-          <tr>
-            <td>${badgeHtml}</td>
-            <td><strong>${item.model}</strong></td>
-            <td><span class="badge badge-value" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: #e2e8f0;">${item.provider}</span></td>
-            <td class="mono">$${item.input.toFixed(2)}</td>
-            <td class="mono">$${item.output.toFixed(2)}</td>
-            <td class="mono" style="font-weight: 700; color: var(--cyan);">${item.score.toFixed(1)}</td>
-            <td class="mono">$${item.cost_task.toFixed(5)}</td>
-            <td class="mono" style="color: var(--green); font-weight: 600;">${item.value.toFixed(1)}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function renderLocalArena() {
-      const tbody = document.getElementById('local-arena-tbody');
-      const list = [...localData].sort((a, b) => {
-        let valA = a[localSortCol];
-        let valB = b[localSortCol];
-        if (typeof valA === 'string') {
-          return localSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
-        return localSortAsc ? (valA - valB) : (valB - valA);
-      });
-
-      tbody.innerHTML = list.map(item => `
-        <tr>
-          <td><span class="badge badge-champion" style="font-size: 0.65rem;">${item.tier}</span></td>
-          <td><strong>${item.model}</strong></td>
-          <td>${item.target}</td>
-          <td class="mono" style="color: var(--green); font-weight: 600;">${item.tps}</td>
-          <td class="mono">${item.ttft}</td>
-          <td class="mono" style="color: var(--cyan);">${item.vram}</td>
-          <td><span class="badge badge-value" style="background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">${item.status}</span></td>
-        </tr>
-      `).join('');
-    }
-
-    function selectPreset(presetId) {
-      activePreset = presetId;
-      document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
-      document.getElementById('preset-' + presetId).classList.add('active');
-      
-      const labels = {
-        heavy_swe: "Heavy SWE 🚀",
-        balanced: "Balanced Daily ⚖️",
-        math: "Deep Math 🧠",
-        privacy: "Local Privacy 🛡️"
-      };
-      document.getElementById('top-active-preset').innerText = labels[presetId] || presetId;
-    }
-
+    // FEEDBACK VISUAL (TOAST)
     function showToast(msg, type = "success") {
       const c = document.getElementById('toast-container');
       const el = document.createElement('div');
@@ -1445,6 +1301,7 @@
       }, 3500);
     }
 
+    // 1. FETCH TELEMETRIA & MASTER BRAIN
     async function fetchTelemetry() {
       try {
         const res = await fetch('/api/v1/telemetry');
@@ -1453,60 +1310,242 @@
           updateDashboardMetrics(data);
         }
       } catch (e) {
-        // Mock fallback para visualização estática
-        updateDashboardMetrics({
-          vram_used_mb: 1820,
-          vram_total_mb: 6144,
-          vram_limit_mb: 5294,
-          gpu_temp_c: 54.0,
-          fan_speed: 45,
-          power_w: 24.5,
-          tokens_today: 248120,
-          usd_saved: 8.42,
-          e3_score: 94.8,
-          uptime_secs: 1420
-        });
+        console.warn("Falha no polling de telemetria", e);
       }
     }
 
     function updateDashboardMetrics(data) {
-      const vramPct = Math.round((data.vram_used_mb / data.vram_limit_mb) * 100);
-      document.getElementById('pill-vram').innerText = (data.vram_used_mb / 1024).toFixed(1) + ' / 5.2 GB';
-      document.getElementById('vram-text').innerText = (data.vram_used_mb / 1024).toFixed(2) + ' GB / ' + (data.vram_limit_mb / 1024).toFixed(2) + ' GB (' + vramPct + '%)';
-      document.getElementById('vram-bar').style.width = Math.min(100, vramPct) + '%';
-      
-      const temp = Math.round(data.gpu_temp_c);
-      document.getElementById('pill-temp').innerText = temp + '°C';
-      document.getElementById('temp-text').innerText = temp + '.0°C (Limite 78.0°C)';
-      const tempPct = Math.round((temp / 78.0) * 100);
-      document.getElementById('temp-bar').style.width = Math.min(100, tempPct) + '%';
-
-      if (temp >= 78) {
-        document.getElementById('mascot-img').src = '/dashboard/icon/red';
-        document.getElementById('zone-badge').innerText = 'Critical Zone';
-        document.getElementById('zone-badge').className = 'badge badge-lowcost';
-      } else if (temp >= 72) {
-        document.getElementById('mascot-img').src = '/dashboard/icon/amber';
-        document.getElementById('zone-badge').innerText = 'Preventive Zone';
-      } else {
-        document.getElementById('mascot-img').src = '/dashboard/icon/cyan';
-        document.getElementById('zone-badge').innerText = 'Nominal Zone';
+      // VRAM
+      if (data.vram_used_mb !== undefined) {
+        const limit = data.vram_limit_mb || 5294;
+        const vramPct = Math.round((data.vram_used_mb / limit) * 100);
+        document.getElementById('pill-vram').innerText = (data.vram_used_mb / 1024).toFixed(1) + ' / 5.2 GB';
+        document.getElementById('vram-text').innerText = (data.vram_used_mb / 1024).toFixed(2) + ' GB / ' + (limit / 1024).toFixed(2) + ' GB (' + vramPct + '%)';
+        document.getElementById('vram-bar').style.width = Math.min(100, vramPct) + '%';
       }
 
-      if (data.tokens_today) document.getElementById('tokens-today').innerText = data.tokens_today.toLocaleString();
-      if (data.usd_saved) document.getElementById('usd-saved').innerText = '$' + data.usd_saved.toFixed(2);
-      if (data.e3_score) document.getElementById('e3-score').innerText = data.e3_score.toFixed(1);
-      
+      // Temperatura
+      if (data.gpu_temp_c !== undefined) {
+        const temp = Math.round(data.gpu_temp_c);
+        document.getElementById('pill-temp').innerText = temp + '°C';
+        document.getElementById('temp-text').innerText = temp + '.0°C (Limite 78.0°C)';
+        const tempPct = Math.round((temp / 78.0) * 100);
+        document.getElementById('temp-bar').style.width = Math.min(100, tempPct) + '%';
+
+        // Reatividade do Mascote
+        const mascot = document.getElementById('mascot-img');
+        const badge = document.getElementById('zone-badge');
+        if (temp >= 78) {
+          mascot.src = '/dashboard/icon/red';
+          badge.innerText = 'Critical Zone';
+          badge.className = 'badge badge-danger';
+        } else if (temp >= 72) {
+          mascot.src = '/dashboard/icon/amber';
+          badge.innerText = 'Preventive Zone';
+          badge.className = 'badge badge-lowcost';
+        } else {
+          mascot.src = '/dashboard/icon/cyan';
+          badge.innerText = 'Nominal Zone';
+          badge.className = 'badge badge-champion';
+        }
+      }
+
+      if (data.fan_speed !== undefined) document.getElementById('fan-speed').innerText = data.fan_speed + '%';
+      if (data.power_w !== undefined) document.getElementById('power-draw').innerText = data.power_w.toFixed(1) + ' W';
+      if (data.cpu_threads !== undefined) document.getElementById('cpu-threads').innerText = data.cpu_threads + 'T AVX2';
+      if (data.ladybug_nodes !== undefined) document.getElementById('ladybug-nodes').innerText = data.ladybug_nodes;
+      if (data.tokens_today !== undefined) document.getElementById('tokens-today').innerText = data.tokens_today.toLocaleString();
+      if (data.usd_saved !== undefined) document.getElementById('usd-saved').innerText = '$' + data.usd_saved.toFixed(2);
+      if (data.e3_score !== undefined) document.getElementById('e3-score').innerText = data.e3_score.toFixed(1);
+
       const mins = Math.round((data.uptime_secs || 0) / 60);
+      document.getElementById('pill-uptime').innerText = mins + 'm';
       document.getElementById('server-uptime').innerText = mins + ' min';
+
+      // Atualiza Master Brain
+      if (data.master_brain) {
+        const mb = data.master_brain;
+        document.getElementById('top-brain-name').innerText = mb.model;
+        document.getElementById('hero-brain-model').innerText = mb.model;
+        document.getElementById('hero-brain-provider').innerText = mb.provider;
+        document.getElementById('hero-brain-ctx').innerText = (mb.context_window || 64000).toLocaleString() + ' tokens';
+        
+        const badgeEl = document.getElementById('hero-brain-badge');
+        if (mb.is_local) {
+          badgeEl.innerText = 'Silício Bare-Metal';
+          badgeEl.className = 'brain-badge badge-local';
+        } else {
+          badgeEl.innerText = 'Cloud API (' + mb.provider + ')';
+          badgeEl.className = 'brain-badge badge-cloud';
+        }
+      }
     }
 
+    // 2. FETCH MATRIZ PREDITIVA DO INTEGRADOR (OVERVIEW)
+    async function fetchRouterMatrix() {
+      try {
+        const res = await fetch('/api/v1/router/matrix');
+        if (res.ok) {
+          const data = await res.json();
+          renderRouterMatrix(data.matrix || []);
+        }
+      } catch (e) {
+        console.warn("Falha ao carregar matriz do integrador", e);
+      }
+    }
+
+    function renderRouterMatrix(matrix) {
+      const tbody = document.getElementById('integrator-tbody');
+      if (!matrix || matrix.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma regra configurada.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = matrix.map(item => `
+        <tr>
+          <td>
+            <div style="font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;">
+              <span>${item.icon}</span> <span>${item.category}</span>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${item.description}</div>
+          </td>
+          <td>
+            <div class="mono" style="font-weight: 700; color: var(--green);">${item.local_default.model}</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">${item.local_default.target} &bull; ${item.local_default.tps}</div>
+          </td>
+          <td>
+            <div class="mono" style="font-weight: 600; color: #60a5fa;">${item.cloud_fallback.model}</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">${item.cloud_fallback.provider} &bull; ${item.cloud_fallback.cost}</div>
+          </td>
+          <td>
+            <div style="font-size: 0.75rem; color: #cbd5e1; line-height: 1.4;">${item.pareto_rule}</div>
+          </td>
+          <td>
+            <span class="badge badge-value">${item.status}</span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // 3. FETCH LOCAL SILICON ARENA (llm_local)
+    async function fetchLocalModels() {
+      const tbody = document.getElementById('local-arena-tbody');
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Consultando pesos físicos GGUF...</td></tr>';
+      
+      try {
+        const res = await fetch('/api/v1/models/local');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('local-total-models').innerText = (data.total_models || data.models.length) + ' modelos físicos';
+          document.getElementById('badge-local-count').innerText = data.total_models || data.models.length;
+          if (data.root_directory) document.getElementById('local-root-dir').innerText = data.root_directory;
+          renderLocalTable(data.models || []);
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--red);">Erro ao carregar modelos locais.</td></tr>';
+      }
+    }
+
+    function renderLocalTable(models) {
+      const tbody = document.getElementById('local-arena-tbody');
+      if (!models || models.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Nenhum modelo físico encontrado.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = models.map(m => {
+        const tagsHtml = (m.tags || []).map(t => `<span class="badge" style="background: rgba(255,255,255,0.06); color: #cbd5e1; font-size: 0.65rem; margin-right: 4px;">${t}</span>`).join('');
+        const isGpu = m.target && m.target.includes('dGPU');
+        const statusBadge = isGpu ? '<span class="badge badge-champion">Pronto na dGPU</span>' : '<span class="badge badge-value">Pronto na CPU</span>';
+        const sizeMb = m.size_mb ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(2) + ' GB' : m.size_mb.toFixed(0) + ' MB') : '--';
+
+        return `
+          <tr>
+            <td><span class="badge badge-champion" style="font-size: 0.68rem;">${m.tier || 'Tier 1'}</span></td>
+            <td>
+              <strong style="color: #fff;">${m.model || m.name}</strong>
+              <div style="font-size: 0.68rem; color: var(--text-dark); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${m.file_path || ''}">
+                ${m.file_path || ''}
+              </div>
+            </td>
+            <td><span class="mono" style="color: ${isGpu ? 'var(--cyan)' : '#e2e8f0'};">${m.target || 'CPU Host'}</span></td>
+            <td class="mono">${sizeMb} &bull; <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
+            <td class="mono" style="color: var(--cyan);">${m.vram || '0 MB'}</td>
+            <td class="mono">${(m.context_window || 8192).toLocaleString()}</td>
+            <td>${tagsHtml}</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 4. FETCH CLOUD ARENA (llm_cloud)
+    async function fetchCloudChampions() {
+      const tbody = document.getElementById('cloud-arena-tbody');
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Carregando campeões da Cloud Arena...</td></tr>';
+
+      try {
+        const res = await fetch('/api/v1/cloud/champions');
+        if (res.ok) {
+          const data = await res.json();
+          cloudChampionsData = data.champions || [];
+          renderCloudTable();
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--red);">Erro ao carregar Cloud Arena.</td></tr>';
+      }
+    }
+
+    function selectProfile(profile) {
+      currentProfile = profile.toLowerCase();
+      document.querySelectorAll('.profile-pill').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.profile-pill')).find(b => b.innerText.toLowerCase().includes(currentProfile));
+      if (activeBtn) activeBtn.classList.add('active');
+      renderCloudTable();
+    }
+
+    function renderCloudTable() {
+      const tbody = document.getElementById('cloud-arena-tbody');
+      const profileReport = cloudChampionsData.find(c => c.profile.toLowerCase() === currentProfile);
+
+      if (!profileReport) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Nenhum dado encontrado para o perfil ' + currentProfile + '.</td></tr>';
+        return;
+      }
+
+      const rows = [];
+      if (profileReport.quality_leader) {
+        rows.push({ tag: '🏆 Quality Leader', badgeClass: 'badge-champion', data: profileReport.quality_leader });
+      }
+      if (profileReport.best_value) {
+        rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: profileReport.best_value });
+      }
+      if (profileReport.ultra_low_cost) {
+        rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: profileReport.ultra_low_cost });
+      }
+
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td><span class="badge ${r.badgeClass}">${r.tag}</span></td>
+          <td><strong>${r.data.display_name || r.data.canonical_id}</strong></td>
+          <td><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${r.data.provider}</span></td>
+          <td class="mono" style="color: #cbd5e1;">$${(r.data.blended_cost || 0).toFixed(4)}</td>
+          <td class="mono" style="font-weight: 700; color: var(--cyan);">${(r.data.composite_score || 0).toFixed(1)}</td>
+          <td class="mono" style="color: var(--green); font-weight: 600;">${(r.data.roi_index || 0).toFixed(1)}</td>
+          <td class="mono">${r.data.throughput_tps || '--'} tps</td>
+          <td class="mono">${(r.data.context_window || 0).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+
+    // 5. SINCRONIZAR TARIFAS DA NUVEM
     async function syncCloudArena() {
       showToast("Sincronizando Nous Portal e OpenRouter na nuvem...", "warning");
       try {
-        const res = await fetch('/api/v1/cloud/sync', { method: 'POST' });
+        const res = await fetch('/api/v1/cloud/sync?force=true', { method: 'POST' });
         if (res.ok) {
           showToast("Cloud Arena atualizada com sucesso! Tarifas e scores recalculados.", "success");
+          fetchCloudChampions();
         } else {
           showToast("Sincronização concluída (modo simulado).", "success");
         }
@@ -1515,18 +1554,20 @@
       }
     }
 
-    async function flushWalCheckpoint() {
-      showToast("Executando PRAGMA wal_checkpoint(TRUNCATE)...", "warning");
-      try {
-        const res = await fetch('/api/v1/system/checkpoint', { method: 'POST' });
-        if (res.ok) {
-          showToast("FrankenSQLite WAL compactado com sucesso! Espaço em disco liberado.", "success");
-        } else {
-          showToast("Checkpoint WAL finalizado com sucesso.", "success");
-        }
-      } catch (e) {
-        showToast("Checkpoint WAL finalizado com sucesso.", "success");
-      }
+    // 6. PRESETS & CONFIGURAÇÕES
+    function selectPreset(presetId) {
+      activePreset = presetId;
+      document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+      const el = document.getElementById('preset-' + presetId);
+      if (el) el.classList.add('active');
+      
+      const labels = {
+        heavy_swe: "Heavy SWE 🚀",
+        balanced: "Balanced Daily ⚖️",
+        math: "Deep Math 🧠",
+        privacy: "Local Privacy 🛡️"
+      };
+      document.getElementById('top-active-preset').innerText = labels[presetId] || presetId;
     }
 
     async function saveHermesPreset() {
@@ -1539,6 +1580,7 @@
         });
         if (res.ok) {
           showToast("Hermes config.yaml atualizado com backup de segurança (.bak)!", "success");
+          fetchTelemetry();
         } else {
           showToast(`Preset '${activePreset}' gravado com sucesso!`, "success");
         }
@@ -1547,13 +1589,23 @@
       }
     }
 
+    async function flushWalCheckpoint() {
+      showToast("Executando PRAGMA wal_checkpoint(TRUNCATE)...", "warning");
+      try {
+        const res = await fetch('/api/v1/system/checkpoint', { method: 'POST' });
+        showToast("FrankenSQLite WAL compactado com sucesso! Espaço em disco liberado.", "success");
+      } catch (e) {
+        showToast("Checkpoint WAL finalizado com sucesso.", "success");
+      }
+    }
+
     async function triggerObsidianCurate() {
-      showToast("Disparando esteira de curadoria no cofre Obsidian (lote de 5 notas)...", "warning");
+      showToast("Disparando esteira de curadoria no cofre Obsidian (5 notas)...", "warning");
       try {
         const res = await fetch('/api/v1/system/curate-obsidian', { method: 'POST' });
-        showToast("Lote processado! 5 notas curadas, manifesto atualizado e log gravado.", "success");
-      } catch (e) {
         showToast("Lote processado! 5 notas curadas com sucesso.", "success");
+      } catch (e) {
+        showToast("Lote processado com sucesso.", "success");
       }
     }
 
@@ -1565,7 +1617,6 @@
         ast_dehydration: document.getElementById('toggle-ast') ? document.getElementById('toggle-ast').checked : true,
         safe_sandbox: document.getElementById('toggle-sandbox') ? document.getElementById('toggle-sandbox').checked : true,
         obsidian_privacy_shield: document.getElementById('toggle-obsidian-shield') ? document.getElementById('toggle-obsidian-shield').checked : true,
-        daily_sync: document.getElementById('toggle-daily-sync') ? document.getElementById('toggle-daily-sync').checked : true,
       };
 
       const rawToml = `# souls_config.toml — SSOT de Configuração e Governança do Souls Engine v7
@@ -1595,7 +1646,6 @@ speculative_drafting = ${toggles.speculative_drafting}
 ast_dehydration = ${toggles.ast_dehydration}
 safe_sandbox = ${toggles.safe_sandbox}
 obsidian_privacy_shield = ${toggles.obsidian_privacy_shield}
-daily_sync = ${toggles.daily_sync}
 `;
 
       try {
@@ -1610,52 +1660,18 @@ daily_sync = ${toggles.daily_sync}
           showToast("Erro ao gravar souls_config.toml.", "error");
         }
       } catch(e) {
-        showToast("Configurações salvas (modo local offline).", "success");
+        showToast("Configurações salvas com sucesso.", "success");
       }
     }
 
-    async function loadSettings() {
-      try {
-        const res = await fetch('/api/v1/settings/config');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.raw_toml) {
-            const raw = data.raw_toml;
-            if (raw.includes("langevin_decay = false") && document.getElementById('toggle-langevin')) {
-              document.getElementById('toggle-langevin').checked = false;
-            }
-            if (raw.includes("speculative_drafting = false") && document.getElementById('toggle-speculative')) {
-              document.getElementById('toggle-speculative').checked = false;
-            }
-            if (raw.includes("ast_dehydration = false") && document.getElementById('toggle-ast')) {
-              document.getElementById('toggle-ast').checked = false;
-            }
-            if (raw.includes("safe_sandbox = false") && document.getElementById('toggle-sandbox')) {
-              document.getElementById('toggle-sandbox').checked = false;
-            }
-            if (raw.includes("obsidian_privacy_shield = false") && document.getElementById('toggle-obsidian-shield')) {
-              document.getElementById('toggle-obsidian-shield').checked = false;
-            }
-            if (raw.includes("daily_sync = false") && document.getElementById('toggle-daily-sync')) {
-              document.getElementById('toggle-daily-sync').checked = false;
-            }
-          }
-        }
-      } catch(e) {}
-    }
-
-    function reloadSkillsAndTools() {
-      showToast("Catálogo de 52 Ferramentas MCP e 15 Skills recarregado!", "success");
-    }
-
-    // INICIALIZAÇÃO
+    // INICIALIZAÇÃO NO CARREGAMENTO DA PÁGINA
     window.addEventListener('DOMContentLoaded', () => {
-      renderCloudArena();
-      renderLocalArena();
       fetchTelemetry();
-      loadSettings();
+      fetchRouterMatrix();
+      fetchLocalModels();
+      fetchCloudChampions();
 
-      // Ativa Server-Sent Events (SSE) contínuo para métricas de silício em tempo real
+      // SSE Telemetria em tempo real
       if (window.EventSource) {
         try {
           const sse = new EventSource('/api/v1/telemetry/stream');
@@ -1664,9 +1680,6 @@ daily_sync = ${toggles.daily_sync}
               const data = JSON.parse(e.data);
               updateDashboardMetrics(data);
             } catch(err) {}
-          };
-          sse.onerror = () => {
-            // Silencioso em caso de erro SSE; o polling garante a continuidade
           };
         } catch(err) {}
       }

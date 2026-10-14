@@ -57,12 +57,19 @@ $checks += Assert-Check "3. Two-Stage Semantic Switchboard MCP (<5ms)" {
 
 # 4. Des-staging Domínio 6 (Context LEAN & Sandbox)
 $checks += Assert-Check "4. Domínio 6: Compressão LEAN Real" {
-    $body = @{
-        jsonrpc = "2.0"; id = 11; method = "tools/call"
-        params = @{ name = "compress"; arguments = @{ text = "// Comentário descartável`nfn run() { return 1; }" } }
-    } | ConvertTo-Json
-    $res = Invoke-RestMethod -Uri "$BaseUrl/mcp" -Method Post -Body $body -ContentType "application/json"
-    if ($res.result.content[0].text -like "*// Comentário*") { throw "Comentário não foi removido na compressão" }
+    $compressPayload = @{
+        jsonrpc = "2.0"
+        id = 11
+        method = "tools/call"
+        params = @{
+            name = "compress"
+            arguments = @{
+                text = "// Comentario descartavel`nfn run() { return 1; }"
+            }
+        }
+    } | ConvertTo-Json -Depth 5
+    $res = Invoke-RestMethod -Uri "$BaseUrl/mcp" -Method Post -Body $compressPayload -ContentType "application/json; charset=utf-8"
+    if ($res.result.content[0].text -like "*// Comentario*") { throw "Comentário não foi removido na compressão" }
     "OK (Tokens economizados: $($res.result.structuredContent.tokens_saved))"
 }
 
@@ -78,7 +85,7 @@ $checks += Assert-Check "5. Adaptadores Hermes Desktop Plugin Links" {
 # 6. Central souls_config.toml Persistence
 $checks += Assert-Check "6. Configuração Centralizada souls_config.toml" {
     $cfg = Invoke-RestMethod -Uri "$BaseUrl/api/v1/settings/config"
-    if (-not $cfg.raw_toml -or -not ($cfg.raw_toml -like "*vram_hard_limit_mb*")) { throw "Configuração TOML inválida" }
+    if (-not $cfg.raw_toml -or -not ($cfg.raw_toml -like "*vram_ceiling_mb*")) { throw "Configuração TOML inválida" }
     "OK (Arquivo persistido em $($cfg.path))"
 }
 

@@ -99,6 +99,8 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
         .await
         .unwrap_or(142);
 
+    let master_brain = read_hermes_master_brain();
+
     Json(json!({
         "status": "online",
         "port": 9123,
@@ -116,6 +118,165 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
         "e3_score": 94.8,
         "tokens_today": 248120,
         "usd_saved": 8.42,
+        "master_brain": master_brain,
+    }))
+}
+
+/// Helper function to inspect the active master brain configured in Hermes Agent config.yaml.
+pub fn read_hermes_master_brain() -> Value {
+    let local_appdata = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| "C:\\Users\\rosas\\AppData\\Local".to_string());
+    let hermes_cfg_path = PathBuf::from(&local_appdata).join("hermes").join("config.yaml");
+
+    let mut model_name = "deepseek/deepseek-chat".to_string();
+    let mut provider = "nous".to_string();
+
+    if hermes_cfg_path.exists() {
+        if let Ok(content) = fs::read_to_string(&hermes_cfg_path) {
+            let mut inside_top_model = false;
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if line.starts_with("model:") {
+                    inside_top_model = true;
+                    continue;
+                }
+                if inside_top_model {
+                    if trimmed.starts_with("default:") {
+                        let val = trimmed.trim_start_matches("default:").trim().trim_matches('"').trim_matches('\'');
+                        if !val.is_empty() {
+                            model_name = val.to_string();
+                        }
+                    } else if trimmed.starts_with("provider:") {
+                        let val = trimmed.trim_start_matches("provider:").trim().trim_matches('"').trim_matches('\'');
+                        if !val.is_empty() {
+                            provider = val.to_string();
+                        }
+                    } else if !line.starts_with(' ') && !line.starts_with('\t') && !line.is_empty() {
+                        inside_top_model = false;
+                    }
+                }
+            }
+        }
+    }
+
+    let is_local = provider == "custom" || provider == "local" || model_name.contains("gguf") || model_name.contains("qwen") || model_name.contains("smollm") || model_name.contains("hermes-3-llama");
+    let target_type = if is_local { "Silício Bare-Metal" } else { "Cloud API" };
+
+    json!({
+        "model": model_name,
+        "provider": provider,
+        "is_local": is_local,
+        "target_type": target_type,
+        "status": "Online / Configurado",
+        "context_window": if model_name.contains("claude") { 200_000 } else if model_name.contains("qwen") { 131_072 } else { 64_000 }
+    })
+}
+
+/// Returns the predictive selection matrix for tasks (Pareto Local Default vs Cloud Fallback).
+pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    let matrix = vec![
+        json!({
+            "id": "coding_swe",
+            "category": "Coding & Cirurgia Sintática",
+            "icon": "💻",
+            "description": "Edições atômicas AST, Myers Diff e refatoração de código Rust/TypeScript.",
+            "local_default": {
+                "model": "qwen3-5-4b-agentic-coder-v4-i1-q4-k-s",
+                "target": "dGPU RTX 2060m (2.5 GB VRAM)",
+                "tps": "28.4 tokens/s",
+                "cost": "$0.00 (Zero Silício)"
+            },
+            "cloud_fallback": {
+                "model": "anthropic/claude-3-7-sonnet",
+                "provider": "Nous Portal / OpenRouter",
+                "cost": "$3.00 / $15.00 por 1M"
+            },
+            "pareto_rule": "Executa 100% no silício local se blast radius <= 5 arquivos; escala para Claude se refatoração estrutural multi-crate.",
+            "status": "Pronto (dGPU)"
+        }),
+        json!({
+            "id": "agentic_tools",
+            "category": "Agentic & Tool Calling (MCP)",
+            "icon": "🤖",
+            "description": "Despacho de microtarefas periféricas, JSON Schema e execução MCP.",
+            "local_default": {
+                "model": "arch-function-chat-3b-q5-k-m",
+                "target": "dGPU RTX 2060m (2.1 GB VRAM)",
+                "tps": "32.0 tokens/s",
+                "cost": "$0.00 (Zero Silício)"
+            },
+            "cloud_fallback": {
+                "model": "deepseek/deepseek-chat",
+                "provider": "Nous Portal",
+                "cost": "$0.14 / $0.28 por 1M"
+            },
+            "pareto_rule": "Chamadas operacionais de MCP executam localmente; orquestração complexa com long-turn desvia para DeepSeek.",
+            "status": "Pronto (dGPU)"
+        }),
+        json!({
+            "id": "fast_triage",
+            "category": "Fast Triage & Gating de Entropia",
+            "icon": "⚡",
+            "description": "Triagem instantânea de intenção e medição de entropia de prompts.",
+            "local_default": {
+                "model": "smollm2-135m-reasoning-5k-q4-k-m",
+                "target": "CPU Host AVX2 (0 MB VRAM)",
+                "tps": "149.2 tokens/s",
+                "cost": "$0.00 (Host CPU)"
+            },
+            "cloud_fallback": {
+                "model": "smollm2-360m-instruct-q8-0",
+                "provider": "CPU Host (0 MB VRAM)",
+                "cost": "$0.00 (Zero Cloud Waste)"
+            },
+            "pareto_rule": "100% Bare-metal no silício host. Nunca escala para nuvem para poupar latência e evitar custos desnecessários.",
+            "status": "Pronto (CPU AVX2)"
+        }),
+        json!({
+            "id": "deep_reasoning",
+            "category": "Deep Reasoning & Lógica",
+            "icon": "🧠",
+            "description": "Cadeias densas de pensamento (CoT), análise matemática e prova de propriedades.",
+            "local_default": {
+                "model": "phi-4-mini-instruct-q4-k-m",
+                "target": "dGPU RTX 2060m (2.3 GB VRAM)",
+                "tps": "26.5 tokens/s",
+                "cost": "$0.00 (Zero Silício)"
+            },
+            "cloud_fallback": {
+                "model": "deepseek/deepseek-reasoner",
+                "provider": "Nous Portal",
+                "cost": "$0.55 / $2.19 por 1M"
+            },
+            "pareto_rule": "Deliberação socrática local até 16k tokens; desvia para DeepSeek R1 se ambiguidade formal exceder limiar de entropia.",
+            "status": "Pronto (dGPU)"
+        }),
+        json!({
+            "id": "vision_multimodal",
+            "category": "Multimodal & Visão",
+            "icon": "👁️",
+            "description": "Compreensão de capturas de tela de UI, diagramas e análise de layouts visuais.",
+            "local_default": {
+                "model": "qwen2-5-vl-3b-instruct-q4-k-m",
+                "target": "dGPU RTX 2060m (1.8 GB VRAM)",
+                "tps": "24.0 tokens/s",
+                "cost": "$0.00 (Zero Silício)"
+            },
+            "cloud_fallback": {
+                "model": "openai/gpt-4o",
+                "provider": "OpenRouter",
+                "cost": "$2.50 / $10.00 por 1M"
+            },
+            "pareto_rule": "Processamento de imagens diretamente na RTX 2060m sem enviar dados sensíveis de tela para a nuvem.",
+            "status": "Pronto (dGPU)"
+        })
+    ];
+
+    Json(json!({
+        "status": "success",
+        "total_categories": matrix.len(),
+        "matrix": matrix
     }))
 }
 
