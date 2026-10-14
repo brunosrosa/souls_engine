@@ -15,11 +15,16 @@ pub fn normalize_val(val: f64, min: f64, max: f64) -> f64 {
 
 pub fn normalize_score_or_elo(val: f64) -> f64 {
     if val <= 100.0 {
-        // Escala percentil/índice (Artificial Analysis Intelligence / Coding / Agentic)
-        val.clamp(0.0, 100.0)
+        // Escala Artificial Analysis Intelligence Index (10.0 a 60.0 mapeada para 0 a 100)
+        // Se já for um índice percentual direto (ex: SWE / coding_index > 65), preserva o percentual
+        if val > 65.0 {
+            val.clamp(0.0, 100.0)
+        } else {
+            normalize_val(val, 10.0, 60.0)
+        }
     } else {
-        // Escala Elo humana (LMSYS Chatbot Arena: 1000 a 1550)
-        normalize_val(val, 1000.0, 1550.0)
+        // Escala Elo humana (LMSYS Chatbot Arena: 1200.0 a 1550.0 mapeada para 0 a 100)
+        normalize_val(val, 1200.0, 1550.0)
     }
 }
 

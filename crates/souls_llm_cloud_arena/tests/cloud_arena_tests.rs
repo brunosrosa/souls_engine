@@ -90,10 +90,10 @@ async fn test_sqlite_strict_migrations_and_repository() {
 #[test]
 fn test_resolver_canonical_behavior() {
     let resolver = CanonicalResolver::new();
-    assert_eq!(resolver.resolve("anthropic/claude-3-7-sonnet:beta"), "claude-3-7-sonnet");
-    assert_eq!(resolver.resolve("deepseek/deepseek-chat"), "deepseek-v3");
-    assert_eq!(resolver.resolve("nousresearch/hermes-3-llama-3.1-70b"), "hermes-3-llama-3.1-70b");
-    assert_eq!(resolver.resolve("qwen/qwen-2.5-coder-32b"), "qwen-2.5-coder-32b");
+    assert_eq!(resolver.resolve("~anthropic/claude-sonnet-5.5"), "anthropic/claude-sonnet-5.5");
+    assert_eq!(resolver.resolve("anthropic/claude-sonnet-5.5:beta"), "anthropic/claude-sonnet-5.5");
+    assert_eq!(resolver.resolve("gemini-4-argon-high"), "google/gemini-4-argon");
+    assert_eq!(resolver.resolve("~openai/gpt-astra-latest"), "openai/gpt-6-astra");
 }
 
 #[test]
@@ -226,9 +226,9 @@ fn test_foreign_key_protection_against_unknown_models() {
     let resolver = CanonicalResolver::new();
 
     // Modelos conhecidos resolvem perfeitamente
-    assert_eq!(resolver.try_resolve("anthropic/claude-3-7-sonnet:beta"), Some("claude-3-7-sonnet".to_string()));
-    assert_eq!(resolver.try_resolve("deepseek/deepseek-chat"), Some("deepseek-v3".to_string()));
-    assert_eq!(resolver.try_resolve("openai/gpt-4o"), Some("gpt-4o".to_string()));
+    assert_eq!(resolver.try_resolve("~anthropic/claude-sonnet-5.5"), Some("anthropic/claude-sonnet-5.5".to_string()));
+    assert_eq!(resolver.try_resolve("gemini-4-argon-high"), Some("google/gemini-4-argon".to_string()));
+    assert_eq!(resolver.try_resolve("~openai/gpt-astra-latest"), Some("openai/gpt-6-astra".to_string()));
 
     // Modelos desconhecidos fora da arena retornam None para blindar FK SQLite
     assert_eq!(resolver.try_resolve("random-provider/some-random-unknown-model"), None);

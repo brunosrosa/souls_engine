@@ -126,13 +126,12 @@ mod tests {
     fn test_canonical_resolution() {
         let resolver = CanonicalResolver::new();
 
-        assert_eq!(resolver.resolve("anthropic/claude-3-7-sonnet:beta"), "claude-3-7-sonnet");
-        assert_eq!(resolver.resolve("anthropic/claude-3.7-sonnet"), "claude-3-7-sonnet");
-        assert_eq!(resolver.resolve("deepseek/deepseek-chat"), "deepseek-v3");
-        assert_eq!(resolver.resolve("deepseek/deepseek-reasoner"), "deepseek-r1");
-        assert_eq!(resolver.resolve("nousresearch/hermes-3-llama-3.1-405b"), "hermes-3-llama-3.1-405b");
-        assert_eq!(resolver.resolve("qwen/qwen-2.5-coder-32b-instruct"), "qwen-2.5-coder-32b");
-        assert_eq!(resolver.resolve("openai/gpt-4o"), "gpt-4o");
-        assert_eq!(resolver.resolve("openai/o3-mini"), "o3-mini");
+        assert_eq!(resolver.resolve("~anthropic/claude-sonnet-5.5"), "anthropic/claude-sonnet-5.5");
+        assert_eq!(resolver.resolve("anthropic/claude-sonnet-5.5:beta"), "anthropic/claude-sonnet-5.5");
+        assert_eq!(resolver.resolve("claude-sonnet-5.5"), "anthropic/claude-sonnet-5.5");
+        assert_eq!(resolver.resolve("gemini-4-argon-high"), "google/gemini-4-argon");
+        assert_eq!(resolver.resolve("~openai/gpt-astra-latest"), "openai/gpt-6-astra");
+        assert_eq!(resolver.resolve("glm-5.3-max"), "z-ai/glm-5.3-prime");
+        assert_eq!(resolver.resolve("qwen3.8-max"), "qwen/qwen3.8-max-prime");
     }
 }
