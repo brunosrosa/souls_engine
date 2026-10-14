@@ -16,7 +16,10 @@ pub mod domain;
 pub mod engines;
 pub mod error;
 pub mod harness;
+pub mod inventory;
 pub mod reporters;
+
+pub use inventory::{LocalModelInventory, LocalModelItem, RuntimeFlags, SAFE_WDDM_CEILING_MB};
 
 pub use batteries::{
     run_context_pressure, run_cognitive_eval, run_hardware_profile, run_multimodal_vision,
