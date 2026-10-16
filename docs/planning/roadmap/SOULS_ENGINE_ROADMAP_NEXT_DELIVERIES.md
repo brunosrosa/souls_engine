@@ -883,3 +883,19 @@ Para o Arquiteto Humano que deseja operar o sistema imediatamente com o Hermes A
 3. **Deliberação Socrática:** Solicite uma análise arquitetural de um módulo (ele invocará a ferramenta MCP `thinking`).
 4. **Cirurgia Sintática:** Peça para ele inspecionar uma função (ele obedecerá à skill `souls-code-surgeon`, usando `outline` e `symbol` sem ler arquivos inteiros).
 5. **Auto-Aprendizado (`/learn`):** Diante de qualquer correção ou novo padrão, comande `/learn` para que o Hermes ative a skill `agent-self-learning-loop` e persista o aprendizado permanentemente.
+
+---
+
+## 21. BATERIA DE HOMOLOGAÇÃO EM VOO (FLIGHT TEST) & PROTOCOLO SSOT DE INICIALIZAÇÃO DE SESSÕES
+
+### 21.1 Protocolo de Validação Pré-Assinatura do Nous Portal
+Antes de efetivar a contratação de planos ou aportes de créditos em APIs de nuvem, o operador deve executar os 4 voos de homologação clínica:
+1. **Voo 1 (Silício Local Isolado):** Disparo de microtarefas de fatiamento AST e extração JSON forçando execução estritamente local (Tier 0 no i9 e Tier 1 na RTX 2060m). Validação de teto útil $\le 5.2$ GB via `metrics`.
+2. **Voo 2 (Auditoria de Entropia e Reasoning Dinâmico):** Teste de 3 níveis de prompt via `souls_intent` e `souls_route_subtask` para comprovar a variação de `recommended_reasoning_effort` (`minimum` para trivial, `medium` para código, `high` para teoremas).
+3. **Voo 3 (Delegação e Handoff no Hermes Agent):** Teste de um comando `delegate_task` real no Hermes Agent, validando se a sessão do subagente é persistida de forma auditável no SQLite STRICT WAL (`sub_agent_sessions`).
+4. **Voo 4 (Simulação FinOps na Cloud Arena):** Verificação no Web Dashboard das projeções de ROI dos 335 modelos contemporâneos do Nous Portal frente ao mercado.
+
+### 21.2 O Papel do Roadmap como Ancoragem Única (Universal Boot SSOT)
+Este documento (`SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md`) é formalmente declarado como o **Ponto Único de Entrada e Contexto Completo para Inicialização de Qualquer Nova Sessão com Agentes de IA**. Ao abrir um novo turno de trabalho no Antigravity ou em qualquer ferramenta:
+- Basta fornecer a menção a este arquivo (`@SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md`).
+- O agente absorverá instantaneamente o estado atual do código, as 10 crates canônicas, as decisões arquiteturais (ADRs), as armadilhas evitadas e o checklist exato do próximo passo a ser executado.
