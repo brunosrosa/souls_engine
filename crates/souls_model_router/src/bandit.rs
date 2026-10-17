@@ -6,11 +6,13 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
+use souls_inference_runtime::calculate_reasoning_effort;
 use souls_inference_runtime::nvml::{
     BARRIER_LAMBDA, BARRIER_MU, OperationalZone, RTX_2060M_VRAM_TOTAL_MB,
     THERMAL_CRITICAL_C, THERMAL_NOMINAL_MAX_C, VRAM_FREE_CRITICAL_MB, VRAM_FREE_NOMINAL_MIN_MB,
 };
 use souls_memory::SoulsMemoryStore;
+use souls_protocol::DynamicReasoningRecommendation;
 
 use crate::context::TaskContext;
 use crate::error::RouterError;
@@ -59,7 +61,7 @@ impl Default for ParetoWeights {
 }
 
 /// Final decision produced by the ParetoBandit decision engine.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RoutingDecision {
     /// Selected model identifier.
     pub model_id: String,
@@ -79,6 +81,8 @@ pub struct RoutingDecision {
     pub thermodynamic_barrier_phi: f32,
     /// Audit rationale explaining why this model was chosen.
     pub rationale: String,
+    /// Dynamic reasoning and thinking budget recommendation based on Tier 0.5 entropy and FinOps calibration.
+    pub reasoning_recommendation: Option<DynamicReasoningRecommendation>,
 }
 
 /// Unpacks lock-free GPU telemetry from an atomic u64 state:
@@ -247,6 +251,11 @@ impl ParetoBanditRouter {
         let mut highest_utility = f64::NEG_INFINITY;
         let mut rng = rand::thread_rng();
 
+        // 1.5 Compute dynamic reasoning effort recommendation
+        let entropy = task.entropy_score.unwrap_or(0.5);
+        let is_retry = task.is_retry.unwrap_or(false);
+        let reasoning_rec = calculate_reasoning_effort(entropy, &task.category, is_retry);
+
         let total_tokens = task.total_projected_tokens();
 
         for model in active_models {
@@ -348,6 +357,7 @@ impl ParetoBanditRouter {
                     projected_latency_ms,
                     thermodynamic_barrier_phi: barrier_phi,
                     rationale,
+                    reasoning_recommendation: Some(reasoning_rec.clone()),
                 });
             }
         }

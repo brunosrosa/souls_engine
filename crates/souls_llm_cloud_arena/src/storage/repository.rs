@@ -280,4 +280,20 @@ impl CloudArenaRepository {
             ultra_low_cost: ultra_low,
         })
     }
+
+    /// Obtém a data mais recente com avaliações gravadas no banco SQLite STRICT.
+    pub async fn get_latest_evaluation_date(&self) -> Result<Option<String>, CloudArenaError> {
+        let row = sqlx::query(
+            "SELECT MAX(evaluation_date) as latest_date FROM daily_evaluations WHERE composite_score > 0.0;"
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(r) = row {
+            let latest: Option<String> = r.try_get("latest_date").ok().flatten();
+            Ok(latest)
+        } else {
+            Ok(None)
+        }
+    }
 }

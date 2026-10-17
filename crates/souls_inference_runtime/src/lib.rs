@@ -46,6 +46,9 @@ pub use onnx::{
     ClassificationLabel, ClassificationOutput, OrtClassifierEngine, OrtSessionBuilder,
     OrtSessionConfig, MAX_TRIAGE_CHARS,
 };
+pub use souls_protocol::{
+    DynamicReasoningRecommendation, ProviderReasoningPayloads, ReasoningEffortLevel,
+};
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -103,8 +106,18 @@ impl InferenceRuntime {
         &self,
         prompt: &str,
     ) -> Result<serde_json::Value, InferenceError> {
+        self.evaluate_intent_with_retry(prompt, false).await
+    }
+
+    /// Combined Tier 0 + Tier 0.5 Intent evaluation with Fallback Escalation support.
+    pub async fn evaluate_intent_with_retry(
+        &self,
+        prompt: &str,
+        is_retry: bool,
+    ) -> Result<serde_json::Value, InferenceError> {
         let classify = self.infer_tier0_classify(prompt).await?;
         let probe = self.infer_tier05_probe(prompt).await?;
+        let reasoning = calculate_reasoning_effort(probe.entropy, &classify.top_label, is_retry);
 
         Ok(serde_json::json!({
             "intent": classify.top_label,
@@ -116,6 +129,7 @@ impl InferenceRuntime {
             "vram_mb": 0,
             "source": probe.source,
             "scores": classify.scores,
+            "reasoning_recommendation": reasoning,
         }))
     }
 
@@ -175,6 +189,64 @@ impl Default for InferenceRuntime {
     }
 }
 
+/// Calculates dynamic reasoning effort and token thinking budget based on Tier 0.5 epistemic entropy,
+/// intent categorization, and progressive escalation for retries (FinOps ADR).
+pub fn calculate_reasoning_effort(
+    entropy: f32,
+    intent: &str,
+    is_retry: bool,
+) -> DynamicReasoningRecommendation {
+    let base_level = if entropy < 0.35 || intent == "json_extraction" || intent == "formatting" {
+        ReasoningEffortLevel::Low
+    } else if entropy > 0.70
+        || intent == "architecture_design"
+        || intent == "security"
+        || intent == "mathematics"
+    {
+        ReasoningEffortLevel::High
+    } else {
+        ReasoningEffortLevel::Medium
+    };
+
+    let (final_level, escalated) = if is_retry {
+        match base_level {
+            ReasoningEffortLevel::None => (ReasoningEffortLevel::Low, true),
+            ReasoningEffortLevel::Low => (ReasoningEffortLevel::Medium, true),
+            ReasoningEffortLevel::Medium => (ReasoningEffortLevel::High, true),
+            ReasoningEffortLevel::High => (ReasoningEffortLevel::High, true),
+        }
+    } else {
+        (base_level, false)
+    };
+
+    let budget = match final_level {
+        ReasoningEffortLevel::None => 0,
+        ReasoningEffortLevel::Low => 1024,
+        ReasoningEffortLevel::Medium => 4096,
+        ReasoningEffortLevel::High => 16384,
+    };
+
+    let rationale = if escalated {
+        format!(
+            "Escalated reasoning effort due to retry on {} (entropy: {:.2})",
+            intent, entropy
+        )
+    } else {
+        format!(
+            "Calculated reasoning effort based on intent {} and entropy {:.2}",
+            intent, entropy
+        )
+    };
+
+    DynamicReasoningRecommendation::new(
+        final_level,
+        budget,
+        entropy as f64,
+        escalated,
+        rationale,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,5 +298,38 @@ mod tests {
         assert_eq!(res["intent"], "code");
         assert_eq!(res["vram_mb"], 0);
         assert!(res["latency_ms"].as_f64().unwrap() > 0.0);
+        assert!(res["reasoning_recommendation"]["reasoning_effort"].is_string());
+        assert!(res["reasoning_recommendation"]["thinking_budget_tokens"].as_u64().unwrap() > 0);
+    }
+
+    #[test]
+    fn test_calculate_reasoning_effort_stages_and_fallback() {
+        // Estágio 1: Baixa entropia (H < 0.35)
+        let low = calculate_reasoning_effort(0.20, "json_extraction", false);
+        assert_eq!(low.reasoning_effort, ReasoningEffortLevel::Low);
+        assert_eq!(low.thinking_budget_tokens, 1024);
+        assert!(!low.is_escalated_retry);
+
+        // Estágio 2: Média entropia (0.35 <= H <= 0.70)
+        let med = calculate_reasoning_effort(0.48, "code_refactoring", false);
+        assert_eq!(med.reasoning_effort, ReasoningEffortLevel::Medium);
+        assert_eq!(med.thinking_budget_tokens, 4096);
+
+        // Estágio 3: Alta entropia (H > 0.70)
+        let high = calculate_reasoning_effort(0.82, "architecture_design", false);
+        assert_eq!(high.reasoning_effort, ReasoningEffortLevel::High);
+        assert_eq!(high.thinking_budget_tokens, 16384);
+
+        // Teste de Fallback Escalation em retry: Low -> Medium
+        let escalated_low = calculate_reasoning_effort(0.20, "json_extraction", true);
+        assert_eq!(escalated_low.reasoning_effort, ReasoningEffortLevel::Medium);
+        assert_eq!(escalated_low.thinking_budget_tokens, 4096);
+        assert!(escalated_low.is_escalated_retry);
+
+        // Teste de Fallback Escalation em retry: Medium -> High
+        let escalated_med = calculate_reasoning_effort(0.48, "code_refactoring", true);
+        assert_eq!(escalated_med.reasoning_effort, ReasoningEffortLevel::High);
+        assert_eq!(escalated_med.thinking_budget_tokens, 16384);
+        assert!(escalated_med.is_escalated_retry);
     }
 }

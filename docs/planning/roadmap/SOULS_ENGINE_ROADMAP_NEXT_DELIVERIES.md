@@ -314,20 +314,29 @@ Para garantir imunidade a desmontagens da unidade virtual `Z:` (Dev Drive ReFS):
 
 ### 8.3 Curadoria Enciclopédica do Obsidian DB (`raw/` $\to$ `wiki/`)
 O cofre pessoal em `C:\Users\rosas\OneDrive\Documentos\Obisidian DB` atua como a Memória Fria de Longo Prazo do Arquiteto:
-1. **Zona Sagrada `raw/` (Fontes Brutas Imutáveis):**
+1. **Zona Sagrada `raw/` (Fontes Brutas Imutáveis & Preservação Aditiva):**
    * O diretório `raw/` abriga anotações livres, transcrições brutas, recortes e fontes externas.
-   * O Antigravity CLI e os subagentes do Hermes tratam o `raw/` em modo estritamente **Read-Only**.
-   * Respeito absoluto às regras de privacidade: dados de `raw/financas/` e `raw/saude/` são processados **100% localmente** (GPU/CPU bare-metal, sem envio para nuvens abertas).
-2. **Esteira de Curadoria e Criação de Verbetes:**
+   * O Antigravity CLI e os subagentes do Hermes tratam o corpo do `raw/` em modo estritamente **Read-Only**.
+   * **Preservação Aditiva de YAML:** Se o arquivo original possuir cabeçalho YAML próprio, nenhum campo é removido ou truncado; faz-se estritamente *merge* não-destrutivo.
+2. **Soberania Híbrida de Saúde e Finanças (`obsidian-privacy-shield`):**
+   * **Superação do gargalo de SLMs:** A análise clínica e o planejamento financeiro não são rebaixados para SLMs locais fracos.
+   * O silício local (Tier 0 / `pii_redactor.rs`) atua como **Proxy de Desidentificação de PII** (remove nomes, CPFs, números de conta/cartão).
+   * O payload analítico puro é processado por modelos de ponta de alto contexto, garantindo **inteligência máxima com zero vazamento de identidade**.
+3. **Esteira de Curadoria e Criação de Verbetes:**
    * Sintetiza "verbetes" hiperconectados (wikilinks `[[Conceito]]`), notas conceituais atômicas em `wiki/concepts/`, entidades em `wiki/entities/` e resumos em `wiki/summaries/`.
-   * Adiciona compulsoriamente frontmatter YAML padronizado (`type`, `tags`, `last_updated`, `reviewed`).
+   * Adiciona compulsoriamente frontmatter YAML padronizado (`type`, `tags`, `sources: ["[[raw/...]]"]`, `last_updated`, `reviewed`).
    * Registra todas as operações autônomas no diário incremental `wiki/log.md`.
-3. **Manifesto de Progresso & Rastreamento com SHA-256:**
+4. **Manifesto de Progresso & Rastreamento com SHA-256:**
    * O arquivo `C:\Users\rosas\OneDrive\Documentos\Obisidian DB\wiki\raw_manifest.json` mapeia cada arquivo de `raw/` com seu hash SHA-256, status (`PENDING`, `IN_PROGRESS`, `CURATED`, `SKIPPED`) e lista de verbetes derivados.
-4. **Modelo de Disparo Híbrido:**
-   * **Sob Demanda:** Executável via PowerShell / CLI a qualquer momento (`pwsh scripts/curate_obsidian.ps1`).
-   * **Agendamento Automático:** Suporte a disparo periódico via cron do Hermes Agent (`%LOCALAPPDATA%\hermes\cron`).
-   * **Lotes Seguros:** Processamento estritamente limitado a no máximo 5 arquivos por rodada (respeitando o limite de autonomia de $\le 10$ arquivos do `AGENTS.md` do cofre).
+   * Se um arquivo for editado no Obsidian, o hash diverge e o sistema reprocessa de forma idempotente.
+5. **Orquestração pelo Hermes & Despacho do Antigravity CLI:**
+   * O Hermes Agent atua como Maestro e despacha o **Antigravity CLI (`agy`)** via terminal como subagente executor isolado.
+   * Isso preserva o contexto do chat interativo do Hermes 100% limpo e focado no usuário.
+   * **Perfil Cognitivo:** Uso prioritário de modelos com **janela de contexto longa ($\ge 1\text{M}$ tokens)** e alta eficiência de custo (ex: Gemini Flash, Claude Haiku/Sonnet, DeepSeek V4 Flash) em vez de modelos caros de raciocínio formal.
+6. **Cadência Contínua de 30 Minutos (The 30-Minute Drip):**
+   * Processamento de **2 a 3 arquivos a cada 30 minutos** via agendamento cron no Hermes.
+   * Rendimento de 35 a 50 arquivos por dia ativo, permitindo **liquidar o backlog de 498 arquivos em 10 a 12 dias úteis**, sem sobreaquecer hardware e sem estourar *rate limits*.
+   * Consulte o guia de implantação em `docs/architecture/HERMES_OBSIDIAN_CURATOR_CRON_GUIDE.md`.
 
 ### 8.4 Ciclo Evolutivo de Aprendizado Contínuo (`/learn` e Auto-Refinamento)
 * As correções operacionais e novos padrões descobertos em sessões de trabalho são capturados via comando `/learn`.
@@ -858,10 +867,16 @@ flowchart TD
 3. **Nível 3 — Dynamic Fallback Escalation (Escalonamento por Falha):**
    - Se um subagente rodando em `reasoning: low` falhar em passar nos testes de verificação sintática, o Souls Engine escalona automaticamente a próxima tentativa para `reasoning: high` na mesma sessão, aplicando deliberação profunda apenas como remédio corretivo.
 
-### 19.3 Próximos Passos de Pesquisa & Implementação
-- [ ] Adicionar os campos `reasoning_effort_levels` e `thinking_token_pricing` na tabela `pricing_telemetry_snapshots` do SQLite.
-- [ ] Adicionar o campo `recommended_reasoning_effort` no retorno da ferramenta MCP `souls_route_subtask`.
-- [ ] Conectar o medidor de entropia de Shannon de `souls_inference_runtime` à decisão de budget.
+### 19.3 Status de Implementação & Homologação Canônica (Concluído 100%)
+- [x] **DTOs Universais (`souls_protocol`):** Entregues `ReasoningEffortLevel` (`None`, `Low`, `Medium`, `High`), `ProviderReasoningPayloads` (OpenRouter, Anthropic, OpenAI `reasoning_effort`, Gemini `thinking_config`) e `DynamicReasoningRecommendation` com rationale estruturado. (16/16 testes PASS).
+- [x] **Calibração de 3 Estágios via Entropia de Shannon (`souls_inference_runtime`):** Implementada `calculate_reasoning_effort` mapeando:
+  - $H < 0.35$ (ou `json_extraction`, `formatting`): `low` (1.024 tokens)
+  - $0.35 \le H \le 0.70$ (SWE padrão, refatoração, curadoria): `medium` (4.096 tokens)
+  - $H > 0.70$ (matemática, segurança, concorrência, arquitetura): `high` (16.384 tokens)
+  - **Dynamic Fallback Escalation:** Em caso de retry/falha (`is_retry: true`), o raciocínio escala 1 degrau (`low` $\to$ `medium` $\to$ `high`). Integrado em `evaluate_intent_with_retry`. (37/37 testes PASS).
+- [x] **Orquestração no ParetoBandit (`souls_model_router`):** `TaskContext` enriquecido com `entropy_score` e `is_retry`, e `RoutingDecision` carrega a recomendação dinâmica universal. (11/11 testes PASS).
+- [x] **Exposição MCP & Integração em `souls_server`:** `route_subtask` e `intent` expõem `reasoning_recommendation` completo tanto em texto legível para modelos quanto em `structuredContent`. (25/25 testes PASS).
+- [x] **Deploy de Binários Release:** Binários compilados (`souls_server.exe` e `souls_engine.exe`) sincronizados em `%LOCALAPPDATA%\SoulsEngine\` e validados em execução real no daemon local (:9123).
 
 ---
 

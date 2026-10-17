@@ -523,6 +523,41 @@ mod tests {
         assert!((prior.beta - 1.0).abs() < 1e-5);
         assert!((prior.cumulative_reward - 100.0).abs() < 1e-5);
     }
+
+    /// Gate 12: test_dynamic_reasoning_effort_routing_recommendation
+    /// Asserts that ParetoBandit attaches calibrated thinking budget recommendations
+    /// based on task entropy, intent, and escalates appropriately on retry.
+    #[tokio::test]
+    async fn test_dynamic_reasoning_effort_routing_recommendation() {
+        let router = setup_test_router(45.0, 850).await;
+
+        // 1. Low entropy task
+        let low_task = TaskContext::new("task_low", "sess_1", "json_extraction", 200, 100)
+            .with_entropy(0.18);
+        let low_decision = router.route_task(&low_task).await.unwrap();
+        let low_rec = low_decision.reasoning_recommendation.unwrap();
+        assert_eq!(low_rec.reasoning_effort, souls_protocol::ReasoningEffortLevel::Low);
+        assert_eq!(low_rec.thinking_budget_tokens, 1024);
+        assert!(!low_rec.is_escalated_retry);
+
+        // 2. High entropy task
+        let high_task = TaskContext::new("task_high", "sess_1", "architecture_design", 1000, 500)
+            .with_entropy(0.85);
+        let high_decision = router.route_task(&high_task).await.unwrap();
+        let high_rec = high_decision.reasoning_recommendation.unwrap();
+        assert_eq!(high_rec.reasoning_effort, souls_protocol::ReasoningEffortLevel::High);
+        assert_eq!(high_rec.thinking_budget_tokens, 16384);
+
+        // 3. Low entropy task escalated on retry: Low -> Medium
+        let retry_task = TaskContext::new("task_retry", "sess_1", "json_extraction", 200, 100)
+            .with_entropy(0.18)
+            .with_retry(true);
+        let retry_decision = router.route_task(&retry_task).await.unwrap();
+        let retry_rec = retry_decision.reasoning_recommendation.unwrap();
+        assert_eq!(retry_rec.reasoning_effort, souls_protocol::ReasoningEffortLevel::Medium);
+        assert_eq!(retry_rec.thinking_budget_tokens, 4096);
+        assert!(retry_rec.is_escalated_retry);
+    }
 }
 
 

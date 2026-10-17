@@ -1558,4 +1558,78 @@ impl FixtureService {
         })).await;
         assert!(res_sem["structuredContent"]["matches"].is_array());
     }
+
+    #[tokio::test]
+    async fn test_mcp_dynamic_reasoning_and_fallback_escalation() {
+        let state = create_test_state().await;
+        let app = build_router(state.clone());
+
+        let call_tool = |tool_name: &'static str, args: serde_json::Value| {
+            let app_clone = app.clone();
+            async move {
+                let payload = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": 1001,
+                    "method": "tools/call",
+                    "params": {
+                        "name": tool_name,
+                        "arguments": args
+                    }
+                });
+                let req = Request::builder()
+                    .uri("/mcp")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                    .unwrap();
+                let resp = app_clone.oneshot(req).await.unwrap();
+                assert_eq!(resp.status(), StatusCode::OK);
+                let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+                let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                v["result"].clone()
+            }
+        };
+
+        // 1. Testa route_subtask com baixa entropia (Low reasoning effort, 1024 tokens)
+        let res_low = call_tool("route_subtask", serde_json::json!({
+            "task_type": "json_extraction",
+            "estimated_tokens": 400,
+            "entropy": 0.15
+        })).await;
+
+        let rec_low = &res_low["structuredContent"]["reasoning_recommendation"];
+        assert_eq!(rec_low["reasoning_effort"], "low");
+        assert_eq!(rec_low["thinking_budget_tokens"], 1024);
+        assert_eq!(rec_low["is_escalated_retry"], false);
+        assert_eq!(rec_low["payloads"]["openai_reasoning_effort"], "low");
+        assert_eq!(rec_low["payloads"]["openrouter"]["effort"], "low");
+        assert_eq!(rec_low["payloads"]["anthropic"]["type"], "enabled");
+        assert_eq!(rec_low["payloads"]["anthropic"]["budget_tokens"], 1024);
+        assert_eq!(rec_low["payloads"]["gemini_thinking_config"]["thinking_budget"], 1024);
+
+        // 2. Testa route_subtask com retry escalation (Low -> Medium, 4096 tokens)
+        let res_retry = call_tool("route_subtask", serde_json::json!({
+            "task_type": "json_extraction",
+            "estimated_tokens": 400,
+            "entropy": 0.15,
+            "is_retry": true
+        })).await;
+
+        let rec_retry = &res_retry["structuredContent"]["reasoning_recommendation"];
+        assert_eq!(rec_retry["reasoning_effort"], "medium");
+        assert_eq!(rec_retry["thinking_budget_tokens"], 4096);
+        assert_eq!(rec_retry["is_escalated_retry"], true);
+        assert_eq!(rec_retry["payloads"]["openai_reasoning_effort"], "medium");
+
+        // 3. Testa intent com suporte a retry
+        let res_intent = call_tool("intent", serde_json::json!({
+            "prompt": "Parse this JSON AST",
+            "is_retry": true
+        })).await;
+
+        let intent_rec = &res_intent["structuredContent"]["reasoning_recommendation"];
+        assert!(intent_rec["reasoning_effort"].is_string());
+        assert!(intent_rec["thinking_budget_tokens"].as_u64().unwrap() > 0);
+        assert_eq!(intent_rec["is_escalated_retry"], true);
+    }
 }

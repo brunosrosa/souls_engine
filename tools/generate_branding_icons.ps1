@@ -1,9 +1,21 @@
 # tools/generate_branding_icons.ps1
 # Gerador Automatizado de Assets e Ícones de Branding para o Souls Engine v7
 # Produz variações de cores dos olhos (Ciano, Verde, Âmbar, Vermelho, Roxo)
-# e gera PNGs em múltiplos tamanhos + arquivos .ICO multi-resolução para Windows Systray / Launcher.
+# e aplica recorte com BORDAS ARREDONDADAS (Squircle) e FUNDO TRANSPARENTE nos 4 cantos externos.
+# Gera PNGs em múltiplos tamanhos + arquivos .ICO multi-resolução para Windows Systray / Launcher.
 
-$srcImage = "C:\Users\rosas\.gemini\antigravity-ide\brain\4e3e1bda-872a-422e-ac39-cf8c34e69fa9\.user_uploaded\media_1791834488261.jpg"
+$srcCandidates = @(
+    "C:\Users\rosas\.gemini\antigravity-ide\brain\9879e3dc-0528-4554-8c33-7bb3608b04bc\.user_uploaded\media_1792209760265.jpg",
+    "C:\Users\rosas\.gemini\antigravity-ide\brain\4e3e1bda-872a-422e-ac39-cf8c34e69fa9\.user_uploaded\media_1791834488261.jpg"
+)
+
+$srcImage = $srcCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if (-not $srcImage) {
+    Write-Error "Imagem fonte do mascote não encontrada!"
+    exit 1
+}
+
 $outDir = "Z:\souls_engine\assets\branding"
 
 if (-not (Test-Path $outDir)) {
@@ -80,9 +92,42 @@ public class SoulsIconBuilder {
         return dest;
     }
 
+    // Cria GraphicsPath de retângulo com cantos arredondados (squircle)
+    public static GraphicsPath CreateRoundedPath(RectangleF rect, float radius) {
+        GraphicsPath path = new GraphicsPath();
+        float d = radius * 2f;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    // Aplica o recorte de bordas arredondadas e torna o exterior 100% transparente
+    public static Bitmap ApplyRoundedCorners(Bitmap src, float x, float y, float w, float h, float radius) {
+        Bitmap dest = new Bitmap(src.Width, src.Height, PixelFormat.Format32bppArgb);
+        using (Graphics g = Graphics.FromImage(dest)) {
+            g.Clear(Color.Transparent);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.CompositingQuality = CompositingQuality.HighQuality;
+
+            RectangleF rect = new RectangleF(x, y, w, h);
+            using (GraphicsPath path = CreateRoundedPath(rect, radius)) {
+                using (TextureBrush tb = new TextureBrush(src)) {
+                    g.FillPath(tb, path);
+                }
+            }
+        }
+        return dest;
+    }
+
     public static Bitmap ResizeImage(Bitmap src, int width, int height) {
         Bitmap dest = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         using (Graphics g = Graphics.FromImage(dest)) {
+            g.Clear(Color.Transparent);
             g.CompositingQuality = CompositingQuality.HighQuality;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             g.SmoothingMode = SmoothingMode.HighQuality;
@@ -146,6 +191,7 @@ $csharpCode
 `$src = '$srcImage'
 `$out = '$outDir'
 
+Write-Host "Carregando imagem fonte: `$src" -ForegroundColor Cyan
 `$orig = [Bitmap]::new(`$src)
 
 # Cores: Nome, Hue, Descrição
@@ -162,11 +208,18 @@ $csharpCode
 
 foreach (`$v in `$variants) {
     Write-Host "Processando variante: `$(`$v.Name) (`$(`$v.Desc))..."
-    `$colorBmp = if (`$v.Hue -lt 0) { `$orig } else { [SoulsIconBuilder]::ShiftHue(`$orig, [float]`$v.Hue) }
+    `$rawColor = if (`$v.Hue -lt 0) { `$orig } else { [SoulsIconBuilder]::ShiftHue(`$orig, [float]`$v.Hue) }
+
+    # Aplica o recorte de bordas arredondadas (Squircle) com fundo transparente nos 4 cantos
+    `$colorBmp = [SoulsIconBuilder]::ApplyRoundedCorners(`$rawColor, 60.0, 50.0, 878.0, 880.0, 180.0)
 
     # Salva o master PNG de 1024x1024
     `$masterPath = Join-Path `$out ("souls_icon_`$(`$v.Name)_1024.png")
     `$colorBmp.Save(`$masterPath, [ImageFormat]::Png)
+
+    # Também salva no nome padrão para interoperabilidade
+    `$stdPath = Join-Path `$out ("souls_icon_`$(`$v.Name).png")
+    `$colorBmp.Save(`$stdPath, [ImageFormat]::Png)
 
     # Salva os PNGs nas resoluções úteis
     foreach (`$s in `$sizes) {
@@ -180,13 +233,14 @@ foreach (`$v in `$variants) {
     `$icoPath = Join-Path `$out ("souls_icon_`$(`$v.Name).ico")
     [SoulsIconBuilder]::SaveAsIcon(`$colorBmp, `$icoPath, `$icoSizes)
 
+    `$colorBmp.Dispose()
     if (`$v.Hue -ge 0) {
-        `$colorBmp.Dispose()
+        `$rawColor.Dispose()
     }
 }
 
 `$orig.Dispose()
-Write-Host "Processamento concluído com sucesso!"
+Write-Host "Processamento concluído com sucesso! Ícones com bordas arredondadas e cantos transparentes gerados." -ForegroundColor Green
 "@
 
 $runnerScriptPath = "Z:\souls_engine\tools\_run_branding.ps1"

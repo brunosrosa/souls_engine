@@ -23,10 +23,10 @@ pub async fn cloud_champions_handler(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let _guard = state.acquire_connection();
 
-    match state.cloud_arena.get_all_champions(params.date.as_deref()).await {
-        Ok(champions) => Ok(Json(json!({
+    match state.cloud_arena.get_champions_with_effective_date(params.date.as_deref()).await {
+        Ok((effective_date, champions)) => Ok(Json(json!({
             "status": "success",
-            "date": params.date.unwrap_or_else(|| chrono::Utc::now().format("%Y-%m-%d").to_string()),
+            "date": effective_date,
             "profiles_count": champions.len(),
             "champions": champions
         }))),

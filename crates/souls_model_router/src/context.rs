@@ -21,6 +21,10 @@ pub struct TaskContext {
     pub requires_code_generation: bool,
     /// Optional cyclomatic complexity metric for code tasks.
     pub cyclomatic_complexity: Option<u32>,
+    /// Optional Tier 0.5 Shannon entropy score $H \in [0.0, 1.0]$.
+    pub entropy_score: Option<f32>,
+    /// Optional flag indicating if this task is an escalated retry after a previous failure.
+    pub is_retry: Option<bool>,
 }
 
 impl TaskContext {
@@ -41,6 +45,8 @@ impl TaskContext {
             requires_tools: false,
             requires_code_generation: false,
             cyclomatic_complexity: None,
+            entropy_score: None,
+            is_retry: None,
         }
     }
 
@@ -58,6 +64,18 @@ impl TaskContext {
     ) -> Self {
         self.requires_code_generation = requires_code_generation;
         self.cyclomatic_complexity = complexity;
+        self
+    }
+
+    /// Builder method to supply Tier 0.5 epistemic entropy score.
+    pub fn with_entropy(mut self, entropy: f32) -> Self {
+        self.entropy_score = Some(entropy);
+        self
+    }
+
+    /// Builder method to flag task as an escalated retry.
+    pub fn with_retry(mut self, is_retry: bool) -> Self {
+        self.is_retry = Some(is_retry);
         self
     }
 

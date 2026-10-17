@@ -220,6 +220,110 @@ pub struct SwarmHandoffPayload {
     pub created_at: i64,
 }
 
+/// Níveis padronizados de esforço qualitativo de raciocínio (Reasoning Effort).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReasoningEffortLevel {
+    None,
+    Low,
+    Medium,
+    High,
+}
+
+impl ReasoningEffortLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+        }
+    }
+
+    /// Escala um degrau em caso de retry por erro sintático (Fallback Escalation).
+    pub fn escalate_retry(&self) -> Self {
+        match self {
+            Self::None => Self::Low,
+            Self::Low => Self::Medium,
+            Self::Medium | Self::High => Self::High,
+        }
+    }
+}
+
+impl std::fmt::Display for ReasoningEffortLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+/// Sub-objetos prontos para provedores de nuvem (OpenRouter, Anthropic, OpenAI, Gemini).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProviderReasoningPayloads {
+    /// Objeto nativo OpenRouter: { "effort": "...", "max_tokens": N, "exclude": false }
+    pub openrouter: serde_json::Value,
+    /// Objeto nativo Anthropic: { "type": "enabled", "budget_tokens": N }
+    pub anthropic: serde_json::Value,
+    /// Parâmetro nativo OpenAI: "low" | "medium" | "high"
+    pub openai_reasoning_effort: String,
+    /// Objeto nativo Google Gemini: { "thinking_budget": N }
+    pub gemini_thinking_config: serde_json::Value,
+}
+
+/// Recomendação rica de raciocínio dinâmico calculada via entropia de Shannon e classificação de intenção.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DynamicReasoningRecommendation {
+    pub reasoning_effort: ReasoningEffortLevel,
+    pub thinking_budget_tokens: u32,
+    pub entropy_score: f64,
+    pub is_escalated_retry: bool,
+    pub rationale: String,
+    pub payloads: ProviderReasoningPayloads,
+}
+
+impl DynamicReasoningRecommendation {
+    pub fn new(
+        effort: ReasoningEffortLevel,
+        budget_tokens: u32,
+        entropy: f64,
+        is_escalated: bool,
+        rationale: impl Into<String>,
+    ) -> Self {
+        let effort_str = effort.as_str().to_string();
+        let openrouter = serde_json::json!({
+            "effort": effort_str,
+            "max_tokens": budget_tokens,
+            "exclude": false
+        });
+
+        let anthropic = if effort == ReasoningEffortLevel::None {
+            serde_json::json!({ "type": "disabled" })
+        } else {
+            serde_json::json!({
+                "type": "enabled",
+                "budget_tokens": budget_tokens
+            })
+        };
+
+        let gemini = serde_json::json!({
+            "thinking_budget": budget_tokens
+        });
+
+        Self {
+            reasoning_effort: effort,
+            thinking_budget_tokens: budget_tokens,
+            entropy_score: entropy,
+            is_escalated_retry: is_escalated,
+            rationale: rationale.into(),
+            payloads: ProviderReasoningPayloads {
+                openrouter,
+                anthropic,
+                openai_reasoning_effort: effort_str,
+                gemini_thinking_config: gemini,
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,5 +343,27 @@ mod tests {
         const { assert!(RTX_2060M_WDDM_CEILING_MB < RTX_2060M_VRAM_TOTAL_MB) };
         assert_eq!(RTX_2060M_VRAM_TOTAL_MB, 6144);
         assert_eq!(MIN_PCIE_BANDWIDTH_GBPS_FOR_SPILLOVER, 32.0);
+    }
+
+    #[test]
+    fn test_dynamic_reasoning_recommendation_payloads() {
+        let rec = DynamicReasoningRecommendation::new(
+            ReasoningEffortLevel::Medium,
+            4096,
+            0.52,
+            false,
+            "Tarefa de complexidade padrão",
+        );
+
+        assert_eq!(rec.reasoning_effort, ReasoningEffortLevel::Medium);
+        assert_eq!(rec.thinking_budget_tokens, 4096);
+        assert_eq!(rec.payloads.openai_reasoning_effort, "medium");
+        assert_eq!(rec.payloads.openrouter["max_tokens"], 4096);
+        assert_eq!(rec.payloads.anthropic["budget_tokens"], 4096);
+        assert_eq!(rec.payloads.gemini_thinking_config["thinking_budget"], 4096);
+
+        // Teste de fallback escalation
+        let escalated = rec.reasoning_effort.escalate_retry();
+        assert_eq!(escalated, ReasoningEffortLevel::High);
     }
 }

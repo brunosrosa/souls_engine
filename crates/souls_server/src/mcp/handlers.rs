@@ -39,7 +39,19 @@ pub async fn handle_route_subtask(
         .and_then(Value::as_bool)
         .unwrap_or_else(|| task_type.contains("code") || task_type.contains("coding"));
 
-    let task_ctx = TaskContext::new(
+    let entropy_opt = args
+        .get("entropy")
+        .or_else(|| args.get("entropy_score"))
+        .and_then(Value::as_f64)
+        .map(|v| v as f32);
+
+    let is_retry = args
+        .get("is_retry")
+        .or_else(|| args.get("retry"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    let mut task_ctx = TaskContext::new(
         format!("task_{:x}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()),
         "subagent_mcp",
         task_type,
@@ -48,6 +60,13 @@ pub async fn handle_route_subtask(
     )
     .with_tools(requires_tools)
     .with_code_generation(requires_code, Some(5));
+
+    if let Some(entropy) = entropy_opt {
+        task_ctx = task_ctx.with_entropy(entropy);
+    }
+    if is_retry {
+        task_ctx = task_ctx.with_retry(true);
+    }
 
     // Execute route_task on dedicated thread to isolate local ThreadRng future
     let router = Arc::clone(&state.router);
@@ -71,11 +90,22 @@ pub async fn handle_route_subtask(
     let packed = state.router.gpu_telemetry_atomic().load(Ordering::Acquire);
     let (vram_allocated_mb, gpu_temp_c, zone) = unpack_gpu_telemetry(packed);
 
+    let reasoning_text = if let Some(ref rec) = decision.reasoning_recommendation {
+        format!(
+            " | Reasoning: {} (Budget: {} tokens, Escalated: {})",
+            rec.reasoning_effort.as_str(),
+            rec.thinking_budget_tokens,
+            rec.is_escalated_retry
+        )
+    } else {
+        String::new()
+    };
+
     Ok(json!({
         "content": [{
             "type": "text",
             "text": format!(
-                "Optimal Model: {} (Tier: {}, Provider: {}, Utility: {:.4}, Latency: {:.1}ms, VRAM: {}MB, Temp: {:.1}°C, Zone: {:?})",
+                "Optimal Model: {} (Tier: {}, Provider: {}, Utility: {:.4}, Latency: {:.1}ms, VRAM: {}MB, Temp: {:.1}°C, Zone: {:?}){}",
                 decision.model_id,
                 decision.tier_name,
                 decision.provider_type,
@@ -83,7 +113,8 @@ pub async fn handle_route_subtask(
                 decision.projected_latency_ms,
                 vram_allocated_mb,
                 gpu_temp_c,
-                zone
+                zone,
+                reasoning_text
             )
         }],
         "structuredContent": {
@@ -98,7 +129,8 @@ pub async fn handle_route_subtask(
             "gpu_temp_c": gpu_temp_c,
             "operational_zone": format!("{zone:?}"),
             "thermodynamic_barrier_phi": decision.thermodynamic_barrier_phi,
-            "rationale": decision.rationale
+            "rationale": decision.rationale,
+            "reasoning_recommendation": decision.reasoning_recommendation
         },
         "isError": false
     }))
@@ -1165,7 +1197,7 @@ pub fn handle_repo_impact(
     }))
 }
 
-/// Handles `intent` Tier 0/0.5 Epistemic Probing.
+/// Handles `intent` Tier 0/0.5 Epistemic Probing with Fallback Escalation support.
 pub async fn handle_intent(
     state: &AppState,
     args: &serde_json::Map<String, Value>,
@@ -1175,7 +1207,12 @@ pub async fn handle_intent(
         .and_then(Value::as_str)
         .unwrap_or("");
 
-    let eval = state.runtime.evaluate_intent(prompt).await
+    let is_retry = args.get("is_retry")
+        .or_else(|| args.get("retry"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    let eval = state.runtime.evaluate_intent_with_retry(prompt, is_retry).await
         .map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({

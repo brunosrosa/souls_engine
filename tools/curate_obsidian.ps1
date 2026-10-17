@@ -4,7 +4,7 @@
 [CmdletBinding()]
 param(
     [string]$VaultPath = "C:\Users\rosas\OneDrive\Documentos\Obisidian DB",
-    [int]$BatchSize = 5,
+    [int]$BatchSize = 2,
     [switch]$StatusOnly,
     [switch]$ProcessBatch
 )

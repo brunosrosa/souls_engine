@@ -69,25 +69,54 @@ impl CloudArenaCoordinator {
         self.sync.force_sync(date).await
     }
 
-    /// Obtém os campeões de Pareto para todos os 5 perfis cognitivos.
-    pub async fn get_all_champions(&self, date: Option<&str>) -> Result<Vec<ProfileChampionReport>, CloudArenaError> {
+    /// Obtém os campeões de Pareto para todos os 5 perfis cognitivos retornando a data efetiva da avaliação.
+    /// Caso a data não seja informada (ou não possua avaliações gravadas), faz fallback automático
+    /// para a data mais recente disponível no banco SQLite STRICT.
+    pub async fn get_champions_with_effective_date(
+        &self,
+        date: Option<&str>,
+    ) -> Result<(String, Vec<ProfileChampionReport>), CloudArenaError> {
         let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-        let d = date.unwrap_or(&today);
+        let target_date = date.unwrap_or(&today);
 
+        // 1. Tenta buscar na data alvo
         let mut reports = Vec::new();
+        let mut has_any_champions = false;
         for &profile in TaskProfileKind::all() {
-            let champ = self.sync.repo.get_champions(profile, d).await?;
+            let champ = self.sync.repo.get_champions(profile, target_date).await?;
+            if champ.quality_leader.is_some() || champ.best_value.is_some() || champ.ultra_low_cost.is_some() {
+                has_any_champions = true;
+            }
             reports.push(champ);
         }
 
+        // 2. Se a data não foi especificada explicitamente pelo usuário e hoje não tem avaliações,
+        // ou se a data alvo retornou vazia, faz fallback para a última data válida gravada no SQLite
+        if !has_any_champions && date.is_none() {
+            if let Some(latest) = self.sync.repo.get_latest_evaluation_date().await? {
+                if latest != target_date {
+                    let mut fallback_reports = Vec::new();
+                    for &profile in TaskProfileKind::all() {
+                        let champ = self.sync.repo.get_champions(profile, &latest).await?;
+                        fallback_reports.push(champ);
+                    }
+                    return Ok((latest, fallback_reports));
+                }
+            }
+        }
+
+        Ok((target_date.to_string(), reports))
+    }
+
+    /// Obtém os campeões de Pareto para todos os 5 perfis cognitivos.
+    pub async fn get_all_champions(&self, date: Option<&str>) -> Result<Vec<ProfileChampionReport>, CloudArenaError> {
+        let (_, reports) = self.get_champions_with_effective_date(date).await?;
         Ok(reports)
     }
 
     /// Exporta o relatório completo de campeões em formato Markdown.
     pub async fn export_markdown_report(&self, date: Option<&str>) -> Result<String, CloudArenaError> {
-        let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-        let d = date.unwrap_or(&today);
-        let champions = self.get_all_champions(Some(d)).await?;
-        Ok(generate_markdown_report(d, &champions))
+        let (effective_date, champions) = self.get_champions_with_effective_date(date).await?;
+        Ok(generate_markdown_report(&effective_date, &champions))
     }
 }

@@ -1,41 +1,66 @@
 ---
 name: obsidian-privacy-shield
-description: Playbook de segurança e soberania de dados para domínios sensíveis do cofre Obsidian. Proíbe envio de dados de saúde, finanças e PII para APIs de nuvem com treino aberto; impõe processamento 100% local no silício.
+description: Playbook de segurança, desidentificação e soberania de dados para domínios de saúde e finanças no cofre Obsidian. Impõe higienização local de PII antes de qualquer análise analítica de fronteira.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   author: "Souls Engine Architecture"
   vault_root: "C:\\Users\\rosas\\OneDrive\\Documentos\\Obisidian DB"
 ---
 
-# Obsidian Privacy Shield — Playbook de Soberania de Dados PII (v7)
+# Obsidian Privacy Shield — Playbook de Soberania & Desidentificação PII (v7)
 
-Este playbook governa a blindagem de privacidade de dados pessoais, médicos e financeiros armazenados no cofre Obsidian.
-
-## 🔒 REGRA INVIOLÁVEL DE SOBERANIA LOCAL
-É **expressamente proibido** enviar para provedores de nuvem públicos ou APIs de treinamento livre (ex.: Gemini Free Tier, endpoints sem zero-data-retention) qualquer conteúdo oriundo de:
-* `raw/financas/`: Extratos bancários, faturas de cartão Ourocard, investimentos, comprovantes e dados fiscais.
-* `raw/saude/`: Exames laboratoriais, biometria (Samsung Health), relatórios médicos, prescrições e histórico clínico.
-* Documentos contendo PII (*Personally Identifiable Information*): CPFs, senhas, documentos de identidade e endereços.
+Este playbook governa a blindagem de privacidade de dados pessoais, médicos e financeiros armazenados no cofre Obsidian, equilibrando **soberania de identidade** com **excelência cognitiva analítica**.
 
 ---
 
-## 🛠️ FLUXO DE PROCESSAMENTO LOCAL
+## 🔒 REGRA INVIOLÁVEL: NUNCA ENVIAR PII DIRETO PARA A NUVEM
+
+É **expressamente proibido** enviar dados de identificação pessoal (*Personally Identifiable Information* - PII) brutos para qualquer provedor de nuvem pública sem sanitização prévia:
+* `raw/financas/`: Extratos bancários, faturas de cartão Ourocard, investimentos, números de conta/agência, senhas e chaves PIX.
+* `raw/saude/`: Exames laboratoriais, relatórios médicos, biometria (smartwatch), prescrições contendo nome de médico/paciente ou CRM.
+* Documentos contendo CPFs, RG, endereços residenciais ou dados de identificação civil.
+
+---
+
+## 🛠️ O PIPELINE HÍBRIDO DE DESIDENTIFICAÇÃO (LOCAL SANITIZER + FRONTIER REASONING)
+
+> **Princípio Fundamental:** A análise de saúde e finanças **não pode ser rebaixada para modelos locais fracos (SLMs)** que alucinem em diagnósticos ou façam planejamento contábil raso.  
+> O modelo local atua como **Agente de Redação/Sanitização de PII**, e o modelo de fronteira atua como o **Analista Clínico/Financeiro de Alta Inteligência**.
 
 ```
-Documento em raw/financas/ ou raw/saude/
-                   │
-                   ▼
-       [Verificação de Rota PII]
-                   │
-                   ▼
-  Execução 100% Local no Silício Bare-Metal:
-  - dGPU RTX 2060m (Tier 1: Qwen2.5-Coder / Llama-3.2)
-  - CPU Host Intel i9 AVX2 (Tier 0 / Tier 0.5)
-                   │
-                   ▼
-  Geração do Verbete em wiki/ com Custo Zero e Risco Zero
+    Documento em raw/financas/ ou raw/saude/
+                       │
+                       ▼
+    [1. Higienização Local de PII no Silício]
+    - souls_core::pii_redactor (Aho-Corasick linear) ou Tier 0 local
+    - Substituição de CPF, Nome, Contas por tokens:
+      * Nome -> [USUARIO_ALVO]
+      * Conta 12345-6 -> [CONTA_CORRENTE_A]
+      * Laboratório X -> [LAB_REFERENCIA]
+                       │
+                       ▼
+    [2. Payload Clínico / Financeiro Anonimizado]
+    (Apenas biomarcadores, taxas, valores orçamentários limpos de identidade)
+                       │
+                       ▼
+    [3. Análise Analítica de Ponta na Fronteira]
+    - Modelo de alta capacidade (Zero Data Retention)
+    - Correlações complexas de saúde, tendências de exames, planejamento fino
+                       │
+                       ▼
+    [4. Consolidação Segura no Cofre]
+    - Verbete atômico gerado em wiki/concepts/ ou wiki/entities/
+    - Log de auditoria em wiki/log.md
 ```
 
-1. **Classificação Automática:** Ao processar um arquivo que resida em `raw/financas/` ou `raw/saude/`, o agente ativa a tag `LOCAL_ONLY`.
-2. **Despacho Bare-Metal:** O processamento deve ocorrer estritamente via motor local do Souls Engine (`souls_inference_runtime` / llama.cpp) ou endpoints locais do Hermes (`http://127.0.0.1:9123/v1/chat/completions`).
-3. **Higienização de Entidades:** Ao sintetizar notas na `wiki/`, valores específicos de transações podem ser agregados em resumos categóricos para manter a clareza sem redundância desnecessária.
+---
+
+## 🛡️ MODOS OPERACIONAIS DE PRIVACIDADE
+
+1. **Modo `HYBRID_ANONYMIZED` (Padrão Recomendado):**
+   - Redige PII localmente no silício (custo zero).
+   - Envia o corpo analítico puro para o modelo de fronteira de alto contexto.
+   - Entrega a máxima sofisticação médica e financeira com total blindagem de identidade.
+2. **Modo `STRICT_LOCAL` (Para Notas Ultra-Confidenciais):**
+   - Processamento 100% contido na dGPU RTX 2060m e CPU host i9 com AVX2 (`/v1/chat/completions` local em `127.0.0.1:9123`).
+   - Zero tráfego de rede para documentos marcados com `confidentiality: airgap`.
