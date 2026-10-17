@@ -5,7 +5,7 @@ cargo build --release -p souls_server
 
 if ($LASTEXITCODE -eq 0) {
     $targetDir = "Z:\souls_engine\target\release"
-    if (-not (Test-Path $targetDir)) {
+    if (-not (Test-Path (Join-Path $targetDir "souls_server.exe"))) {
         $targetDir = "Z:\souls_engine\target\x86_64-pc-windows-msvc\release"
     }
 
@@ -17,6 +17,13 @@ if ($LASTEXITCODE -eq 0) {
         Write-Host "✓ Binários de Produção gerados com sucesso:" -ForegroundColor Green
         Write-Host "  - $serverExe" -ForegroundColor Yellow
         Write-Host "  - $engineExe" -ForegroundColor Yellow
+
+        $appDataDir = Join-Path $env:LOCALAPPDATA "SoulsEngine"
+        if (Test-Path $appDataDir) {
+            $destApp = Join-Path $appDataDir "souls_engine.exe"
+            Copy-Item -Path $serverExe -Destination $destApp -Force
+            Write-Host "✓ Atualizado binário em: $destApp" -ForegroundColor Green
+        }
     }
 } else {
     Write-Host "❌ Falha na compilação de release." -ForegroundColor Red

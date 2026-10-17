@@ -315,6 +315,8 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
 #[derive(Debug, Deserialize)]
 pub struct HermesPresetRequest {
     pub preset_id: String,
+    pub model_override: Option<String>,
+    pub provider: Option<String>,
 }
 
 /// Applies a recommended operational preset to the Hermes Agent `config.yaml`.
@@ -326,42 +328,49 @@ pub async fn hermes_preset_handler(
 
     let profiles = crate::profiles::get_available_profiles(&state).await;
 
-    // Resolve target model and provider based on preset_id or dynamic champions
-    let (target_model, target_provider) = match payload.preset_id.as_str() {
-        "heavy_swe" | "deep_swe" => {
-            let p = profiles.iter().find(|p| p.id == "deep_swe");
-            (
-                p.map(|x| x.target_model.as_str()).unwrap_or("anthropic/claude-3-7-sonnet"),
-                "nous",
-            )
-        }
-        "math" | "deep_reasoning" => {
-            let p = profiles.iter().find(|p| p.id == "deep_reasoning");
-            (
-                p.map(|x| x.target_model.as_str()).unwrap_or("deepseek/deepseek-reasoner"),
-                "nous",
-            )
-        }
-        "privacy" | "local_sovereign" => {
-            let p = profiles.iter().find(|p| p.id == "local_sovereign");
-            (
-                p.map(|x| x.target_model.as_str()).unwrap_or("qwen3.5-coder-3b-instruct"),
-                "custom",
-            )
-        }
-        "ultra_fast" => {
-            let p = profiles.iter().find(|p| p.id == "ultra_fast");
-            (
-                p.map(|x| x.target_model.as_str()).unwrap_or("google/gemini-2.0-flash-001"),
-                "nous",
-            )
-        }
-        _ => {
-            let p = profiles.iter().find(|p| p.id == "frontier_balanced");
-            (
-                p.map(|x| x.target_model.as_str()).unwrap_or("deepseek/deepseek-chat"),
-                "nous",
-            )
+    // Resolve target model and provider based on preset_id, dynamic champions or manual override
+    let (target_model, target_provider) = if let Some(ref custom_model) = payload.model_override {
+        (
+            custom_model.as_str(),
+            payload.provider.as_deref().unwrap_or("nous"),
+        )
+    } else {
+        match payload.preset_id.as_str() {
+            "heavy_swe" | "deep_swe" => {
+                let p = profiles.iter().find(|p| p.id == "deep_swe");
+                (
+                    p.map(|x| x.target_model.as_str()).unwrap_or("anthropic/claude-3-7-sonnet"),
+                    "nous",
+                )
+            }
+            "math" | "deep_reasoning" => {
+                let p = profiles.iter().find(|p| p.id == "deep_reasoning");
+                (
+                    p.map(|x| x.target_model.as_str()).unwrap_or("deepseek/deepseek-reasoner"),
+                    "nous",
+                )
+            }
+            "privacy" | "local_sovereign" => {
+                let p = profiles.iter().find(|p| p.id == "local_sovereign");
+                (
+                    p.map(|x| x.target_model.as_str()).unwrap_or("qwen3.5-coder-3b-instruct"),
+                    "custom",
+                )
+            }
+            "ultra_fast" => {
+                let p = profiles.iter().find(|p| p.id == "ultra_fast");
+                (
+                    p.map(|x| x.target_model.as_str()).unwrap_or("google/gemini-2.0-flash-001"),
+                    "nous",
+                )
+            }
+            _ => {
+                let p = profiles.iter().find(|p| p.id == "frontier_balanced");
+                (
+                    p.map(|x| x.target_model.as_str()).unwrap_or("deepseek/deepseek-chat"),
+                    "nous",
+                )
+            }
         }
     };
 
@@ -470,6 +479,56 @@ pub async fn telemetry_stream_handler(
     Sse::new(ReceiverStream::new(rx)).keep_alive(KeepAlive::default())
 }
 
+/// Helper function to parse simple TOML format into a structured JSON Value.
+pub fn parse_toml_to_json(content: &str) -> Value {
+    let mut root = serde_json::Map::new();
+    let mut current_section = String::new();
+    let mut current_map = serde_json::Map::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            if !current_section.is_empty() {
+                root.insert(current_section.clone(), Value::Object(current_map));
+                current_map = serde_json::Map::new();
+            }
+            current_section = trimmed[1..trimmed.len() - 1].trim().to_string();
+            continue;
+        }
+
+        if let Some((key, val_str)) = trimmed.split_once('=') {
+            let k = key.trim().to_string();
+            let v_raw = val_str.trim().trim_matches('"').trim_matches('\'');
+
+            let parsed_val = if v_raw.eq_ignore_ascii_case("true") {
+                Value::Bool(true)
+            } else if v_raw.eq_ignore_ascii_case("false") {
+                Value::Bool(false)
+            } else if let Ok(i) = v_raw.parse::<i64>() {
+                Value::Number(i.into())
+            } else if let Ok(f) = v_raw.parse::<f64>() {
+                serde_json::Number::from_f64(f)
+                    .map(Value::Number)
+                    .unwrap_or(Value::String(v_raw.to_string()))
+            } else {
+                Value::String(v_raw.to_string())
+            };
+
+            current_map.insert(k, parsed_val);
+        }
+    }
+
+    if !current_section.is_empty() {
+        root.insert(current_section, Value::Object(current_map));
+    }
+
+    Value::Object(root)
+}
+
 fn get_config_file_path() -> PathBuf {
     PathBuf::from(r"Z:\souls_engine\.souls_data\config\souls_config.toml")
 }
@@ -483,22 +542,56 @@ port = 9123
 host = "127.0.0.1"
 max_active_connections = 16
 
+[reasoning]
+dynamic_reasoning_enabled = true
+max_reasoning_effort = "ultra"
+stepwise_retry_escalation = true
+high_entropy_threshold = 0.70
+trivial_task_bypass = true
+
 [finops]
 vram_hard_limit_mb = 5294
 gpu_temp_throttle_c = 78.0
 gpu_temp_preventive_c = 72.0
+nvml_ewma_alpha = 0.20
+watchdog_polling_ms = 500
+
+[router]
+pareto_dispatch_enabled = true
+weight_quality = 0.50
+weight_cost = 0.30
+weight_latency = 0.20
+geometric_decay_gamma = 0.995
+cold_start_sovereignty_bias = true
+local_context_token_limit = 8192
+
+[ast]
+source_side_dehydration = true
+max_tree_sitter_lines = 15000
 lean_compression_enabled = true
 dedup_min_lines = 5
+preserve_docstrings = true
 
-[governance]
-pareto_dispatch_enabled = true
-entropy_gating_threshold = 0.65
+[memory]
+langevin_decay_enabled = true
+epistemic_half_life_days = 30
+rrf_k_constant = 60
+wal_checkpoint_mode = "truncate"
+
+[sandbox]
 safe_sandbox_timeout_ms = 5000
-obsidian_curator_batch_size = 5
+strict_refs_isolation = true
+ansi_sanitization = true
+
+[obsidian]
+vault_path = "C:\\Users\\rosas\\OneDrive\\Documentos\\Obisidian DB"
+curator_batch_size = 5
+privacy_shield_enabled = true
+raw_readonly = true
 "#.to_string()
 }
 
-/// Retrieves centralized `souls_config.toml` configuration.
+/// Retrieves centralized `souls_config.toml` configuration and structured JSON parsing.
 pub async fn get_config_handler() -> Json<Value> {
     let p = get_config_file_path();
     let content = if p.exists() {
@@ -512,10 +605,19 @@ pub async fn get_config_handler() -> Json<Value> {
         def
     };
 
+    let default_parsed = parse_toml_to_json(&get_default_config_toml());
+    let mut parsed = parse_toml_to_json(&content);
+    if let (Value::Object(ref mut p_map), Value::Object(d_map)) = (&mut parsed, default_parsed) {
+        for (k, v) in d_map {
+            p_map.entry(k).or_insert(v);
+        }
+    }
+
     Json(json!({
         "status": "success",
         "path": p.to_string_lossy(),
-        "raw_toml": content
+        "raw_toml": content,
+        "parsed": parsed
     }))
 }
 
@@ -535,13 +637,22 @@ pub async fn post_config_handler(
 
     let toml_to_write = payload.raw_toml.unwrap_or_else(get_default_config_toml);
 
+    // Create safety backup .bak
+    let backup_path = p.with_extension("toml.bak");
+    if p.exists() {
+        let _ = fs::copy(&p, &backup_path);
+    }
+
     match fs::write(&p, &toml_to_write) {
         Ok(_) => {
             info!("souls_config.toml written atomically at: {:?}", p);
+            let parsed = parse_toml_to_json(&toml_to_write);
             Json(json!({
                 "status": "success",
                 "message": "Configurações salvas com sucesso em souls_config.toml",
-                "path": p.to_string_lossy()
+                "path": p.to_string_lossy(),
+                "backup_path": backup_path.to_string_lossy(),
+                "parsed": parsed
             }))
         }
         Err(e) => {
@@ -551,5 +662,84 @@ pub async fn post_config_handler(
                 "message": e.to_string()
             }))
         }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateProfileRequest {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub role: Option<String>,
+    pub arena_category: Option<String>,
+    pub target_model: Option<String>,
+    pub provider: Option<String>,
+}
+
+/// Lists all dynamic Master Brain and Worker profiles with their active Pareto triads.
+pub async fn list_profiles_handler(State(state): State<AppState>) -> Json<Value> {
+    let profiles = crate::profiles::get_available_profiles(&state).await;
+    Json(json!({
+        "status": "success",
+        "count": profiles.len(),
+        "profiles": profiles
+    }))
+}
+
+/// Creates or updates a dynamic profile in `souls_config.toml`.
+pub async fn create_profile_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<CreateProfileRequest>,
+) -> Json<Value> {
+    let id = payload.id.trim().to_lowercase().replace(' ', "_");
+    if id.is_empty() {
+        return Json(json!({
+            "status": "error",
+            "message": "O identificador do perfil (id) não pode ser vazio."
+        }));
+    }
+
+    let name = payload.name.trim();
+    let desc = payload.description.as_deref().unwrap_or("Perfil customizado de subagente.");
+    let role = payload.role.as_deref().unwrap_or("subagent");
+    let arena_cat = payload.arena_category.as_deref().unwrap_or("coding");
+    let model = payload.target_model.as_deref().unwrap_or("deepseek/deepseek-chat");
+    let prov = payload.provider.as_deref().unwrap_or("nous");
+
+    match crate::profiles::save_or_update_profile(&id, name, desc, role, arena_cat, model, prov, None) {
+        Ok(_) => {
+            let profiles = crate::profiles::get_available_profiles(&state).await;
+            let created = profiles.iter().find(|p| p.id == id);
+            Json(json!({
+                "status": "success",
+                "message": format!("Perfil '{id}' gravado com sucesso!"),
+                "profile": created
+            }))
+        }
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
+    }
+}
+
+/// Deletes a custom profile from `souls_config.toml` (orchestrator is protected).
+pub async fn delete_profile_handler(
+    State(_state): State<AppState>,
+    AxumPath(profile_id): AxumPath<String>,
+) -> Json<Value> {
+    match crate::profiles::delete_profile(&profile_id, None) {
+        Ok(true) => Json(json!({
+            "status": "success",
+            "message": format!("Perfil '{profile_id}' removido com sucesso!")
+        })),
+        Ok(false) => Json(json!({
+            "status": "not_found",
+            "message": format!("Perfil '{profile_id}' não foi encontrado.")
+        })),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
     }
 }

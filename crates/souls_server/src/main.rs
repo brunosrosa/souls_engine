@@ -1295,15 +1295,19 @@ impl FixtureService {
         let json_models: serde_json::Value = serde_json::from_slice(&bytes_models).unwrap();
         assert!(json_models["models"].as_array().unwrap().len() >= 4);
 
-        // 6. Testa POST /api/v1/settings/hermes-preset
+        // 6. Testa POST /api/v1/settings/hermes-preset com model_override da Tríade de Nuvem
         let req_preset = Request::builder()
             .uri("/api/v1/settings/hermes-preset")
             .method("POST")
             .header("content-type", "application/json")
-            .body(Body::from(r#"{"preset_id":"balanced"}"#))
+            .body(Body::from(r#"{"preset_id":"frontier_balanced","model_override":"deepseek/deepseek-chat","provider":"nous"}"#))
             .unwrap();
         let resp_preset = app.clone().oneshot(req_preset).await.unwrap();
         assert_eq!(resp_preset.status(), StatusCode::OK);
+        let bytes_preset = to_bytes(resp_preset.into_body(), usize::MAX).await.unwrap();
+        let json_preset: serde_json::Value = serde_json::from_slice(&bytes_preset).unwrap();
+        assert_eq!(json_preset["status"], "success");
+        assert_eq!(json_preset["applied_model"], "deepseek/deepseek-chat");
 
         // 7. Testa POST /api/v1/system/checkpoint
         let req_ckpt = Request::builder()
@@ -1314,7 +1318,7 @@ impl FixtureService {
         let resp_ckpt = app.clone().oneshot(req_ckpt).await.unwrap();
         assert_eq!(resp_ckpt.status(), StatusCode::OK);
 
-        // 8. Testa GET /api/v1/settings/config (souls_config.toml)
+        // 8. Testa GET /api/v1/settings/config (souls_config.toml e parsed subsystems)
         let req_cfg = Request::builder()
             .uri("/api/v1/settings/config")
             .method("GET")
@@ -1326,6 +1330,10 @@ impl FixtureService {
         let json_cfg: serde_json::Value = serde_json::from_slice(&bytes_cfg).unwrap();
         assert_eq!(json_cfg["status"], "success");
         assert!(json_cfg["raw_toml"].as_str().unwrap().contains("port = 9123"));
+        assert!(json_cfg["parsed"]["server"]["port"].is_number());
+        assert!(json_cfg["parsed"]["reasoning"].is_object());
+        assert!(json_cfg["parsed"]["finops"].is_object());
+        assert!(json_cfg["parsed"]["router"].is_object());
 
         // 9. Testa POST /api/v1/settings/config (atualização atômica)
         let req_post_cfg = Request::builder()

@@ -28,6 +28,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/router/matrix", get(dashboard::router_matrix_handler))
         .route("/api/v1/settings/hermes-preset", post(dashboard::hermes_preset_handler))
         .route("/api/v1/settings/config", get(dashboard::get_config_handler).post(dashboard::post_config_handler))
+        .route("/api/v1/profiles", get(dashboard::list_profiles_handler).post(dashboard::create_profile_handler))
+        .route("/api/v1/profiles/:id", axum::routing::delete(dashboard::delete_profile_handler))
         .route("/api/v1/system/checkpoint", post(dashboard::system_checkpoint_handler))
         .route("/api/v1/system/curate-obsidian", post(dashboard::system_curate_obsidian_handler))
         // Core API Endpoints
@@ -35,6 +37,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/models", get(models::models_handler))
         .route("/v1/chat/completions", post(chat::chat_completions_handler))
         .route("/api/v1/cloud/champions", get(cloud::cloud_champions_handler))
+        .route("/api/v1/cloud/models", get(cloud::cloud_ranked_models_handler))
         .route("/api/v1/cloud/sync", post(cloud::cloud_sync_handler))
         // Modern Streamable HTTP endpoint (MCP 2025-03-26+)
         .route("/mcp", post(mcp_post_handler).get(mcp_get_handler))

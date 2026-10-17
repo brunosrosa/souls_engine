@@ -178,6 +178,13 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 ├──────────┼───────────────────────┼─────────────────────────────────────────────┤
 │ Sessão 13│ Bloco K: Simbiose     │ [CONCLUÍDA] Linkagem desktop-plugins Hermes,│
 │          │ Hermes & Systray Win32│ launcher Systray olhos RGB, 7/7 E2E PASS    │
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 14│ Bloco L: Settings UX  │ [CONCLUÍDA] Tríade de Modelos Cloud Arena,  │
+│          │ & Governança da Nuvem │ 8 subsistemas c/ tooltips (i), 1-click Hermes│
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 15│ Bloco M: Auditoria Fina│ [Fase 1 CONCLUÍDA / Fase 2 PLANEJADA]       │
+│          │ & Design System Web   │ Branding 2-linhas, Top 50 Cloud, Quick Apply│
+│          │                       │ & Auditoria Elemento a Elemento de Telas    │
 └──────────┴───────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -919,3 +926,88 @@ Antes de efetivar a contratação de planos ou aportes de créditos em APIs de n
 Este documento (`SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md`) é formalmente declarado como o **Ponto Único de Entrada e Contexto Completo para Inicialização de Qualquer Nova Sessão com Agentes de IA**. Ao abrir um novo turno de trabalho no Antigravity ou em qualquer ferramenta:
 - Basta fornecer a menção a este arquivo (`@SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md`).
 - O agente absorverá instantaneamente o estado atual do código, as 10 crates canônicas, as decisões arquiteturais (ADRs), as armadilhas evitadas e o checklist exato do próximo passo a ser executado.
+
+---
+
+## 22. SESSÃO 15: AUDITORIA FINA, POLIMENTO ELEMENTO A ELEMENTO & DESIGN SYSTEM DO FRONTEND WEB
+
+### 22.1 Contexto e Justificativa de Qualidade & Heurística (Design "Wow")
+Interfaces com alta densidade de dados operacionais e de mercado correm o risco de acumular microequívocos de alinhamento, quebras desordenadas de texto em células estreitas e badges descentralizadas que degradam a ergonomia e a sensação de solidez do sistema. 
+
+Para assegurar uma experiência com padrão de produto acabado (*state of the art*), estabeleceu-se a **Sessão 15 (Bloco M)** com foco duplo:
+1. **Fase 1 (Correções Imediatas de Legibilidade e Interatividade - Entregue):** Resolução de quebras de texto, padronização visual de provedores, expansão da Cloud Arena para além da Tríade de Líderes e interligação funcional com o Hermes Agent via modal de aplicação rápida.
+2. **Fase 2 (Auditoria Fina Elemento a Elemento - Planejada):** Revisão minuciosa tela a tela, componente a componente, de todas as 6 abas do Dashboard Web.
+
+---
+
+### 22.2 Entregas Consolidadas da Fase 1 (Sessão 15 - Bloco M)
+
+#### 1. Tipografia Hierárquica em Duas Linhas para Modelos (`formatModelDisplayName`)
+* **Problema Resolvido:** Strings extensas (ex: `deepseek/deepseek-v4-flash-vision-exp` ou `qwen3.5-agentic-coder-2.5b-q4_k_m.gguf`) quebravam aleatoriamente em colunas de tabelas, tornando a leitura cansativa e visualmente truncada.
+* **Solução Implementada:**
+  * Linha 1 (Branding / Lab): Pílula em caixa-alta com fundo sutil e cores semânticas (`ANTHROPIC /`, `OPENAI /`, `GOOGLE /`, `DEEPSEEK /`, `QWEN /` ou `LOCAL /` em verde neon bare-metal).
+  * Linha 2 (Nome do Modelo): Tipografia monoespaçada destacada e legível sem quebras arbitrárias.
+  * Padronizado uniformemente na **Cloud Arena**, no **Inventário Físico Local** e no **Integrador de Decisões Preditivas (Overview)**.
+
+#### 2. Centralização Geométrica e Consistência de Badges e Retângulos Arredondados
+* Todos os elementos encapsulados em retângulos arredondados (`.badge`, `.triad-badge`, `.model-brand-pill`, tags de Pareto) foram centralizados via flexbox vertical e horizontal (`display: inline-flex; align-items: center; justify-content: center;`).
+* Alinhamento estrito nas tabelas de telemetria, líderes de Pareto e status do hardware.
+
+#### 3. Expansão da Cloud Arena: Top 50 Modelos de Mercado & Fronteira de Pareto
+* **Além dos 3 Líderes:** Além da visualização rápida dos 3 líderes (Quality Leader, Best Value e Fast Triage), a aba Cloud Arena agora disponibiliza a tabela expandida com os **Top 50 modelos contemporâneos** ordenados por score composto ponderado para o perfil selecionado.
+* **Busca e Paginação em Tempo Real:** Campo de busca textual instantâneo e controles de paginação (10 modelos por página).
+* **Endpoint Dedicado:** Criação do endpoint `GET /api/v1/cloud/models?profile=<perfil>&limit=50` com query SQL otimizada sobre o `daily_evaluations` no SQLite STRICT WAL.
+
+#### 4. Atalhos e Modal de Aplicação Rápida de Modelos no Hermes Agent (`modal-quick-apply`)
+* **Navegação Direta:** Botão `[⚙️ Configurar / Trocar no Hermes]` no cabeçalho da Cloud Arena redirecionando imediatamente para a aba de Governança de Configurações (`tab-settings` -> `subtab-brain`).
+* **Botão de Aplicação Direta (`[⚡ Usar]`):** Presente em cada card da Tríade de Líderes, em todas as 50 linhas do ranking da Cloud Arena e nos modelos do Inventário Físico Local.
+* **Modal Inteligente de Destino:** Permite escolher em 1 clique onde aplicar o modelo selecionado:
+  * Como modelo mestre no chat interativo do Hermes (`hermes.model`).
+  * Como modelo para o perfil de subagente correspondente (ex: Coding & SWE, Deep Reasoning, Fast Triage).
+  * Envia mutação transacional segura para o backend sem corromper a hierarquia do `config.yaml`.
+
+---
+
+### 22.3 Fase 2 Planejada: Backlog de Auditoria Fina Elemento a Elemento
+
+Para a futura passagem minuciosa aba a aba:
+
+| Aba | Alvo da Auditoria | Melhorias Previstas |
+| :--- | :--- | :--- |
+| **Overview (Cockpit)** | Cards de Telemetria & Gráfico de Pareto | Micro-animações de pulso térmico da GPU, tooltips nativos em métricas de VRAM, suavização de curvas de Pareto em SVG. |
+| **Local Silício** | Inventário Físico & Switchboard | Barras de progresso de ocupação de VRAM por modelo, status de download assíncrono (integrado à crate `souls_llm_inventory`). |
+| **Cloud Arena** | Tríade & Ranking Top 50 | Filtro rápido por provedores (apenas Nous, apenas OpenRouter), coluna comparativa de latência TTFT estimada e exportação CSV. |
+| **Memória L2/L3** | Triad Explorer & Ontologia LadybugDB | Visualização gráfica interativa das arestas da ontologia (`depends_on`, `conflicts_with`), paginação na busca híbrida RRF. |
+| **Settings (Governança)** | 8 Subsistemas & 1-Click Hermes | Agrupamento colapsável (*accordion*), validação em tempo real de sintaxe de chaves de API, diff visual antes de salvar `config.yaml`. |
+| **Logs & Telemetria** | Terminal SSE Streaming & Spool | Filtro de log level (INFO, WARN, ERROR) em tempo real, busca com regex e botão de download do spool compactado. |
+
+---
+
+## 23. VISÃO CONSOLIDADA DAS PRÓXIMAS GRANDES ENTREGAS DO ROADMAP
+
+Para a continuidade estratégica do Souls Engine v7, os 3 grandes blocos mestres de implementação física e arquitetural são:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                PLANO DE CONTINUIDADE: OS 3 BLOCOS PRIORITÁRIOS                 │
+├────────────────────────────────────────────────────────────────────────────────┤
+│ 1. EXPANSÃO DE FERRAMENTAS DE CONTEXTO & SANDBOX (souls_core)                  │
+│    - smart_read: Leitura semântica orientada a orçamento e AST                │
+│    - compress & dedup: Redução LEAN de contexto na RAM sem perda informacional │
+│    - shell & execute: Execução segura de comandos em sandbox restrita Win32    │
+│    - web_search & fetch_web: Inteligência web e extração de markdown na RAM    │
+├────────────────────────────────────────────────────────────────────────────────┤
+│ 2. RFC-007: CRATE souls_llm_inventory (Model Hub & Profiling de Silício)       │
+│    - Gestão universal de arquivos GGUF/ONNX em %USERPROFILE%\llm_local_models  │
+│    - Download manager assíncrono com suporte a HTTP Range (resume) e SHA-256   │
+│    - Profiling de silício adaptativo para teto WDDM da RTX 2060m (5.2 GB)     │
+│    - Broadcast de progresso de downloads em tempo real via SSE no Web Dashboard│
+├────────────────────────────────────────────────────────────────────────────────┤
+│ 3. CURADORIA DO OBSIDIAN DB (Wiki / Log / Cron)                                │
+│    - Esteira autônoma e arquivamento seguro raw/ -> wiki/ (498 documentos)    │
+│    - Validação de integridade SHA-256 e blindagem de privacidade LOCAL_ONLY    │
+│    - Registro compulsório de transformações em wiki/log.md                     │
+│    - Agendamento de cron job periódico para digestão e enriquecimento de notas │
+└────────────────────────────────────────────────────────────────────────────────┘
+```
+

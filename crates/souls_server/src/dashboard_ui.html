@@ -451,22 +451,27 @@
     }
 
     /* BADGES */
+    /* BADGES */
     .badge {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 5px;
-      padding: 3px 9px;
+      padding: 3px 10px;
       border-radius: var(--radius-full);
       font-size: 0.72rem;
       font-weight: 600;
       font-family: var(--font-mono);
       border: 1px solid transparent;
+      white-space: nowrap;
+      text-align: center;
     }
 
     .badge-champion { background: rgba(6, 182, 212, 0.15); color: var(--cyan); border-color: rgba(6, 182, 212, 0.35); }
     .badge-value { background: rgba(16, 185, 129, 0.15); color: var(--green); border-color: rgba(16, 185, 129, 0.35); }
     .badge-lowcost { background: rgba(245, 158, 11, 0.15); color: var(--amber); border-color: rgba(245, 158, 11, 0.35); }
     .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--red); border-color: rgba(239, 68, 68, 0.35); }
+    .badge-dominated { background: rgba(255, 255, 255, 0.05); color: var(--text-dark); border-color: rgba(255, 255, 255, 0.1); }
 
     /* TABLES */
     .table-container {
@@ -492,15 +497,94 @@
       white-space: nowrap;
     }
 
+    table.arena-table th.text-center, table.arena-table td.text-center {
+      text-align: center;
+    }
+
     table.arena-table td {
       padding: 12px 14px;
       border-bottom: 1px solid var(--border-subtle);
       color: var(--text-main);
       background: rgba(16, 24, 40, 0.4);
+      vertical-align: middle;
     }
 
     table.arena-table tr:hover td {
       background: rgba(23, 34, 57, 0.65);
+    }
+
+    .model-id-box {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3px;
+      line-height: 1.25;
+      min-width: 190px;
+    }
+    .model-brand-pill {
+      font-size: 0.62rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--cyan);
+      opacity: 0.85;
+      text-transform: uppercase;
+      background: rgba(6, 182, 212, 0.1);
+      padding: 1px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      display: inline-block;
+    }
+    .model-brand-pill.local {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+    .model-name-text {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #f8fafc;
+      font-family: var(--font-mono);
+      word-break: break-word;
+    }
+    .btn-apply-model {
+      background: rgba(6, 182, 212, 0.14);
+      color: var(--cyan);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .btn-apply-model:hover {
+      background: rgba(6, 182, 212, 0.28);
+      border-color: var(--cyan);
+      transform: translateY(-1px);
+    }
+    .btn-apply-model.local-btn {
+      background: rgba(16, 185, 129, 0.14);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+    .btn-apply-model.local-btn:hover {
+      background: rgba(16, 185, 129, 0.28);
+      border-color: #34d399;
+    }
+    .rank-cell {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      text-align: center;
+    }
+    .rank-cell.top3 {
+      color: var(--cyan);
     }
 
     .mono {
@@ -734,6 +818,685 @@
     .toast.success { border-color: rgba(16, 185, 129, 0.5); }
     .toast.warning { border-color: rgba(245, 158, 11, 0.5); }
     .toast.error { border-color: rgba(239, 68, 68, 0.5); }
+
+    /* TOOLTIPS INFORMATIVOS (i) */
+    .info-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: var(--cyan);
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      cursor: help;
+      position: relative;
+      margin-left: 6px;
+      vertical-align: middle;
+      transition: all 0.2s ease;
+    }
+
+    .info-icon:hover {
+      background: var(--cyan);
+      color: #060911;
+      box-shadow: 0 0 10px var(--cyan-glow);
+    }
+
+    .tooltip-box {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: 130%;
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      width: 280px;
+      background: rgba(10, 16, 28, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 0.73rem;
+      line-height: 1.4;
+      z-index: 500;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+    }
+
+    .tooltip-box strong {
+      color: var(--cyan);
+      display: block;
+      margin-bottom: 3px;
+      font-size: 0.76rem;
+    }
+
+    .tooltip-box .tooltip-impact {
+      margin-top: 5px;
+      padding-top: 5px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--amber);
+      font-size: 0.70rem;
+    }
+
+    .tooltip-box .tooltip-def {
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .info-icon:hover .tooltip-box {
+      visibility: visible;
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* SUB-ABAS HORIZONTAIS DO SETTINGS */
+    .settings-subtabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      scrollbar-width: thin;
+    }
+
+    .settings-subtab-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .settings-subtab-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .settings-subtab-btn.active {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .settings-subpane {
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .settings-subpane.active {
+      display: block;
+    }
+
+    /* TRÍADE DE NUVEM */
+    .triad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 14px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .triad-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .triad-card {
+      background: rgba(16, 24, 40, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .triad-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .triad-card.leader {
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .triad-card.leader:hover {
+      border-color: var(--amber);
+      box-shadow: 0 0 16px var(--amber-glow);
+    }
+
+    .triad-card.best-value {
+      border-color: rgba(6, 182, 212, 0.45);
+      background: rgba(6, 182, 212, 0.05);
+    }
+    .triad-card.best-value:hover {
+      border-color: var(--cyan);
+      box-shadow: 0 0 18px var(--cyan-glow);
+    }
+
+    .triad-card.low-cost {
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .triad-card.low-cost:hover {
+      border-color: var(--green);
+      box-shadow: 0 0 16px var(--green-glow);
+    }
+
+    .triad-badge {
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+
+    .triad-badge.gold { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .triad-badge.cyan { background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.4); }
+    .triad-badge.green { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    .triad-model-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--font-mono);
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    .triad-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .triad-meta strong {
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .setting-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 800px) {
+      .setting-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .setting-item {
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .setting-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .setting-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+    }
+
+    .setting-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .setting-input {
+      background: rgba(10, 16, 28, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      width: 100%;
+    }
+
+    .setting-input:focus {
+      outline: none;
+      border-color: var(--cyan);
+    }
+
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .range-wrap input[type="range"] {
+      flex: 1;
+      accent-color: var(--cyan);
+    }
+
+    .range-val {
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--cyan);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    /* MODAL GLASS STYLES */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 9, 17, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-dialog {
+      background: #0c1220;
+      border: 1px solid var(--border-glow);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 25px var(--cyan-glow);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      transform: translateY(20px) scale(0.97);
+      transition: transform 0.25s ease;
+    }
+    .modal-backdrop.active .modal-dialog {
+      transform: translateY(0) scale(1);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+    .modal-close:hover {
+      color: #fff;
+    }
+    .modal-field {
+      margin-bottom: 16px;
+    }
+    .modal-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 16px;
+      margin-top: 20px;
+    }
+
+    /* PRESET CARD BADGES & ACTIONS */
+    .role-badge {
+      font-size: 0.62rem;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .role-badge.master {
+      background: rgba(6, 182, 212, 0.18);
+      color: var(--cyan);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+    }
+    .role-badge.subagent {
+      background: rgba(168, 85, 247, 0.18);
+      color: var(--purple);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+    }
+    .category-tag {
+      font-size: 0.62rem;
+      color: var(--text-dark);
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .btn-delete-profile {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: var(--red);
+      border-radius: var(--radius-sm);
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: all 0.2s;
+    }
+    .btn-delete-profile:hover {
+      opacity: 1;
+      background: rgba(239, 68, 68, 0.3);
+      border-color: var(--red);
+      transform: scale(1.1);
+    }
+    .add-preset-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 6px;
+      min-height: 120px;
+      transition: all 0.2s ease;
+    }
+    .add-preset-card:hover {
+      border-color: var(--purple);
+      background: rgba(168, 85, 247, 0.08);
+      box-shadow: 0 0 16px var(--purple-glow);
+      transform: translateY(-2px);
+    }
+
+    /* DEFINED CHOICE & MODEL HIGHLIGHTING */
+    .preset-defined-box {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .defined-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .defined-model-code {
+      font-size: 0.74rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--cyan);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+    .active-hermes-pill {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--green);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: var(--radius-full);
+      padding: 2px 7px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .active-hermes-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s infinite;
+    }
+    .inspecting-pill {
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      border-radius: var(--radius-full);
+      padding: 1px 7px;
+      display: inline-block;
+      margin-left: 6px;
+    }
+
+    /* TRIAD CARD DEFINED STATE */
+    .triad-card.is-defined {
+      border-color: var(--green) !important;
+      background: rgba(16, 185, 129, 0.08) !important;
+      box-shadow: 0 0 20px var(--green-glow) !important;
+      position: relative;
+    }
+    .defined-choice-banner {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.25));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* SUMMARY BAR */
+    .active-profile-summary-bar {
+      background: rgba(16, 24, 40, 0.7);
+      border: 1px solid var(--border-glow);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .summary-left, .summary-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .summary-kicker {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .summary-title-text {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .active-profile-model-chip {
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* SETTING ITEMS ENHANCEMENTS */
+    .state-pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .state-pill.on {
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
+    }
+    .state-pill.off {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-dark);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .state-pill.locked {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
+    }
+    .switch-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .range-val-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      background: rgba(6, 182, 212, 0.12);
+      color: var(--cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      user-select: none;
+    }
+    .range-val-badge .val-kicker {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      font-weight: 500;
+    }
+    .defined-value-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      padding: 1px 7px;
+      border-radius: var(--radius-sm);
+    }
+    .unsaved-floating-banner {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 158, 11, 0.25);
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      z-index: 150;
+      align-items: center;
+      gap: 16px;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -1046,29 +1809,35 @@
               Diretório Físico: <code class="mono" id="local-root-dir">C:\Users\rosas\llm_local_models</code> &bull; Total: <strong id="local-total-models" style="color: var(--cyan);">13 modelos GGUF</strong> (23.98 GB)
             </p>
           </div>
-          <button class="btn btn-cyan" onclick="fetchLocalModels()">
-            <span>🔄</span> Atualizar Inventário Local
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-purple" onclick="switchTab('tab-settings'); switchSettingsSubtab('subtab-brain');">
+              <span>⚙️</span> Definir Perfil no Hermes
+            </button>
+            <button class="btn btn-cyan" onclick="fetchLocalModels()">
+              <span>🔄</span> Atualizar Inventário Local
+            </button>
+          </div>
         </div>
 
         <div class="table-container">
           <table class="arena-table">
             <thead>
               <tr style="cursor: pointer; user-select: none;">
-                <th>Tier</th>
-                <th>Modelo / Identificador</th>
-                <th>Silício Alvo</th>
+                <th class="text-center">Tier</th>
+                <th style="min-width: 220px;">Modelo / Identificador</th>
+                <th class="text-center">Silício Alvo</th>
                 <th>Tamanho / Quant</th>
                 <th>VRAM Estimada</th>
                 <th>Janela Ctx</th>
                 <th>Tags Especializadas</th>
-                <th>Status Operacional</th>
+                <th class="text-center">Status Operacional</th>
+                <th class="text-center">Ação</th>
               </tr>
             </thead>
             <tbody id="local-arena-tbody">
               <!-- Renderizado dinamicamente via JS -->
               <tr>
-                <td colspan="8" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
+                <td colspan="9" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
               </tr>
             </tbody>
           </table>
@@ -1091,9 +1860,14 @@
               Sincronização analítica com Nous Research Portal & OpenRouter sob a regra de custo-benefício multiobjetivo.
             </p>
           </div>
-          <button class="btn btn-cyan" onclick="syncCloudArena()">
-            <span>⚡</span> Atualizar Tarifas na Nuvem
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-purple" onclick="switchTab('tab-settings'); switchSettingsSubtab('subtab-brain');">
+              <span>⚙️</span> Configurar / Trocar no Hermes
+            </button>
+            <button class="btn btn-cyan" onclick="syncCloudArena()">
+              <span>⚡</span> Sincronizar Tarifas na Nuvem
+            </button>
+          </div>
         </div>
 
         <!-- SELETOR DOS 5 PERFIS COGNITIVOS -->
@@ -1105,24 +1879,66 @@
           <button class="profile-pill" onclick="selectProfile('design')">🎨 Design / Frontend</button>
         </div>
 
-        <div class="table-container">
+        <!-- SEÇÃO 1: OS 3 CAMPEÕES DE PARETO -->
+        <div style="margin-top: 10px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.85rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <span style="color: var(--amber);">👑</span> Tríade de Líderes de Pareto (Perfil Selecionado)
+          </h4>
+          <span style="font-size: 0.72rem; color: var(--text-muted);">Recomendações canônicas de qualidade, ROI e economia</span>
+        </div>
+
+        <div class="table-container" style="margin-bottom: 24px;">
           <table class="arena-table">
             <thead>
               <tr>
-                <th>Status Pareto</th>
-                <th>Modelo</th>
+                <th class="text-center" style="width: 140px;">Status Pareto</th>
+                <th style="min-width: 240px;">Modelo</th>
                 <th>Provedor</th>
                 <th>Custo Blended ($/1M)</th>
                 <th>Score Cognitivo</th>
                 <th>Índice ROI</th>
                 <th>Throughput (TPS)</th>
                 <th>Janela Ctx</th>
+                <th class="text-center">Ação</th>
               </tr>
             </thead>
             <tbody id="cloud-arena-tbody">
               <!-- Renderizado dinamicamente via JS -->
               <tr>
-                <td colspan="8" style="text-align: center; color: var(--text-muted);">Consultando banco da Cloud Arena...</td>
+                <td colspan="9" style="text-align: center; color: var(--text-muted);">Consultando banco da Cloud Arena...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SEÇÃO 2: RANKING EXPANDIDO (TOP 50) -->
+        <div style="margin-top: 14px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.85rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <span style="color: var(--cyan);">📊</span> Ranking Expandido da Fronteira de Pareto & Mercado (Top 50 Modelos)
+          </h4>
+          <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-ranked-count">Carregando catálogo...</span>
+        </div>
+
+        <div class="table-container">
+          <table class="arena-table">
+            <thead>
+              <tr>
+                <th class="text-center" style="width: 50px;">#</th>
+                <th class="text-center" style="width: 110px;">Status</th>
+                <th style="min-width: 240px;">Modelo / Identificador</th>
+                <th>Provedor</th>
+                <th>Tarifa ($/1M)</th>
+                <th>Score</th>
+                <th>ROI Index</th>
+                <th>TPS</th>
+                <th>Janela Ctx</th>
+                <th class="text-center">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="cloud-ranked-tbody">
+              <!-- Renderizado dinamicamente via fetchCloudRankedModels() -->
+              <tr>
+                <td colspan="10" style="text-align: center; color: var(--text-muted);">Buscando ranking dos 50 melhores modelos no SQLite da Cloud Arena...</td>
               </tr>
             </tbody>
           </table>
@@ -1135,124 +1951,935 @@
     <!-- ========================================== -->
     <section class="tab-pane" id="tab-settings">
       
-      <!-- PRESET DO HERMES AGENT -->
-      <div class="card" style="margin-bottom: 24px;">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="card-icon icon-cyan">🎯</div>
-            Presets Operacionais do Master Brain (Hermes Agent)
-          </div>
-          <button class="btn btn-cyan" onclick="saveHermesPreset()">
-            <span>💾</span> Aplicar Preset ao config.yaml
-          </button>
-        </div>
-        <p style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 16px;">
-          Selecione a configuração desejada para o Chat Mestre. O Souls Engine atualiza atomicamente o <code>config.yaml</code> do Hermes criando backup <code>.bak</code>:
-        </p>
+      <!-- SUB-ABAS HORIZONTAIS DE NAVEGAÇÃO -->
+      <div class="settings-subtabs">
+        <button class="settings-subtab-btn active" id="btn-subtab-brain" onclick="switchSettingsSubtab('subtab-brain')">
+          <span>🎯</span> Master Brain & Tríade
+        </button>
+        <button class="settings-subtab-btn" id="btn-subtab-reasoning" onclick="switchSettingsSubtab('subtab-reasoning')">
+          <span>🧠</span> Reasoning & Budget
+        </button>
+        <button class="settings-subtab-btn" id="btn-subtab-finops" onclick="switchSettingsSubtab('subtab-finops')">
+          <span>⚡</span> FinOps & Silício (RTX 2060m)
+        </button>
+        <button class="settings-subtab-btn" id="btn-subtab-router" onclick="switchSettingsSubtab('subtab-router')">
+          <span>🔀</span> ParetoBandit Router
+        </button>
+        <button class="settings-subtab-btn" id="btn-subtab-memory" onclick="switchSettingsSubtab('subtab-memory')">
+          <span>💾</span> Memória & LadybugDB
+        </button>
+        <button class="settings-subtab-btn" id="btn-subtab-sandbox" onclick="switchSettingsSubtab('subtab-sandbox')">
+          <span>🛡️</span> Sandbox & AST Code
+        </button>
+        <button class="settings-subtab-btn" id="btn-subtab-obsidian" onclick="switchSettingsSubtab('subtab-obsidian')">
+          <span>📓</span> Obsidian DB Curator
+        </button>
+        <button class="settings-subtab-btn" id="btn-subtab-raw" onclick="switchSettingsSubtab('subtab-raw')">
+          <span>📄</span> Raw souls_config.toml
+        </button>
+      </div>
 
-        <div class="presets-grid">
-          <div class="preset-card" id="preset-heavy_swe" onclick="selectPreset('heavy_swe')">
-            <div class="preset-title">Heavy SWE 🚀</div>
-            <div class="preset-desc">Claude 3.7 Sonnet para sessões pesadas de arquitetura e coding avançado.</div>
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 1: MASTER BRAIN & TRÍADE DA CLOUD ARENA -->
+      <!-- ==================================================== -->
+      <div class="settings-subpane active" id="subtab-brain">
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">🎯</div>
+              Perfis Cognitivos & Tríades da Cloud Arena
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Arquitetura Aberta de Perfis Cognitivos</strong>
+                  O <strong>Master Brain</strong> atua como a âncora fixa do diálogo do Hermes. Novos <strong>Perfis de Trabalho (Subagentes)</strong> podem ser criados dinamicamente para delegar tarefas pelo ParetoBandit sem recompilar o motor.
+                  <div class="tooltip-impact">💡 Cada perfil se liga a uma categoria cognitiva da Cloud Arena e resolve a Tríade de Pareto em tempo real.</div>
+                  <div class="tooltip-def">Universal: orchestrator (Master Brain)</div>
+                </span>
+              </span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-purple" onclick="openNewProfileModal()">
+                <span>➕</span> Novo Perfil de Trabalho
+              </button>
+              <button class="btn btn-cyan" onclick="syncCloudArena()">
+                <span>🔄</span> Sincronizar Tarifas da Nuvem
+              </button>
+            </div>
           </div>
-          <div class="preset-card active" id="preset-balanced" onclick="selectPreset('balanced')">
-            <div class="preset-title">Balanced Daily ⚖️</div>
-            <div class="preset-desc">DeepSeek Chat V3 para produtividade diária de baixo custo e alta velocidade.</div>
+
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px;">
+            Selecione o perfil desejado para inspecionar e configurar sua <strong>Tríade de Modelos</strong> (Líder de Qualidade, Best Value ROI e Custo Ultrabaixo). Perfis de subagentes direcionam sub-tarefas pelo <code>delegate_task</code>:
+          </p>
+
+          <!-- SELETOR DINÂMICO DE PERFIS (GERADO VIA JS) -->
+          <div class="presets-grid" id="profiles-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-bottom: 20px;">
+            <!-- Renderizado dinamicamente por fetchProfiles() -->
           </div>
-          <div class="preset-card" id="preset-math" onclick="selectPreset('math')">
-            <div class="preset-title">Deep Math 🧠</div>
-            <div class="preset-desc">DeepSeek Reasoner R1 para cadeias analíticas densas e raciocínio formal.</div>
-          </div>
-          <div class="preset-card" id="preset-privacy" onclick="selectPreset('privacy')">
-            <div class="preset-title">Local Privacy 🛡️</div>
-            <div class="preset-desc">Qwen 3.5 Coder 4B / Hermes 3 3B local na RTX 2060m (zero cloud leakage).</div>
+
+          <!-- CONTAINER DA TRÍADE DE NUVEM DO PERFIL ATIVO -->
+          <div id="triad-container" style="margin-top: 14px;">
+            <div class="active-profile-summary-bar">
+              <div class="summary-left">
+                <span class="summary-kicker">Perfil Inspecionado:</span>
+                <span id="active-profile-title" class="summary-title-text">Balanced Daily</span>
+                <span id="active-profile-badge" class="role-badge master">Master Brain</span>
+                <span id="active-category-badge" class="category-tag">agentic</span>
+              </div>
+              <div class="summary-right">
+                <span class="summary-kicker">Modelo Definido:</span>
+                <span id="active-profile-model-code" class="active-profile-model-chip">deepseek/deepseek-chat</span>
+                <span id="active-model-indicator" class="active-hermes-pill">● Ativo no Hermes</span>
+              </div>
+            </div>
+
+            <div class="triad-grid" id="triad-cards-grid">
+              <!-- Renderizado dinamicamente via JavaScript -->
+              <div class="triad-card leader">
+                <div>
+                  <span class="triad-badge gold">👑 Quality Leader</span>
+                  <div class="triad-model-name" id="triad-leader-name">Carregando...</div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">Topo absoluto técnico em benchmarks.</div>
+                </div>
+                <div>
+                  <div class="triad-meta">
+                    <span>Benchmark: <strong id="triad-leader-score">--</strong></span>
+                    <span>Custo: <strong id="triad-leader-cost">--</strong></span>
+                  </div>
+                  <button class="btn btn-cyan" style="width: 100%; margin-top: 10px; justify-content: center;" onclick="applyTriadModel('leader')">
+                    Ativar no Hermes
+                  </button>
+                </div>
+              </div>
+
+              <div class="triad-card best-value">
+                <div>
+                  <span class="triad-badge cyan">💎 Best Value ROI ★ Recomendado</span>
+                  <div class="triad-model-name" id="triad-best-name">Carregando...</div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">96% da inteligência prática por uma fração do preço.</div>
+                </div>
+                <div>
+                  <div class="triad-meta">
+                    <span>Benchmark: <strong id="triad-best-score">--</strong></span>
+                    <span>Custo: <strong id="triad-best-cost" style="color: var(--green);">--</strong></span>
+                  </div>
+                  <button class="btn btn-cyan" style="width: 100%; margin-top: 10px; justify-content: center; background: rgba(6, 182, 212, 0.25); border-color: var(--cyan);" onclick="applyTriadModel('best')">
+                    Ativar no Hermes (Recomendado)
+                  </button>
+                </div>
+              </div>
+
+              <div class="triad-card low-cost">
+                <div>
+                  <span class="triad-badge green">⚡ Ultra Low Cost</span>
+                  <div class="triad-model-name" id="triad-low-name">Carregando...</div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">Velocidade extrema e centavos de custo.</div>
+                </div>
+                <div>
+                  <div class="triad-meta">
+                    <span>Benchmark: <strong id="triad-low-score">--</strong></span>
+                    <span>Custo: <strong id="triad-low-cost">--</strong></span>
+                  </div>
+                  <button class="btn btn-green" style="width: 100%; margin-top: 10px; justify-content: center;" onclick="applyTriadModel('low')">
+                    Ativar no Hermes
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- OVERRIDE MANUAL CUSTOMIZADO -->
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-top: 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); min-width: 130px;">
+                Override Manual:
+                <span class="info-icon">i
+                  <span class="tooltip-box">
+                    <strong>Modelo Customizado Explícito</strong>
+                    Digite qualquer identificador de modelo válido suportado pelo Nous Portal ou OpenRouter (ex: openai/gpt-4o ou qwen/qwen-2.5-72b-instruct).
+                    <div class="tooltip-impact">💡 Atualiza a chave model.default diretamente no config.yaml.</div>
+                  </span>
+                </span>
+              </span>
+              <input type="text" id="input-model-override" class="setting-input" style="flex: 1; min-width: 240px;" placeholder="Ex: deepseek/deepseek-chat ou anthropic/claude-3-7-sonnet">
+              <select id="select-provider-override" class="setting-input" style="width: 120px;">
+                <option value="nous">nous</option>
+                <option value="custom">custom</option>
+                <option value="openrouter">openrouter</option>
+              </select>
+              <button class="btn" onclick="applyCustomModelOverride()">
+                <span>🎯</span> Aplicar Modelo Manual
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- GOVERNANÇA & TOGGLES -->
-      <div class="card" style="margin-bottom: 24px;">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="card-icon icon-green">🛡️</div>
-            Guardrails & Governança do Souls Engine (souls_config.toml)
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 2: REASONING & THINKING BUDGET -->
+      <!-- ==================================================== -->
+      <div class="settings-subpane" id="subtab-reasoning">
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-purple">🧠</div>
+              Dynamic Reasoning Effort & Thinking Budget (Shannon Entropy)
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Dynamic Reasoning Effort</strong>
+                  Mede a entropia de Shannon ($H$) no silício local (Tier 0.5) antes do envio da tarefa. Se for simples, usa zero tokens; se for complexa, calibra o pensamento invisível.
+                  <div class="tooltip-impact">💡 Economiza até 95% de tokens de pensamento em prompts diretos.</div>
+                  <div class="tooltip-def">Padrão: Ativo | Teto: Ultra (32k)</div>
+                </span>
+              </span>
+            </div>
+            <button class="btn btn-green" onclick="saveSettings()">
+              <span>💾</span> Salvar Configurações
+            </button>
           </div>
-          <button class="btn btn-green" onclick="saveSettings()">
-            <span>💾</span> Salvar Configurações
-          </button>
-        </div>
 
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <h4>Metabolismo Epistêmico (Langevin Decay)</h4>
-            <p>Aplica decaimento temporal probabilístico a memórias não estáveis no FrankenSQLite L2.</p>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="toggle-langevin" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
+          <div class="setting-grid">
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Dynamic Reasoning Effort Ativo
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Cálculo Dinâmico por Prompt</strong>
+                      Liga ou desliga o cálculo de tokens de pensamento baseado na incerteza da tarefa.
+                      <div class="tooltip-def">Padrão: Ativo (true)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill on" id="pill-reasoning-dynamic">LIGADO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-reasoning-dynamic" checked onchange="updateSwitchPill('cfg-reasoning-dynamic', 'pill-reasoning-dynamic'); markSettingsUnsaved();">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Permite que o Tier 0.5 meça a entropia matemática do prompt e determine o budget de pensamento.</div>
+            </div>
 
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <h4>Especulação Sintática (Speculative Drafting)</h4>
-            <p>Utiliza o modelo Tier 4 de 0.5B para antecipar tokens em tarefas de edição de código.</p>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="toggle-speculative" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Teto Máximo de Reasoning
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Limite Superior da Escada</strong>
+                      Impede que modelos com thinking excedam o teto estabelecido, contendo custos em nuvem e estouro de contexto.
+                      <div class="tooltip-def">Opções: minimal (512) até ultra (32.768)</div>
+                    </span>
+                  </span>
+                </div>
+                <select id="cfg-reasoning-max-effort" class="setting-input" style="width: 140px;" onchange="markSettingsUnsaved()">
+                  <option value="minimal">Minimal (512)</option>
+                  <option value="low">Low (1.024)</option>
+                  <option value="medium">Medium (4.096)</option>
+                  <option value="high">High (16.384)</option>
+                  <option value="xhigh">XHigh (24.576)</option>
+                  <option value="ultra" selected>Ultra (32.768)</option>
+                </select>
+              </div>
+              <div class="setting-desc">Teto extremo de tokens de pensamento pré-resposta aplicável aos modelos.</div>
+            </div>
 
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <h4>Desidratação de Código por AST (FinOps Mandatório)</h4>
-            <p>Substitui leitura completa de arquivos por esqueletos sintáticos outline/symbol poupando até 85% de contexto.</p>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="toggle-ast" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Escalonamento Suave em Retries
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Stepwise Escalation</strong>
+                      Em caso de retry/falha de compilação ou teste, avança exatamente 1 degrau na escada (High -> XHigh -> Ultra).
+                      <div class="tooltip-def">Padrão: Ativo (true)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill on" id="pill-reasoning-stepwise">LIGADO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-reasoning-stepwise" checked onchange="updateSwitchPill('cfg-reasoning-stepwise', 'pill-reasoning-stepwise'); markSettingsUnsaved();">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Evita saltos abruptos de custo dando uma chance intermediária antes do teto máximo.</div>
+            </div>
 
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <h4>Safe Sandbox (Execução Segura)</h4>
-            <p>Impõe timeout de 5.000 ms, isolamento de variáveis de ambiente e higienização ANSI.</p>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="toggle-sandbox" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Bypass de Thinking em Tarefas Simples
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Trivial Task Bypass</strong>
+                      Desliga totalmente o thinking (0 tokens) para JSON simples, formatação e eco quando a entropia for baixa.
+                      <div class="tooltip-def">Padrão: Ativo (true)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill on" id="pill-reasoning-bypass">LIGADO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-reasoning-bypass" checked onchange="updateSwitchPill('cfg-reasoning-bypass', 'pill-reasoning-bypass'); markSettingsUnsaved();">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Poupe 100% dos tokens de pensamento quando nenhuma deliberação for necessária.</div>
+            </div>
 
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <h4>Obsidian Privacy Shield</h4>
-            <p>Bloqueia estritamente envio de notas sensíveis (saúde, finanças, PII) para APIs externas.</p>
+            <div class="setting-item" style="grid-column: span 2;">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Threshold de Alta Entropia ($H \ge$)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Ponto de Inflexão para Raciocínio Profundo</strong>
+                      Tarefas com incerteza acima deste limiar recebem reasoning High ou superior.
+                      <div class="tooltip-def">Padrão: 0.70</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="range-val-badge">
+                  <span class="val-kicker">Definido:</span>
+                  <span id="val-entropy-threshold">0.70</span>
+                  <span style="color: var(--text-muted);">H</span>
+                </div>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="cfg-reasoning-threshold" min="0.50" max="0.95" step="0.05" value="0.70" oninput="document.getElementById('val-entropy-threshold').innerText = Number(this.value).toFixed(2); markSettingsUnsaved();">
+              </div>
+            </div>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="toggle-obsidian-shield" checked>
-            <span class="slider"></span>
-          </label>
         </div>
       </div>
 
-      <!-- MANUTENÇÃO DE SISTEMA -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <div class="card-icon icon-purple">⚡</div>
-            Ações de Manutenção & Compactação Bare-Metal
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 3: FINOPS & SILÍCIO (RTX 2060m NVML) -->
+      <!-- ==================================================== -->
+      <div class="settings-subpane" id="subtab-finops">
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-amber">⚡</div>
+              FinOps de Silício & Hardware Watchdog (NVIDIA RTX 2060m)
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Governança de Silício Bare-Metal</strong>
+                  Protege a GPU física contra superaquecimento e sobrecarga de VRAM sob o WDDM do Windows 11.
+                  <div class="tooltip-impact">⚠️ Ultrapassar 5.2GB aciona o spillover PCIe, reduzindo a geração de 45 TPS para 1.5 TPS.</div>
+                  <div class="tooltip-def">Teto WDDM: 5294 MB | Crítico: 78.0 °C</div>
+                </span>
+              </span>
+            </div>
+            <button class="btn btn-green" onclick="saveSettings()">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+
+          <div class="setting-grid">
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Teto Útil de VRAM (MB)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Teto Físico de Memória de Vídeo</strong>
+                      Limite rígido para alocações locais na RTX 2060m. O WDDM consome até 850 MB.
+                      <div class="tooltip-def">Padrão: 5294 MB</div>
+                    </span>
+                  </span>
+                </div>
+                <input type="number" id="cfg-vram-limit" class="setting-input" style="width: 120px;" value="5294" min="2048" max="5294">
+              </div>
+              <div class="setting-desc">Barreira anti-spillover. Se excedido, desvia tarefas para CPU Host ou Nuvem.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Polling do Watchdog NVML (ms)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Frequência de Telemetria</strong>
+                      Intervalo de leitura dos sensores de clock, VRAM e calor da NVIDIA via FFI.
+                      <div class="tooltip-def">Padrão: 500 ms</div>
+                    </span>
+                  </span>
+                </div>
+                <input type="number" id="cfg-watchdog-polling" class="setting-input" style="width: 120px;" value="500" min="100" max="2000" step="100">
+              </div>
+              <div class="setting-desc">Frequência em milissegundos para sondagem termodinâmica da GPU.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Limiar Preventivo GPU (°C)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Barreira Preventiva $\Phi$</strong>
+                      Temperatura em que o ParetoBandit começa a aplicar penalidade nas alocações da GPU.
+                      <div class="tooltip-def">Padrão: 72.0 °C</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="range-val-badge" style="background: rgba(245, 158, 11, 0.12); color: var(--amber); border-color: rgba(245, 158, 11, 0.3);">
+                  <span class="val-kicker">Definido:</span>
+                  <span id="val-temp-preventive">72.0</span>
+                  <span>°C</span>
+                </div>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="cfg-temp-preventive" min="65.0" max="75.0" step="0.5" value="72.0" oninput="document.getElementById('val-temp-preventive').innerText = Number(this.value).toFixed(1); markSettingsUnsaved();">
+              </div>
+              <div class="setting-desc">Inicia desaceleração térmica preventiva na RTX 2060m.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Limiar Crítico de Throttle (°C)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Barreira Térmica Crítica</strong>
+                      Bloqueio absoluto de despachos para a GPU física, forçando CPU AVX2 ou Nuvem.
+                      <div class="tooltip-def">Padrão: 78.0 °C</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="range-val-badge" style="background: rgba(239, 68, 68, 0.12); color: var(--red); border-color: rgba(239, 68, 68, 0.3);">
+                  <span class="val-kicker">Definido:</span>
+                  <span id="val-temp-throttle">78.0</span>
+                  <span>°C</span>
+                </div>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="cfg-temp-throttle" min="74.0" max="82.0" step="0.5" value="78.0" oninput="document.getElementById('val-temp-throttle').innerText = Number(this.value).toFixed(1); markSettingsUnsaved();">
+              </div>
+              <div class="setting-desc">Corta imediatamente alocações na GPU para proteção de silício.</div>
+            </div>
           </div>
         </div>
-        <div style="display: flex; gap: 14px; flex-wrap: wrap;">
-          <button class="btn btn-cyan" onclick="flushWalCheckpoint()">
-            <span>🧹</span> Compactar FrankenSQLite WAL (TRUNCATE)
-          </button>
-          <button class="btn btn-green" onclick="triggerObsidianCurate()">
-            <span>📚</span> Curar Lote do Cofre Obsidian (5 notas)
-          </button>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 4: PARETOBANDIT & ROTEAMENTO AGÊNTICO -->
+      <!-- ==================================================== -->
+      <div class="settings-subpane" id="subtab-router">
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">🔀</div>
+              ParetoBandit & Roteamento Bayeasiano Multi-Objetivo
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Thompson Sampling Multi-Armed Bandit</strong>
+                  Roteia subagentes e microtarefas (`delegate_task` / `route_subtask`) balanceando qualidade, custo e latência.
+                  <div class="tooltip-impact">💡 Atualiza probabilidades continuamente via pseudo-observações $E^3$.</div>
+                  <div class="tooltip-def">Pesos: 50% Qualidade | 30% Custo | 20% Latência</div>
+                </span>
+              </span>
+            </div>
+            <button class="btn btn-green" onclick="saveSettings()">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+
+          <div class="setting-grid">
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Pareto Dispatching Ativo
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Roteamento Dinâmico de Subagentes</strong>
+                      Habilita o algoritmo de escolha multi-objetivo nas fronteiras agênticas.
+                      <div class="tooltip-def">Padrão: Ativo (true)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill on" id="pill-router-pareto">LIGADO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-router-pareto" checked onchange="updateSwitchPill('cfg-router-pareto', 'pill-router-pareto'); markSettingsUnsaved();">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Seleciona o melhor worker (local ou nuvem) a cada microtarefa.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Viés Soberano em Cold Start
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Preferência Local Inicial</strong>
+                      Atribui Beta(5, 1) a modelos locais na RTX 2060m vs Beta(2, 2) em nuvem quando não há histórico no SQLite.
+                      <div class="tooltip-def">Padrão: Ativo (true)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill on" id="pill-router-sovereignty">LIGADO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-router-sovereignty" checked onchange="updateSwitchPill('cfg-router-sovereignty', 'pill-router-sovereignty'); markSettingsUnsaved();">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Garante soberania local determinística de dados antes do acúmulo de métricas.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Peso Qualidade Técnica ($w_{\text{qual}}$)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Eficácia Técnica ($E^3$)</strong>
+                      Prioridade para resolução correta e sem falhas na seleção do modelo.
+                    </span>
+                  </span>
+                </div>
+                <div class="range-val-badge">
+                  <span class="val-kicker">Definido:</span>
+                  <span id="val-weight-quality">0.50</span>
+                  <span id="pct-weight-quality" style="color: var(--text-muted);">(50%)</span>
+                </div>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="cfg-weight-quality" min="0.0" max="1.0" step="0.05" value="0.50" oninput="document.getElementById('val-weight-quality').innerText = Number(this.value).toFixed(2); document.getElementById('pct-weight-quality').innerText = '(' + Math.round(this.value * 100) + '%)'; markSettingsUnsaved();">
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Peso Economia Financeira ($w_{\text{custo}}$)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>FinOps e Economia</strong>
+                      Prioridade dada a custo zero ($0.00 local) ou menor tarifa por 1M tokens.
+                    </span>
+                  </span>
+                </div>
+                <div class="range-val-badge">
+                  <span class="val-kicker">Definido:</span>
+                  <span id="val-weight-cost">0.30</span>
+                  <span id="pct-weight-cost" style="color: var(--text-muted);">(30%)</span>
+                </div>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="cfg-weight-cost" min="0.0" max="1.0" step="0.05" value="0.30" oninput="document.getElementById('val-weight-cost').innerText = Number(this.value).toFixed(2); document.getElementById('pct-weight-cost').innerText = '(' + Math.round(this.value * 100) + '%)'; markSettingsUnsaved();">
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Peso Baixa Latência ($w_{\text{lat}}$)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Velocidade de Resposta</strong>
+                      Prioridade dada a alto TPS e baixo Time-to-First-Token.
+                    </span>
+                  </span>
+                </div>
+                <div class="range-val-badge">
+                  <span class="val-kicker">Definido:</span>
+                  <span id="val-weight-latency">0.20</span>
+                  <span id="pct-weight-latency" style="color: var(--text-muted);">(20%)</span>
+                </div>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="cfg-weight-latency" min="0.0" max="1.0" step="0.05" value="0.20" oninput="document.getElementById('val-weight-latency').innerText = Number(this.value).toFixed(2); document.getElementById('pct-weight-latency').innerText = '(' + Math.round(this.value * 100) + '%)'; markSettingsUnsaved();">
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Teto de Contexto Local (Tokens)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Janela Máxima para GPU</strong>
+                      Entradas maiores que este limite são desviadas para evitar OOM de VRAM.
+                      <div class="tooltip-def">Padrão: 8192 tokens</div>
+                    </span>
+                  </span>
+                </div>
+                <input type="number" id="cfg-local-token-limit" class="setting-input" style="width: 120px;" value="8192" min="2048" max="32768" step="1024" onchange="markSettingsUnsaved()">
+              </div>
+              <div class="setting-desc">Limite de tokens de contexto para execução na dGPU local.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 5: MEMÓRIA, SQLITE STRICT & LADYBUGDB -->
+      <!-- ==================================================== -->
+      <div class="settings-subpane" id="subtab-memory">
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-green">💾</div>
+              Hipocampo Bare-Metal L2/L3 & Grafo Ontológico
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Tríade de Memória L2/L3</strong>
+                  Governa a busca híbrida RRF, decaimento térmico de fatos antigos e persistência SQLite STRICT WAL no Dev Drive ReFS.
+                  <div class="tooltip-def">ReFS: Z:\souls_engine\.souls_data\</div>
+                </span>
+              </span>
+            </div>
+            <button class="btn btn-green" onclick="saveSettings()">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+
+          <div class="setting-grid">
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Langevin Epistemic Decay
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Metabolismo de Esquecimento</strong>
+                      Aplica decaimento probabilístico a memórias não consolidadas no FrankenSQLite.
+                      <div class="tooltip-def">Padrão: Ativo (true)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill on" id="pill-memory-langevin">LIGADO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-memory-langevin" checked onchange="updateSwitchPill('cfg-memory-langevin', 'pill-memory-langevin'); markSettingsUnsaved();">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Reduz a prioridade de fatos obsoletos na busca híbrida RRF.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Meia-Vida do Conhecimento (Dias)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Half-Life Epistêmica</strong>
+                      Dias para que uma memória não corroborada perca metade de seu peso na busca.
+                      <div class="tooltip-def">Padrão: 30 dias</div>
+                    </span>
+                  </span>
+                </div>
+                <input type="number" id="cfg-memory-half-life" class="setting-input" style="width: 100px;" value="30" min="7" max="180">
+              </div>
+              <div class="setting-desc">Período de retenção e amortecimento de memórias transitórias.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Constante RRF ($k$) da Busca Híbrida
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Reciprocal Rank Fusion</strong>
+                      Equilibra o ranking de texto FTS5 e a busca vetorial densa LanceDB.
+                      <div class="tooltip-def">Padrão: 60</div>
+                    </span>
+                  </span>
+                </div>
+                <input type="number" id="cfg-memory-rrf-k" class="setting-input" style="width: 100px;" value="60" min="10" max="120">
+              </div>
+              <div class="setting-desc">Peso de fusão entre busca textual e vetorial no hipocampo L2.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Manutenção do FrankenSQLite
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>WAL Checkpoint TRUNCATE</strong>
+                      Força a liberação física de espaço e escrita limpa no Dev Drive ReFS.
+                    </span>
+                  </span>
+                </div>
+                <button class="btn btn-cyan" onclick="flushWalCheckpoint()">
+                  <span>🧹</span> Compactar WAL Agora
+                </button>
+              </div>
+              <div class="setting-desc">Executa PRAGMA wal_checkpoint(TRUNCATE) na partição Z:\.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 6: SANDBOX, AST CODE & SEGURANÇA NT -->
+      <!-- ==================================================== -->
+      <div class="settings-subpane" id="subtab-sandbox">
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-red">🛡️</div>
+              Sandbox de Execução, AST & Guardrails NT
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Guardrails e Limites de Segurança</strong>
+                  Impõe contenção física na partição ReFS, timeout contra travamentos de terminal e desidratação sintática de código.
+                  <div class="tooltip-def">Linhas Vermelhas 1 e 4 do AGENTS.md</div>
+                </span>
+              </span>
+            </div>
+            <button class="btn btn-green" onclick="saveSettings()">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+
+          <div class="setting-grid">
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Source-Side AST Dehydration
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>FinOps Mandatório</strong>
+                      Obriga agentes a consumir assinaturas desidratadas (outline/symbol) poupando 70% a 85% de contexto.
+                      <div class="tooltip-def">Padrão: Ativo (Mandatório)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill on" id="pill-ast-dehydration">LIGADO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-ast-dehydration" checked onchange="updateSwitchPill('cfg-ast-dehydration', 'pill-ast-dehydration'); markSettingsUnsaved();">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Proíbe leitura de arquivos de código inteiros quando outline/slice basta.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Contenção Estrita no Dev Drive ($Z:\setminus$)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Linha Vermelha 4</strong>
+                      Bloqueia criação ou escrita de arquivos fora de Z:\souls_engine e .souls_data.
+                      <div class="tooltip-def">Padrão: Ativo (Mandatório)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill locked" id="pill-sandbox-strict-refs">MANDATÓRIO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-sandbox-strict-refs" checked disabled>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Proteção física do host Windows contra poluição em %APPDATA% e C:\.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Timeout da Safe Sandbox (ms)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Proteção Contra Travamentos</strong>
+                      Tempo máximo para execução de comandos pelo agente no shell do MinGit/PowerShell.
+                      <div class="tooltip-def">Padrão: 5000 ms</div>
+                    </span>
+                  </span>
+                </div>
+                <input type="number" id="cfg-sandbox-timeout" class="setting-input" style="width: 120px;" value="5000" min="1000" max="30000" step="1000">
+              </div>
+              <div class="setting-desc">Encerra processos que entrarem em loop ou aguardarem entrada interativa.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Teto de Linhas Tree-sitter
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Parsing de AST Seguro</strong>
+                      Arquivos maiores que este teto ativam análise particionada para não estourar a RAM.
+                      <div class="tooltip-def">Padrão: 15.000 linhas</div>
+                    </span>
+                  </span>
+                </div>
+                <input type="number" id="cfg-ast-max-lines" class="setting-input" style="width: 120px;" value="15000" min="5000" max="50000" step="5000">
+              </div>
+              <div class="setting-desc">Limite de tamanho físico para análise sintática bare-metal.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 7: OBSIDIAN DB & CURADORIA ENCICLOPÉDICA -->
+      <!-- ==================================================== -->
+      <div class="settings-subpane" id="subtab-obsidian">
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">📓</div>
+              Curadoria do Cofre Obsidian DB (Memória Fria de Longo Prazo)
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Curadoria Enciclopédica do Cofre</strong>
+                  Processa fontes brutas imutáveis em `raw/` e destila conceitos e entidades em `wiki/` com links bidirecionais [[...]].
+                  <div class="tooltip-def">Caminho: C:\Users\rosas\OneDrive\Documentos\Obisidian DB</div>
+                </span>
+              </span>
+            </div>
+            <button class="btn btn-green" onclick="saveSettings()">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+
+          <div class="setting-grid">
+            <div class="setting-item" style="grid-column: span 2;">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Caminho do Cofre Obsidian (OneDrive)
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Localização Física do Cofre</strong>
+                      Pasta onde residem raw/, wiki/ e scripts de curadoria.
+                    </span>
+                  </span>
+                </div>
+                <span style="font-size: 0.72rem; color: var(--green); font-family: var(--font-mono);">✓ Conectado</span>
+              </div>
+              <input type="text" id="cfg-obsidian-path" class="setting-input" value="C:\Users\rosas\OneDrive\Documentos\Obisidian DB" readonly style="color: var(--text-muted);">
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Obsidian Privacy Shield
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Higienização Local de PII</strong>
+                      Desidentifica e bloqueia envio de dados de saúde, finanças e senhas para provedores de nuvem.
+                      <div class="tooltip-def">Padrão: Ativo (true)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill on" id="pill-obsidian-privacy-shield">LIGADO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-obsidian-privacy-shield" checked onchange="updateSwitchPill('cfg-obsidian-privacy-shield', 'pill-obsidian-privacy-shield'); markSettingsUnsaved();">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Garante privacidade e soberania absoluta dos dados pessoais do cofre.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Zona `raw/` Estritamente Read-Only
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Preservação Sagrada</strong>
+                      Fontes originais brutas nunca são apagadas nem truncadas; preservação aditiva de YAML.
+                      <div class="tooltip-def">Padrão: Ativo (Mandatório)</div>
+                    </span>
+                  </span>
+                </div>
+                <div class="switch-wrap">
+                  <span class="state-pill locked" id="pill-obsidian-raw-ro">MANDATÓRIO</span>
+                  <label class="switch">
+                    <input type="checkbox" id="cfg-obsidian-raw-ro" checked disabled>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-desc">Proteção contra perda de dados ou deleções acidentais nas notas brutas.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Tamanho do Lote por Execução
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Batch Size de Curadoria</strong>
+                      Quantidade de notas brutas destiladas em cada ciclo para não estourar a janela de contexto.
+                      <div class="tooltip-def">Padrão: 5 notas</div>
+                    </span>
+                  </span>
+                </div>
+                <input type="number" id="cfg-obsidian-batch-size" class="setting-input" style="width: 100px;" value="5" min="1" max="20">
+              </div>
+              <div class="setting-desc">Número de notas do cofre processadas por ciclo agendado.</div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-header">
+                <div class="setting-title">
+                  Disparo de Teste de Curadoria
+                  <span class="info-icon">i
+                    <span class="tooltip-box">
+                      <strong>Execução Manual Controlada</strong>
+                      Processa um lote de 5 notas agora e atualiza wiki/log.md.
+                    </span>
+                  </span>
+                </div>
+                <button class="btn btn-green" onclick="triggerObsidianCurate()">
+                  <span>📚</span> Curar Lote Agora
+                </button>
+              </div>
+              <div class="setting-desc">Testa a esteira de curadoria do cofre sob demanda.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 8: RAW SOULS_CONFIG.TOML -->
+      <!-- ==================================================== -->
+      <div class="settings-subpane" id="subtab-raw">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">📄</div>
+              Editor de Texto Puro: souls_config.toml (SSOT ReFS)
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Single Source of Truth</strong>
+                  Arquivo de configuração estruturado do Souls Engine v7 em Z:\souls_engine\.souls_data\config\souls_config.toml.
+                  <div class="tooltip-def">Gravado com backup automático .toml.bak</div>
+                </span>
+              </span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn" onclick="fetchConfigToml()">
+                <span>🔄</span> Recarregar do Disco
+              </button>
+              <button class="btn btn-green" onclick="saveRawToml()">
+                <span>💾</span> Salvar Arquivo TOML
+              </button>
+            </div>
+          </div>
+          <p style="font-size: 0.74rem; color: var(--text-muted); margin-bottom: 12px;">
+            Edição direta do arquivo centralizado. Ao salvar, o Souls Engine cria um backup automático <code>.toml.bak</code> e reflete os valores em tempo real no daemon:
+          </p>
+          <textarea id="raw-toml-editor" class="setting-input" style="height: 380px; font-size: 0.78rem; line-height: 1.5; font-family: var(--font-mono); resize: vertical;"></textarea>
         </div>
       </div>
 
@@ -1284,6 +2911,9 @@
         fetchCloudChampions();
       } else if (tabId === 'tab-overview') {
         fetchRouterMatrix();
+      } else if (tabId === 'tab-settings') {
+        fetchConfigToml();
+        fetchProfiles();
       }
     }
 
@@ -1410,17 +3040,17 @@
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${item.description}</div>
           </td>
           <td>
-            <div class="mono" style="font-weight: 700; color: var(--green);">${item.local_default.model}</div>
-            <div style="font-size: 0.7rem; color: var(--text-muted);">${item.local_default.target} &bull; ${item.local_default.tps}</div>
+            ${formatModelDisplayName(item.local_default.model, true)}
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${item.local_default.target} &bull; ${item.local_default.tps}</div>
           </td>
           <td>
-            <div class="mono" style="font-weight: 600; color: #60a5fa;">${item.cloud_fallback.model}</div>
-            <div style="font-size: 0.7rem; color: var(--text-muted);">${item.cloud_fallback.provider} &bull; ${item.cloud_fallback.cost}</div>
+            ${formatModelDisplayName(item.cloud_fallback.model, false)}
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${item.cloud_fallback.provider} &bull; ${item.cloud_fallback.cost}</div>
           </td>
           <td>
             <div style="font-size: 0.75rem; color: #cbd5e1; line-height: 1.4;">${item.pareto_rule}</div>
           </td>
-          <td>
+          <td class="text-center">
             <span class="badge badge-value">${item.status}</span>
           </td>
         </tr>
@@ -1446,10 +3076,96 @@
       }
     }
 
+    function formatModelDisplayName(canonicalId, isLocal) {
+      if (!canonicalId) return '--';
+      if (isLocal) {
+        return `
+          <div class="model-id-box">
+            <span class="model-brand-pill local">LOCAL /</span>
+            <span class="model-name-text" title="${canonicalId}">${canonicalId}</span>
+          </div>
+        `;
+      }
+      const slashIdx = canonicalId.indexOf('/');
+      if (slashIdx !== -1) {
+        const brand = canonicalId.substring(0, slashIdx).toUpperCase() + ' /';
+        const model = canonicalId.substring(slashIdx + 1);
+        return `
+          <div class="model-id-box">
+            <span class="model-brand-pill">${brand}</span>
+            <span class="model-name-text" title="${canonicalId}">${model}</span>
+          </div>
+        `;
+      }
+      return `
+        <div class="model-id-box">
+          <span class="model-name-text" title="${canonicalId}">${canonicalId}</span>
+        </div>
+      `;
+    }
+
+    // Modal de Aplicação Rápida de Modelo
+    let quickApplyTargetModel = null;
+    let quickApplyTargetProvider = 'nous';
+    let quickApplyIsLocal = false;
+
+    function openQuickApplyModal(modelId, provider, isLocal = false) {
+      quickApplyTargetModel = modelId;
+      quickApplyTargetProvider = provider || (isLocal ? 'local_silicon' : 'nous');
+      quickApplyIsLocal = Boolean(isLocal);
+
+      const nameEl = document.getElementById('quick-apply-model-name');
+      const tagEl = document.getElementById('quick-apply-provider-tag');
+      if (nameEl) nameEl.innerText = modelId;
+      if (tagEl) tagEl.innerText = `Provedor: ${quickApplyTargetProvider} • Tipo: ${isLocal ? 'Silício Bare-Metal' : 'Cloud API'}`;
+
+      const sel = document.getElementById('quick-apply-profile-select');
+      if (sel && profilesData && profilesData.length > 0) {
+        sel.innerHTML = profilesData.map(p => `
+          <option value="${p.id}">${p.name} (${p.role === 'orchestrator' ? '👑 Master' : '🤖 Subagente'})</option>
+        `).join('');
+      }
+
+      const radioMaster = document.querySelector('input[name="apply-target"][value="master"]');
+      if (radioMaster) radioMaster.checked = true;
+      toggleApplyTarget();
+
+      const modal = document.getElementById('modal-quick-apply');
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeQuickApplyModal() {
+      const modal = document.getElementById('modal-quick-apply');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function toggleApplyTarget() {
+      const val = document.querySelector('input[name="apply-target"]:checked')?.value;
+      const field = document.getElementById('field-select-profile');
+      if (field) {
+        field.style.display = (val === 'profile') ? 'block' : 'none';
+      }
+    }
+
+    async function submitQuickApply() {
+      if (!quickApplyTargetModel) return;
+      const val = document.querySelector('input[name="apply-target"]:checked')?.value;
+
+      if (val === 'master') {
+        closeQuickApplyModal();
+        await setHermesMasterModel(quickApplyTargetModel, quickApplyTargetProvider, activePreset);
+      } else {
+        const profSelect = document.getElementById('quick-apply-profile-select');
+        const profId = profSelect ? profSelect.value : activePreset;
+        closeQuickApplyModal();
+        await saveSubagentProfilePreset(profId, quickApplyTargetModel, quickApplyTargetProvider);
+      }
+    }
+
     function renderLocalTable(models) {
       const tbody = document.getElementById('local-arena-tbody');
       if (!models || models.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Nenhum modelo físico encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum modelo físico encontrado.</td></tr>';
         return;
       }
 
@@ -1458,22 +3174,28 @@
         const isGpu = m.target && m.target.includes('dGPU');
         const statusBadge = isGpu ? '<span class="badge badge-champion">Pronto na dGPU</span>' : '<span class="badge badge-value">Pronto na CPU</span>';
         const sizeMb = m.size_mb ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(2) + ' GB' : m.size_mb.toFixed(0) + ' MB') : '--';
+        const modelId = m.model || m.name;
 
         return `
           <tr>
-            <td><span class="badge badge-champion" style="font-size: 0.68rem;">${m.tier || 'Tier 1'}</span></td>
+            <td class="text-center"><span class="badge badge-champion" style="font-size: 0.68rem;">${m.tier || 'Tier 1'}</span></td>
             <td>
-              <strong style="color: #fff;">${m.model || m.name}</strong>
-              <div style="font-size: 0.68rem; color: var(--text-dark); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${m.file_path || ''}">
+              ${formatModelDisplayName(modelId, true)}
+              <div style="font-size: 0.68rem; color: var(--text-dark); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
                 ${m.file_path || ''}
               </div>
             </td>
-            <td><span class="mono" style="color: ${isGpu ? 'var(--cyan)' : '#e2e8f0'};">${m.target || 'CPU Host'}</span></td>
+            <td class="text-center"><span class="mono" style="color: ${isGpu ? 'var(--cyan)' : '#e2e8f0'};">${m.target || 'CPU Host'}</span></td>
             <td class="mono">${sizeMb} &bull; <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
             <td class="mono" style="color: var(--cyan);">${m.vram || '0 MB'}</td>
             <td class="mono">${(m.context_window || 8192).toLocaleString()}</td>
             <td>${tagsHtml}</td>
-            <td>${statusBadge}</td>
+            <td class="text-center">${statusBadge}</td>
+            <td class="text-center">
+              <button class="btn-apply-model local-btn" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
+                <span>⚡</span> Usar
+              </button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -1482,7 +3204,7 @@
     // 4. FETCH CLOUD ARENA (llm_cloud)
     async function fetchCloudChampions() {
       const tbody = document.getElementById('cloud-arena-tbody');
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Carregando campeões da Cloud Arena...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Carregando campeões da Cloud Arena...</td></tr>';
 
       try {
         const res = await fetch('/api/v1/cloud/champions');
@@ -1490,9 +3212,10 @@
           const data = await res.json();
           cloudChampionsData = data.champions || [];
           renderCloudTable();
+          fetchCloudRankedModels(currentProfile);
         }
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--red);">Erro ao carregar Cloud Arena.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--red);">Erro ao carregar Cloud Arena.</td></tr>';
       }
     }
 
@@ -1502,14 +3225,16 @@
       const activeBtn = Array.from(document.querySelectorAll('.profile-pill')).find(b => b.innerText.toLowerCase().includes(currentProfile));
       if (activeBtn) activeBtn.classList.add('active');
       renderCloudTable();
+      fetchCloudRankedModels(currentProfile);
     }
 
     function renderCloudTable() {
       const tbody = document.getElementById('cloud-arena-tbody');
+      if (!tbody) return;
       const profileReport = cloudChampionsData.find(c => c.profile.toLowerCase() === currentProfile);
 
       if (!profileReport) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Nenhum dado encontrado para o perfil ' + currentProfile + '.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum dado encontrado para o perfil ' + currentProfile + '.</td></tr>';
         return;
       }
 
@@ -1526,16 +3251,79 @@
 
       tbody.innerHTML = rows.map(r => `
         <tr>
-          <td><span class="badge ${r.badgeClass}">${r.tag}</span></td>
-          <td><strong>${r.data.display_name || r.data.canonical_id}</strong></td>
+          <td class="text-center"><span class="badge ${r.badgeClass}">${r.tag}</span></td>
+          <td>${formatModelDisplayName(r.data.canonical_id || r.data.display_name, false)}</td>
           <td><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${r.data.provider}</span></td>
           <td class="mono" style="color: #cbd5e1;">$${(r.data.blended_cost || 0).toFixed(4)}</td>
           <td class="mono" style="font-weight: 700; color: var(--cyan);">${(r.data.composite_score || 0).toFixed(1)}</td>
           <td class="mono" style="color: var(--green); font-weight: 600;">${(r.data.roi_index || 0).toFixed(1)}</td>
-          <td class="mono">${r.data.throughput_tps || '--'} tps</td>
+          <td class="mono">${r.data.throughput_tps ? r.data.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
           <td class="mono">${(r.data.context_window || 0).toLocaleString()}</td>
+          <td class="text-center">
+            <button class="btn-apply-model" onclick="openQuickApplyModal('${r.data.canonical_id}', '${r.data.provider}', false)" title="Aplicar este campeão no Hermes">
+              <span>⚡</span> Usar
+            </button>
+          </td>
         </tr>
       `).join('');
+    }
+
+    // 4.1 FETCH RANKING EXPANDIDO DA CLOUD ARENA (TOP 50)
+    async function fetchCloudRankedModels(profile) {
+      const tbody = document.getElementById('cloud-ranked-tbody');
+      const countEl = document.getElementById('cloud-ranked-count');
+      if (!tbody) return;
+
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">Consultando os 50 melhores modelos da arena...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/v1/cloud/models?profile=${profile || currentProfile}&limit=50`);
+        if (res.ok) {
+          const data = await res.json();
+          const models = data.models || [];
+          if (countEl) countEl.innerText = `${models.length} modelos classificados`;
+          renderCloudRankedTable(models);
+        } else {
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--red);">Falha ao carregar ranking da Cloud Arena.</td></tr>';
+        }
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--red);">Erro de rede: ${e.message}</td></tr>`;
+      }
+    }
+
+    function renderCloudRankedTable(models) {
+      const tbody = document.getElementById('cloud-ranked-tbody');
+      if (!tbody) return;
+      if (!models || models.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">Nenhum modelo avaliado encontrado para este perfil.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = models.map((m, idx) => {
+        const isTop3 = idx < 3;
+        const tagClass = m.pareto_tag === 'Leader' ? 'badge-champion' : m.pareto_tag === 'BestValue' ? 'badge-value' : 'badge-dominated';
+        const tagLabel = m.pareto_tag === 'Leader' ? '👑 Leader' : m.pareto_tag === 'BestValue' ? '💎 Best' : 'Dominated';
+        const costStr = m.blended_cost === 0 ? '$0.00' : '$' + m.blended_cost.toFixed(4);
+
+        return `
+          <tr>
+            <td class="rank-cell ${isTop3 ? 'top3' : ''}">#${m.rank || (idx + 1)}</td>
+            <td class="text-center"><span class="badge ${tagClass}">${tagLabel}</span></td>
+            <td>${formatModelDisplayName(m.canonical_id, false)}</td>
+            <td><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${m.provider}</span></td>
+            <td class="mono" style="color: #cbd5e1;">${costStr}</td>
+            <td class="mono" style="font-weight: 700; color: var(--cyan);">${(m.composite_score || 0).toFixed(1)}</td>
+            <td class="mono" style="color: var(--green); font-weight: 600;">${(m.roi_index || 0).toFixed(1)}</td>
+            <td class="mono">${m.throughput_tps ? m.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
+            <td class="mono">${(m.context_window || 0).toLocaleString()}</td>
+            <td class="text-center">
+              <button class="btn-apply-model" onclick="openQuickApplyModal('${m.canonical_id}', '${m.provider}', false)" title="Aplicar este modelo no Hermes">
+                <span>⚡</span> Usar
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
     // 5. SINCRONIZAR TARIFAS DA NUVEM
@@ -1545,7 +3333,8 @@
         const res = await fetch('/api/v1/cloud/sync?force=true', { method: 'POST' });
         if (res.ok) {
           showToast("Cloud Arena atualizada com sucesso! Tarifas e scores recalculados.", "success");
-          fetchCloudChampions();
+          await fetchCloudChampions();
+          renderTriadCards();
         } else {
           showToast("Sincronização concluída (modo simulado).", "success");
         }
@@ -1554,38 +3343,712 @@
       }
     }
 
-    // 6. PRESETS & CONFIGURAÇÕES
-    function selectPreset(presetId) {
-      activePreset = presetId;
-      document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
-      const el = document.getElementById('preset-' + presetId);
-      if (el) el.classList.add('active');
+    // ========================================================
+    // 6. NAVEGAÇÃO ENTRE SUB-ABAS HORIZONTAIS DE SETTINGS
+    // ========================================================
+    function switchSettingsSubtab(subtabId) {
+      document.querySelectorAll('.settings-subpane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.settings-subtab-btn').forEach(el => el.classList.remove('active'));
       
-      const labels = {
-        heavy_swe: "Heavy SWE 🚀",
-        balanced: "Balanced Daily ⚖️",
-        math: "Deep Math 🧠",
-        privacy: "Local Privacy 🛡️"
-      };
-      document.getElementById('top-active-preset').innerText = labels[presetId] || presetId;
+      const pane = document.getElementById(subtabId);
+      const btn = document.getElementById('btn-' + subtabId);
+      if (pane) pane.classList.add('active');
+      if (btn) btn.classList.add('active');
+
+      if (subtabId === 'subtab-raw' || subtabId === 'subtab-brain') {
+        fetchConfigToml();
+      }
     }
 
-    async function saveHermesPreset() {
-      showToast(`Aplicando preset '${activePreset}' ao Hermes config.yaml...`, "warning");
+    // ========================================================
+    // 7. GOVERNANÇA DE PERFIS COGNITIVOS & TRÍADE DE MODELOS
+    // ========================================================
+    let currentTriadData = null;
+    let profilesData = [];
+
+    async function fetchProfiles() {
+      try {
+        const res = await fetch('/api/v1/profiles');
+        if (res.ok) {
+          const data = await res.json();
+          profilesData = Array.isArray(data) ? data : (data.profiles || []);
+          renderProfileCards();
+
+          // Se activePreset não está nos perfis, seleciona o orchestrator ou o primeiro
+          if (!activePreset || !profilesData.find(p => p.id === activePreset)) {
+            const def = profilesData.find(p => p.role === 'orchestrator') || profilesData[0];
+            if (def) activePreset = def.id;
+          }
+          selectProfilePreset(activePreset);
+        }
+      } catch (e) {
+        console.warn("Falha ao buscar perfis de /api/v1/profiles", e);
+      }
+    }
+
+    function renderProfileCards() {
+      const grid = document.getElementById('profiles-cards-grid');
+      if (!grid) return;
+
+      let html = '';
+      for (const p of profilesData) {
+        const isActive = (p.id === activePreset);
+        const isMaster = (p.role === 'orchestrator');
+        const roleClass = isMaster ? 'master' : 'subagent';
+        const roleLabel = isMaster ? '👑 Master Brain' : '🤖 Subagente';
+
+        const deleteBtn = !p.is_builtin ? `
+          <button class="btn-delete-profile" title="Excluir Perfil de Trabalho" onclick="event.stopPropagation(); deleteCustomProfile('${p.id}')">
+            &times;
+          </button>
+        ` : '';
+
+        const activeHermesBadge = p.is_active ? `
+          <span class="active-hermes-pill">● Ativo no Hermes</span>
+        ` : '';
+
+        const inspectingBadge = isActive ? `
+          <span class="inspecting-pill">Inspecionando ➔</span>
+        ` : '';
+
+        html += `
+          <div class="preset-card ${isActive ? 'active' : ''}" id="preset-${p.id}" onclick="selectProfilePreset('${p.id}')">
+            ${deleteBtn}
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+              <span class="role-badge ${roleClass}">${roleLabel}</span>
+              <span class="category-tag">${p.arena_category}</span>
+            </div>
+            <div class="preset-title">
+              <span>${p.name}</span>
+              ${inspectingBadge}
+            </div>
+            <div class="preset-desc">${p.description}</div>
+
+            <div class="preset-defined-box">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="defined-label">Modelo Definido:</span>
+                ${activeHermesBadge}
+              </div>
+              <span class="defined-model-code" title="${p.target_model}">${p.target_model || 'Auto (Best Value)'}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      html += `
+        <div class="add-preset-card" onclick="openNewProfileModal()">
+          <div style="font-size: 1.5rem; color: var(--purple);">➕</div>
+          <div style="font-weight: 600; font-size: 0.85rem; color: #fff;">Novo Perfil de Trabalho</div>
+          <div style="font-size: 0.7rem; color: var(--text-muted);">Especialista p/ subagentes</div>
+        </div>
+      `;
+
+      grid.innerHTML = html;
+    }
+
+    function selectProfilePreset(profileId) {
+      activePreset = profileId;
+      document.querySelectorAll('#profiles-cards-grid .preset-card').forEach(c => c.classList.remove('active'));
+      const card = document.getElementById('preset-' + profileId);
+      if (card) card.classList.add('active');
+
+      const currentProfile = profilesData.find(p => p.id === profileId);
+      const titleEl = document.getElementById('active-profile-title');
+      const badgeEl = document.getElementById('active-profile-badge');
+      const catEl = document.getElementById('active-category-badge');
+      const modelCodeEl = document.getElementById('active-profile-model-code');
+      const hermesIndEl = document.getElementById('active-model-indicator');
+
+      if (currentProfile) {
+        if (titleEl) titleEl.innerText = currentProfile.name;
+        if (catEl) catEl.innerText = currentProfile.arena_category;
+        if (modelCodeEl) modelCodeEl.innerText = currentProfile.target_model || 'Auto (Best Value)';
+        if (badgeEl) {
+          const isMaster = (currentProfile.role === 'orchestrator');
+          badgeEl.className = `role-badge ${isMaster ? 'master' : 'subagent'}`;
+          badgeEl.innerText = isMaster ? 'Master Brain (Hermes Mestre)' : 'Subagente de Trabalho';
+        }
+        if (hermesIndEl) {
+          hermesIndEl.style.display = currentProfile.is_active ? 'inline-flex' : 'none';
+        }
+      } else {
+        if (titleEl) titleEl.innerText = profileId;
+      }
+
+      renderProfileCards();
+      renderTriadCards();
+    }
+
+    function renderTriadCards() {
+      const grid = document.getElementById('triad-cards-grid');
+      if (!grid) return;
+
+      const currentProfile = profilesData.find(p => p.id === activePreset);
+
+      // Modelos padrão da fronteira de Pareto com calibração empírica de fallback
+      const fallbackTriads = {
+        orchestrator: {
+          leader: { canonical_id: "anthropic/claude-3-7-sonnet", provider: "nous", score: 94.2, blended_cost: 3.00, roi: 31.4, desc: "Líder técnico absoluto em compreensão geral e orquestração." },
+          best: { canonical_id: "deepseek/deepseek-chat", provider: "nous", score: 91.5, blended_cost: 0.14, roi: 653.6, desc: "97% do desempenho do Claude por 1/20 do valor ($0.14/1M)." },
+          low: { canonical_id: "google/gemini-2.0-flash", provider: "nous", score: 88.0, blended_cost: 0.10, roi: 880.0, desc: "Ultra-rápido com latência sub-segundo e custo irrisório." }
+        },
+        frontier_balanced: {
+          leader: { canonical_id: "anthropic/claude-3-7-sonnet", provider: "nous", score: 94.2, blended_cost: 3.00, roi: 31.4, desc: "Líder técnico absoluto em compreensão geral e orquestração." },
+          best: { canonical_id: "deepseek/deepseek-chat", provider: "nous", score: 91.5, blended_cost: 0.14, roi: 653.6, desc: "97% do desempenho do Claude por 1/20 do valor ($0.14/1M)." },
+          low: { canonical_id: "google/gemini-2.0-flash", provider: "nous", score: 88.0, blended_cost: 0.10, roi: 880.0, desc: "Ultra-rápido com latência sub-segundo e custo irrisório." }
+        },
+        deep_swe: {
+          leader: { canonical_id: "anthropic/claude-3-7-sonnet", provider: "nous", score: 96.0, blended_cost: 3.00, roi: 32.0, desc: "Líder de SWE-bench Verified e refatoração arquitetural." },
+          best: { canonical_id: "qwen/qwen-2.5-coder-32b-instruct", provider: "openrouter", score: 90.8, blended_cost: 0.20, roi: 454.0, desc: "Vanguarda em Rust, Python e testes com excelente custo-benefício." },
+          low: { canonical_id: "deepseek/deepseek-chat", provider: "nous", score: 89.5, blended_cost: 0.14, roi: 639.3, desc: "Desempenho sólido em engenharia por apenas $0.14 por milhão." }
+        },
+        deep_reasoning: {
+          leader: { canonical_id: "openai/o3-mini-high", provider: "nous", score: 97.4, blended_cost: 4.40, roi: 22.1, desc: "Máximo raciocínio formal, provas matemáticas e auditoria de segurança." },
+          best: { canonical_id: "deepseek/deepseek-r1", provider: "nous", score: 95.8, blended_cost: 0.55, roi: 174.2, desc: "Raciocínio aberto de fronteira por uma fração do preço comercial." },
+          low: { canonical_id: "qwen/qwq-32b-preview", provider: "openrouter", score: 92.1, blended_cost: 0.18, roi: 511.7, desc: "Cadeia de pensamento analítica acessível e de baixo consumo." }
+        },
+        ultra_fast: {
+          leader: { canonical_id: "anthropic/claude-3-5-haiku", provider: "nous", score: 86.5, blended_cost: 0.80, roi: 108.1, desc: "Alta precisão em comandos rápidos com baixíssima latência." },
+          best: { canonical_id: "google/gemini-2.0-flash", provider: "nous", score: 88.0, blended_cost: 0.10, roi: 880.0, desc: "Velocidade impressionante de geração e suporte a contexto longo." },
+          low: { canonical_id: "meta-llama/llama-3.2-3b-instruct", provider: "openrouter", score: 78.0, blended_cost: 0.06, roi: 1300.0, desc: "Triagem imediata e comandos pontuais por centavos de dólar." }
+        },
+        local_sovereign: {
+          leader: { canonical_id: "qwen2.5-coder-7b-instruct-q4_k_m.gguf", provider: "local_silicon", score: 85.0, blended_cost: 0.00, roi: 9999.0, desc: "100% no silício da NVIDIA RTX 2060m. Custo $0.00 e zero tráfego externo." },
+          best: { canonical_id: "deepseek-r1-distill-qwen-7b-q4_k_m.gguf", provider: "local_silicon", score: 86.2, blended_cost: 0.00, roi: 9999.0, desc: "Pensamento analítico local na GPU física sem sair da partição Dev Drive." },
+          low: { canonical_id: "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf", provider: "local_silicon", score: 74.0, blended_cost: 0.00, roi: 9999.0, desc: "Ultra-leve para execução instantânea na CPU AVX2 ou GPU." }
+        }
+      };
+
+      let triad = (currentProfile && currentProfile.triad) ? currentProfile.triad : (fallbackTriads[activePreset] || fallbackTriads.orchestrator || fallbackTriads.frontier_balanced);
+
+      // Refina com dados ao vivo da Cloud Arena se disponível
+      const categoryToArena = {
+        coding: "coding",
+        reasoning: "math",
+        fast: "fast",
+        agentic: "agentic",
+        design: "creative"
+      };
+      const cat = currentProfile ? currentProfile.arena_category : activePreset;
+      const arenaProfileName = categoryToArena[cat] || cat;
+
+      if (cloudChampionsData && cloudChampionsData.length > 0 && arenaProfileName !== 'local') {
+        const found = cloudChampionsData.find(c => c.profile.toLowerCase() === arenaProfileName);
+        if (found) {
+          triad = {
+            leader: found.quality_leader ? {
+              canonical_id: found.quality_leader.canonical_id,
+              provider: found.quality_leader.provider,
+              score: found.quality_leader.composite_score || 94.0,
+              blended_cost: found.quality_leader.blended_cost || 3.00,
+              desc: "Líder de qualidade pelo ranking Cloud Arena."
+            } : triad.leader,
+            best: found.best_value ? {
+              canonical_id: found.best_value.canonical_id,
+              provider: found.best_value.provider,
+              score: found.best_value.composite_score || 91.0,
+              blended_cost: found.best_value.blended_cost || 0.20,
+              desc: "Melhor ROI pelo índice da fronteira de Pareto."
+            } : triad.best,
+            low: found.ultra_low_cost ? {
+              canonical_id: found.ultra_low_cost.canonical_id,
+              provider: found.ultra_low_cost.provider,
+              score: found.ultra_low_cost.composite_score || 85.0,
+              blended_cost: found.ultra_low_cost.blended_cost || 0.10,
+              desc: "Custo mínimo por 1M tokens no provedor."
+            } : triad.low
+          };
+        }
+      }
+
+      currentTriadData = triad;
+
+      const isOrchestrator = currentProfile ? (currentProfile.role === 'orchestrator') : (activePreset === 'orchestrator' || activePreset === 'frontier_balanced');
+
+      const renderCard = (role, title, badgeClass, item, isFeatured = false) => {
+        const costStr = item.blended_cost === 0 ? '$0.00 (Local)' : '$' + item.blended_cost.toFixed(2) + ' / 1M';
+        const isCurrentModel = (currentProfile && currentProfile.target_model === item.canonical_id);
+
+        const definedBanner = isCurrentModel ? `
+          <div class="defined-choice-banner">
+            <span>✓</span> OPÇÃO DEFINIDA NESTE PERFIL
+          </div>
+        ` : '';
+
+        const primaryAction = isCurrentModel ? '' : (isOrchestrator 
+          ? `applyTriadModel('${role}')` 
+          : `saveSubagentProfilePreset('${activePreset}', '${item.canonical_id}', '${item.provider}')`);
+
+        const primaryBtn = isCurrentModel ? `
+          <button class="btn btn-green disabled" style="width: 100%; margin-top: 10px; justify-content: center; opacity: 0.95; cursor: default;" disabled>
+            ✓ Modelo Ativo / Definido
+          </button>
+        ` : `
+          <button class="btn ${isFeatured ? 'btn-cyan' : role === 'low' ? 'btn-green' : 'btn-cyan'}" 
+                  style="width: 100%; margin-top: 10px; justify-content: center; ${isFeatured ? 'background: rgba(6, 182, 212, 0.25); border-color: var(--cyan);' : ''}" 
+                  onclick="${primaryAction}">
+            ${isOrchestrator ? 'Ativar no Hermes Agent' : 'Definir para este Subagente'}
+          </button>
+        `;
+
+        const promoteBtn = (!isOrchestrator && !isCurrentModel) ? `
+          <button class="btn" style="width: 100%; margin-top: 6px; font-size: 0.72rem; padding: 6px;" onclick="promoteToMaster('${item.canonical_id}', '${item.provider}')">
+            👑 Promover a Mestre no Hermes
+          </button>
+        ` : '';
+
+        return `
+          <div class="triad-card ${role === 'leader' ? 'leader' : role === 'best' ? 'best-value' : 'low-cost'} ${isCurrentModel ? 'is-defined' : ''}">
+            <div>
+              ${definedBanner}
+              <span class="triad-badge ${badgeClass}">${title}</span>
+              <div class="triad-model-name" title="${item.canonical_id}">${item.canonical_id}</div>
+              <div style="font-size: 0.73rem; color: var(--text-muted); margin-bottom: 8px;">${item.desc}</div>
+            </div>
+            <div>
+              <div class="triad-meta">
+                <span>Score: <strong style="color: var(--cyan);">${item.score.toFixed(1)}</strong></span>
+                <span>Tarifa: <strong style="color: ${item.blended_cost === 0 ? 'var(--cyan)' : 'var(--green)'};">${costStr}</strong></span>
+              </div>
+              ${primaryBtn}
+              ${promoteBtn}
+            </div>
+          </div>
+        `;
+      };
+
+      grid.innerHTML = `
+        ${renderCard('leader', '👑 Quality Leader', 'gold', triad.leader, false)}
+        ${renderCard('best', '💎 Best Value ROI ★ Recomendado', 'cyan', triad.best, true)}
+        ${renderCard('low', '⚡ Ultra Low Cost', 'green', triad.low, false)}
+      `;
+    }
+
+    async function applyTriadModel(role) {
+      if (!currentTriadData || !currentTriadData[role]) {
+        showToast("Dados do modelo não carregados.", "warning");
+        return;
+      }
+      const item = currentTriadData[role];
+      await setHermesMasterModel(item.canonical_id, item.provider, activePreset);
+    }
+
+    async function promoteToMaster(modelId, provider) {
+      await setHermesMasterModel(modelId, provider, activePreset);
+    }
+
+    async function setHermesMasterModel(modelId, provider, presetId) {
+      showToast(`Ativando ${modelId} como Master Brain no Hermes config.yaml...`, "warning");
       try {
         const res = await fetch('/api/v1/settings/hermes-preset', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ preset_id: activePreset })
+          body: JSON.stringify({
+            preset_id: presetId,
+            model_override: modelId,
+            provider: provider
+          })
         });
-        if (res.ok) {
-          showToast("Hermes config.yaml atualizado com backup de segurança (.bak)!", "success");
+        const data = await res.json();
+        if (res.ok && (data.status === "ok" || data.status === "success")) {
+          const applied = data.applied_model || data.active_model || modelId;
+          const prov = data.provider || data.active_provider || provider;
+          showToast(`Master Brain atualizado para ${applied} (${prov})! Backup criado em config.yaml.bak.`, "success");
+          const ind = document.getElementById('active-model-indicator');
+          if (ind) ind.innerText = `Modelo Ativo no Hermes: ${applied}`;
           fetchTelemetry();
         } else {
-          showToast(`Preset '${activePreset}' gravado com sucesso!`, "success");
+          showToast(`Erro ao ativar modelo no Hermes: ${data.message || data.error || 'Falha de comunicação'}`, "error");
         }
       } catch (e) {
-        showToast(`Preset '${activePreset}' gravado com sucesso!`, "success");
+        showToast(`Erro de rede ao salvar Hermes config: ${e.message}`, "error");
+      }
+    }
+
+    async function saveSubagentProfilePreset(profileId, modelId, provider) {
+      showToast(`Configurando subagentes '${profileId}' para ${modelId}...`, "warning");
+      try {
+        const prof = profilesData.find(p => p.id === profileId);
+        if (prof) {
+          prof.default_model = modelId;
+          prof.default_provider = provider;
+          const res = await fetch('/api/v1/profiles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(prof)
+          });
+          const data = await res.json();
+          if (res.ok && data.status === 'ok') {
+            showToast(`Perfil de trabalho '${prof.name}' configurado com ${modelId}!`, "success");
+            await fetchProfiles();
+            selectProfilePreset(profileId);
+            return;
+          }
+        }
+        await saveSettings();
+        showToast(`Preset '${profileId}' salvo!`, "success");
+      } catch (e) {
+        showToast(`Falha ao salvar preset: ${e.message}`, "error");
+      }
+    }
+
+    function openNewProfileModal() {
+      const modal = document.getElementById('modal-new-profile');
+      if (modal) modal.classList.add('active');
+      const idInput = document.getElementById('new-profile-id');
+      if (idInput) {
+        idInput.value = '';
+        idInput.focus();
+      }
+      document.getElementById('new-profile-name').value = '';
+      document.getElementById('new-profile-desc').value = '';
+      document.getElementById('new-profile-model').value = '';
+    }
+
+    function closeNewProfileModal() {
+      const modal = document.getElementById('modal-new-profile');
+      if (modal) modal.classList.remove('active');
+    }
+
+    async function submitNewProfile() {
+      const id = document.getElementById('new-profile-id').value.trim();
+      const name = document.getElementById('new-profile-name').value.trim();
+      const category = document.getElementById('new-profile-category').value;
+      const desc = document.getElementById('new-profile-desc').value.trim();
+      const model = document.getElementById('new-profile-model').value.trim();
+
+      if (!id || !name) {
+        showToast("Preencha o ID e o Nome do perfil.", "warning");
+        return;
+      }
+
+      if (!/^[a-z0-9_-]+$/.test(id)) {
+        showToast("ID deve conter apenas letras minúsculas, números e sublinhados (_)", "warning");
+        return;
+      }
+
+      showToast(`Criando perfil de trabalho '${name}'...`, "warning");
+      try {
+        const res = await fetch('/api/v1/profiles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: id,
+            name: name,
+            description: desc || name,
+            role: "subagent",
+            arena_category: category,
+            default_model: model || "",
+            default_provider: category === 'local' ? 'local_silicon' : 'nous'
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'ok') {
+          showToast(`Perfil '${name}' criado com sucesso e salvo no souls_config.toml!`, "success");
+          closeNewProfileModal();
+          await fetchProfiles();
+          selectProfilePreset(id);
+        } else {
+          showToast(`Erro ao criar perfil: ${data.error || 'Falha desconhecida'}`, "error");
+        }
+      } catch (e) {
+        showToast(`Erro de rede ao criar perfil: ${e.message}`, "error");
+      }
+    }
+
+    async function deleteCustomProfile(profileId) {
+      if (!confirm(`Tem certeza que deseja excluir o perfil de trabalho '${profileId}'?`)) {
+        return;
+      }
+      showToast(`Removendo perfil '${profileId}'...`, "warning");
+      try {
+        const res = await fetch(`/api/v1/profiles/${profileId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok && data.status === 'ok') {
+          showToast(`Perfil '${profileId}' removido com sucesso!`, "success");
+          activePreset = 'orchestrator';
+          await fetchProfiles();
+        } else {
+          showToast(`Erro ao excluir perfil: ${data.error || 'Falha'}`, "error");
+        }
+      } catch (e) {
+        showToast(`Erro de rede ao excluir perfil: ${e.message}`, "error");
+      }
+    }
+
+    async function applyCustomModelOverride() {
+      const input = document.getElementById('input-model-override');
+      const select = document.getElementById('select-provider-override');
+      const modelId = input ? input.value.trim() : '';
+      const provider = select ? select.value : 'nous';
+
+      if (!modelId) {
+        showToast("Digite o identificador do modelo (ex: deepseek/deepseek-chat)", "warning");
+        return;
+      }
+
+      await setHermesMasterModel(modelId, provider, activePreset);
+    }
+
+    // ========================================================
+    // 8. PERSISTÊNCIA & FORMULÁRIO DE CONFIGURAÇÕES DOS SUBSISTEMAS
+    // ========================================================
+    let currentConfigData = null;
+
+    async function fetchConfigToml() {
+      try {
+        const res = await fetch('/api/v1/settings/config');
+        if (res.ok) {
+          const data = await res.json();
+          currentConfigData = data;
+          const editor = document.getElementById('raw-toml-editor');
+          if (editor && data.raw_toml) editor.value = data.raw_toml;
+          if (data.parsed) {
+            populateSettingsForm(data.parsed);
+          }
+        }
+      } catch (e) {
+        console.warn("Falha ao carregar souls_config.toml", e);
+      }
+    }
+
+    function updateSwitchPill(cbId, pillId) {
+      const cb = document.getElementById(cbId);
+      const pill = document.getElementById(pillId);
+      if (!cb || !pill) return;
+      if (cb.disabled) {
+        pill.className = "state-pill locked";
+        pill.innerText = "MANDATÓRIO";
+        return;
+      }
+      if (cb.checked) {
+        pill.className = "state-pill on";
+        pill.innerText = "LIGADO";
+      } else {
+        pill.className = "state-pill off";
+        pill.innerText = "DESLIGADO";
+      }
+    }
+
+    let hasUnsavedSettings = false;
+    function markSettingsUnsaved() {
+      hasUnsavedSettings = true;
+      const banner = document.getElementById('unsaved-banner');
+      if (banner) banner.style.display = 'flex';
+    }
+
+    function dismissUnsavedBanner() {
+      const banner = document.getElementById('unsaved-banner');
+      if (banner) banner.style.display = 'none';
+    }
+
+    function populateSettingsForm(cfg) {
+      if (!cfg) return;
+
+      const setCheck = (id, val, pillId) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) {
+          el.checked = Boolean(val);
+          if (pillId) updateSwitchPill(id, pillId);
+        }
+      };
+      const setInput = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.value = val;
+      };
+
+      // Reasoning
+      if (cfg.reasoning) {
+        setCheck('cfg-reasoning-dynamic', cfg.reasoning.dynamic_reasoning_effort, 'pill-reasoning-dynamic');
+        setInput('cfg-reasoning-max-effort', cfg.reasoning.max_reasoning_effort);
+        setCheck('cfg-reasoning-stepwise', cfg.reasoning.stepwise_escalation, 'pill-reasoning-stepwise');
+        setCheck('cfg-reasoning-bypass', cfg.reasoning.trivial_task_bypass, 'pill-reasoning-bypass');
+        if (cfg.reasoning.entropy_threshold !== undefined) {
+          setInput('cfg-reasoning-threshold', cfg.reasoning.entropy_threshold);
+          const tEl = document.getElementById('val-entropy-threshold');
+          if (tEl) tEl.innerText = Number(cfg.reasoning.entropy_threshold).toFixed(2);
+        }
+      }
+
+      // FinOps
+      if (cfg.finops) {
+        setInput('cfg-vram-limit', cfg.finops.vram_hard_limit_mb);
+        setInput('cfg-watchdog-polling', cfg.finops.watchdog_polling_ms);
+        if (cfg.finops.gpu_temp_preventive_c !== undefined) {
+          setInput('cfg-temp-preventive', cfg.finops.gpu_temp_preventive_c);
+          const pEl = document.getElementById('val-temp-preventive');
+          if (pEl) pEl.innerText = Number(cfg.finops.gpu_temp_preventive_c).toFixed(1);
+        }
+        if (cfg.finops.gpu_temp_throttle_c !== undefined) {
+          setInput('cfg-temp-throttle', cfg.finops.gpu_temp_throttle_c);
+          const tEl = document.getElementById('val-temp-throttle');
+          if (tEl) tEl.innerText = Number(cfg.finops.gpu_temp_throttle_c).toFixed(1);
+        }
+      }
+
+      // Router
+      if (cfg.router) {
+        setCheck('cfg-router-pareto', cfg.router.pareto_dispatch_enabled, 'pill-router-pareto');
+        setCheck('cfg-router-sovereignty', cfg.router.sovereign_cold_start_bias, 'pill-router-sovereignty');
+        setInput('cfg-local-token-limit', cfg.router.local_token_limit);
+        if (cfg.router.weight_quality !== undefined) {
+          setInput('cfg-weight-quality', cfg.router.weight_quality);
+          const el = document.getElementById('val-weight-quality');
+          if (el) el.innerText = Number(cfg.router.weight_quality).toFixed(2);
+          const pct = document.getElementById('pct-weight-quality');
+          if (pct) pct.innerText = '(' + Math.round(Number(cfg.router.weight_quality) * 100) + '%)';
+        }
+        if (cfg.router.weight_cost !== undefined) {
+          setInput('cfg-weight-cost', cfg.router.weight_cost);
+          const el = document.getElementById('val-weight-cost');
+          if (el) el.innerText = Number(cfg.router.weight_cost).toFixed(2);
+          const pct = document.getElementById('pct-weight-cost');
+          if (pct) pct.innerText = '(' + Math.round(Number(cfg.router.weight_cost) * 100) + '%)';
+        }
+        if (cfg.router.weight_latency !== undefined) {
+          setInput('cfg-weight-latency', cfg.router.weight_latency);
+          const el = document.getElementById('val-weight-latency');
+          if (el) el.innerText = Number(cfg.router.weight_latency).toFixed(2);
+          const pct = document.getElementById('pct-weight-latency');
+          if (pct) pct.innerText = '(' + Math.round(Number(cfg.router.weight_latency) * 100) + '%)';
+        }
+      }
+
+      // Memory
+      if (cfg.memory) {
+        setCheck('cfg-memory-langevin', cfg.memory.langevin_decay_enabled, 'pill-memory-langevin');
+        setInput('cfg-memory-half-life', cfg.memory.half_life_days);
+        setInput('cfg-memory-rrf-k', cfg.memory.rrf_k);
+      }
+
+      // AST & Sandbox
+      if (cfg.ast) {
+        setCheck('cfg-ast-dehydration', cfg.ast.dehydration_enabled, 'pill-ast-dehydration');
+        setInput('cfg-ast-max-lines', cfg.ast.max_lines_tree_sitter);
+      }
+      if (cfg.sandbox) {
+        setInput('cfg-sandbox-timeout', cfg.sandbox.safe_sandbox_timeout_ms);
+      }
+
+      // Obsidian
+      if (cfg.obsidian) {
+        setCheck('cfg-obsidian-privacy-shield', cfg.obsidian.privacy_shield_enabled, 'pill-obsidian-privacy-shield');
+        setInput('cfg-obsidian-batch-size', cfg.obsidian.curator_batch_size);
+      }
+    }
+
+    async function saveSettings() {
+      showToast("Salvando configurações dos 8 subsistemas em souls_config.toml...", "warning");
+      
+      const getCheck = (id, def) => {
+        const el = document.getElementById(id);
+        return el ? el.checked : def;
+      };
+      const getNum = (id, def) => {
+        const el = document.getElementById(id);
+        return el && el.value !== '' ? Number(el.value) : def;
+      };
+      const getStr = (id, def) => {
+        const el = document.getElementById(id);
+        return el ? el.value : def;
+      };
+
+      const rawToml = `# souls_config.toml — SSOT de Configuração e Governança do Souls Engine v7
+# Dev Drive ReFS: Z:\\souls_engine\\.souls_data\\config\\souls_config.toml
+# Atualizado via Dashboard UI em ${new Date().toISOString()}
+
+[server]
+port = 9123
+host = "127.0.0.1"
+max_active_connections = 16
+
+[reasoning]
+dynamic_reasoning_effort = ${getCheck('cfg-reasoning-dynamic', true)}
+max_reasoning_effort = "${getStr('cfg-reasoning-max-effort', 'ultra')}"
+stepwise_escalation = ${getCheck('cfg-reasoning-stepwise', true)}
+trivial_task_bypass = ${getCheck('cfg-reasoning-bypass', true)}
+entropy_threshold = ${getNum('cfg-reasoning-threshold', 0.70).toFixed(2)}
+
+[finops]
+vram_hard_limit_mb = ${getNum('cfg-vram-limit', 5294)}
+watchdog_polling_ms = ${getNum('cfg-watchdog-polling', 500)}
+gpu_temp_preventive_c = ${getNum('cfg-temp-preventive', 72.0).toFixed(1)}
+gpu_temp_throttle_c = ${getNum('cfg-temp-throttle', 78.0).toFixed(1)}
+lean_compression_enabled = true
+dedup_min_lines = 5
+
+[router]
+pareto_dispatch_enabled = ${getCheck('cfg-router-pareto', true)}
+sovereign_cold_start_bias = ${getCheck('cfg-router-sovereignty', true)}
+weight_quality = ${getNum('cfg-weight-quality', 0.50).toFixed(2)}
+weight_cost = ${getNum('cfg-weight-cost', 0.30).toFixed(2)}
+weight_latency = ${getNum('cfg-weight-latency', 0.20).toFixed(2)}
+local_token_limit = ${getNum('cfg-local-token-limit', 8192)}
+
+[memory]
+langevin_decay_enabled = ${getCheck('cfg-memory-langevin', true)}
+half_life_days = ${getNum('cfg-memory-half-life', 30)}
+rrf_k = ${getNum('cfg-memory-rrf-k', 60)}
+
+[ast]
+dehydration_enabled = ${getCheck('cfg-ast-dehydration', true)}
+max_lines_tree_sitter = ${getNum('cfg-ast-max-lines', 15000)}
+
+[sandbox]
+safe_sandbox_timeout_ms = ${getNum('cfg-sandbox-timeout', 5000)}
+strict_refs_partition = true
+
+[obsidian]
+vault_path = "C:\\\\Users\\\\rosas\\\\OneDrive\\\\Documentos\\\\Obisidian DB"
+privacy_shield_enabled = ${getCheck('cfg-obsidian-privacy-shield', true)}
+raw_readonly = true
+curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
+`;
+
+      try {
+        const res = await fetch('/api/v1/settings/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ raw_toml: rawToml })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'ok') {
+          showToast("Configurações gravadas com sucesso no souls_config.toml (.toml.bak criado)!", "success");
+          hasUnsavedSettings = false;
+          dismissUnsavedBanner();
+          const editor = document.getElementById('raw-toml-editor');
+          if (editor) editor.value = rawToml;
+        } else {
+          showToast(`Erro ao gravar configurações: ${data.error || 'Falha desconhecida'}`, "error");
+        }
+      } catch (e) {
+        showToast(`Erro de rede ao salvar: ${e.message}`, "error");
+      }
+    }
+
+    async function saveRawToml() {
+      const editor = document.getElementById('raw-toml-editor');
+      if (!editor) return;
+      const rawToml = editor.value;
+
+      showToast("Gravando souls_config.toml diretamente...", "warning");
+      try {
+        const res = await fetch('/api/v1/settings/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ raw_toml: rawToml })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'ok') {
+          showToast("Arquivo TOML salvo com sucesso e backup de segurança criado!", "success");
+          hasUnsavedSettings = false;
+          dismissUnsavedBanner();
+          fetchConfigToml();
+        } else {
+          showToast(`Erro ao salvar TOML: ${data.error || 'Sintaxe TOML inválida'}`, "error");
+        }
+      } catch (e) {
+        showToast(`Erro de rede ao salvar TOML: ${e.message}`, "error");
       }
     }
 
@@ -1609,67 +4072,15 @@
       }
     }
 
-    async function saveSettings() {
-      showToast("Salvando configurações no souls_config.toml...", "warning");
-      const toggles = {
-        langevin_decay: document.getElementById('toggle-langevin') ? document.getElementById('toggle-langevin').checked : true,
-        speculative_drafting: document.getElementById('toggle-speculative') ? document.getElementById('toggle-speculative').checked : true,
-        ast_dehydration: document.getElementById('toggle-ast') ? document.getElementById('toggle-ast').checked : true,
-        safe_sandbox: document.getElementById('toggle-sandbox') ? document.getElementById('toggle-sandbox').checked : true,
-        obsidian_privacy_shield: document.getElementById('toggle-obsidian-shield') ? document.getElementById('toggle-obsidian-shield').checked : true,
-      };
-
-      const rawToml = `# souls_config.toml — SSOT de Configuração e Governança do Souls Engine v7
-# Dev Drive ReFS: Z:\\souls_engine\\.souls_data\\config\\souls_config.toml
-
-[server]
-port = 9123
-host = "127.0.0.1"
-max_active_connections = 16
-
-[finops]
-vram_hard_limit_mb = 5294
-gpu_temp_throttle_c = 78.0
-gpu_temp_preventive_c = 72.0
-lean_compression_enabled = true
-dedup_min_lines = 5
-
-[governance]
-pareto_dispatch_enabled = true
-entropy_gating_threshold = 0.65
-safe_sandbox_timeout_ms = 5000
-obsidian_curator_batch_size = 5
-
-[toggles]
-langevin_decay = ${toggles.langevin_decay}
-speculative_drafting = ${toggles.speculative_drafting}
-ast_dehydration = ${toggles.ast_dehydration}
-safe_sandbox = ${toggles.safe_sandbox}
-obsidian_privacy_shield = ${toggles.obsidian_privacy_shield}
-`;
-
-      try {
-        const res = await fetch('/api/v1/settings/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ raw_toml: rawToml })
-        });
-        if (res.ok) {
-          showToast("Configurações e Toggles salvos com sucesso no souls_config.toml!", "success");
-        } else {
-          showToast("Erro ao gravar souls_config.toml.", "error");
-        }
-      } catch(e) {
-        showToast("Configurações salvas com sucesso.", "success");
-      }
-    }
-
     // INICIALIZAÇÃO NO CARREGAMENTO DA PÁGINA
     window.addEventListener('DOMContentLoaded', () => {
       fetchTelemetry();
       fetchRouterMatrix();
       fetchLocalModels();
-      fetchCloudChampions();
+      fetchCloudChampions().then(() => {
+        fetchProfiles();
+      });
+      fetchConfigToml();
 
       // SSE Telemetria em tempo real
       if (window.EventSource) {
@@ -1687,5 +4098,125 @@ obsidian_privacy_shield = ${toggles.obsidian_privacy_shield}
       setInterval(fetchTelemetry, 3000);
     });
   </script>
+
+  <!-- MODAL: NOVO PERFIL DE TRABALHO -->
+  <div class="modal-backdrop" id="modal-new-profile">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>➕</span> Novo Perfil de Trabalho (Subagente)
+        </div>
+        <button class="modal-close" onclick="closeNewProfileModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-field">
+          <label class="modal-label" for="new-profile-id">Identificador do Perfil (Slug Único)</label>
+          <input type="text" id="new-profile-id" class="setting-input" style="width: 100%;" placeholder="ex: security_auditor, ux_designer, clinical_curator">
+          <div style="font-size: 0.7rem; color: var(--text-dark); margin-top: 4px;">Apenas letras minúsculas, números e sublinhados (_)</div>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="new-profile-name">Nome Amigável & Emoji</label>
+          <input type="text" id="new-profile-name" class="setting-input" style="width: 100%;" placeholder="ex: Security & Crypto Auditor 🛡️">
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="new-profile-category">Categoria Cognitiva na Cloud Arena</label>
+          <select id="new-profile-category" class="setting-input" style="width: 100%;">
+            <option value="coding">Coding & Software Engineering (SWE)</option>
+            <option value="reasoning">Reasoning, Math & Cryptography</option>
+            <option value="fast">Ultra Fast & Triage</option>
+            <option value="agentic">Agentic, Delegation & Planning</option>
+            <option value="design">Design, UX & Copywriting</option>
+            <option value="local">Local Silicon Sovereign (RTX 2060m / CPU AVX2)</option>
+          </select>
+          <div style="font-size: 0.7rem; color: var(--text-dark); margin-top: 4px;">A categoria define o cálculo automático da Tríade de Pareto da Cloud Arena.</div>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="new-profile-desc">Descrição do Perfil</label>
+          <textarea id="new-profile-desc" class="setting-input" style="width: 100%; height: 70px; resize: vertical;" placeholder="Finalidade operacional deste perfil de trabalho..."></textarea>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label" for="new-profile-model">Modelo Padrão Inicial (Opcional)</label>
+          <input type="text" id="new-profile-model" class="setting-input" style="width: 100%;" placeholder="Deixe em branco para usar o Best Value da arena">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeNewProfileModal()">Cancelar</button>
+        <button class="btn btn-purple" onclick="submitNewProfile()">
+          <span>💾</span> Criar Perfil de Trabalho
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL RÁPIDO DE APLICAÇÃO DE MODELO -->
+  <div class="modal-backdrop" id="modal-quick-apply">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.05rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--cyan);">⚡</span> Aplicar Modelo no Hermes Agent
+        </div>
+        <button class="modal-close" onclick="closeQuickApplyModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
+          <div style="font-size: 0.65rem; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase;">Modelo Selecionado:</div>
+          <div id="quick-apply-model-name" style="font-weight: 700; color: var(--cyan); font-family: var(--font-mono); font-size: 0.95rem; margin-top: 4px; word-break: break-all;">--</div>
+          <div id="quick-apply-provider-tag" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">--</div>
+        </div>
+
+        <div class="modal-field">
+          <label class="modal-label">Onde você deseja aplicar este modelo?</label>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: rgba(255,255,255,0.02);">
+              <input type="radio" name="apply-target" value="master" checked style="margin-top: 3px;" onchange="toggleApplyTarget()">
+              <div>
+                <strong style="color: #fff; font-size: 0.85rem;">👑 Master Brain Geral (Hermes Chat Mestre)</strong>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">Atualiza o <code>config.yaml</code> do Hermes Agent para usar este modelo no chat diário interativo.</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: rgba(255,255,255,0.02);">
+              <input type="radio" name="apply-target" value="profile" style="margin-top: 3px;" onchange="toggleApplyTarget()">
+              <div>
+                <strong style="color: #fff; font-size: 0.85rem;">🤖 Perfil de Trabalho (Subagente)</strong>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">Associa este modelo a um perfil de subagente delegado pelo ParetoBandit.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-field" id="field-select-profile" style="display: none;">
+          <label class="modal-label" for="quick-apply-profile-select">Selecione o Perfil de Trabalho:</label>
+          <select id="quick-apply-profile-select" class="setting-input" style="width: 100%;">
+            <!-- Preenchido dinamicamente com os perfis -->
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeQuickApplyModal()">Cancelar</button>
+        <button class="btn btn-cyan" onclick="submitQuickApply()">
+          <span>⚡</span> Confirmar e Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANNER FLUTUANTE DE ALTERAÇÕES NÃO SALVAS -->
+  <div class="unsaved-floating-banner" id="unsaved-banner">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="color: var(--amber); font-size: 1.25rem;">⚠️</span>
+      <div>
+        <div style="font-size: 0.82rem; font-weight: 600; color: #fff;">Alterações Não Salvas</div>
+        <div style="font-size: 0.72rem; color: var(--text-muted);">Configurações foram alteradas mas ainda não salvas em disco.</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn btn-green" style="padding: 6px 14px; font-size: 0.78rem;" onclick="saveSettings()">
+        <span>💾</span> Salvar Agora
+      </button>
+      <button class="btn" style="padding: 6px 10px; font-size: 0.78rem;" onclick="dismissUnsavedBanner()" title="Dispensar aviso">
+        ✕
+      </button>
+    </div>
+  </div>
 </body>
 </html>
