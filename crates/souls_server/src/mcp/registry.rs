@@ -1,6 +1,6 @@
 //! # Canonical MCP Tool Registry (`souls_server::mcp::registry`)
 //!
-//! Exposes all 52 canonical MCP tools, input schemas, namespaces, and Progressive
+//! Exposes all 55 canonical MCP tools, input schemas, namespaces, and Progressive
 //! Tool Disclosure (Level 0 boot compact vs Level 1 dynamic discovery).
 
 use serde_json::{json, Value};
@@ -18,7 +18,7 @@ pub struct ToolMeta {
 
 static ALL_TOOLS: OnceLock<Vec<ToolMeta>> = OnceLock::new();
 
-/// Returns the static repository of all 52 tools.
+/// Returns the static repository of all 55 tools.
 pub fn get_canonical_tools() -> &'static [ToolMeta] {
     ALL_TOOLS.get_or_init(build_canonical_tools)
 }
@@ -764,6 +764,42 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
             input_schema: || json!({
                 "type": "object",
                 "properties": {},
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "profile_list",
+            namespace: "sys",
+            description: "Inspeciona os 5 perfis cognitivos do Master Brain do Hermes Agent e os modelos campeões da Fronteira de Pareto.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "profile_switch",
+            namespace: "sys",
+            description: "Alterna atomicamente o modelo do Master Brain no config.yaml do Hermes Agent com backup preventivo (.bak).",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "profile": {
+                        "type": "string",
+                        "enum": ["frontier_balanced", "deep_swe", "deep_reasoning", "ultra_fast", "local_sovereign"],
+                        "description": "Identificador do perfil canônico a ser ativado no Master Brain."
+                    },
+                    "model_override": {
+                        "type": "string",
+                        "description": "Sobrescreve explicitamente o modelo alvo (ex: 'deepseek/deepseek-chat')."
+                    },
+                    "provider": {
+                        "type": "string",
+                        "description": "Sobrescreve o provedor de inferência (ex: 'nous', 'custom', 'openrouter')."
+                    }
+                },
                 "additionalProperties": false
             }),
         },

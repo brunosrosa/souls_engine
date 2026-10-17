@@ -243,9 +243,9 @@ Como evolução formalizada via RFC-007 (`docs/architecture/RFC_SOULS_LLM_INVENT
 
 ---
 
-## 6. MAPA EXAUSTIVO DE STATUS CLÍNICO DAS 51 FERRAMENTAS MCP
+## 6. MAPA EXAUSTIVO DE STATUS CLÍNICO DAS 55 FERRAMENTAS MCP
 
-Para erradicar qualquer ambiguidade sobre stubs e implementações profundas, o quadro abaixo mapeia o ciclo de entrega de cada uma das 51 ferramentas operacionais:
+Para erradicar qualquer ambiguidade sobre stubs e implementações profundas, o quadro abaixo mapeia o ciclo de entrega de cada uma das 55 ferramentas operacionais:
 
 | Garra MCP | Crate Rust | Status Atual | Sessão de Ativação Plena |
 | :--- | :--- | :--- | :--- |
@@ -260,6 +260,8 @@ Para erradicar qualquer ambiguidade sobre stubs e implementações profundas, o 
 | `outline`, `symbol`, `callers`, `callees`, `get_ast`, `edit`, `replace`, `delta_diff` | `souls_ast` | **LIVE_PRODUCTION** | Sessão 4 (Concluída) |
 | `repo_heatmap`, `repo_impact` | `souls_ast` | **LIVE_PRODUCTION** | Sessão 4 (Concluída) |
 | `intent` | `souls_inference_runtime` | **LIVE_PRODUCTION** | Sessão 4 (Concluída) |
+| `cloud_champions`, `cloud_arena_sync` | `souls_llm_cloud_arena` | **LIVE_PRODUCTION** | Sessão 6 (Concluída) |
+| `profile_list`, `profile_switch` | `souls_server` | **LIVE_PRODUCTION** | Sessão 6 / Governança Master Brain (Concluída) |
 | `read`, `smart_read`, `multi_read`, `compress`, `dedup`, `fill`, `stub_fill`, `headroom_retrieve` | `souls_core` | Staging estruturado; transplante compressão LEAN & CCR | **Sessão 5 (Contexto & Sandbox)** |
 | `tree`, `search`, `shell`, `execute`, `fetch_web`, `web_search`, `repo_meta` | `souls_core` | Staging estruturado; transplante sandbox e HTTP scraper | **Sessão 5 (Contexto & Sandbox)** |
 | `feedback` | `souls_llm_cloud_arena` | Staging estruturado; transplante Cloud Arena & APIs externas | **Sessão 6 (Cloud Arena)** |
@@ -867,13 +869,16 @@ flowchart TD
 3. **Nível 3 — Dynamic Fallback Escalation (Escalonamento por Falha):**
    - Se um subagente rodando em `reasoning: low` falhar em passar nos testes de verificação sintática, o Souls Engine escalona automaticamente a próxima tentativa para `reasoning: high` na mesma sessão, aplicando deliberação profunda apenas como remédio corretivo.
 
-### 19.3 Status de Implementação & Homologação Canônica (Concluído 100%)
-- [x] **DTOs Universais (`souls_protocol`):** Entregues `ReasoningEffortLevel` (`None`, `Low`, `Medium`, `High`), `ProviderReasoningPayloads` (OpenRouter, Anthropic, OpenAI `reasoning_effort`, Gemini `thinking_config`) e `DynamicReasoningRecommendation` com rationale estruturado. (16/16 testes PASS).
-- [x] **Calibração de 3 Estágios via Entropia de Shannon (`souls_inference_runtime`):** Implementada `calculate_reasoning_effort` mapeando:
-  - $H < 0.35$ (ou `json_extraction`, `formatting`): `low` (1.024 tokens)
-  - $0.35 \le H \le 0.70$ (SWE padrão, refatoração, curadoria): `medium` (4.096 tokens)
-  - $H > 0.70$ (matemática, segurança, concorrência, arquitetura): `high` (16.384 tokens)
-  - **Dynamic Fallback Escalation:** Em caso de retry/falha (`is_retry: true`), o raciocínio escala 1 degrau (`low` $\to$ `medium` $\to$ `high`). Integrado em `evaluate_intent_with_retry`. (37/37 testes PASS).
+### 19.3 Status de Implementação & Homologação Canônica (Concluído 100% com 6 Níveis)
+- [x] **Taxonomia Canônica Universal de 6 Níveis (`souls_protocol`):** Entregues `ReasoningEffortLevel` (`None`, `Minimal`, `Low`, `Medium`, `High`, `Ultra`), `ProviderReasoningPayloads` (OpenRouter `max`/`effort`, Anthropic `budget_tokens`, OpenAI `reasoning_effort`, Gemini `thinking_budget`) e `DynamicReasoningRecommendation` com rationale estruturado. (16/16 testes PASS).
+- [x] **Calibração de 6 Estágios via Entropia de Shannon (`souls_inference_runtime`):** Implementada `calculate_reasoning_effort` mapeando:
+  - `intent == "echo"` ou `passthrough`: `none` (0 tokens)
+  - $H < 0.20$ (ou `formatting`, `docstring`): `minimal` (512 tokens) $\to$ Economia de 95%
+  - $0.20 \le H < 0.38$ (ou `json_extraction`): `low` (1.024 tokens)
+  - $0.38 \le H \le 0.70$ (SWE padrão, refatoração, curadoria): `medium` (4.096 tokens)
+  - $0.70 < H \le 0.85$ (arquitetura, segurança, concorrência, matemática): `high` (16.384 tokens)
+  - $H > 0.85$ (ou `kernel_formal_proof`, teoremas densos): `ultra` (32.768 tokens) $\to$ All-in cognitivo
+  - **Dynamic Fallback Escalation Quádruplo:** Em caso de retry/falha (`is_retry: true`), o raciocínio escala ordenadamente (`None` $\to$ `Minimal` $\to$ `Low` $\to$ `Medium` $\to$ `High` $\to$ `Ultra`). Integrado em `evaluate_intent_with_retry`. (37/37 testes PASS).
 - [x] **Orquestração no ParetoBandit (`souls_model_router`):** `TaskContext` enriquecido com `entropy_score` e `is_retry`, e `RoutingDecision` carrega a recomendação dinâmica universal. (11/11 testes PASS).
 - [x] **Exposição MCP & Integração em `souls_server`:** `route_subtask` e `intent` expõem `reasoning_recommendation` completo tanto em texto legível para modelos quanto em `structuredContent`. (25/25 testes PASS).
 - [x] **Deploy de Binários Release:** Binários compilados (`souls_server.exe` e `souls_engine.exe`) sincronizados em `%LOCALAPPDATA%\SoulsEngine\` e validados em execução real no daemon local (:9123).

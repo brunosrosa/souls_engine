@@ -55,9 +55,9 @@ pub static CANONICAL_SKILLS: &[SkillMeta] = &[
     },
     SkillMeta {
         name: "souls-cloud-arena-advisor",
-        description: "Consulta e ranking da Fronteira de Pareto nos 5 perfis cognitivos.",
-        primary_tools: &["cloud_champions", "cloud_arena_sync"],
-        keywords: &["cloud", "arena", "pricing", "cost", "pareto", "nous", "openrouter", "model"],
+        description: "Consulta e ranking da Fronteira de Pareto nos 5 perfis cognitivos e governança do Master Brain.",
+        primary_tools: &["cloud_champions", "cloud_arena_sync", "profile_list", "profile_switch"],
+        keywords: &["cloud", "arena", "pricing", "cost", "pareto", "nous", "openrouter", "model", "profile", "preset", "hermes", "brain"],
     },
     SkillMeta {
         name: "souls-hardware-watchdog",

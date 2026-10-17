@@ -196,12 +196,19 @@ pub fn calculate_reasoning_effort(
     intent: &str,
     is_retry: bool,
 ) -> DynamicReasoningRecommendation {
-    let base_level = if entropy < 0.35 || intent == "json_extraction" || intent == "formatting" {
+    let base_level = if intent == "echo" || intent == "passthrough" {
+        ReasoningEffortLevel::None
+    } else if entropy < 0.18 || intent == "formatting" || intent == "docstring" {
+        ReasoningEffortLevel::Minimal
+    } else if entropy < 0.35 || intent == "json_extraction" {
         ReasoningEffortLevel::Low
-    } else if entropy > 0.70
+    } else if entropy > 0.88 || intent == "kernel_formal_proof" {
+        ReasoningEffortLevel::Ultra
+    } else if entropy > 0.78 || intent == "mathematics" {
+        ReasoningEffortLevel::XHigh
+    } else if entropy > 0.65
         || intent == "architecture_design"
         || intent == "security"
-        || intent == "mathematics"
     {
         ReasoningEffortLevel::High
     } else {
@@ -209,21 +216,20 @@ pub fn calculate_reasoning_effort(
     };
 
     let (final_level, escalated) = if is_retry {
-        match base_level {
-            ReasoningEffortLevel::None => (ReasoningEffortLevel::Low, true),
-            ReasoningEffortLevel::Low => (ReasoningEffortLevel::Medium, true),
-            ReasoningEffortLevel::Medium => (ReasoningEffortLevel::High, true),
-            ReasoningEffortLevel::High => (ReasoningEffortLevel::High, true),
-        }
+        let escalated_level = base_level.escalate_retry();
+        (escalated_level, true)
     } else {
         (base_level, false)
     };
 
     let budget = match final_level {
         ReasoningEffortLevel::None => 0,
+        ReasoningEffortLevel::Minimal => 512,
         ReasoningEffortLevel::Low => 1024,
         ReasoningEffortLevel::Medium => 4096,
         ReasoningEffortLevel::High => 16384,
+        ReasoningEffortLevel::XHigh => 24576,
+        ReasoningEffortLevel::Ultra => 32768,
     };
 
     let rationale = if escalated {
@@ -304,32 +310,66 @@ mod tests {
 
     #[test]
     fn test_calculate_reasoning_effort_stages_and_fallback() {
-        // Estágio 1: Baixa entropia (H < 0.35)
-        let low = calculate_reasoning_effort(0.20, "json_extraction", false);
+        // Estágio 1: Minimal (H < 0.18)
+        let min = calculate_reasoning_effort(0.12, "formatting", false);
+        assert_eq!(min.reasoning_effort, ReasoningEffortLevel::Minimal);
+        assert_eq!(min.thinking_budget_tokens, 512);
+        assert!(!min.is_escalated_retry);
+
+        // Estágio 2: Baixa entropia (0.18 <= H < 0.35)
+        let low = calculate_reasoning_effort(0.28, "json_extraction", false);
         assert_eq!(low.reasoning_effort, ReasoningEffortLevel::Low);
         assert_eq!(low.thinking_budget_tokens, 1024);
         assert!(!low.is_escalated_retry);
 
-        // Estágio 2: Média entropia (0.35 <= H <= 0.70)
+        // Estágio 3: Média entropia (0.35 <= H <= 0.65)
         let med = calculate_reasoning_effort(0.48, "code_refactoring", false);
         assert_eq!(med.reasoning_effort, ReasoningEffortLevel::Medium);
         assert_eq!(med.thinking_budget_tokens, 4096);
 
-        // Estágio 3: Alta entropia (H > 0.70)
-        let high = calculate_reasoning_effort(0.82, "architecture_design", false);
+        // Estágio 4: Alta entropia (0.65 < H <= 0.78)
+        let high = calculate_reasoning_effort(0.70, "architecture_design", false);
         assert_eq!(high.reasoning_effort, ReasoningEffortLevel::High);
         assert_eq!(high.thinking_budget_tokens, 16384);
 
+        // Estágio 5: Extra-Alta entropia (0.78 < H <= 0.88)
+        let xhigh = calculate_reasoning_effort(0.82, "mathematics", false);
+        assert_eq!(xhigh.reasoning_effort, ReasoningEffortLevel::XHigh);
+        assert_eq!(xhigh.thinking_budget_tokens, 24576);
+
+        // Estágio 6: Ultra entropia (H > 0.88)
+        let ultra = calculate_reasoning_effort(0.92, "kernel_formal_proof", false);
+        assert_eq!(ultra.reasoning_effort, ReasoningEffortLevel::Ultra);
+        assert_eq!(ultra.thinking_budget_tokens, 32768);
+
+        // Teste de Fallback Escalation em retry: Minimal -> Low
+        let esc_min = calculate_reasoning_effort(0.12, "formatting", true);
+        assert_eq!(esc_min.reasoning_effort, ReasoningEffortLevel::Low);
+        assert_eq!(esc_min.thinking_budget_tokens, 1024);
+        assert!(esc_min.is_escalated_retry);
+
         // Teste de Fallback Escalation em retry: Low -> Medium
-        let escalated_low = calculate_reasoning_effort(0.20, "json_extraction", true);
-        assert_eq!(escalated_low.reasoning_effort, ReasoningEffortLevel::Medium);
-        assert_eq!(escalated_low.thinking_budget_tokens, 4096);
-        assert!(escalated_low.is_escalated_retry);
+        let esc_low = calculate_reasoning_effort(0.28, "json_extraction", true);
+        assert_eq!(esc_low.reasoning_effort, ReasoningEffortLevel::Medium);
+        assert_eq!(esc_low.thinking_budget_tokens, 4096);
+        assert!(esc_low.is_escalated_retry);
 
         // Teste de Fallback Escalation em retry: Medium -> High
-        let escalated_med = calculate_reasoning_effort(0.48, "code_refactoring", true);
-        assert_eq!(escalated_med.reasoning_effort, ReasoningEffortLevel::High);
-        assert_eq!(escalated_med.thinking_budget_tokens, 16384);
-        assert!(escalated_med.is_escalated_retry);
+        let esc_med = calculate_reasoning_effort(0.48, "code_refactoring", true);
+        assert_eq!(esc_med.reasoning_effort, ReasoningEffortLevel::High);
+        assert_eq!(esc_med.thinking_budget_tokens, 16384);
+        assert!(esc_med.is_escalated_retry);
+
+        // Teste de Fallback Escalation em retry: High -> XHigh (não pula degrau!)
+        let esc_high = calculate_reasoning_effort(0.70, "architecture_design", true);
+        assert_eq!(esc_high.reasoning_effort, ReasoningEffortLevel::XHigh);
+        assert_eq!(esc_high.thinking_budget_tokens, 24576);
+        assert!(esc_high.is_escalated_retry);
+
+        // Teste de Fallback Escalation em retry: XHigh -> Ultra
+        let esc_xhigh = calculate_reasoning_effort(0.82, "mathematics", true);
+        assert_eq!(esc_xhigh.reasoning_effort, ReasoningEffortLevel::Ultra);
+        assert_eq!(esc_xhigh.thinking_budget_tokens, 32768);
+        assert!(esc_xhigh.is_escalated_retry);
     }
 }

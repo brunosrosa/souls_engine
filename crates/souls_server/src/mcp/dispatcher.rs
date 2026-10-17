@@ -194,6 +194,16 @@ pub async fn dispatch_jsonrpc(
                         .await
                         .map_err(|e| e.to_jsonrpc_error())
                 }
+                "profile_list" => {
+                    handlers::handle_profile_list(state)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
+                "profile_switch" => {
+                    handlers::handle_profile_switch(state, args)
+                        .await
+                        .map_err(|e| e.to_jsonrpc_error())
+                }
                 "handoff" => {
                     handlers::handle_handoff(state, args)
                         .await

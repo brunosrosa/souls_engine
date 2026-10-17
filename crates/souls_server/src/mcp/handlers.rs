@@ -1305,3 +1305,87 @@ pub async fn handle_cloud_arena_sync(
     }))
 }
 
+/// Handles `profile_list` Master Brain profiles inspection.
+pub async fn handle_profile_list(state: &AppState) -> Result<Value, McpDomainError> {
+    let profiles = crate::profiles::get_available_profiles(state).await;
+    let cfg_path = crate::profiles::resolve_hermes_config_path();
+    let (active_model, active_provider) = crate::profiles::read_active_hermes_model(&cfg_path);
+
+    let active_profile = profiles
+        .iter()
+        .find(|p| p.is_active)
+        .map(|p| p.id.as_str())
+        .unwrap_or("custom");
+
+    let result = json!({
+        "active_model": active_model,
+        "active_provider": active_provider,
+        "active_profile": active_profile,
+        "config_path": cfg_path.to_string_lossy(),
+        "profiles_count": profiles.len(),
+        "profiles": profiles
+    });
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(&result).unwrap_or_default()
+        }],
+        "structuredContent": result,
+        "isError": false
+    }))
+}
+
+/// Handles `profile_switch` atomic profile switching on Hermes Agent config.yaml.
+pub async fn handle_profile_switch(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let profile_arg = args.get("profile").and_then(Value::as_str);
+    let model_override = args.get("model_override").and_then(Value::as_str);
+    let provider_arg = args.get("provider").and_then(Value::as_str);
+
+    let profiles = crate::profiles::get_available_profiles(state).await;
+
+    let (target_model, target_provider) = if let Some(custom_model) = model_override {
+        (custom_model.to_string(), provider_arg.unwrap_or("nous").to_string())
+    } else if let Some(prof_id) = profile_arg {
+        if let Some(matched) = profiles.iter().find(|p| p.id == prof_id) {
+            (matched.target_model.clone(), provider_arg.unwrap_or(&matched.provider).to_string())
+        } else {
+            return Err(McpDomainError::InvalidInputParameters);
+        }
+    } else {
+        let matched = profiles
+            .iter()
+            .find(|p| p.id == "frontier_balanced")
+            .ok_or(McpDomainError::InternalEnginePanic)?;
+        (matched.target_model.clone(), provider_arg.unwrap_or(&matched.provider).to_string())
+    };
+
+    let switch_res = crate::profiles::apply_profile_to_hermes(
+        profile_arg,
+        &target_model,
+        Some(&target_provider),
+        None,
+    )
+    .map_err(|_| McpDomainError::InvalidInputParameters)?;
+
+    let text_summary = format!(
+        "Master Brain do Hermes atualizado com sucesso!\n- Modelo anterior: {}\n- Novo modelo ativo: {}\n- Provedor: {}\n- Backup de segurança: {}\n\n(i) Novas sessões e prompts do Hermes Agent utilizarão imediatamente este modelo.",
+        switch_res.previous_model,
+        switch_res.applied_model,
+        switch_res.provider,
+        switch_res.backup_path.as_deref().unwrap_or("N/A")
+    );
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": text_summary
+        }],
+        "structuredContent": switch_res,
+        "isError": false
+    }))
+}
+

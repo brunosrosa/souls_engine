@@ -225,27 +225,59 @@ pub struct SwarmHandoffPayload {
 #[serde(rename_all = "lowercase")]
 pub enum ReasoningEffortLevel {
     None,
+    Minimal,
     Low,
     Medium,
     High,
+    XHigh,
+    Ultra,
 }
 
 impl ReasoningEffortLevel {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::None => "none",
+            Self::Minimal => "minimal",
             Self::Low => "low",
             Self::Medium => "medium",
             Self::High => "high",
+            Self::XHigh => "xhigh",
+            Self::Ultra => "ultra",
+        }
+    }
+
+    /// Retorna o valor de esforço no contrato nativo OpenRouter ("none", "minimal", "low", "medium", "high", "xhigh", "max").
+    pub fn as_openrouter_effort(&self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Minimal => "minimal",
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+            Self::XHigh => "xhigh",
+            Self::Ultra => "max",
+        }
+    }
+
+    /// Retorna o valor de esforço no contrato nativo OpenAI ("none", "low", "medium", "high").
+    pub fn as_openai_effort(&self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Minimal | Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High | Self::XHigh | Self::Ultra => "high",
         }
     }
 
     /// Escala um degrau em caso de retry por erro sintático (Fallback Escalation).
     pub fn escalate_retry(&self) -> Self {
         match self {
-            Self::None => Self::Low,
+            Self::None => Self::Minimal,
+            Self::Minimal => Self::Low,
             Self::Low => Self::Medium,
-            Self::Medium | Self::High => Self::High,
+            Self::Medium => Self::High,
+            Self::High => Self::XHigh,
+            Self::XHigh | Self::Ultra => Self::Ultra,
         }
     }
 }
@@ -288,9 +320,8 @@ impl DynamicReasoningRecommendation {
         is_escalated: bool,
         rationale: impl Into<String>,
     ) -> Self {
-        let effort_str = effort.as_str().to_string();
         let openrouter = serde_json::json!({
-            "effort": effort_str,
+            "effort": effort.as_openrouter_effort(),
             "max_tokens": budget_tokens,
             "exclude": false
         });
@@ -317,7 +348,7 @@ impl DynamicReasoningRecommendation {
             payloads: ProviderReasoningPayloads {
                 openrouter,
                 anthropic,
-                openai_reasoning_effort: effort_str,
+                openai_reasoning_effort: effort.as_openai_effort().to_string(),
                 gemini_thinking_config: gemini,
             },
         }

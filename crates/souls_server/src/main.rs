@@ -5,6 +5,7 @@
 //! Zero UI, Zero Systray, strictly ReFS/NVMe bare-metal execution.
 
 mod mcp;
+pub mod profiles;
 mod routes;
 mod shutdown;
 mod state;
@@ -617,7 +618,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 53, "Full mode must expose all 53 canonical tools");
+        assert_eq!(tools_full.len(), 55, "Full mode must expose all 55 canonical tools");
     }
 
     #[tokio::test]
@@ -1590,11 +1591,24 @@ impl FixtureService {
             }
         };
 
-        // 1. Testa route_subtask com baixa entropia (Low reasoning effort, 1024 tokens)
+        // 1. Testa route_subtask com ultra-baixa entropia (Minimal reasoning effort, 512 tokens)
+        let res_min = call_tool("route_subtask", serde_json::json!({
+            "task_type": "formatting",
+            "estimated_tokens": 200,
+            "entropy": 0.10
+        })).await;
+
+        let rec_min = &res_min["structuredContent"]["reasoning_recommendation"];
+        assert_eq!(rec_min["reasoning_effort"], "minimal");
+        assert_eq!(rec_min["thinking_budget_tokens"], 512);
+        assert_eq!(rec_min["payloads"]["openrouter"]["effort"], "minimal");
+        assert_eq!(rec_min["payloads"]["openai_reasoning_effort"], "low");
+
+        // 2. Testa route_subtask com baixa entropia (Low reasoning effort, 1024 tokens)
         let res_low = call_tool("route_subtask", serde_json::json!({
             "task_type": "json_extraction",
             "estimated_tokens": 400,
-            "entropy": 0.15
+            "entropy": 0.28
         })).await;
 
         let rec_low = &res_low["structuredContent"]["reasoning_recommendation"];
@@ -1607,11 +1621,11 @@ impl FixtureService {
         assert_eq!(rec_low["payloads"]["anthropic"]["budget_tokens"], 1024);
         assert_eq!(rec_low["payloads"]["gemini_thinking_config"]["thinking_budget"], 1024);
 
-        // 2. Testa route_subtask com retry escalation (Low -> Medium, 4096 tokens)
+        // 3. Testa route_subtask com retry escalation (Low -> Medium, 4096 tokens)
         let res_retry = call_tool("route_subtask", serde_json::json!({
             "task_type": "json_extraction",
             "estimated_tokens": 400,
-            "entropy": 0.15,
+            "entropy": 0.28,
             "is_retry": true
         })).await;
 
@@ -1621,7 +1635,50 @@ impl FixtureService {
         assert_eq!(rec_retry["is_escalated_retry"], true);
         assert_eq!(rec_retry["payloads"]["openai_reasoning_effort"], "medium");
 
-        // 3. Testa intent com suporte a retry
+        // 4. Testa route_subtask com alta entropia em retry escalando suavemente (High -> XHigh, 24576 tokens)
+        let res_retry_high = call_tool("route_subtask", serde_json::json!({
+            "task_type": "architecture_design",
+            "estimated_tokens": 1000,
+            "entropy": 0.78,
+            "is_retry": true
+        })).await;
+
+        let rec_retry_high = &res_retry_high["structuredContent"]["reasoning_recommendation"];
+        assert_eq!(rec_retry_high["reasoning_effort"], "xhigh");
+        assert_eq!(rec_retry_high["thinking_budget_tokens"], 24576);
+        assert_eq!(rec_retry_high["is_escalated_retry"], true);
+        assert_eq!(rec_retry_high["payloads"]["openrouter"]["effort"], "xhigh");
+
+        // 5. Testa route_subtask com xhigh entropia direta (XHigh, 24576 tokens)
+        let res_xhigh = call_tool("route_subtask", serde_json::json!({
+            "task_type": "cryptographic_audit",
+            "estimated_tokens": 1500,
+            "entropy": 0.82
+        })).await;
+
+        let rec_xhigh = &res_xhigh["structuredContent"]["reasoning_recommendation"];
+        assert_eq!(rec_xhigh["reasoning_effort"], "xhigh");
+        assert_eq!(rec_xhigh["thinking_budget_tokens"], 24576);
+        assert_eq!(rec_xhigh["payloads"]["openrouter"]["effort"], "xhigh");
+        assert_eq!(rec_xhigh["payloads"]["openai_reasoning_effort"], "high");
+        assert_eq!(rec_xhigh["payloads"]["anthropic"]["budget_tokens"], 24576);
+        assert_eq!(rec_xhigh["payloads"]["gemini_thinking_config"]["thinking_budget"], 24576);
+
+        // 6. Testa route_subtask com ultra entropia (Ultra reasoning effort, 32768 tokens)
+        let res_ultra = call_tool("route_subtask", serde_json::json!({
+            "task_type": "kernel_formal_proof",
+            "estimated_tokens": 2000,
+            "entropy": 0.92
+        })).await;
+
+        let rec_ultra = &res_ultra["structuredContent"]["reasoning_recommendation"];
+        assert_eq!(rec_ultra["reasoning_effort"], "ultra");
+        assert_eq!(rec_ultra["thinking_budget_tokens"], 32768);
+        assert_eq!(rec_ultra["payloads"]["openrouter"]["effort"], "max");
+        assert_eq!(rec_ultra["payloads"]["openai_reasoning_effort"], "high");
+        assert_eq!(rec_ultra["payloads"]["gemini_thinking_config"]["thinking_budget"], 32768);
+
+        // 7. Testa intent com suporte a retry
         let res_intent = call_tool("intent", serde_json::json!({
             "prompt": "Parse this JSON AST",
             "is_retry": true
@@ -1631,5 +1688,97 @@ impl FixtureService {
         assert!(intent_rec["reasoning_effort"].is_string());
         assert!(intent_rec["thinking_budget_tokens"].as_u64().unwrap() > 0);
         assert_eq!(intent_rec["is_escalated_retry"], true);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_profile_list_and_profile_switch_governance() {
+        let dir = std::env::temp_dir().join(format!(
+            "souls_server_profile_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _ = std::fs::create_dir_all(&dir);
+        let cfg_file = dir.join("config.yaml");
+
+        let initial_yaml = r#"mcp_servers:
+  souls_engine:
+    url: "http://127.0.0.1:9123/mcp"
+    transport: "http"
+
+model:
+  default: "deepseek/deepseek-chat"
+  provider: "nous"
+"#;
+        std::fs::write(&cfg_file, initial_yaml).unwrap();
+
+        // Direct test environment to use isolated test config.yaml
+        std::env::set_var("SOULS_HERMES_CONFIG_PATH", cfg_file.to_str().unwrap());
+
+        let state = create_test_state().await;
+        let app = build_router(state.clone());
+
+        let call_tool = |tool_name: &'static str, args: serde_json::Value| {
+            let app_clone = app.clone();
+            async move {
+                let payload = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": 2001,
+                    "method": "tools/call",
+                    "params": {
+                        "name": tool_name,
+                        "arguments": args
+                    }
+                });
+                let req = Request::builder()
+                    .uri("/mcp")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                    .unwrap();
+                let resp = app_clone.oneshot(req).await.unwrap();
+                assert_eq!(resp.status(), StatusCode::OK);
+                let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+                let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                v["result"].clone()
+            }
+        };
+
+        // 1. Testa profile_list
+        let res_list = call_tool("profile_list", serde_json::json!({})).await;
+        let list_data = &res_list["structuredContent"];
+        assert_eq!(list_data["profiles_count"], 5);
+        assert_eq!(list_data["active_model"], "deepseek/deepseek-chat");
+        assert_eq!(list_data["active_profile"], "frontier_balanced");
+
+        // 2. Testa profile_switch para deep_swe
+        let res_switch = call_tool("profile_switch", serde_json::json!({
+            "profile": "deep_swe"
+        })).await;
+        let switch_data = &res_switch["structuredContent"];
+        assert_eq!(switch_data["status"], "success");
+        assert_eq!(switch_data["previous_model"], "deepseek/deepseek-chat");
+        assert_eq!(switch_data["applied_model"], "anthropic/claude-3-7-sonnet");
+        assert_eq!(switch_data["backup_created"], true);
+
+        // 3. Testa profile_list refletindo a alteração
+        let res_list_after = call_tool("profile_list", serde_json::json!({})).await;
+        let list_data_after = &res_list_after["structuredContent"];
+        assert_eq!(list_data_after["active_model"], "anthropic/claude-3-7-sonnet");
+        assert_eq!(list_data_after["active_profile"], "deep_swe");
+
+        // 4. Testa profile_switch para local_sovereign (silício local)
+        let res_switch_local = call_tool("profile_switch", serde_json::json!({
+            "profile": "local_sovereign"
+        })).await;
+        let switch_local_data = &res_switch_local["structuredContent"];
+        assert_eq!(switch_local_data["status"], "success");
+        assert_eq!(switch_local_data["applied_model"], "qwen3.5-coder-3b-instruct");
+        assert_eq!(switch_local_data["provider"], "custom");
+
+        // Cleanup env var and test directory
+        std::env::remove_var("SOULS_HERMES_CONFIG_PATH");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

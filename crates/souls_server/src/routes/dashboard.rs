@@ -124,42 +124,20 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
 
 /// Helper function to inspect the active master brain configured in Hermes Agent config.yaml.
 pub fn read_hermes_master_brain() -> Value {
-    let local_appdata = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| "C:\\Users\\rosas\\AppData\\Local".to_string());
-    let hermes_cfg_path = PathBuf::from(&local_appdata).join("hermes").join("config.yaml");
+    let cfg_path = crate::profiles::resolve_hermes_config_path();
+    let (model_name, provider) = crate::profiles::read_active_hermes_model(&cfg_path);
 
-    let mut model_name = "deepseek/deepseek-chat".to_string();
-    let mut provider = "nous".to_string();
-
-    if hermes_cfg_path.exists() {
-        if let Ok(content) = fs::read_to_string(&hermes_cfg_path) {
-            let mut inside_top_model = false;
-            for line in content.lines() {
-                let trimmed = line.trim();
-                if line.starts_with("model:") {
-                    inside_top_model = true;
-                    continue;
-                }
-                if inside_top_model {
-                    if trimmed.starts_with("default:") {
-                        let val = trimmed.trim_start_matches("default:").trim().trim_matches('"').trim_matches('\'');
-                        if !val.is_empty() {
-                            model_name = val.to_string();
-                        }
-                    } else if trimmed.starts_with("provider:") {
-                        let val = trimmed.trim_start_matches("provider:").trim().trim_matches('"').trim_matches('\'');
-                        if !val.is_empty() {
-                            provider = val.to_string();
-                        }
-                    } else if !line.starts_with(' ') && !line.starts_with('\t') && !line.is_empty() {
-                        inside_top_model = false;
-                    }
-                }
-            }
-        }
-    }
-
-    let is_local = provider == "custom" || provider == "local" || model_name.contains("gguf") || model_name.contains("qwen") || model_name.contains("smollm") || model_name.contains("hermes-3-llama");
-    let target_type = if is_local { "Silício Bare-Metal" } else { "Cloud API" };
+    let is_local = provider == "custom"
+        || provider == "local"
+        || model_name.contains("gguf")
+        || model_name.contains("qwen")
+        || model_name.contains("smollm")
+        || model_name.contains("hermes-3-llama");
+    let target_type = if is_local {
+        "Silício Bare-Metal"
+    } else {
+        "Cloud API"
+    };
 
     json!({
         "model": model_name,
@@ -346,64 +324,60 @@ pub async fn hermes_preset_handler(
 ) -> Json<Value> {
     let _guard = state.acquire_connection();
 
-    let target_model = match payload.preset_id.as_str() {
-        "heavy_swe" => "anthropic/claude-3-7-sonnet",
-        "math" => "deepseek/deepseek-reasoner",
-        "privacy" => "qwen3.5-coder-3b-instruct",
-        _ => "deepseek/deepseek-chat",
+    let profiles = crate::profiles::get_available_profiles(&state).await;
+
+    // Resolve target model and provider based on preset_id or dynamic champions
+    let (target_model, target_provider) = match payload.preset_id.as_str() {
+        "heavy_swe" | "deep_swe" => {
+            let p = profiles.iter().find(|p| p.id == "deep_swe");
+            (
+                p.map(|x| x.target_model.as_str()).unwrap_or("anthropic/claude-3-7-sonnet"),
+                "nous",
+            )
+        }
+        "math" | "deep_reasoning" => {
+            let p = profiles.iter().find(|p| p.id == "deep_reasoning");
+            (
+                p.map(|x| x.target_model.as_str()).unwrap_or("deepseek/deepseek-reasoner"),
+                "nous",
+            )
+        }
+        "privacy" | "local_sovereign" => {
+            let p = profiles.iter().find(|p| p.id == "local_sovereign");
+            (
+                p.map(|x| x.target_model.as_str()).unwrap_or("qwen3.5-coder-3b-instruct"),
+                "custom",
+            )
+        }
+        "ultra_fast" => {
+            let p = profiles.iter().find(|p| p.id == "ultra_fast");
+            (
+                p.map(|x| x.target_model.as_str()).unwrap_or("google/gemini-2.0-flash-001"),
+                "nous",
+            )
+        }
+        _ => {
+            let p = profiles.iter().find(|p| p.id == "frontier_balanced");
+            (
+                p.map(|x| x.target_model.as_str()).unwrap_or("deepseek/deepseek-chat"),
+                "nous",
+            )
+        }
     };
 
-    info!(
-        preset = %payload.preset_id,
-        target_model = %target_model,
-        "Applying Master Brain preset to Hermes config.yaml"
-    );
-
-    // Resolve hermes config path
-    let local_appdata = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| "C:\\Users\\rosas\\AppData\\Local".to_string());
-    let hermes_cfg_path = PathBuf::from(&local_appdata).join("hermes").join("config.yaml");
-
-    let mut backup_created = false;
-    if hermes_cfg_path.exists() {
-        let backup_path = hermes_cfg_path.with_extension("yaml.bak");
-        if let Ok(_) = fs::copy(&hermes_cfg_path, &backup_path) {
-            backup_created = true;
-        }
-
-        if let Ok(content) = fs::read_to_string(&hermes_cfg_path) {
-            let mut inside_top_model = false;
-            let mut new_lines = Vec::new();
-
-            for line in content.lines() {
-                if line.starts_with("model:") {
-                    inside_top_model = true;
-                    new_lines.push(line.to_string());
-                    continue;
-                }
-
-                if inside_top_model {
-                    if line.starts_with("  default:") {
-                        new_lines.push(format!("  default: \"{}\"", target_model));
-                        continue;
-                    } else if !line.starts_with(" ") && !line.is_empty() {
-                        inside_top_model = false;
-                    }
-                }
-
-                new_lines.push(line.to_string());
-            }
-
-            let _ = fs::write(&hermes_cfg_path, new_lines.join("\n"));
-        }
+    match crate::profiles::apply_profile_to_hermes(
+        Some(&payload.preset_id),
+        target_model,
+        Some(target_provider),
+        None,
+    ) {
+        Ok(res) => Json(json!(res)),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err,
+            "preset_id": payload.preset_id
+        })),
     }
-
-    Json(json!({
-        "status": "success",
-        "preset_id": payload.preset_id,
-        "applied_model": target_model,
-        "backup_created": backup_created,
-        "config_path": hermes_cfg_path.to_string_lossy()
-    }))
 }
 
 /// Executes atomic WAL checkpoint to compact SQLite on Dev Drive ReFS.
