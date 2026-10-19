@@ -1,0 +1,28 @@
+[package]
+name = "souls_llm_inventory"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+souls_protocol = { path = "../souls_protocol" }
+souls_inference_runtime = { path = "../souls_inference_runtime" }
+
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+chrono = { workspace = true }
+async-trait = { workspace = true }
+sha2 = "0.10"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_System_SystemInformation",
+] }
+
+[dev-dependencies]
+tempfile = "3.10"

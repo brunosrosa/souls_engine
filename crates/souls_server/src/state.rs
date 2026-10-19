@@ -44,6 +44,8 @@ pub struct AppState {
     pub router: Arc<ParetoBanditRouter>,
     pub cloud_arena: Arc<CloudArenaCoordinator>,
     pub mcp_sessions: Arc<crate::mcp::McpSessionManager>,
+    pub inventory_downloader: Arc<souls_llm_inventory::DownloadManager>,
+    pub hf_client: Arc<souls_llm_inventory::HuggingFaceClient>,
     active_connections: Arc<AtomicUsize>,
     start_time: Instant,
 }
@@ -62,6 +64,8 @@ impl AppState {
             router,
             cloud_arena,
             mcp_sessions: Arc::new(crate::mcp::McpSessionManager::new()),
+            inventory_downloader: Arc::new(souls_llm_inventory::DownloadManager::new()),
+            hf_client: Arc::new(souls_llm_inventory::HuggingFaceClient::new()),
             active_connections: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),
         }

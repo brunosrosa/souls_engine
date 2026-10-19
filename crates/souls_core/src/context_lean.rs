@@ -4,8 +4,10 @@
 //! protected via `tokio::task::spawn_blocking`, polyglot signature-preserving
 //! auto-shrink pruning (Brace, Indent, Block paradigms), and concurrent multi-file reads.
 
+use std::collections::{HashMap, VecDeque};
+use std::hash::{Hash, Hasher};
 use std::path::Path;
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 use tiktoken::CoreBpe;
 use crate::ansi_filter::strip_ansi_escapes;
 use crate::error::CoreError;
@@ -506,6 +508,364 @@ where
     results
 }
 
+/// Compaction and token savings metrics.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompactionResult {
+    pub compressed_text: String,
+    pub original_tokens: usize,
+    pub compacted_tokens: usize,
+    pub tokens_saved: usize,
+    pub reduction_percent: f64,
+}
+
+/// Strips non-essential comments while strictly preserving docstrings, linter annotations, and compiler directives.
+pub fn strip_comments_polyglot(code: &str, lang_or_ext: Option<&str>) -> String {
+    let lower_lang = lang_or_ext.unwrap_or("").to_lowercase();
+    let is_python = lower_lang.ends_with(".py") || lower_lang == "py" || lower_lang == "python";
+
+    let mut out = Vec::new();
+    let mut in_block_comment = false;
+    let mut in_py_docstring = false;
+    let mut py_docstring_quote = "";
+
+    for line in code.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            out.push("");
+            continue;
+        }
+
+        // Python docstrings (""" or ''')
+        if is_python {
+            if in_py_docstring {
+                out.push(line);
+                if trimmed.ends_with(py_docstring_quote) {
+                    in_py_docstring = false;
+                }
+                continue;
+            }
+
+            if trimmed.starts_with("\"\"\"") || trimmed.starts_with("'''") {
+                let quote = if trimmed.starts_with("\"\"\"") { "\"\"\"" } else { "'''" };
+                out.push(line);
+                if trimmed.len() > 3 && trimmed[3..].contains(quote) {
+                    // Single-line docstring
+                } else {
+                    in_py_docstring = true;
+                    py_docstring_quote = quote;
+                }
+                continue;
+            }
+
+            // Python line comment (#)
+            if trimmed.starts_with('#') {
+                if trimmed.starts_with("#!")
+                    || trimmed.starts_with("# type:")
+                    || trimmed.starts_with("# noqa")
+                    || trimmed.starts_with("# pylint:")
+                    || trimmed.starts_with("# pragma:")
+                    || trimmed.starts_with("# coding:")
+                {
+                    out.push(line);
+                }
+                continue;
+            }
+
+            // Inline comment check
+            if let Some(pos) = line.find("  #") {
+                let after = &line[pos..];
+                if !after.contains("# type:") && !after.contains("# noqa") {
+                    let clean = line[..pos].trim_end();
+                    if !clean.is_empty() {
+                        out.push(clean);
+                    }
+                    continue;
+                }
+            }
+
+            out.push(line);
+            continue;
+        }
+
+        // C-family / Rust / TS / Go / Java
+        if in_block_comment {
+            if trimmed.contains("*/") {
+                in_block_comment = false;
+            }
+            continue;
+        }
+
+        // Docstrings: /// or //!
+        if trimmed.starts_with("///") || trimmed.starts_with("//!") {
+            out.push(line);
+            continue;
+        }
+
+        // Block docstring /** ... */
+        if trimmed.starts_with("/**") {
+            out.push(line);
+            if !trimmed.contains("*/") {
+                in_block_comment = false; // keep emitting doc lines
+            }
+            continue;
+        }
+
+        // Rust attributes and directives #[...]
+        if trimmed.starts_with("#[") || trimmed.starts_with("#![") {
+            out.push(line);
+            continue;
+        }
+
+        // Line comments //
+        if trimmed.starts_with("//") {
+            if trimmed.starts_with("// SAFETY:")
+                || trimmed.starts_with("// nolint")
+                || trimmed.starts_with("// [allow(")
+            {
+                out.push(line);
+            }
+            continue;
+        }
+
+        // Block comment start /*
+        if trimmed.starts_with("/*") && !trimmed.starts_with("/**") {
+            if trimmed.contains("*/") {
+                continue;
+            }
+            in_block_comment = true;
+            continue;
+        }
+
+        // Inline comment
+        if let Some(pos) = line.find(" //") {
+            let after = &line[pos..];
+            if !after.contains("// SAFETY:") && !after.contains("// nolint") {
+                let clean = line[..pos].trim_end();
+                if !clean.is_empty() {
+                    out.push(clean);
+                }
+                continue;
+            }
+        }
+
+        out.push(line);
+    }
+
+    out.join("\n")
+}
+
+/// Applies LEAN compression: strips implementation comments, collapses redundant blank lines,
+/// and measures BPE token reduction.
+pub fn compress_lean_code(code: &str, lang_or_ext: Option<&str>) -> CompactionResult {
+    let original_tokens = count_tokens(code);
+    let stripped = strip_comments_polyglot(code, lang_or_ext);
+    let compressed_text = lightweight_cleanup(&stripped);
+    let compacted_tokens = count_tokens(&compressed_text);
+
+    let tokens_saved = original_tokens.saturating_sub(compacted_tokens);
+    let reduction_percent = if original_tokens > 0 {
+        (tokens_saved as f64 / original_tokens as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    CompactionResult {
+        compressed_text,
+        original_tokens,
+        compacted_tokens,
+        tokens_saved,
+        reduction_percent,
+    }
+}
+
+/// In-memory LRU-bounded cache for deduplicated code and text blocks.
+#[derive(Debug)]
+pub struct DedupCache {
+    max_capacity: usize,
+    blocks: HashMap<String, String>,
+    order: VecDeque<String>,
+}
+
+impl DedupCache {
+    /// Creates a new cache with an LRU bound.
+    #[must_use]
+    pub fn new(max_capacity: usize) -> Self {
+        Self {
+            max_capacity: max_capacity.max(10),
+            blocks: HashMap::new(),
+            order: VecDeque::new(),
+        }
+    }
+
+    /// Stores a deduplicated block with its SipHash key.
+    pub fn insert(&mut self, hash: String, content: String) {
+        if self.blocks.contains_key(&hash) {
+            return;
+        }
+
+        if self.blocks.len() >= self.max_capacity {
+            if let Some(oldest) = self.order.pop_front() {
+                self.blocks.remove(&oldest);
+            }
+        }
+
+        self.order.push_back(hash.clone());
+        self.blocks.insert(hash, content);
+    }
+
+    /// Retrieves the original content for a hash marker.
+    #[must_use]
+    pub fn get(&self, hash: &str) -> Option<&String> {
+        self.blocks.get(hash)
+    }
+
+    /// Returns the number of stored blocks.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.blocks.len()
+    }
+
+    /// Returns whether the cache is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.blocks.is_empty()
+    }
+
+    /// Clears all blocks.
+    pub fn clear(&mut self) {
+        self.blocks.clear();
+        self.order.clear();
+    }
+}
+
+impl Default for DedupCache {
+    fn default() -> Self {
+        Self::new(1000)
+    }
+}
+
+/// Thread-safe singleton for global deduplication cache in RAM.
+static GLOBAL_DEDUP_CACHE: OnceLock<RwLock<DedupCache>> = OnceLock::new();
+
+/// Returns a reference to the global deduplication cache.
+pub fn get_global_dedup_cache() -> &'static RwLock<DedupCache> {
+    GLOBAL_DEDUP_CACHE.get_or_init(|| RwLock::new(DedupCache::default()))
+}
+
+/// Result of deduplication analysis and compaction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DedupResult {
+    pub deduplicated_text: String,
+    pub deduplicated_blocks: usize,
+    pub original_lines: usize,
+    pub compacted_lines: usize,
+}
+
+/// Identifies repeated blocks of `min_lines` or more, replaces them with compact SipHash markers,
+/// and caches the original blocks in RAM for lossless rehydration.
+pub fn dedup_text(text: &str, min_lines: usize, cache: &RwLock<DedupCache>) -> DedupResult {
+    let min_lines = min_lines.max(3);
+    let lines: Vec<&str> = text.lines().collect();
+    let original_lines = lines.len();
+
+    if original_lines < min_lines * 2 {
+        return DedupResult {
+            deduplicated_text: text.to_string(),
+            deduplicated_blocks: 0,
+            original_lines,
+            compacted_lines: original_lines,
+        };
+    }
+
+    let mut seen_blocks: HashMap<String, String> = HashMap::new();
+    let mut out_lines = Vec::new();
+    let mut i = 0;
+    let mut dedup_count = 0;
+
+    let mut cache_guard = cache.write().unwrap();
+
+    while i < lines.len() {
+        if i + min_lines <= lines.len() {
+            let candidate_block = lines[i..i + min_lines].join("\n");
+
+            // SipHash 64-bit deterministic hash
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            candidate_block.hash(&mut hasher);
+            let block_hash = format!("{:016x}", hasher.finish());
+
+            if seen_blocks.contains_key(&block_hash) {
+                let marker = format!("[DEDUP_BLOCK_{}: {} lines omitted]", block_hash, min_lines);
+                cache_guard.insert(block_hash.clone(), candidate_block);
+                out_lines.push(marker);
+                i += min_lines;
+                dedup_count += 1;
+                continue;
+            } else {
+                seen_blocks.insert(block_hash, candidate_block);
+            }
+        }
+        out_lines.push(lines[i].to_string());
+        i += 1;
+    }
+
+    let result_text = out_lines.join("\n");
+    let compacted_lines = out_lines.len();
+
+    DedupResult {
+        deduplicated_text: result_text,
+        deduplicated_blocks: dedup_count,
+        original_lines,
+        compacted_lines,
+    }
+}
+
+/// Rehydrates previously deduplicated SipHash markers back into lossless text.
+pub fn rehydrate_text(text: &str, cache: &RwLock<DedupCache>) -> (String, usize) {
+    let mut result = text.to_string();
+    let mut replaced = 0;
+
+    let cache_guard = cache.read().unwrap();
+    let prefix = "[DEDUP_BLOCK_";
+
+    loop {
+        if let Some(start_pos) = result.find(prefix) {
+            let hash_start = start_pos + prefix.len();
+            if hash_start + 16 <= result.len() {
+                let hash = &result[hash_start..hash_start + 16];
+                if let Some(end_bracket) = result[hash_start..].find(']') {
+                    let marker_end = hash_start + end_bracket + 1;
+                    if let Some(original) = cache_guard.get(hash) {
+                        result.replace_range(start_pos..marker_end, original);
+                        replaced += 1;
+                        continue;
+                    }
+                }
+            }
+            break;
+        } else {
+            break;
+        }
+    }
+
+    (result, replaced)
+}
+
+/// Rehydrates `{{key}}` template placeholders using a dictionary.
+pub fn fill_template_placeholders(template: &str, placeholders: &HashMap<String, String>) -> (String, usize) {
+    let mut result = template.to_string();
+    let mut count = 0;
+
+    for (k, v) in placeholders {
+        let needle = format!("{{{{{}}}}}", k);
+        if result.contains(&needle) {
+            result = result.replace(&needle, v);
+            count += 1;
+        }
+    }
+
+    (result, count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -568,4 +928,100 @@ mod tests {
         assert!(shrunk.contains("def forward(self, x): pass  # body omitted"));
         assert!(!shrunk.contains("layer_500"));
     }
+
+    #[test]
+    fn test_compress_lean_code_preserves_rust_docstrings_and_attributes() {
+        let rust_code = r#"
+//! # Crate Root Docs
+//! Preserved module docstring.
+
+// Ordinary implementation comment to strip
+#[derive(Debug, Clone, PartialEq)]
+pub struct EngineConfig {
+    /// Documenting the field
+    pub timeout_ms: u64,
+    // Another comment to remove
+    pub is_active: bool, // inline comment
 }
+
+// SAFETY: Crucial bare-metal comment
+pub unsafe fn unsafe_door() {}
+"#;
+        let res = compress_lean_code(rust_code, Some("rs"));
+        assert!(res.compressed_text.contains("//! # Crate Root Docs"));
+        assert!(res.compressed_text.contains("/// Documenting the field"));
+        assert!(res.compressed_text.contains("#[derive(Debug, Clone, PartialEq)]"));
+        assert!(res.compressed_text.contains("// SAFETY: Crucial bare-metal comment"));
+        assert!(!res.compressed_text.contains("Ordinary implementation comment"));
+        assert!(!res.compressed_text.contains("Another comment to remove"));
+        assert!(res.tokens_saved > 0 || res.original_tokens > 0);
+    }
+
+    #[test]
+    fn test_compress_lean_code_python_docstrings_and_type_directives() {
+        let py_code = r#"
+"""Module header docstring."""
+
+# Implementation comment to remove
+# type: ignore[import]
+def compute_loss(x, y):
+    """Calculates cross-entropy loss."""
+    # Another comment to strip
+    val = x * 2  # inline removal
+    return val
+"#;
+        let res = compress_lean_code(py_code, Some("py"));
+        assert!(res.compressed_text.contains("\"\"\"Module header docstring.\"\"\""));
+        assert!(res.compressed_text.contains("\"\"\"Calculates cross-entropy loss.\"\"\""));
+        assert!(res.compressed_text.contains("# type: ignore[import]"));
+        assert!(!res.compressed_text.contains("# Implementation comment to remove"));
+        assert!(!res.compressed_text.contains("# Another comment to strip"));
+        assert!(!res.compressed_text.contains("# inline removal"));
+    }
+
+    #[test]
+    fn test_dedup_and_rehydrate_roundtrip() {
+        let cache = RwLock::new(DedupCache::new(50));
+        let repeated_block = "line_a = 1;\nline_b = 2;\nline_c = 3;\nline_d = 4;\nline_e = 5;";
+
+        let text = format!(
+            "// Header\n{}\n// Middle separator\n{}\n// Footer",
+            repeated_block, repeated_block
+        );
+
+        let dedup_res = dedup_text(&text, 5, &cache);
+        assert_eq!(dedup_res.deduplicated_blocks, 1);
+        assert!(dedup_res.deduplicated_text.contains("[DEDUP_BLOCK_"));
+
+        let (rehydrated, count) = rehydrate_text(&dedup_res.deduplicated_text, &cache);
+        assert_eq!(count, 1);
+        assert_eq!(rehydrated, text);
+    }
+
+    #[test]
+    fn test_dedup_cache_lru_eviction() {
+        let mut cache = DedupCache::new(10);
+        for i in 0..15 {
+            cache.insert(format!("hash_{i:04}"), format!("content_{i}"));
+        }
+        assert_eq!(cache.len(), 10);
+        // The first 5 should have been evicted
+        assert!(cache.get("hash_0000").is_none());
+        assert!(cache.get("hash_0004").is_none());
+        // The last ones should exist
+        assert!(cache.get("hash_0014").is_some());
+    }
+
+    #[test]
+    fn test_fill_template_placeholders() {
+        let template = "Hello {{user}}, your balance is {{balance}} USD.";
+        let mut placeholders = HashMap::new();
+        placeholders.insert("user".to_string(), "Alice".to_string());
+        placeholders.insert("balance".to_string(), "1500".to_string());
+
+        let (filled, count) = fill_template_placeholders(template, &placeholders);
+        assert_eq!(count, 2);
+        assert_eq!(filled, "Hello Alice, your balance is 1500 USD.");
+    }
+}
+

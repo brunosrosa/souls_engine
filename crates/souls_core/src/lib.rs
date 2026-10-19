@@ -16,17 +16,27 @@ pub mod fs;
 pub mod logging;
 pub mod panic;
 pub mod pii_redactor;
+pub mod sandbox;
 pub mod subprocess_guard;
+pub mod web;
 
 pub use ansi_filter::{ansi_density, strip_ansi, strip_ansi_escapes};
 pub use context_lean::{
-    count_tokens, count_tokens_async, detect_paradigm, extract_outline_signatures_polyglot,
-    lightweight_cleanup, multi_read_concurrent, smart_read_file, smart_read_text,
-    smart_read_text_async, FileCompaction, LanguageParadigm,
+    compress_lean_code, count_tokens, count_tokens_async, dedup_text, detect_paradigm,
+    extract_outline_signatures_polyglot, fill_template_placeholders, get_global_dedup_cache,
+    lightweight_cleanup, multi_read_concurrent, rehydrate_text, smart_read_file, smart_read_text,
+    smart_read_text_async, CompactionResult, DedupCache, DedupResult, FileCompaction,
+    LanguageParadigm,
 };
 pub use error::CoreError;
 pub use fs::{clone_file_refs, ensure_refs_directory, validate_refs_path};
 pub use logging::{init_tracing, sanitize_terminal_buffer};
 pub use panic::{run_safe_sync, run_safe_task};
 pub use pii_redactor::PiiRedactor;
+pub use sandbox::{
+    run_sandboxed_command, run_sandboxed_shell, CommandSafetyFilter, OutputTruncationPolicy,
+    SandboxedResult,
+};
 pub use subprocess_guard::{SubprocessConfig, SubprocessGuard, SubprocessState};
+pub use web::{html_to_clean_markdown, parse_duckduckgo_html, WebSearchResult};
+

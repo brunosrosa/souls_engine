@@ -15,6 +15,7 @@ souls_ast = { path = "../souls_ast" }
 souls_anthropophagy = { path = "../souls_anthropophagy" }
 souls_llm_local_arena = { path = "../souls_llm_local_arena" }
 souls_llm_cloud_arena = { path = "../souls_llm_cloud_arena" }
+souls_llm_inventory = { path = "../souls_llm_inventory" }
 
 tokio = { workspace = true }
 axum = { workspace = true }

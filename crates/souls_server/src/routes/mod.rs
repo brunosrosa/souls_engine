@@ -4,6 +4,7 @@ pub mod chat;
 pub mod cloud;
 pub mod dashboard;
 pub mod health;
+pub mod inventory;
 pub mod models;
 
 use axum::routing::{get, post};
@@ -39,6 +40,19 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/cloud/champions", get(cloud::cloud_champions_handler))
         .route("/api/v1/cloud/models", get(cloud::cloud_ranked_models_handler))
         .route("/api/v1/cloud/sync", post(cloud::cloud_sync_handler))
+        // Model Hub & Inventory Endpoints (RFC-007)
+        .route("/api/v1/inventory/hardware", get(inventory::inventory_hardware_handler))
+        .route("/api/v1/inventory/recommendations", get(inventory::inventory_recommendations_handler))
+        .route("/api/v1/inventory/models", get(inventory::inventory_models_handler))
+        .route("/api/v1/inventory/search", get(inventory::inventory_search_handler))
+        .route("/api/v1/inventory/repo-files", get(inventory::inventory_repo_files_handler))
+        .route("/api/v1/inventory/download", post(inventory::inventory_download_handler))
+        .route("/api/v1/inventory/downloads", get(inventory::inventory_list_downloads_handler))
+        .route("/api/v1/inventory/download/:id/pause", post(inventory::inventory_pause_download_handler))
+        .route("/api/v1/inventory/download/:id/resume", post(inventory::inventory_resume_download_handler))
+        .route("/api/v1/inventory/download/:id/cancel", post(inventory::inventory_cancel_download_handler))
+        .route("/api/v1/inventory/models/:filename", axum::routing::delete(inventory::inventory_delete_model_handler))
+        .route("/api/v1/inventory/downloads/stream", get(inventory::inventory_download_stream_handler))
         // Modern Streamable HTTP endpoint (MCP 2025-03-26+)
         .route("/mcp", post(mcp_post_handler).get(mcp_get_handler))
         // Legacy HTTP+SSE endpoints (MCP 2024-11-05)

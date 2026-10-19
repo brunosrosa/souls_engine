@@ -1789,4 +1789,94 @@ model:
         std::env::remove_var("SOULS_HERMES_CONFIG_PATH");
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[tokio::test]
+    async fn test_inventory_hardware_and_recommendations_routes() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let req = Request::builder()
+            .uri("/api/v1/inventory/hardware")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["status"], "success");
+        assert!(json["hardware"]["host_ram_total_mb"].as_u64().unwrap_or(0) > 0);
+
+        let req2 = Request::builder()
+            .uri("/api/v1/inventory/recommendations")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp2 = app.clone().oneshot(req2).await.unwrap();
+        assert_eq!(resp2.status(), StatusCode::OK);
+
+        let bytes2 = to_bytes(resp2.into_body(), usize::MAX).await.unwrap();
+        let json2: serde_json::Value = serde_json::from_slice(&bytes2).unwrap();
+        assert_eq!(json2["status"], "success");
+        assert!(json2["catalog"].as_array().unwrap().len() >= 5);
+        assert!(json2["triad"]["tier1_coder"]["model_name"].is_string());
+    }
+
+    #[tokio::test]
+    async fn test_inventory_download_lifecycle_routes() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // Enqueue download
+        let payload = serde_json::json!({
+            "repo_id": "Qwen/Test-GGUF",
+            "file_name": "test-qwen-q4.gguf",
+            "download_url": "http://127.0.0.1:9/dummy-test"
+        });
+
+        let req = Request::builder()
+            .uri("/api/v1/inventory/download")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["status"], "enqueued");
+        let dl_id = json["item"]["id"].as_str().unwrap().to_string();
+
+        // Pause download
+        let req_pause = Request::builder()
+            .uri(format!("/api/v1/inventory/download/{}/pause", dl_id))
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+        let resp_pause = app.clone().oneshot(req_pause).await.unwrap();
+        assert_eq!(resp_pause.status(), StatusCode::OK);
+
+        // Resume download
+        let req_resume = Request::builder()
+            .uri(format!("/api/v1/inventory/download/{}/resume", dl_id))
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+        let resp_resume = app.clone().oneshot(req_resume).await.unwrap();
+        assert_eq!(resp_resume.status(), StatusCode::OK);
+
+        // Cancel download
+        let req_cancel = Request::builder()
+            .uri(format!("/api/v1/inventory/download/{}/cancel", dl_id))
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+        let resp_cancel = app.clone().oneshot(req_cancel).await.unwrap();
+        assert_eq!(resp_cancel.status(), StatusCode::OK);
+    }
 }

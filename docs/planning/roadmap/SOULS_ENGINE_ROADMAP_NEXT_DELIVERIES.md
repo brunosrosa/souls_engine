@@ -185,6 +185,14 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 │ Sessão 15│ Bloco M: Auditoria Fina│ [Fase 1 CONCLUÍDA / Fase 2 PLANEJADA]       │
 │          │ & Design System Web   │ Branding 2-linhas, Top 50 Cloud, Quick Apply│
 │          │                       │ & Auditoria Elemento a Elemento de Telas    │
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 16│ Bloco 1: Context &    │ [CONCLUÍDA & HOMOLOGADA] Pipeline LEAN/CCR  │
+│          │ Sandbox Engine        │ souls_core, anti-explosion head+tail, safe  │
+│          │ (souls_core)          │ sandbox Win32, SipHash LRU, 65/65 PASS      │
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 17│ Bloco 2: Model Hub &  │ [CONCLUÍDA & HOMOLOGADA] Nova crate         │
+│          │ Hardware Profiler     │ souls_llm_inventory, Profiler Agnóstico,    │
+│          │ (souls_llm_inventory) │ Downloader Resiliente Range/SHA256, UI Hub  │
 └──────────┴───────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -269,8 +277,8 @@ Para erradicar qualquer ambiguidade sobre stubs e implementações profundas, o 
 | `intent` | `souls_inference_runtime` | **LIVE_PRODUCTION** | Sessão 4 (Concluída) |
 | `cloud_champions`, `cloud_arena_sync` | `souls_llm_cloud_arena` | **LIVE_PRODUCTION** | Sessão 6 (Concluída) |
 | `profile_list`, `profile_switch` | `souls_server` | **LIVE_PRODUCTION** | Sessão 6 / Governança Master Brain (Concluída) |
-| `read`, `smart_read`, `multi_read`, `compress`, `dedup`, `fill`, `stub_fill`, `headroom_retrieve` | `souls_core` | Staging estruturado; transplante compressão LEAN & CCR | **Sessão 5 (Contexto & Sandbox)** |
-| `tree`, `search`, `shell`, `execute`, `fetch_web`, `web_search`, `repo_meta` | `souls_core` | Staging estruturado; transplante sandbox e HTTP scraper | **Sessão 5 (Contexto & Sandbox)** |
+| `read`, `smart_read`, `multi_read`, `compress`, `dedup`, `fill`, `stub_fill`, `headroom_retrieve` | `souls_core` | **LIVE_PRODUCTION** | Sessão 16 / Bloco 1 (Concluída) |
+| `tree`, `search`, `shell`, `execute`, `fetch_web`, `web_search`, `repo_meta` | `souls_core` | **LIVE_PRODUCTION** | Sessão 16 / Bloco 1 (Concluída) |
 | `feedback` | `souls_llm_cloud_arena` | Staging estruturado; transplante Cloud Arena & APIs externas | **Sessão 6 (Cloud Arena)** |
 
 ---
@@ -989,25 +997,80 @@ Para a continuidade estratégica do Souls Engine v7, os 3 grandes blocos mestres
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
-│                PLANO DE CONTINUIDADE: OS 3 BLOCOS PRIORITÁRIOS                 │
+│                PLANO DE CONTINUIDADE: STATUS DOS 3 BLOCOS MESTRES              │
 ├────────────────────────────────────────────────────────────────────────────────┤
 │ 1. EXPANSÃO DE FERRAMENTAS DE CONTEXTO & SANDBOX (souls_core)                  │
-│    - smart_read: Leitura semântica orientada a orçamento e AST                │
-│    - compress & dedup: Redução LEAN de contexto na RAM sem perda informacional │
-│    - shell & execute: Execução segura de comandos em sandbox restrita Win32    │
-│    - web_search & fetch_web: Inteligência web e extração de markdown na RAM    │
+│    STATUS: [CONCLUÍDA & HOMOLOGADA NA SESSÃO 16 - 65/65 TESTES PASS]           │
+│    - compress_lean_code: Stripping inteligente sem quebrar docstrings/anotações │
+│    - DedupCache: SipHash LRU bounded na RAM com marcadores [DEDUP_BLOCK_<HEX>] │
+│    - OutputTruncationPolicy: Head 50 + Tail 70 linhas prevenindo Context Rot   │
+│    - CommandSafetyFilter: Barreira contra comandos destrutivos do Windows NT    │
+│    - html_to_clean_markdown & DuckDuckGo Lite: Scraper de RAM zero-dependency  │
 ├────────────────────────────────────────────────────────────────────────────────┤
 │ 2. RFC-007: CRATE souls_llm_inventory (Model Hub & Profiling de Silício)       │
-│    - Gestão universal de arquivos GGUF/ONNX em %USERPROFILE%\llm_local_models  │
-│    - Download manager assíncrono com suporte a HTTP Range (resume) e SHA-256   │
-│    - Profiling de silício adaptativo para teto WDDM da RTX 2060m (5.2 GB)     │
-│    - Broadcast de progresso de downloads em tempo real via SSE no Web Dashboard│
+│    STATUS: [CONCLUÍDA & HOMOLOGADA NA SESSÃO 17 - 16/16 + 31/31 TESTES PASS]   │
+│    - Hardware Profiler dinâmico e agnóstico (GlobalMemoryStatusEx Win32 + NVML) │
+│    - Tríade Recomendada Curada por silício para Tier 0, Tier 0.5 e Tier 1       │
+│    - Catálogo curado SSOT com benchmarks (Coding, MMLU, IFEval, Speed TPS)      │
+│    - Download Manager Sequencial Resiliente com HTTP Range (resume) e SHA-256   │
+│    - Hugging Face Hub Client (busca dinâmica de repos e inspeção de GGUFs)      │
+│    - Web Dashboard: sub-aba 'Model Hub & Downloads' com 5 cards & SSE viva     │
 ├────────────────────────────────────────────────────────────────────────────────┤
 │ 3. CURADORIA DO OBSIDIAN DB (Wiki / Log / Cron)                                │
+│    STATUS: [PRÓXIMO BLOCO PARA ESPECIFICAÇÃO & EXECUÇÃO]                       │
 │    - Esteira autônoma e arquivamento seguro raw/ -> wiki/ (498 documentos)    │
 │    - Validação de integridade SHA-256 e blindagem de privacidade LOCAL_ONLY    │
 │    - Registro compulsório de transformações em wiki/log.md                     │
 │    - Agendamento de cron job periódico para digestão e enriquecimento de notas │
 └────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 24. ESPECIFICAÇÃO DE ENTREGA: BLOCO 2 (RFC-007 — `souls_llm_inventory`)
+
+### 24.1 Arquitetura da Crate `crates/souls_llm_inventory`
+* **Higiene de Dependências Win32 (AGENTS.md Seção 3):** Implementação bare-metal utilizando exclusivamente `windows-sys = { version = "0.59", features = ["Win32_System_SystemInformation"] }` via `GlobalMemoryStatusEx` (`// SAFETY:`), mantendo o workspace 100% imune a `winapi v0.3.9` e `core_affinity`.
+* **Hardware Profiler Agnóstico (`profiler.rs`):**
+  * Sonda dinamicamente a GPU primária via NVML, headroom WDDM do Windows 11 (850 MB retidos pelo DWM, liberando 5.294 MB de VRAM segura na RTX 2060m), memória RAM física do host e instruções de CPU (AVX2 / AVX512).
+  * Avalia o `HardwareFit` (`OptimalVram`, `TightVram`, `PartialCpuOffload`, `CpuOnly`, `Incompatible`) calculando o tamanho dos pesos quantizados somado ao KV-Cache calibrado (teto seguro de 8.192 tokens para inferência local na dGPU) mais 300 MB de margem de ativação CUDA.
+* **Manifesto Curado e Tríade Recomendada (`registry.rs`):**
+  * Catálogo SSOT com modelos de referência testados nos 5 perfis cognitivos (`orchestrator`, `deep_research`, `fast_reasoner`, `code_specialist`, `quick_triage`) e 3 Tiers locais.
+  * Resolução automática da **Tríade Recomendada** com o ajuste ideal de quantização para a VRAM do usuário.
+* **Download Manager Sequencial Resiliente (`downloader.rs` & `checksum.rs`):**
+  * Fila FIFO sequencial (1 download ativo por vez, evitando concorrência e saturação de I/O no ReFS).
+  * Suporte nativo a **Resume** via header `Range: bytes=X-` de HTTP.
+  * Gravação com sufixo temporário `.part` e promoção atômica para `.gguf` no diretório canônico `llm_local_models` apenas após o download completo.
+  * Cálculo e validação incremental de hash SHA-256 (blocos de 64 KB na RAM sem leak de memória).
+  * Controle de ciclo de vida com `Pause`, `Resume` e `Cancel`.
+  * Canal de broadcast assíncrono para streaming de progresso SSE em tempo real a cada 500ms.
+* **Hugging Face Hub Client (`hf_client.rs`):**
+  * Busca de repositórios abertos (`search_models`).
+  * Inspeção em tempo real de arquivos `.gguf` na raiz do repositório (`get_repo_gguf_files`) com extração de tamanho e hashes SHA-256 oficiais do Git LFS.
+
+### 24.2 Rotas REST e SSE no `souls_server` (`inventory.rs`)
+| Rota | Método | Descrição |
+| :--- | :---: | :--- |
+| `/api/v1/inventory/hardware` | `GET` | Retorna diagnóstico de silício (GPU, VRAM, RAM, CPU). |
+| `/api/v1/inventory/recommendations` | `GET` | Retorna hardware probe + Tríade Recomendada + Catálogo Curado com Fit. |
+| `/api/v1/inventory/models` | `GET` | Varredura física dos arquivos GGUF em `llm_local_models`. |
+| `/api/v1/inventory/search` | `GET` | Busca repositórios GGUF no Hugging Face Hub (`q` ou `query`). |
+| `/api/v1/inventory/repo-files` | `GET` | Inspeciona arquivos `.gguf` de um repositório HF com avaliação de Fit. |
+| `/api/v1/inventory/download` | `POST` | Enfileira um novo download sequencial. |
+| `/api/v1/inventory/downloads` | `GET` | Retorna estado atual do download ativo e da fila. |
+| `/api/v1/inventory/download/{id}/pause` | `POST` | Pausa o download ativo mantendo o arquivo `.part`. |
+| `/api/v1/inventory/download/{id}/resume` | `POST` | Retoma o download via HTTP Range `bytes=X-`. |
+| `/api/v1/inventory/download/{id}/cancel` | `POST` | Cancela o download e descarta com segurança o `.part`. |
+| `/api/v1/inventory/downloads/stream` | `GET` | SSE loopback com progresso em tempo real a cada 500ms. |
+| `/api/v1/inventory/models/{file_name}` | `DELETE` | Exclui modelo físico com blindagem contra path traversal. |
+
+### 24.3 Interface Visual no Web Dashboard (`dashboard_ui.html`)
+* **Sub-Navegação Silício Local:** Alternância fluida entre `💾 Modelos Locais Instalados` e `✨ Model Hub & Downloads`.
+* **Card 1: Hardware Profiler Bare-Metal:** Exibe GPU primária, VRAM útil WDDM (5.29 GB), RAM do host, extensões AVX2 e teto de contexto dGPU (8.192 tokens).
+* **Card 2: Gerenciador Sequencial de Downloads Resiliente:** Barra de progresso visual com porcentagem, bytes transferidos/total, velocidade (MB/s), ETA estimado, status e botões `⏸ Pausar`, `▶ Retomar` e `✖ Cancelar`.
+* **Card 3: Tríade Recomendada pelo Hardware Profiler:** 3 cards com badges semânticos de compatibilidade (`[100% VRAM]`, `[Optimal Fit]`, etc.), benchmarks de velocidade e botão de 1-Click Download.
+* **Card 4: Catálogo Curado por Perfil Cognitivo:** Filtros por botões/pílulas de perfis (`Todos`, `orchestrator`, `deep_research`, `fast_reasoner`, `code_specialist`, `quick_triage`) com seletor interativo de quantização que recalcula dinamicamente em tempo real o tamanho e o badge de Hardware Fit.
+* **Card 5: Explorador Hugging Face Hub:** Campo de busca, listagem de repositórios com downloads e likes, inspeção instantânea de arquivos `.gguf` com badges de compatibilidade e botão de download direto de qualquer variante.
+
+
 

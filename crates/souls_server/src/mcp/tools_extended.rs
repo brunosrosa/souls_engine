@@ -5,27 +5,20 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{OnceLock, RwLock};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{json, Value};
 use sqlx::Row;
 
 use souls_protocol::error::McpDomainError;
-use souls_core::ansi_filter::strip_ansi_escapes;
 use souls_core::context_lean::{
-    count_tokens, lightweight_cleanup, multi_read_concurrent, smart_read_file,
+    compress_lean_code, count_tokens, dedup_text, fill_template_placeholders,
+    get_global_dedup_cache, multi_read_concurrent, rehydrate_text, smart_read_file,
 };
-use souls_core::fs::validate_refs_path;
-use souls_core::subprocess_guard::{SubprocessConfig, SubprocessGuard};
+use souls_core::error::CoreError;
+use souls_core::sandbox::{run_sandboxed_command, run_sandboxed_shell};
+use souls_core::web::{html_to_clean_markdown, parse_duckduckgo_html};
 use crate::AppState;
-
-/// In-memory thread-safe cache for deduplicated and CCR blocks (ephemeral RAM, 0 MB VRAM).
-static DEDUP_BLOCK_CACHE: OnceLock<RwLock<HashMap<String, String>>> = OnceLock::new();
-
-fn get_dedup_cache() -> &'static RwLock<HashMap<String, String>> {
-    DEDUP_BLOCK_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
-}
 
 fn url_encode(input: &str) -> String {
     let mut encoded = String::new();
@@ -171,89 +164,34 @@ pub async fn handle_multi_read(args: &serde_json::Map<String, Value>) -> Result<
     }))
 }
 
-fn strip_code_comments(code: &str) -> String {
-    let mut out = Vec::new();
-    let mut in_block_comment = false;
-    let mut last_was_empty = false;
-
-    for line in code.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            if !last_was_empty {
-                out.push(String::new());
-                last_was_empty = true;
-            }
-            continue;
-        }
-
-        if trimmed.starts_with("//") && !trimmed.starts_with("///") {
-            continue;
-        }
-        if trimmed.starts_with("/*") && trimmed.ends_with("*/") {
-            continue;
-        }
-        if trimmed.starts_with("/*") {
-            in_block_comment = true;
-            continue;
-        }
-        if in_block_comment {
-            if trimmed.contains("*/") {
-                in_block_comment = false;
-            }
-            continue;
-        }
-
-        let mut clean_line = line.to_string();
-        if let Some(idx) = clean_line.find(" //") {
-            clean_line.truncate(idx);
-        }
-
-        let clean_trimmed = clean_line.trim_end();
-        if !clean_trimmed.is_empty() {
-            out.push(clean_trimmed.to_string());
-            last_was_empty = false;
-        }
-    }
-
-    out.join("\n")
-}
-
 /// Handles `compress` applying LEAN syntax comment and whitespace reduction.
 pub async fn handle_compress(args: &serde_json::Map<String, Value>) -> Result<Value, McpDomainError> {
-    let raw_text = if let Some(t) = args.get("text").and_then(Value::as_str) {
-        t.to_string()
+    let (raw_text, lang_hint) = if let Some(t) = args.get("text").and_then(Value::as_str) {
+        (t.to_string(), args.get("lang").and_then(Value::as_str).map(|s| s.to_string()))
     } else if let Some(p_str) = args.get("path").and_then(Value::as_str) {
-        let p = PathBuf::from(p_str);
-        validate_refs_path(&p).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
-        tokio::fs::read_to_string(&p).await.map_err(|_| {
+        let p = souls_core::fs::resolve_workspace_path(p_str)
+            .map_err(|_| McpDomainError::RefsPathLeakViolation)?;
+        let content = tokio::fs::read_to_string(&p).await.map_err(|_| {
             McpDomainError::StructuredFailure
-        })?
+        })?;
+        let ext = p.extension().and_then(|e| e.to_str()).map(|s| s.to_string());
+        (content, ext)
     } else {
         return Err(McpDomainError::InvalidInputParameters);
     };
 
-    let original_tokens = count_tokens(&raw_text);
-    let stripped = strip_code_comments(&raw_text);
-    let compressed_text = lightweight_cleanup(&stripped);
-    let compressed_tokens = count_tokens(&compressed_text);
-
-    let saved = original_tokens.saturating_sub(compressed_tokens);
-    let reduction_pct = if original_tokens > 0 {
-        (saved as f64 / original_tokens as f64) * 100.0
-    } else {
-        0.0
-    };
+    let res = compress_lean_code(&raw_text, lang_hint.as_deref());
 
     Ok(json!({
         "content": [{
             "type": "text",
-            "text": compressed_text
+            "text": res.compressed_text
         }],
         "structuredContent": {
-            "original_tokens": original_tokens,
-            "compressed_tokens": compressed_tokens,
-            "tokens_saved": saved,
-            "reduction_percent": format!("{:.1}%", reduction_pct)
+            "original_tokens": res.original_tokens,
+            "compressed_tokens": res.compacted_tokens,
+            "tokens_saved": res.tokens_saved,
+            "reduction_percent": format!("{:.1}%", res.reduction_percent)
         },
         "isError": false
     }))
@@ -264,8 +202,8 @@ pub async fn handle_dedup(args: &serde_json::Map<String, Value>) -> Result<Value
     let raw_text = if let Some(t) = args.get("text").and_then(Value::as_str) {
         t.to_string()
     } else if let Some(p_str) = args.get("path").and_then(Value::as_str) {
-        let p = PathBuf::from(p_str);
-        validate_refs_path(&p).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
+        let p = souls_core::fs::resolve_workspace_path(p_str)
+            .map_err(|_| McpDomainError::RefsPathLeakViolation)?;
         tokio::fs::read_to_string(&p).await.map_err(|_| {
             McpDomainError::StructuredFailure
         })?
@@ -274,55 +212,18 @@ pub async fn handle_dedup(args: &serde_json::Map<String, Value>) -> Result<Value
     };
 
     let min_lines = args.get("min_lines").and_then(Value::as_u64).unwrap_or(5) as usize;
-    let lines: Vec<&str> = raw_text.lines().collect();
-
-    if lines.len() < min_lines * 2 {
-        return Ok(json!({
-            "content": [{ "type": "text", "text": raw_text }],
-            "structuredContent": { "deduplicated_blocks": 0, "status": "unchanged" },
-            "isError": false
-        }));
-    }
-
-    let mut seen_blocks: HashMap<String, String> = HashMap::new();
-    let mut out_lines = Vec::new();
-    let mut i = 0;
-    let mut dedup_count = 0;
-
-    let cache = get_dedup_cache();
-    let mut cache_guard = cache.write().unwrap();
-
-    while i < lines.len() {
-        if i + min_lines <= lines.len() {
-            let candidate_block = lines[i..i + min_lines].join("\n");
-            let block_hash = format!("{:08x}", candidate_block.chars().map(|c| c as u32).sum::<u32>());
-
-            if seen_blocks.contains_key(&block_hash) {
-                let marker = format!("[DEDUP_BLOCK_{}: {} lines omitted]", block_hash, min_lines);
-                cache_guard.insert(block_hash.clone(), candidate_block);
-                out_lines.push(marker);
-                i += min_lines;
-                dedup_count += 1;
-                continue;
-            } else {
-                seen_blocks.insert(block_hash, candidate_block);
-            }
-        }
-        out_lines.push(lines[i].to_string());
-        i += 1;
-    }
-
-    let result_text = out_lines.join("\n");
+    let cache = get_global_dedup_cache();
+    let res = dedup_text(&raw_text, min_lines, cache);
 
     Ok(json!({
         "content": [{
             "type": "text",
-            "text": result_text
+            "text": res.deduplicated_text
         }],
         "structuredContent": {
-            "deduplicated_blocks": dedup_count,
-            "original_lines": lines.len(),
-            "compacted_lines": out_lines.len()
+            "deduplicated_blocks": res.deduplicated_blocks,
+            "original_lines": res.original_lines,
+            "compacted_lines": res.compacted_lines
         },
         "isError": false
     }))
@@ -330,48 +231,36 @@ pub async fn handle_dedup(args: &serde_json::Map<String, Value>) -> Result<Value
 
 /// Handles `fill` rehydrating CCR placeholders or dedup markers back into lossless text.
 pub async fn handle_fill(args: &serde_json::Map<String, Value>) -> Result<Value, McpDomainError> {
-    let mut template = args
+    let template = args
         .get("template")
         .or_else(|| args.get("text"))
         .and_then(Value::as_str)
-        .ok_or(McpDomainError::InvalidInputParameters)?
-        .to_string();
+        .ok_or(McpDomainError::InvalidInputParameters)?;
 
-    let mut filled_count = 0;
+    let mut filled_text = template.to_string();
+    let mut total_filled = 0;
 
     if let Some(placeholders) = args.get("placeholders").and_then(Value::as_object) {
+        let mut map = HashMap::new();
         for (k, v) in placeholders {
-            let needle = format!("{{{{{}}}}}", k);
-            let val_str = v.as_str().unwrap_or(&v.to_string()).to_string();
-            if template.contains(&needle) {
-                template = template.replace(&needle, &val_str);
-                filled_count += 1;
-            }
+            map.insert(k.clone(), v.as_str().unwrap_or(&v.to_string()).to_string());
         }
+        let (f_text, count) = fill_template_placeholders(&filled_text, &map);
+        filled_text = f_text;
+        total_filled += count;
     }
 
-    {
-        let cache = get_dedup_cache();
-        let cache_guard = cache.read().unwrap();
-        for (hash, original_code) in cache_guard.iter() {
-            let prefix = format!("[DEDUP_BLOCK_{}:", hash);
-            if let Some(start_idx) = template.find(&prefix) {
-                if let Some(end_rel) = template[start_idx..].find(']') {
-                    let end_idx = start_idx + end_rel + 1;
-                    template.replace_range(start_idx..end_idx, original_code);
-                    filled_count += 1;
-                }
-            }
-        }
-    }
+    let cache = get_global_dedup_cache();
+    let (rehydrated, dedup_count) = rehydrate_text(&filled_text, cache);
+    total_filled += dedup_count;
 
     Ok(json!({
         "content": [{
             "type": "text",
-            "text": template
+            "text": rehydrated
         }],
         "structuredContent": {
-            "filled_count": filled_count,
+            "filled_count": total_filled,
             "status": "rehydrated"
         },
         "isError": false
@@ -431,7 +320,7 @@ pub async fn handle_headroom_retrieve(args: &serde_json::Map<String, Value>) -> 
         .and_then(Value::as_str)
         .ok_or(McpDomainError::InvalidInputParameters)?;
 
-    let cache = get_dedup_cache();
+    let cache = get_global_dedup_cache();
     let cache_guard = cache.read().unwrap();
 
     if let Some(original_code) = cache_guard.get(hash) {
@@ -624,7 +513,7 @@ pub async fn handle_search(args: &serde_json::Map<String, Value>) -> Result<Valu
     }))
 }
 
-/// Handles `shell` controlled terminal execution inside ReFS.
+/// Handles `shell` controlled terminal execution inside ReFS with Sandbox and Truncation Guard.
 pub async fn handle_shell(args: &serde_json::Map<String, Value>) -> Result<Value, McpDomainError> {
     let command = args
         .get("command")
@@ -633,59 +522,59 @@ pub async fn handle_shell(args: &serde_json::Map<String, Value>) -> Result<Value
 
     let cwd_str = args.get("cwd").and_then(Value::as_str).unwrap_or("Z:/souls_engine");
     let cwd_path = PathBuf::from(cwd_str);
-    validate_refs_path(&cwd_path).map_err(|_| McpDomainError::RefsPathLeakViolation)?;
-
     let timeout_ms = args.get("timeout_ms").and_then(Value::as_u64).unwrap_or(15_000);
 
-    let start = Instant::now();
+    match run_sandboxed_shell(command, &cwd_path, timeout_ms).await {
+        Ok(res) => {
+            let response_text = if !res.stderr.trim().is_empty() {
+                format!("STDOUT:\n{}\n\nSTDERR:\n{}", res.stdout.trim(), res.stderr.trim())
+            } else {
+                res.stdout.trim().to_string()
+            };
 
-    let cfg = SubprocessConfig::new("powershell")
-        .with_args(vec![
-            "-NoProfile".to_string(),
-            "-NonInteractive".to_string(),
-            "-Command".to_string(),
-            command.to_string(),
-        ])
-        .with_working_dir(cwd_path.to_string_lossy().to_string())
-        .with_kill_on_drop(true);
-
-    let guard = SubprocessGuard::spawn(&cfg)
-        .map_err(|_| McpDomainError::InternalEnginePanic)?;
-
-    let child = guard.into_child().ok_or(McpDomainError::InternalEnginePanic)?;
-    let exec_fut = child.wait_with_output();
-
-    let output = tokio::time::timeout(Duration::from_millis(timeout_ms), exec_fut)
-        .await
-        .map_err(|_| McpDomainError::StructuredFailure)?
-        .map_err(|_| McpDomainError::InternalEnginePanic)?;
-
-    let stdout_raw = String::from_utf8_lossy(&output.stdout);
-    let stderr_raw = String::from_utf8_lossy(&output.stderr);
-
-    let clean_stdout = strip_ansi_escapes(&stdout_raw);
-    let clean_stderr = strip_ansi_escapes(&stderr_raw);
-    let latency_ms = start.elapsed().as_millis() as u64;
-
-    let response_text = if !clean_stderr.trim().is_empty() {
-        format!("STDOUT:\n{}\n\nSTDERR:\n{}", clean_stdout.trim(), clean_stderr.trim())
-    } else {
-        clean_stdout.trim().to_string()
-    };
-
-    Ok(json!({
-        "content": [{
-            "type": "text",
-            "text": response_text
-        }],
-        "structuredContent": {
-            "exit_code": output.status.code().unwrap_or(-1),
-            "latency_ms": latency_ms,
-            "stdout": clean_stdout.trim(),
-            "stderr": clean_stderr.trim()
-        },
-        "isError": !output.status.success()
-    }))
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": response_text
+                }],
+                "structuredContent": {
+                    "exit_code": res.exit_code,
+                    "latency_ms": res.execution_time_ms,
+                    "stdout": res.stdout.trim(),
+                    "stderr": res.stderr.trim(),
+                    "truncated": res.truncated
+                },
+                "isError": res.exit_code != 0
+            }))
+        }
+        Err(CoreError::DangerousCommandBlocked(msg)) => {
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!("BLOCKED BY SANDBOX: {msg}")
+                }],
+                "structuredContent": {
+                    "blocked": true,
+                    "reason": msg
+                },
+                "isError": true
+            }))
+        }
+        Err(CoreError::ExecutionTimeout(ms)) => {
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!("TIMEOUT: Process execution exceeded {ms} ms")
+                }],
+                "structuredContent": {
+                    "timeout_ms": ms
+                },
+                "isError": true
+            }))
+        }
+        Err(CoreError::RefsPathLeakViolation(_)) => Err(McpDomainError::RefsPathLeakViolation),
+        Err(_) => Err(McpDomainError::InternalEnginePanic),
+    }
 }
 
 /// Handles `execute` sandboxed process execution.
@@ -706,40 +595,41 @@ pub async fn handle_execute(args: &serde_json::Map<String, Value>) -> Result<Val
         }
     }
 
-    let cfg = SubprocessConfig::new(executable)
-        .with_args(arg_strings)
-        .with_working_dir("Z:/souls_engine")
-        .with_kill_on_drop(true);
+    let cwd_str = args.get("cwd").and_then(Value::as_str).unwrap_or("Z:/souls_engine");
+    let cwd_path = PathBuf::from(cwd_str);
 
-    let start = Instant::now();
-    let guard = SubprocessGuard::spawn(&cfg)
-        .map_err(|_| McpDomainError::InternalEnginePanic)?;
-
-    let child = guard.into_child().ok_or(McpDomainError::InternalEnginePanic)?;
-    let exec_fut = child.wait_with_output();
-
-    let output = tokio::time::timeout(Duration::from_millis(timeout_ms), exec_fut)
-        .await
-        .map_err(|_| McpDomainError::StructuredFailure)?
-        .map_err(|_| McpDomainError::InternalEnginePanic)?;
-
-    let clean_stdout = strip_ansi_escapes(&String::from_utf8_lossy(&output.stdout));
-    let clean_stderr = strip_ansi_escapes(&String::from_utf8_lossy(&output.stderr));
-    let latency_ms = start.elapsed().as_millis() as u64;
-
-    Ok(json!({
-        "content": [{
-            "type": "text",
-            "text": clean_stdout.trim()
-        }],
-        "structuredContent": {
-            "executable": executable,
-            "exit_code": output.status.code().unwrap_or(-1),
-            "latency_ms": latency_ms,
-            "stderr": clean_stderr.trim()
-        },
-        "isError": !output.status.success()
-    }))
+    match run_sandboxed_command(executable, &arg_strings, &cwd_path, timeout_ms).await {
+        Ok(res) => {
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": res.stdout.trim()
+                }],
+                "structuredContent": {
+                    "executable": executable,
+                    "exit_code": res.exit_code,
+                    "latency_ms": res.execution_time_ms,
+                    "stderr": res.stderr.trim(),
+                    "truncated": res.truncated
+                },
+                "isError": res.exit_code != 0
+            }))
+        }
+        Err(CoreError::ExecutionTimeout(ms)) => {
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!("TIMEOUT: Command execution exceeded {ms} ms")
+                }],
+                "structuredContent": {
+                    "timeout_ms": ms
+                },
+                "isError": true
+            }))
+        }
+        Err(CoreError::RefsPathLeakViolation(_)) => Err(McpDomainError::RefsPathLeakViolation),
+        Err(_) => Err(McpDomainError::InternalEnginePanic),
+    }
 }
 
 /// Handles `fetch_web` scraping HTML and converting to clean Markdown in RAM.
@@ -762,7 +652,7 @@ pub async fn handle_fetch_web(args: &serde_json::Map<String, Value>) -> Result<V
     let status = resp.status().as_u16();
     let body_html = resp.text().await.unwrap_or_default();
 
-    let markdown = convert_html_to_markdown(&body_html);
+    let markdown = html_to_clean_markdown(&body_html);
 
     Ok(json!({
         "content": [{
@@ -778,95 +668,7 @@ pub async fn handle_fetch_web(args: &serde_json::Map<String, Value>) -> Result<V
     }))
 }
 
-fn convert_html_to_markdown(html: &str) -> String {
-    let mut out = String::new();
-    let mut in_script = false;
-    let mut in_style = false;
-    let mut in_tag = false;
-    let mut tag_buf = String::new();
-
-    let lower = html.to_lowercase();
-    let chars: Vec<char> = html.chars().collect();
-    let lower_chars: Vec<char> = lower.chars().collect();
-
-    let mut i = 0;
-    while i < chars.len() {
-        if in_script {
-            if i + 8 <= lower_chars.len() && &lower_chars[i..i + 9] == &['<', '/', 's', 'c', 'r', 'i', 'p', 't', '>'] {
-                in_script = false;
-                i += 9;
-                continue;
-            }
-            i += 1;
-            continue;
-        }
-
-        if in_style {
-            if i + 7 <= lower_chars.len() && &lower_chars[i..i + 8] == &['<', '/', 's', 't', 'y', 'l', 'e', '>'] {
-                in_style = false;
-                i += 8;
-                continue;
-            }
-            i += 1;
-            continue;
-        }
-
-        if chars[i] == '<' {
-            in_tag = true;
-            tag_buf.clear();
-            i += 1;
-            continue;
-        }
-
-        if in_tag {
-            if chars[i] == '>' {
-                in_tag = false;
-                let tag_lower = tag_buf.trim().to_lowercase();
-                if tag_lower.starts_with("script") {
-                    in_script = true;
-                } else if tag_lower.starts_with("style") {
-                    in_style = true;
-                } else if tag_lower.starts_with("p") || tag_lower.starts_with("div") || tag_lower.starts_with("br") {
-                    out.push('\n');
-                } else if tag_lower.starts_with("h1") {
-                    out.push_str("\n# ");
-                } else if tag_lower.starts_with("h2") {
-                    out.push_str("\n## ");
-                } else if tag_lower.starts_with("h3") {
-                    out.push_str("\n### ");
-                } else if tag_lower.starts_with("li") {
-                    out.push_str("\n- ");
-                }
-            } else {
-                tag_buf.push(chars[i]);
-            }
-            i += 1;
-            continue;
-        }
-
-        out.push(chars[i]);
-        i += 1;
-    }
-
-    let mut cleaned_lines = Vec::new();
-    let mut last_empty = false;
-    for line in out.lines() {
-        let t = line.trim();
-        if t.is_empty() {
-            if !last_empty {
-                cleaned_lines.push("");
-                last_empty = true;
-            }
-        } else {
-            cleaned_lines.push(t);
-            last_empty = false;
-        }
-    }
-
-    cleaned_lines.join("\n")
-}
-
-/// Handles `web_search` querying DuckDuckGo HTML Lite and parsing results.
+/// Handles `web_search` querying DuckDuckGo HTML Lite and parsing results via souls_core::web.
 pub async fn handle_web_search(args: &serde_json::Map<String, Value>) -> Result<Value, McpDomainError> {
     let query = args
         .get("query")
@@ -889,18 +691,37 @@ pub async fn handle_web_search(args: &serde_json::Map<String, Value>) -> Result<
     })?;
 
     let body_html = resp.text().await.unwrap_or_default();
-    let results = parse_duckduckgo_results(&body_html, limit);
+    let web_results = parse_duckduckgo_html(&body_html, limit);
 
-    let formatted_text = if results.is_empty() {
+    let formatted_text = if web_results.is_empty() {
         format!("No live web search results found for '{}'.", query)
     } else {
-        results
+        web_results
             .iter()
             .enumerate()
-            .map(|(idx, r)| format!("{}. **{}**\n   {}\n   Link: {}", idx + 1, r["title"].as_str().unwrap_or(""), r["snippet"].as_str().unwrap_or(""), r["link"].as_str().unwrap_or("")))
+            .map(|(idx, r)| {
+                format!(
+                    "{}. **{}**\n   {}\n   Link: {}",
+                    idx + 1,
+                    r.title,
+                    r.snippet,
+                    r.link
+                )
+            })
             .collect::<Vec<_>>()
             .join("\n\n")
     };
+
+    let results_json: Vec<Value> = web_results
+        .into_iter()
+        .map(|r| {
+            json!({
+                "title": r.title,
+                "link": r.link,
+                "snippet": r.snippet
+            })
+        })
+        .collect();
 
     Ok(json!({
         "content": [{
@@ -909,64 +730,11 @@ pub async fn handle_web_search(args: &serde_json::Map<String, Value>) -> Result<
         }],
         "structuredContent": {
             "query": query,
-            "count": results.len(),
-            "results": results
+            "count": results_json.len(),
+            "results": results_json
         },
         "isError": false
     }))
-}
-
-fn parse_duckduckgo_results(html: &str, limit: usize) -> Vec<Value> {
-    let mut results = Vec::new();
-    let mut pos = 0;
-
-    while let Some(link_start) = html[pos..].find("class=\"result__snippet\"") {
-        let abs_start = pos + link_start;
-        let window_start = abs_start.saturating_sub(1000);
-        let prefix_window = &html[window_start..abs_start];
-
-        let title = if let Some(t_idx) = prefix_window.rfind("class=\"result__url\"") {
-            if let Some(t_text_start) = prefix_window[t_idx..].find('>') {
-                let text_slice = &prefix_window[t_idx + t_text_start + 1..];
-                if let Some(t_end) = text_slice.find('<') {
-                    text_slice[..t_end].trim().to_string()
-                } else {
-                    "Result".to_string()
-                }
-            } else {
-                "Result".to_string()
-            }
-        } else {
-            "Result".to_string()
-        };
-
-        let snippet_slice = &html[abs_start..];
-        let snippet = if let Some(tag_end) = snippet_slice.find('>') {
-            let inner = &snippet_slice[tag_end + 1..];
-            if let Some(close_tag) = inner.find("</a>") {
-                convert_html_to_markdown(&inner[..close_tag]).replace('\n', " ").trim().to_string()
-            } else {
-                "".to_string()
-            }
-        } else {
-            "".to_string()
-        };
-
-        if !snippet.is_empty() {
-            results.push(json!({
-                "title": title,
-                "snippet": snippet,
-                "link": format!("https://duckduckgo.com/?q={}", url_encode(&title))
-            }));
-            if results.len() >= limit {
-                break;
-            }
-        }
-
-        pos = abs_start + 50;
-    }
-
-    results
 }
 
 /// Handles `repo_meta` extracting git metadata under ReFS.
@@ -1335,7 +1103,7 @@ pub async fn handle_session(_state: &AppState, args: &serde_json::Map<String, Va
     let session_id = args.get("session_id").and_then(Value::as_str).unwrap_or("active_session");
 
     if action == "reset" {
-        let cache = get_dedup_cache();
+        let cache = get_global_dedup_cache();
         cache.write().unwrap().clear();
         Ok(json!({
             "content": [{
@@ -1346,7 +1114,7 @@ pub async fn handle_session(_state: &AppState, args: &serde_json::Map<String, Va
             "isError": false
         }))
     } else {
-        let cache = get_dedup_cache();
+        let cache = get_global_dedup_cache();
         let count = cache.read().unwrap().len();
         Ok(json!({
             "content": [{

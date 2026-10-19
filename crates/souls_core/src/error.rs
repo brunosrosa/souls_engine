@@ -33,6 +33,18 @@ pub enum CoreError {
     #[error("Subprocess guard error: {0}")]
     SubprocessError(String),
 
+    /// Dangerous command blocked by sandbox security filter.
+    #[error("Dangerous command blocked by sandbox: {0}")]
+    DangerousCommandBlocked(String),
+
+    /// Process execution timed out.
+    #[error("Execution timed out after {0} ms")]
+    ExecutionTimeout(u64),
+
+    /// Web extraction or HTML parsing failure.
+    #[error("Web extraction error: {0}")]
+    WebExtractionError(String),
+
     /// Logging / Tracing initialization failure.
     #[error("Tracing initialization error: {0}")]
     TracingInitError(String),
