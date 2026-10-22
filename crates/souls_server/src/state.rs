@@ -46,6 +46,7 @@ pub struct AppState {
     pub mcp_sessions: Arc<crate::mcp::McpSessionManager>,
     pub inventory_downloader: Arc<souls_llm_inventory::DownloadManager>,
     pub hf_client: Arc<souls_llm_inventory::HuggingFaceClient>,
+    pub local_arena: Arc<tokio::sync::Mutex<souls_llm_local_arena::ArenaRunner>>,
     active_connections: Arc<AtomicUsize>,
     start_time: Instant,
 }
@@ -66,6 +67,7 @@ impl AppState {
             mcp_sessions: Arc::new(crate::mcp::McpSessionManager::new()),
             inventory_downloader: Arc::new(souls_llm_inventory::DownloadManager::new()),
             hf_client: Arc::new(souls_llm_inventory::HuggingFaceClient::new()),
+            local_arena: Arc::new(tokio::sync::Mutex::new(souls_llm_local_arena::ArenaRunner::new())),
             active_connections: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),
         }

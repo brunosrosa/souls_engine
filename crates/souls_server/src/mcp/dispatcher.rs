@@ -137,7 +137,44 @@ pub async fn dispatch_jsonrpc(
                 .or_else(|| params.get("full").and_then(Value::as_bool))
                 .unwrap_or(false);
 
-            Ok(list_tools(full_mode))
+            let query = params
+                .get("query")
+                .or_else(|| params.get("intent"))
+                .and_then(Value::as_str);
+
+            if let Some(q) = query {
+                if !q.trim().is_empty() {
+                    let namespace = params.get("namespace").and_then(Value::as_str);
+                    let top_k = params.get("top_k").and_then(Value::as_u64).map(|k| k as usize);
+                    let decision = crate::mcp::switchboard::evaluate_switchboard(state, q, namespace, top_k).await;
+                    let tools_json: Vec<Value> = decision
+                        .tools
+                        .into_iter()
+                        .map(|t| {
+                            json!({
+                                "name": t.name,
+                                "description": t.description,
+                                "inputSchema": t.schema,
+                            })
+                        })
+                        .collect();
+
+                    Ok(json!({
+                        "tools": tools_json,
+                        "switchboard": {
+                            "stage": decision.stage,
+                            "confidence": decision.confidence,
+                            "entropy": decision.entropy,
+                            "latency_ms": decision.latency_ms,
+                            "recommended_skill": decision.recommended_skill,
+                        }
+                    }))
+                } else {
+                    Ok(list_tools(full_mode))
+                }
+            } else {
+                Ok(list_tools(full_mode))
+            }
         }
 
         "tools/call" => {

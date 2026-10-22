@@ -162,9 +162,11 @@ pub struct EnqueueDownloadPayload {
     pub file_name: String,
     pub download_url: Option<String>,
     pub expected_sha256: Option<String>,
+    pub projector_file: Option<String>,
+    pub projector_url: Option<String>,
 }
 
-/// Enqueues a model for background downloading.
+/// Enqueues a model for background downloading (including companion VLM projector if requested).
 pub async fn inventory_download_handler(
     State(state): State<AppState>,
     Json(payload): Json<EnqueueDownloadPayload>,
@@ -190,10 +192,34 @@ pub async fn inventory_download_handler(
         )
         .await
     {
-        Ok(item) => Json(json!({
-            "status": "enqueued",
-            "item": item
-        })),
+        Ok(item) => {
+            let mut enqueued_items = vec![item];
+
+            // If this is a VLM with companion vision projector, enqueue it automatically
+            if let Some(proj_name) = payload.projector_file {
+                let proj_url = payload.projector_url.unwrap_or_else(|| {
+                    format!(
+                        "https://huggingface.co/{}/resolve/main/{}",
+                        payload.repo_id, proj_name
+                    )
+                });
+                if let Ok(proj_item) = state
+                    .inventory_downloader
+                    .enqueue_download(&payload.repo_id, &proj_name, &proj_url, None, &dest_dir)
+                    .await
+                {
+                    enqueued_items.push(proj_item);
+                }
+            }
+
+            let primary_item = enqueued_items.first().cloned();
+            Json(json!({
+                "status": "enqueued",
+                "item": primary_item,
+                "items": enqueued_items,
+                "count": enqueued_items.len()
+            }))
+        }
         Err(e) => Json(json!({
             "status": "error",
             "message": e.to_string()

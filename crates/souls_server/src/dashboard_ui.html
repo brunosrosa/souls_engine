@@ -1974,6 +1974,68 @@
         </div>
 
       </div>
+
+      <!-- CARD 5: ORQUESTRAÇÃO DE SUBAGENTES & CICLO FECHADO DE HANDOFF (L3) -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-amber">🤖</div>
+              Sessões de Subagentes & Ciclo Fechado de Handoff (L3 Memory Vault)
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+              Ciclo de vida isolado de subagentes: raciocínio passo a passo blindado em <code class="mono">sub_agent_diaries</code> e envelopes atômicos em <code class="mono">handoff_payloads</code>.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-cyan" onclick="fetchSubAgentSessions()" style="padding: 6px 14px; font-size: 0.75rem;">
+              <span>🔄</span> Atualizar Sessões
+            </button>
+            <span class="badge badge-champion" id="subagent-sessions-count-badge">0 Sessões</span>
+          </div>
+        </div>
+
+        <!-- STATS DOS SUBAGENTES -->
+        <div class="stat-row" style="margin-top: 0; margin-bottom: 16px;">
+          <div class="stat-box">
+            <div class="stat-lbl">Total Sessões</div>
+            <div class="stat-num" id="stat-subagent-total">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-lbl">Ativas (Spawned / Running)</div>
+            <div class="stat-num" id="stat-subagent-active" style="color: var(--amber);">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-lbl">Concluídas (Handoffs)</div>
+            <div class="stat-num" id="stat-subagent-completed" style="color: var(--green);">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-lbl">Janela Mestre Protegida</div>
+            <div class="stat-num" id="stat-subagent-prefix-cache" style="color: var(--cyan);">&gt;95% Cache</div>
+          </div>
+        </div>
+
+        <!-- TABELA DE SESSÕES DE SUBAGENTES -->
+        <div class="table-container">
+          <table class="arena-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Session ID</th>
+                <th>Subagente / Perfil</th>
+                <th style="width: 140px;">Parent Session</th>
+                <th style="width: 120px;" class="text-center">Status</th>
+                <th style="width: 150px;">Criado em</th>
+                <th style="width: 160px;" class="text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="subagent-sessions-tbody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhuma sessão de subagente registrada ainda.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- ========================================== -->
@@ -1986,9 +2048,17 @@
           <span>💾 Modelos Locais Instalados</span>
           <span class="tab-count-badge" id="badge-subtab-installed-count">13</span>
         </button>
+        <button class="subtab-btn" id="btn-subtab-arena" onclick="switchLocalSubtab('arena')">
+          <span>🏟️ Local Silicon Arena</span>
+          <span class="tab-count-badge" id="badge-subtab-arena-benchmarks" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); display: none;">0</span>
+        </button>
         <button class="subtab-btn" id="btn-subtab-hub" onclick="switchLocalSubtab('hub')">
           <span>✨ Model Hub & Downloads</span>
           <span class="tab-count-badge" id="badge-active-downloads-count" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); display: none;">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-subtab-switchboard" onclick="switchLocalSubtab('switchboard')">
+          <span>⚡ Switchboard MCP (<1.7ms)</span>
+          <span class="tab-count-badge" id="badge-switchboard-tools-count" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">55</span>
         </button>
       </div>
 
@@ -2034,6 +2104,159 @@
                 <!-- Renderizado dinamicamente via JS -->
                 <tr>
                   <td colspan="9" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 3: LOCAL SILICON ARENA (BENCHMARKS BARE-METAL) -->
+      <div id="panel-local-arena" style="display: none;">
+        <!-- CARD 1: RUNNER DE BENCHMARK INTERATIVO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-emerald">🏟️</div>
+                Local Silicon Arena — Aferição & Provas de Silício Bare-Metal (ADR-007)
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Execução de baterias de prova diretamente no hardware real (NVIDIA RTX 2060m CUDA & Intel i9 AVX2). Telemetria registrada no FrankenSQLite STRICT.
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-emerald" onclick="syncLocalArenaHermes()">
+                <span>🔗</span> Sincronizar HardLinks Hermes
+              </button>
+              <button class="btn btn-cyan" onclick="fetchLocalArenaData()">
+                <span>🔄</span> Atualizar Benchmarks
+              </button>
+            </div>
+          </div>
+
+          <!-- CONTROLE DE DISPARO DE PROVA -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px;">
+            <div style="display: grid; grid-template-columns: 2fr 2fr 1.5fr auto; gap: 14px; align-items: end;">
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">SELECIONAR MODELO LOCAL</label>
+                <select id="arena-runner-model-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="">Carregando modelos instalados...</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">BATERIA DE PROVA CANÔNICA</label>
+                <select id="arena-runner-type-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="1">Type 1 — HardwareProfile (Velocidade TPS, VRAM Real, TTFT/TPOT)</option>
+                  <option value="2">Type 2 — CognitiveEval (Rust AST Parsing, CoT Socrático)</option>
+                  <option value="3">Type 3 — MultimodalVision (VLM + mmproj-F16.gguf Pareamento)</option>
+                  <option value="4">Type 4 — SpeculativeDraft (Taxa Alpha & Speedup de Rascunho)</option>
+                  <option value="5">Type 5 — ContextPressure (Needle-in-a-Haystack 4k a 32k)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">MOTOR DE SILÍCIO</label>
+                <select id="arena-runner-engine-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="">Auto (CUDA para dGPU / AVX2 para CPU)</option>
+                  <option value="llama-cuda">LlamaCpp CUDA (NVIDIA RTX 2060m)</option>
+                  <option value="llama-cpu">LlamaCpp CPU (Intel Core i9 AVX2)</option>
+                  <option value="onnx-cpu">ONNX Runtime CPU (Zero VRAM)</option>
+                </select>
+              </div>
+
+              <div>
+                <button class="btn btn-emerald" id="btn-run-arena-benchmark" onclick="executeSelectedArenaBenchmark()" style="height: 38px; padding: 0 20px; white-space: nowrap; font-weight: 600;">
+                  <span>⚡</span> Rodar Prova no Silício
+                </button>
+              </div>
+            </div>
+
+            <!-- RESULTADO EM TEMPO REAL DO TESTE -->
+            <div id="arena-live-feedback" style="display: none; margin-top: 16px; padding: 14px; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 0.82rem; font-weight: 600; color: #fff;" id="arena-live-title">
+                  Resultado do Benchmark
+                </div>
+                <div id="arena-live-verdict-badge"></div>
+              </div>
+              <div id="arena-live-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 10px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: TABELA DE MODELOS & TELEMETRIA REAL NO SILÍCIO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">📊</div>
+                Inventário Homologado no Silício & Métricas Empíricas
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Valores reais obtidos por telemetria NVML e cronometragem bare-metal.
+              </p>
+            </div>
+            <div id="arena-models-summary-badge" class="badge badge-champion">14 Modelos Mapeados</div>
+          </div>
+
+          <div class="table-container">
+            <table class="arena-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;" class="text-center">Tier</th>
+                  <th>Modelo & Identificador</th>
+                  <th style="width: 100px;">Quantização</th>
+                  <th style="width: 120px;" class="text-center">Throughput (TPS)</th>
+                  <th style="width: 100px;" class="text-center">TTFT Prefill</th>
+                  <th style="width: 120px;" class="text-center">VRAM Pico (NVML)</th>
+                  <th style="width: 90px;" class="text-center">E³ Score</th>
+                  <th style="width: 140px;" class="text-center">Status de Prova</th>
+                  <th style="width: 130px;" class="text-center">Ação Rápida</th>
+                </tr>
+              </thead>
+              <tbody id="arena-models-tbody">
+                <tr>
+                  <td colspan="9" style="text-align: center; color: var(--text-muted);">Carregando modelos da Arena...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CARD 3: HISTÓRICO DE AUDITORIA DE TELEMETRIA (arena_telemetry) -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-purple">📜</div>
+                Histórico Recente de Ensaios no Silício (Heuristic Vault)
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Últimas 50 execuções registradas na tabela STRICT <code class="mono">arena_telemetry</code>.
+              </p>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="arena-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;" class="text-center">ID</th>
+                  <th>Modelo</th>
+                  <th style="width: 130px;">Bateria</th>
+                  <th style="width: 110px;" class="text-center">Motor</th>
+                  <th style="width: 90px;" class="text-center">TPS</th>
+                  <th style="width: 90px;" class="text-center">TTFT</th>
+                  <th style="width: 110px;" class="text-center">VRAM Pico</th>
+                  <th style="width: 100px;" class="text-center">Status</th>
+                  <th style="width: 140px;">Data / Hora</th>
+                </tr>
+              </thead>
+              <tbody id="arena-telemetry-tbody">
+                <tr>
+                  <td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum histórico registrado no vault ainda.</td>
                 </tr>
               </tbody>
             </table>
@@ -2138,12 +2361,13 @@
             </div>
           </div>
           <div class="profile-selector" id="curated-profile-filters">
-            <button class="profile-pill active" onclick="filterCuratedProfile('all')">Todos</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('orchestrator')">👑 Orchestrator</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('deep_research')">🔬 Deep Research</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('fast_reasoner')">⚡ Fast Reasoner</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('code_specialist')">💻 Code Specialist</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('quick_triage')">🚦 Quick Triage</button>
+            <button class="profile-pill active" onclick="filterCuratedProfile('all')">Todos os Perfis</button>
+            <button class="profile-pill" onclick="filterCuratedProfile('coding')">💻 Coding Specialist</button>
+            <button class="profile-pill" onclick="filterCuratedProfile('reasoning')">🧠 Deep Reasoning (R1 CoT)</button>
+            <button class="profile-pill" onclick="filterCuratedProfile('agentic')">🤖 Agentic & Tool Calling</button>
+            <button class="profile-pill" onclick="filterCuratedProfile('design')">🎨 UI/UX & Frontend Design</button>
+            <button class="profile-pill" onclick="filterCuratedProfile('vision')">👁️ Vision Multimodal (VLM)</button>
+            <button class="profile-pill" onclick="filterCuratedProfile('fast')">⚡ Fast Reflex & Triage</button>
           </div>
           <div class="curated-grid" id="curated-models-grid">
             <!-- Preenchido dinamicamente via JS -->
@@ -2173,6 +2397,145 @@
             <div style="text-align: center; color: var(--text-muted); padding: 16px; font-size: 0.82rem;">
               Digite um termo ou repositório acima para explorar arquivos GGUF na nuvem Hugging Face.
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 4: TWO-STAGE SEMANTIC SWITCHBOARD -->
+      <div id="panel-local-switchboard" style="display: none;">
+        <!-- CARD 1: RUNNER DE PROJEÇÃO DINÂMICA INTERATIVO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-purple">⚡</div>
+                Two-Stage Semantic Switchboard & Projeção Dinâmica MCP (<1.7ms)
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Mecanismo bare-metal de economia de contexto na CPU Host (AVX2, 0 MB VRAM). Injeta seletivamente de 3 a 8 ferramentas ideais no turno, poupando 4.000 a 6.000 tokens e preservando prefix caching >95%.
+              </p>
+            </div>
+            <button class="btn btn-purple" onclick="fetchSwitchboardSkills()">
+              <span>🔄</span> Recarregar Skills
+            </button>
+          </div>
+
+          <!-- CONTROLE DE ENTRADA DO SWITCHBOARD -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px;">
+            <div style="display: grid; grid-template-columns: 3fr 1.5fr 1fr auto; gap: 14px; align-items: end;">
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">INTENÇÃO OU PROMPT DO TURNO</label>
+                <input type="text" id="switchboard-query-input" class="setting-input" style="width: 100%; font-size: 0.82rem;" placeholder="Ex: refatorar funcao com myers diff na ast, salvar memoria l2, medir vram rtx 2060m..." onkeydown="if(event.key==='Enter') executeSwitchboardEvaluation()">
+              </div>
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">FILTRAR NAMESPACE (OPCIONAL)</label>
+                <select id="switchboard-ns-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="">Todos os Namespaces</option>
+                  <option value="code">code (Cirurgia AST & Myers Diff)</option>
+                  <option value="memory">memory (L2 & Grafo Ladybug)</option>
+                  <option value="think">think (Freio Socrático DAG)</option>
+                  <option value="ops">ops (Sandbox & Terminal)</option>
+                  <option value="sys">sys (NVML Watchdog & Hardware)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TOP-K TOOLS</label>
+                <select id="switchboard-topk-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="3">Top-3</option>
+                  <option value="5" selected>Top-5</option>
+                  <option value="8">Top-8</option>
+                </select>
+              </div>
+              <div>
+                <button class="btn btn-cyan" id="btn-run-switchboard" onclick="executeSwitchboardEvaluation()" style="padding: 9px 18px; font-weight: 600;">
+                  <span>⚡</span> Avaliar Switchboard
+                </button>
+              </div>
+            </div>
+
+            <!-- PRESETS DE TESTE RÁPIDO -->
+            <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center;">
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">PRESETS RÁPIDOS:</span>
+              <button class="btn-micro" onclick="setSwitchboardPreset('extrair outline de funcao rust via ast')">🔧 Código / AST</button>
+              <button class="btn-micro" onclick="setSwitchboardPreset('salvar fato epistemico no sqlite l2 e ladybug')">🧠 Memória L2</button>
+              <button class="btn-micro" onclick="setSwitchboardPreset('analisar hipotese em grafo dag socratico')">🤔 Pensamento Socrático</button>
+              <button class="btn-micro" onclick="setSwitchboardPreset('medir telemetria termica e vram rtx 2060m')">🌡️ Hardware NVML</button>
+              <button class="btn-micro" onclick="setSwitchboardPreset('consultar precos e campeoes cloud arena pareto')">🌐 Cloud FinOps</button>
+              <button class="btn-micro" onclick="setSwitchboardPreset('executar comando shell em sandbox seguro')">🛡️ Safe Sandbox</button>
+            </div>
+          </div>
+
+          <!-- LIVE DECISION RESULT BANNER -->
+          <div id="switchboard-result-container" style="display: none; margin-top: 20px;">
+            <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 18px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span id="sb-stage-badge" class="badge" style="background: rgba(168, 85, 247, 0.25); color: var(--purple); font-size: 0.8rem; padding: 4px 10px;">⚡ Fast-Path RAM Cosine</span>
+                  <span style="font-size: 0.82rem; color: var(--text-muted);" id="sb-summary-text">5 ferramentas projetadas para o contexto</span>
+                </div>
+                <div style="display: flex; gap: 16px; font-family: var(--font-mono); font-size: 0.78rem;">
+                  <div>Latência: <strong id="sb-latency" style="color: var(--cyan);">0.0 ms</strong></div>
+                  <div>Confiança: <strong id="sb-confidence" style="color: var(--emerald);">0%</strong></div>
+                  <div>Entropia: <strong id="sb-entropy" style="color: var(--amber);">0.00</strong></div>
+                </div>
+              </div>
+
+              <!-- SKILL RECOMENDADA -->
+              <div id="sb-skill-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">🎯</span>
+                    <strong id="sb-skill-name" style="color: var(--purple); font-size: 0.92rem;">souls-code-surgeon</strong>
+                    <span id="sb-skill-score-badge" class="badge" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">Score: 0.95</span>
+                  </div>
+                  <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Skill Operacional Canônica</span>
+                </div>
+                <p id="sb-skill-desc" style="font-size: 0.78rem; color: var(--text-muted); margin: 6px 0 10px 0;">Descrição da skill recomendada.</p>
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Ferramentas Primárias da Skill:</span>
+                  <div id="sb-skill-primary-tools" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                </div>
+              </div>
+
+              <!-- FERRAMENTAS PROJETADAS DINAMICAMENTE -->
+              <div>
+                <h4 style="font-size: 0.8rem; color: #fff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em;">Ferramentas Projetadas Dinamicamente (Injeção Cirúrgica):</h4>
+                <div class="table-container">
+                  <table class="arena-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 140px;">Ferramenta</th>
+                        <th style="width: 100px;" class="text-center">Namespace</th>
+                        <th style="width: 80px;" class="text-center">Score</th>
+                        <th>Descrição da Ferramenta</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sb-projected-tools-tbody">
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: CATÁLOGO COMPLETO DAS 15 SKILLS CANÔNICAS -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">📚</div>
+                Catálogo Operacional de Skills Canônicas (.agents/skills/)
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Matriz de 15 competências comportamentais e seus vínculos com as 55 ferramentas MCP.
+              </p>
+            </div>
+            <span class="badge badge-lowcost">15 Skills &bull; 55 Tools</span>
+          </div>
+
+          <div id="sb-skills-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 14px;">
+            <div style="text-align: center; color: var(--text-muted); padding: 20px;">Carregando catálogo de skills...</div>
           </div>
         </div>
       </div>
@@ -3558,17 +3921,471 @@
 
       const panelInstalled = document.getElementById('panel-local-installed');
       const panelHub = document.getElementById('panel-local-hub');
+      const panelArena = document.getElementById('panel-local-arena');
+      const panelSwitchboard = document.getElementById('panel-local-switchboard');
 
       if (subtab === 'installed') {
         if (panelInstalled) panelInstalled.style.display = 'block';
         if (panelHub) panelHub.style.display = 'none';
+        if (panelArena) panelArena.style.display = 'none';
+        if (panelSwitchboard) panelSwitchboard.style.display = 'none';
         fetchLocalModels();
+      } else if (subtab === 'arena') {
+        if (panelInstalled) panelInstalled.style.display = 'none';
+        if (panelHub) panelHub.style.display = 'none';
+        if (panelArena) panelArena.style.display = 'block';
+        if (panelSwitchboard) panelSwitchboard.style.display = 'none';
+        fetchLocalArenaData();
       } else if (subtab === 'hub') {
         if (panelInstalled) panelInstalled.style.display = 'none';
         if (panelHub) panelHub.style.display = 'block';
+        if (panelArena) panelArena.style.display = 'none';
+        if (panelSwitchboard) panelSwitchboard.style.display = 'none';
         fetchHardwareAndRecommendations();
         fetchInventoryDownloads();
         connectDownloadsSSE();
+      } else if (subtab === 'switchboard') {
+        if (panelInstalled) panelInstalled.style.display = 'none';
+        if (panelHub) panelHub.style.display = 'none';
+        if (panelArena) panelArena.style.display = 'none';
+        if (panelSwitchboard) panelSwitchboard.style.display = 'block';
+        fetchSwitchboardSkills();
+      }
+    }
+
+    // ==========================================
+    // 3.2 LOCAL SILICON ARENA (ADR-007)
+    // ==========================================
+    let arenaModelsData = [];
+    let arenaTelemetryData = [];
+
+    async function fetchLocalArenaData() {
+      try {
+        const [resModels, resBench] = await Promise.all([
+          fetch('/api/v1/arena/models'),
+          fetch('/api/v1/arena/benchmarks')
+        ]);
+
+        if (resModels.ok) {
+          const dataModels = await resModels.json();
+          arenaModelsData = dataModels.models || [];
+          renderArenaModelsTable(arenaModelsData);
+          populateArenaRunnerModelSelect(arenaModelsData);
+
+          const benchmarkedCount = arenaModelsData.filter(m => m.status === 'BENCHMARKED').length;
+          const badge = document.getElementById('badge-subtab-arena-benchmarks');
+          if (badge) {
+            badge.innerText = benchmarkedCount;
+            badge.style.display = benchmarkedCount > 0 ? 'inline-block' : 'none';
+          }
+          const sumBadge = document.getElementById('arena-models-summary-badge');
+          if (sumBadge) {
+            sumBadge.innerText = `${arenaModelsData.length} Modelos Mapeados • ${benchmarkedCount} Homologados`;
+          }
+        }
+
+        if (resBench.ok) {
+          const dataBench = await resBench.json();
+          arenaTelemetryData = dataBench.history || [];
+          renderArenaTelemetryTable(arenaTelemetryData);
+        }
+      } catch (err) {
+        console.error('Falha ao carregar dados da Arena Local:', err);
+      }
+    }
+
+    function populateArenaRunnerModelSelect(models) {
+      const select = document.getElementById('arena-runner-model-select');
+      if (!select) return;
+      if (!models || models.length === 0) {
+        select.innerHTML = '<option value="">Nenhum modelo disponível</option>';
+        return;
+      }
+      select.innerHTML = models.map(m => `
+        <option value="${m.model_id}">${m.name} (${m.tier} • ${m.quantization || 'GGUF'})</option>
+      `).join('');
+    }
+
+    function renderArenaModelsTable(models) {
+      const tbody = document.getElementById('arena-models-tbody');
+      if (!tbody) return;
+      if (!models || models.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum modelo descoberto no disco.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = models.map(m => {
+        const isBenchmarked = m.status === 'BENCHMARKED';
+        const statusBadge = isBenchmarked
+          ? '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3);">✅ Homologado</span>'
+          : '<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3);">⏳ Pendente</span>';
+
+        const tpsHtml = m.latest_tps
+          ? `<strong style="color: var(--emerald); font-size: 0.85rem;">${m.latest_tps.toFixed(1)}</strong> <span style="font-size: 0.7rem; color: var(--text-muted);">tok/s</span>`
+          : '<span style="color: var(--text-muted);">--</span>';
+
+        const ttftHtml = m.latest_ttft_ms
+          ? `<span class="mono" style="color: var(--cyan);">${m.latest_ttft_ms.toFixed(0)} ms</span>`
+          : '<span style="color: var(--text-muted);">--</span>';
+
+        const vramHtml = m.latest_vram_peak_mb
+          ? `<span class="mono" style="color: #f43f5e;">${m.latest_vram_peak_mb.toFixed(0)} MB</span>`
+          : `<span class="mono" style="color: var(--text-muted);">${m.size_mb ? (m.size_mb + 36).toFixed(0) + ' MB (est)' : '--'}</span>`;
+
+        const e3Html = m.e3_score
+          ? `<span class="mono" style="color: #a855f7;">${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)}</span>`
+          : '<span style="color: var(--text-muted);">--</span>';
+
+        return `
+          <tr>
+            <td class="text-center"><span class="badge badge-champion" style="font-size: 0.68rem;">${m.tier}</span></td>
+            <td>
+              <div style="font-weight: 600; color: #fff; font-size: 0.82rem;">${m.name}</div>
+              <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">${m.model_id}</div>
+            </td>
+            <td class="mono">${m.quantization || 'GGUF'}</td>
+            <td class="text-center">${tpsHtml}</td>
+            <td class="text-center">${ttftHtml}</td>
+            <td class="text-center">${vramHtml}</td>
+            <td class="text-center">${e3Html}</td>
+            <td class="text-center">${statusBadge}</td>
+            <td class="text-center">
+              <button class="btn btn-emerald" style="padding: 4px 10px; font-size: 0.72rem;" onclick="runSpecificArenaBenchmark('${m.model_id}', 1)" title="Executar Type 1 (Hardware Profile) diretamente neste modelo">
+                <span>⚡</span> Testar
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderArenaTelemetryTable(history) {
+      const tbody = document.getElementById('arena-telemetry-tbody');
+      if (!tbody) return;
+      if (!history || history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum ensaio registrado no SQLite Vault.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = history.slice(0, 20).map(h => `
+        <tr>
+          <td class="text-center mono" style="color: var(--text-muted);">${h.id}</td>
+          <td>
+            <div style="font-weight: 600; color: #fff; font-size: 0.8rem;">${h.model_id}</div>
+          </td>
+          <td><span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">${h.benchmark_type}</span></td>
+          <td class="text-center mono" style="font-size: 0.72rem; color: var(--cyan);">${h.engine}</td>
+          <td class="text-center mono" style="color: var(--emerald); font-weight: 600;">${h.tps > 0 ? h.tps.toFixed(1) : '--'}</td>
+          <td class="text-center mono">${h.ttft_ms > 0 ? h.ttft_ms.toFixed(0) + ' ms' : '--'}</td>
+          <td class="text-center mono">${h.vram_peak_mb > 0 ? h.vram_peak_mb.toFixed(0) + ' MB' : '--'}</td>
+          <td class="text-center"><span class="badge badge-champion" style="font-size: 0.65rem;">${h.status || 'NOMINAL'}</span></td>
+          <td class="mono" style="font-size: 0.7rem; color: var(--text-muted);">${h.created_at || '--'}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function executeSelectedArenaBenchmark() {
+      const modelId = document.getElementById('arena-runner-model-select')?.value;
+      if (!modelId) {
+        showToast('Selecione um modelo para executar a prova.', 'warning');
+        return;
+      }
+
+      const benchType = parseInt(document.getElementById('arena-runner-type-select')?.value || '1', 10);
+      const engine = document.getElementById('arena-runner-engine-select')?.value || null;
+
+      await runSpecificArenaBenchmark(modelId, benchType, engine);
+    }
+
+    async function runSpecificArenaBenchmark(modelId, benchType = 1, engine = null) {
+      const btn = document.getElementById('btn-run-arena-benchmark');
+      const feedback = document.getElementById('arena-live-feedback');
+      const titleEl = document.getElementById('arena-live-title');
+      const verdictEl = document.getElementById('arena-live-verdict-badge');
+      const gridEl = document.getElementById('arena-live-metrics-grid');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Executando Prova...';
+      }
+
+      if (feedback) {
+        feedback.style.display = 'block';
+        if (titleEl) titleEl.innerText = `Executando Prova no Silício para ${modelId}...`;
+        if (verdictEl) verdictEl.innerHTML = '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan);">NVML Watchdog Ativo</span>';
+        if (gridEl) gridEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem;">Mapeando tensores via memmap2 e acionando acelerador...</div>';
+      }
+
+      try {
+        const payload = {
+          model_id: modelId,
+          benchmark_type: benchType,
+          engine: engine
+        };
+
+        const res = await fetch('/api/v1/arena/benchmark/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.status === 'success') {
+          showToast(`Prova ${data.benchmark_type} concluída no silício com sucesso!`, 'success');
+          if (titleEl) titleEl.innerText = `Resultado da Prova: ${data.model_id} (${data.benchmark_type})`;
+          if (verdictEl) verdictEl.innerHTML = `<span class="badge badge-champion">${data.metrics?.verdict || 'NOMINAL'}</span>`;
+
+          if (gridEl && data.metrics) {
+            let cardsHtml = '';
+            if (data.metrics.tps !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Throughput Real</div>
+                  <div class="hw-spec-val" style="color: var(--emerald);">${data.metrics.tps.toFixed(1)} <span style="font-size: 0.7rem;">tok/s</span></div>
+                </div>
+              `;
+            }
+            if (data.metrics.ttft_ms !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">TTFT (Prefill)</div>
+                  <div class="hw-spec-val" style="color: var(--cyan);">${data.metrics.ttft_ms.toFixed(0)} <span style="font-size: 0.7rem;">ms</span></div>
+                </div>
+              `;
+            }
+            if (data.metrics.peak_vram_mb !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">VRAM Pico NVML</div>
+                  <div class="hw-spec-val" style="color: #f43f5e;">${data.metrics.peak_vram_mb.toFixed(0)} <span style="font-size: 0.7rem;">MB</span></div>
+                </div>
+              `;
+            }
+            if (data.metrics.ram_mb !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">RAM Host</div>
+                  <div class="hw-spec-val">${data.metrics.ram_mb.toFixed(0)} <span style="font-size: 0.7rem;">MB</span></div>
+                </div>
+              `;
+            }
+            if (data.metrics.e3_score !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">E³ Score</div>
+                  <div class="hw-spec-val" style="color: #a855f7;">${data.metrics.e3_score > 9000 ? '9999' : data.metrics.e3_score.toFixed(1)}</div>
+                </div>
+              `;
+            }
+            gridEl.innerHTML = cardsHtml;
+          }
+
+          // Atualiza tabelas
+          await fetchLocalArenaData();
+        } else {
+          showToast(data.message || 'Falha ao executar prova no silício.', 'error');
+          if (titleEl) titleEl.innerText = 'Falha na Prova de Silício';
+          if (verdictEl) verdictEl.innerHTML = '<span class="badge" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e;">ERRO</span>';
+          if (gridEl) gridEl.innerHTML = `<div style="color: #f43f5e; font-size: 0.8rem;">${data.message || 'Erro desconhecido'}</div>`;
+        }
+      } catch (err) {
+        console.error('Erro ao executar benchmark:', err);
+        showToast('Erro de comunicação ao executar benchmark.', 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>⚡</span> Rodar Prova no Silício';
+        }
+      }
+    }
+
+    async function syncLocalArenaHermes() {
+      try {
+        showToast('Sincronizando Heuristic Vault e links do Hermes...', 'info');
+        const res = await fetch('/api/v1/arena/sync', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          showToast(`Sincronizados ${data.synced_vault_models} modelos no vault. HardLinks Hermes: ${data.hermes_links?.created || 0} criados, ${data.hermes_links?.verified || 0} verificados.`, 'success');
+          await fetchLocalArenaData();
+        } else {
+          showToast(data.message || 'Falha na sincronização.', 'error');
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar Hermes:', err);
+        showToast('Erro de comunicação ao sincronizar Hermes.', 'error');
+      }
+    }
+
+    // ==========================================
+    // 3.3 TWO-STAGE SEMANTIC SWITCHBOARD (<1.7ms)
+    // ==========================================
+    let switchboardSkillsData = [];
+
+    async function fetchSwitchboardSkills() {
+      try {
+        const res = await fetch('/api/v1/switchboard/skills');
+        if (res.ok) {
+          const data = await res.json();
+          switchboardSkillsData = data.skills || [];
+          renderSwitchboardSkillsGrid(switchboardSkillsData);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar skills do switchboard:', err);
+      }
+    }
+
+    function renderSwitchboardSkillsGrid(skills) {
+      const grid = document.getElementById('sb-skills-grid');
+      if (!grid) return;
+      if (!skills || skills.length === 0) {
+        grid.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhuma skill encontrada.</div>';
+        return;
+      }
+
+      grid.innerHTML = skills.map(s => `
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+              <strong style="color: var(--purple); font-size: 0.88rem;">${s.name}</strong>
+              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--purple); font-size: 0.7rem;">Skill</span>
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">${s.description}</p>
+          </div>
+          <div>
+            <div style="margin-bottom: 8px;">
+              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px;">FERRAMENTAS PRIMÁRIAS:</span>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                ${s.primary_tools.map(t => `<span class="badge badge-lowcost" style="font-size: 0.66rem; padding: 2px 6px;">${t}</span>`).join('')}
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px;">KEYWORDS:</span>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                ${s.keywords.slice(0, 5).map(k => `<span style="font-size: 0.65rem; color: var(--text-muted); background: rgba(255,255,255,0.05); border-radius: 4px; padding: 1px 5px;">#${k}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function setSwitchboardPreset(query) {
+      const input = document.getElementById('switchboard-query-input');
+      if (input) {
+        input.value = query;
+        executeSwitchboardEvaluation();
+      }
+    }
+
+    async function executeSwitchboardEvaluation() {
+      const input = document.getElementById('switchboard-query-input');
+      const nsSelect = document.getElementById('switchboard-ns-select');
+      const topkSelect = document.getElementById('switchboard-topk-select');
+      const btn = document.getElementById('btn-run-switchboard');
+      const container = document.getElementById('switchboard-result-container');
+
+      if (!input || !input.value.trim()) {
+        showToast('Digite uma intenção ou prompt para avaliar o Switchboard.', 'info');
+        return;
+      }
+
+      const query = input.value.trim();
+      const namespace = nsSelect ? nsSelect.value : null;
+      const top_k = topkSelect ? parseInt(topkSelect.value) : 5;
+
+      try {
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<span>⏳</span> Avaliando...';
+        }
+
+        const res = await fetch('/api/v1/switchboard/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: query,
+            namespace: namespace || null,
+            top_k: top_k
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          const d = data.decision;
+          if (container) container.style.display = 'block';
+
+          // Preenche métricas
+          const stageBadge = document.getElementById('sb-stage-badge');
+          if (stageBadge) {
+            if (d.stage.includes('fast_path')) {
+              stageBadge.textContent = '⚡ Fast-Path RAM Cosine (< 2ms)';
+              stageBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+              stageBadge.style.color = 'var(--emerald)';
+            } else {
+              stageBadge.textContent = '🧠 Stage 2 Entropy Gated';
+              stageBadge.style.background = 'rgba(168, 85, 247, 0.25)';
+              stageBadge.style.color = 'var(--purple)';
+            }
+          }
+
+          const latencyElem = document.getElementById('sb-latency');
+          if (latencyElem) latencyElem.textContent = `${d.latency_ms.toFixed(1)} ms`;
+
+          const confElem = document.getElementById('sb-confidence');
+          if (confElem) confElem.textContent = `${(d.confidence * 100).toFixed(1)}%`;
+
+          const entElem = document.getElementById('sb-entropy');
+          if (entElem) entElem.textContent = d.entropy.toFixed(2);
+
+          const summaryElem = document.getElementById('sb-summary-text');
+          if (summaryElem) summaryElem.textContent = `${d.matched_count} ferramentas projetadas para o contexto`;
+
+          // Skill recomendada
+          const skillCard = document.getElementById('sb-skill-card');
+          if (d.recommended_skill) {
+            if (skillCard) skillCard.style.display = 'block';
+            const skName = document.getElementById('sb-skill-name');
+            if (skName) skName.textContent = d.recommended_skill.name;
+            const skScore = document.getElementById('sb-skill-score-badge');
+            if (skScore) skScore.textContent = `Score: ${(d.recommended_skill.score * 100).toFixed(0)}%`;
+            const skDesc = document.getElementById('sb-skill-desc');
+            if (skDesc) skDesc.textContent = d.recommended_skill.description;
+            const skTools = document.getElementById('sb-skill-primary-tools');
+            if (skTools) {
+              skTools.innerHTML = (d.recommended_skill.primary_tools || []).map(t => `<span class="badge badge-lowcost" style="font-size: 0.68rem; padding: 2px 7px;">${t}</span>`).join('');
+            }
+          } else {
+            if (skillCard) skillCard.style.display = 'none';
+          }
+
+          // Ferramentas projetadas
+          const tbody = document.getElementById('sb-projected-tools-tbody');
+          if (tbody) {
+            if (!d.tools || d.tools.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma ferramenta projetada.</td></tr>';
+            } else {
+              tbody.innerHTML = d.tools.map(t => `
+                <tr>
+                  <td><strong class="mono" style="color: var(--cyan);">${t.name}</strong></td>
+                  <td class="text-center"><span class="badge badge-lowcost" style="font-size: 0.68rem;">${t.namespace}</span></td>
+                  <td class="text-center mono" style="color: var(--emerald); font-weight: 600;">${(t.score * 100).toFixed(0)}%</td>
+                  <td style="font-size: 0.78rem; color: var(--text-muted);">${t.description}</td>
+                </tr>
+              `).join('');
+            }
+          }
+        } else {
+          showToast(data.message || 'Falha ao avaliar switchboard.', 'error');
+        }
+      } catch (err) {
+        console.error('Erro ao avaliar switchboard:', err);
+        showToast('Erro de comunicação com o Switchboard.', 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>⚡</span> Avaliar Switchboard';
+        }
       }
     }
 
@@ -3645,9 +4462,9 @@
       if (!container || !triad) return;
 
       const items = [
-        { tierLabel: 'Tier 0 — Fast Reflex & Triage', tierColor: 'var(--green)', icon: '⚡', data: triad.tier0_velocista, role: 'Triagem ultra-rápida e classificação de intenção (70+ tok/s)' },
-        { tierLabel: 'Tier 0.5 — Socratic Thinking & Intent', tierColor: 'var(--cyan)', icon: '🧠', data: triad.tier05_socratico, role: 'Freio cognitivo socrático, decomposição e reflexão rápida' },
-        { tierLabel: 'Tier 1 — Workhorse / Code & Logic', tierColor: 'var(--purple)', icon: '💻', data: triad.tier1_coder, role: 'Cavalo de batalha para cirurgia de código, AST e lógica profunda' },
+        { tierLabel: 'Tier 0 — Fast Reflex & Triage', tierColor: 'var(--green)', icon: '⚡', data: triad.tier0_velocista, role: 'Triagem ultra-rápida, guardrails e classificação de intenção (180+ tok/s)' },
+        { tierLabel: 'Tier 0.5 — Socratic Thinking & Intent', tierColor: 'var(--cyan)', icon: '🧠', data: triad.tier05_socratico, role: 'Raciocínio socrático formal DeepSeek-R1 CoT e deliberação epistêmica' },
+        { tierLabel: 'Tier 1 — Workhorse / Code & Logic', tierColor: 'var(--purple)', icon: '💻', data: triad.tier1_coder, role: 'Cavalo de batalha Sweet Spot para cirurgia de código, AST e lógica profunda' },
       ];
 
       container.innerHTML = items.map(item => {
@@ -3658,6 +4475,8 @@
 
         const sizeGb = variant.size_gb ? variant.size_gb.toFixed(2) : (variant.size_bytes / (1024 ** 3)).toFixed(2);
         const estTps = model.benchmark_scores && model.benchmark_scores.speed_tokens_sec_estimate ? `${model.benchmark_scores.speed_tokens_sec_estimate.toFixed(0)} tps` : '--';
+        const isDown = Boolean(model.is_downloaded);
+        const activeFile = model.local_file_path || variant.file_name;
 
         return `
           <div class="triad-card">
@@ -3666,7 +4485,10 @@
                 <span style="font-size: 0.72rem; font-weight: 700; color: ${item.tierColor}; font-family: var(--font-mono); text-transform: uppercase;">
                   ${item.tierLabel}
                 </span>
-                ${getFitBadgeHtml(variant.hardware_fit)}
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700;">✅ Instalado</span>' : ''}
+                  ${getFitBadgeHtml(variant.hardware_fit)}
+                </div>
               </div>
               <div style="font-size: 1.02rem; font-weight: 700; color: #fff; font-family: var(--font-mono); word-break: break-word;">
                 ${model.model_name}
@@ -3682,9 +4504,20 @@
               </div>
             </div>
             <div style="margin-top: 14px;">
-              <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}')">
-                <span>⬇️</span> 1-Click Download
-              </button>
+              ${isDown ? `
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn btn-green" style="flex: 1; justify-content: center; font-size: 0.78rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                    <span>⚡</span> Usar no Hermes
+                  </button>
+                  <button class="btn" style="padding: 6px 10px; font-size: 0.74rem;" title="Baixar novamente" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
+                    <span>🔄</span>
+                  </button>
+                </div>
+              ` : `
+                <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
+                  <span>⬇️</span> 1-Click Download
+                </button>
+              `}
             </div>
           </div>
         `;
@@ -3696,7 +4529,7 @@
       document.querySelectorAll('#curated-profile-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
       const activeBtn = Array.from(document.querySelectorAll('#curated-profile-filters .profile-pill')).find(b => {
         if (profile === 'all') return b.innerText.includes('Todos');
-        return b.innerText.toLowerCase().includes(profile);
+        return b.getAttribute('onclick') && b.getAttribute('onclick').includes(`'${profile}'`);
       });
       if (activeBtn) activeBtn.classList.add('active');
       renderCuratedCatalog(curatedCatalogData, hubHardwareData);
@@ -3709,44 +4542,65 @@
       const filtered = (catalog || []).filter(m => {
         if (currentCuratedProfileFilter === 'all') return true;
         const prof = (m.cognitive_profile || '').toLowerCase();
-        return prof.includes(currentCuratedProfileFilter.toLowerCase());
+        return prof === currentCuratedProfileFilter.toLowerCase();
       });
 
       if (filtered.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Nenhum modelo curado para este filtro.</div>';
+        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Nenhum modelo curado para este perfil.</div>';
         return;
       }
 
       container.innerHTML = filtered.map((m, idx) => {
         const variants = m.variants || [];
         const recommendedVariant = variants.find(v => v.is_recommended_fit) || variants[0] || {};
+        const isDown = Boolean(m.is_downloaded);
+        const activeFile = m.local_file_path || recommendedVariant.file_name;
 
         const quantOptions = variants.map(v => `
-          <option value="${v.quant_tag}" ${v.is_recommended_fit ? 'selected' : ''} data-size="${v.size_bytes}" data-url="${v.download_url}" data-file="${v.file_name}" data-fit="${v.hardware_fit}" data-sha256="${v.sha256 || ''}">
+          <option value="${v.quant_tag}" ${v.is_recommended_fit ? 'selected' : ''} data-size="${v.size_bytes}" data-url="${v.download_url}" data-file="${v.file_name}" data-fit="${v.hardware_fit}" data-sha256="${v.sha256 || ''}" data-proj-file="${v.projector_file || ''}" data-proj-url="${v.projector_url || ''}">
             ${v.quant_tag} (${(v.size_bytes / (1024**3)).toFixed(2)} GB)
           </option>
         `).join('');
 
         const fitBadge = getFitBadgeHtml(recommendedVariant.hardware_fit);
+        const isSweet = m.category_role === 'SweetSpot';
 
         return `
           <div class="curated-card" id="curated-card-${idx}">
             <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <span class="badge badge-champion" style="font-size: 0.65rem;">${m.assigned_tier} &bull; ${m.cognitive_profile}</span>
-                <span id="curated-fit-${idx}">${fitBadge}</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 4px;">
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  <span class="badge" style="background: ${isSweet ? 'rgba(16, 185, 129, 0.15)' : 'rgba(168, 85, 247, 0.15)'}; color: ${isSweet ? '#34d399' : '#c084fc'}; font-weight: 700; border: 1px solid ${isSweet ? 'rgba(16, 185, 129, 0.35)' : 'rgba(168, 85, 247, 0.35)'}; font-size: 0.68rem;">
+                    ${isSweet ? '⚡ Sweet Spot (45+ tps)' : '💎 Heavyweight (Teto)'}
+                  </span>
+                  ${m.is_multimodal_vlm ? '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.65rem;">👁️ Bundle VLM</span>' : ''}
+                </div>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  ${isDown ? `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700;">✅ Instalado</span>` : ''}
+                  <span id="curated-fit-${idx}">${fitBadge}</span>
+                </div>
               </div>
-              <div style="font-size: 0.95rem; font-weight: 700; color: #fff; font-family: var(--font-mono); margin-top: 4px;">
+
+              <div style="font-size: 1.02rem; font-weight: 700; color: #fff; font-family: var(--font-mono); margin-top: 4px;">
                 ${m.model_name}
               </div>
               <div style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px;">
-                Repo: ${m.repo_id} &bull; Autor: ${m.author || '--'}
+                Repo: ${m.repo_id} &bull; Autor: ${m.author || '--'} &bull; Perfil: <strong style="color: var(--cyan); text-transform: uppercase;">${m.cognitive_profile}</strong>
               </div>
+
+              <p style="font-size: 0.74rem; color: #cbd5e1; margin-top: 8px; line-height: 1.4;">
+                ${m.why_recommended || ''}
+              </p>
+
+              <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
+                ${(m.highlights || []).map(h => `<span class="badge" style="background: rgba(255,255,255,0.05); color: #94a3b8; font-size: 0.65rem;">${h}</span>`).join('')}
+              </div>
+
               <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: rgba(15,23,42,0.4); padding: 8px; border-radius: var(--radius-sm); font-size: 0.7rem; font-family: var(--font-mono);">
-                <div>Coding: <strong style="color: var(--cyan);">${m.benchmark_scores ? m.benchmark_scores.coding_score.toFixed(1) : '--'}</strong></div>
-                <div>MMLU: <strong style="color: #fff;">${m.benchmark_scores ? m.benchmark_scores.mmlu_score.toFixed(1) : '--'}</strong></div>
-                <div>IFEval: <strong style="color: #fff;">${m.benchmark_scores ? m.benchmark_scores.ifeval_score.toFixed(1) : '--'}</strong></div>
-                <div>Speed: <strong style="color: #34d399;">~${m.benchmark_scores ? m.benchmark_scores.speed_tokens_sec_estimate.toFixed(0) : '--'} tps</strong></div>
+                <div>Coding: <strong style="color: var(--cyan);">${m.benchmark_scores && m.benchmark_scores.coding_score ? m.benchmark_scores.coding_score.toFixed(1) : '--'}</strong></div>
+                <div>MMLU: <strong style="color: #fff;">${m.benchmark_scores && m.benchmark_scores.mmlu_score ? m.benchmark_scores.mmlu_score.toFixed(1) : '--'}</strong></div>
+                <div>IFEval: <strong style="color: #fff;">${m.benchmark_scores && m.benchmark_scores.ifeval_score ? m.benchmark_scores.ifeval_score.toFixed(1) : '--'}</strong></div>
+                <div>Speed: <strong style="color: #34d399;">~${m.benchmark_scores && m.benchmark_scores.speed_tokens_sec_estimate ? m.benchmark_scores.speed_tokens_sec_estimate.toFixed(0) : '--'} tps</strong></div>
               </div>
             </div>
 
@@ -3757,9 +4611,21 @@
                   ${quantOptions}
                 </select>
               </div>
-              <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="triggerCuratedDownload(${idx})">
-                <span>⬇️</span> Baixar Seleção
-              </button>
+
+              ${isDown ? `
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn btn-green" style="flex: 1; justify-content: center; font-size: 0.78rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)">
+                    <span>⚡</span> Usar no Hermes
+                  </button>
+                  <button class="btn" style="padding: 6px 12px; font-size: 0.74rem;" title="Baixar novamente" onclick="triggerCuratedDownload(${idx}, '${m.repo_id}')">
+                    <span>🔄</span>
+                  </button>
+                </div>
+              ` : `
+                <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="triggerCuratedDownload(${idx}, '${m.repo_id}')">
+                  <span>⬇️</span> ${m.is_multimodal_vlm ? 'Baixar Bundle VLM (GGUF + mmproj)' : 'Baixar Seleção'}
+                </button>
+              `}
             </div>
           </div>
         `;
@@ -3777,7 +4643,7 @@
       }
     }
 
-    function triggerCuratedDownload(idx) {
+    function triggerCuratedDownload(idx, repoIdOverride) {
       const select = document.getElementById(`curated-select-${idx}`);
       if (!select) return;
       const opt = select.options[select.selectedIndex];
@@ -3785,17 +4651,22 @@
       const filename = opt.getAttribute('data-file');
       const sizeBytes = parseInt(opt.getAttribute('data-size') || '0', 10);
       const sha256 = opt.getAttribute('data-sha256') || '';
+      const projFile = opt.getAttribute('data-proj-file') || '';
+      const projUrl = opt.getAttribute('data-proj-url') || '';
 
-      requestModelDownload(url, filename, sizeBytes, sha256);
+      requestModelDownload(url, filename, sizeBytes, sha256, repoIdOverride, projFile, projUrl);
     }
 
-    async function requestModelDownload(url, filename, sizeBytes, sha256) {
+    async function requestModelDownload(url, filename, sizeBytes, sha256, repoId = null, projFile = '', projUrl = '') {
       try {
         const payload = {
-          url: url,
-          filename: filename,
+          repo_id: repoId || filename,
+          file_name: filename,
+          download_url: url,
           expected_size_bytes: sizeBytes,
-          expected_sha256: sha256 ? sha256 : null
+          expected_sha256: sha256 ? sha256 : null,
+          projector_file: projFile ? projFile : null,
+          projector_url: projUrl ? projUrl : null,
         };
         const res = await fetch('/api/v1/inventory/download', {
           method: 'POST',
@@ -3803,7 +4674,10 @@
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          showToast(`Download de ${filename} adicionado à fila!`, 'success');
+          const msg = projFile ? 
+            `Bundle VLM adicionado à fila: ${filename} + ${projFile}!` : 
+            `Download de ${filename} adicionado à fila!`;
+          showToast(msg, 'success');
           fetchInventoryDownloads();
         } else {
           const err = await res.text();
@@ -4964,11 +5838,223 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       }
     }
 
+    // ==========================================
+    // 7. SESSÕES DE SUBAGENTES & CICLO DE HANDOFF (L3)
+    // ==========================================
+    async function fetchSubAgentSessions() {
+      try {
+        const res = await fetch('/api/v1/sessions/subagents');
+        if (!res.ok) return;
+        const data = await res.json();
+        const sessions = data.subagents || data.sessions || [];
+        renderSubAgentSessions(sessions);
+      } catch (err) {
+        console.error("Erro ao carregar sessões de subagentes:", err);
+      }
+    }
+
+    function renderSubAgentSessions(sessions) {
+      const tbody = document.getElementById('subagent-sessions-tbody');
+      const badgeCount = document.getElementById('subagent-sessions-count-badge');
+      const statTotal = document.getElementById('stat-subagent-total');
+      const statActive = document.getElementById('stat-subagent-active');
+      const statCompleted = document.getElementById('stat-subagent-completed');
+
+      if (!tbody) return;
+
+      if (badgeCount) badgeCount.textContent = `${sessions.length} Sessões`;
+      if (statTotal) statTotal.textContent = sessions.length;
+
+      let activeCount = 0;
+      let completedCount = 0;
+
+      if (sessions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhuma sessão de subagente registrada ainda.</td></tr>`;
+        if (statActive) statActive.textContent = '0';
+        if (statCompleted) statCompleted.textContent = '0';
+        return;
+      }
+
+      let rowsHtml = '';
+      for (const s of sessions) {
+        const statusUpper = (s.status || 'SPAWNED').toUpperCase();
+        let statusBadge = '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.35);">SPAWNED</span>';
+        if (statusUpper === 'RUNNING') {
+          activeCount++;
+          statusBadge = '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.35);">RUNNING ⚡</span>';
+        } else if (statusUpper === 'COMPLETED') {
+          completedCount++;
+          statusBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.35);">COMPLETED ✅</span>';
+        } else if (statusUpper === 'FAILED') {
+          statusBadge = '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.35);">FAILED ❌</span>';
+        } else {
+          activeCount++;
+        }
+
+        const rawCreated = s.created_at;
+        const ts = typeof rawCreated === 'number' && rawCreated < 10000000000 ? rawCreated * 1000 : rawCreated;
+        const dateStr = ts ? new Date(ts).toLocaleTimeString() : '--:--';
+        const parentId = s.parent_session_id || 'Mestre (Chat)';
+        const agentKey = s.agent_id || s.id;
+
+        rowsHtml += `
+          <tr>
+            <td class="mono" style="font-size: 0.76rem; color: var(--cyan); font-weight: 600;">${agentKey}</td>
+            <td>
+              <strong style="color: #fff; font-size: 0.82rem;">${agentKey}</strong>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+                ${escapeHtml(s.task_description || 'Sessão Bare-Metal L3')} &bull; <span style="color: var(--cyan);">${s.assigned_tier || 'Tier1'}</span>
+              </div>
+            </td>
+            <td class="mono" style="font-size: 0.74rem; color: var(--text-muted);">${parentId}</td>
+            <td class="text-center">${statusBadge}</td>
+            <td style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</td>
+            <td class="text-center">
+              <button class="btn btn-purple" style="padding: 4px 10px; font-size: 0.72rem; border-radius: 6px;" onclick="inspectSubAgentHistory('${agentKey}')">
+                <span>📖</span> Diário & Handoff
+              </button>
+            </td>
+          </tr>
+        `;
+      }
+
+      if (statActive) statActive.textContent = activeCount;
+      if (statCompleted) statCompleted.textContent = completedCount;
+      tbody.innerHTML = rowsHtml;
+    }
+
+    async function inspectSubAgentHistory(sessionId) {
+      const modal = document.getElementById('modal-subagent-history');
+      const titleElem = document.getElementById('subagent-modal-title');
+      const subtitleElem = document.getElementById('subagent-modal-subtitle');
+      const profileElem = document.getElementById('subagent-modal-profile');
+      const statusBadgeElem = document.getElementById('subagent-modal-status-badge');
+      const parentElem = document.getElementById('subagent-modal-parent');
+      const handoffsElem = document.getElementById('subagent-modal-handoffs');
+      const diariesCountElem = document.getElementById('subagent-modal-diaries-count');
+      const diariesContainer = document.getElementById('subagent-modal-diaries-container');
+
+      if (!modal) return;
+
+      subtitleElem.textContent = `ID: ${sessionId}`;
+      handoffsElem.textContent = 'Carregando envelopes de handoff...';
+      diariesContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem;">Carregando diários...</div>';
+      modal.classList.add('active');
+
+      try {
+        const res = await fetch(`/api/v1/sessions/subagents/${sessionId}`);
+        if (!res.ok) {
+          handoffsElem.textContent = 'Falha ao consultar a sessão no banco.';
+          return;
+        }
+        const data = await res.json();
+        const s = data.subagent || data.session;
+        if (!s) {
+          handoffsElem.textContent = 'Dados da sessão não localizados.';
+          return;
+        }
+        const diaries = data.diaries || [];
+        const receivedHdf = data.received_handoff;
+        const returnHdf = data.return_handoff;
+
+        profileElem.innerHTML = `<strong>${s.agent_id}</strong> <span style="font-size: 0.75rem; color: var(--cyan); margin-left: 6px;">(${s.assigned_tier || 'Tier1'})</span><div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(s.task_description || '')}</div>`;
+        parentElem.textContent = s.parent_session_id || 'Mestre (Chat)';
+        titleElem.textContent = `Diário & Handoff: ${s.agent_id}`;
+
+        const statusUpper = (s.status || '').toUpperCase();
+        let badgeColor = 'var(--amber)';
+        if (statusUpper === 'COMPLETED') badgeColor = 'var(--green)';
+        if (statusUpper === 'RUNNING') badgeColor = 'var(--cyan)';
+        if (statusUpper === 'FAILED') badgeColor = 'var(--red)';
+        statusBadgeElem.innerHTML = `<span class="badge" style="border: 1px solid ${badgeColor}; color: ${badgeColor};">${statusUpper}</span>`;
+
+        // Render Handoffs (Recebido do Mestre + Retorno ao Mestre)
+        let handoffHtml = '';
+        if (returnHdf) {
+          const rawTime = returnHdf.created_at;
+          const ts = typeof rawTime === 'number' && rawTime < 10000000000 ? rawTime * 1000 : rawTime;
+          const timeStr = ts ? new Date(ts).toLocaleTimeString() : '';
+          handoffHtml += `
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; padding: 12px; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--green); font-weight: 700; margin-bottom: 6px;">
+                <span>🟢 Envelope de Retorno #${returnHdf.id} &bull; Para Mestre: <strong style="color: var(--cyan);">${returnHdf.target_agent_id}</strong></span>
+                <span>${timeStr}</span>
+              </div>
+              <div style="color: #a7f3d0; font-family: var(--font-mono); font-size: 0.78rem; white-space: pre-wrap; line-height: 1.5;">${escapeHtml(returnHdf.context_summary || returnHdf.summary_markdown || '')}</div>
+            </div>
+          `;
+        }
+
+        if (receivedHdf) {
+          const rawTime = receivedHdf.created_at;
+          const ts = typeof rawTime === 'number' && rawTime < 10000000000 ? rawTime * 1000 : rawTime;
+          const timeStr = ts ? new Date(ts).toLocaleTimeString() : '';
+          handoffHtml += `
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px;">
+                <span>📥 Envelope Inicial Recebido #${receivedHdf.id} (De: <strong style="color: var(--cyan);">${receivedHdf.source_session_id}</strong>)</span>
+                <span>${timeStr}</span>
+              </div>
+              <div style="color: #cbd5e1; font-family: var(--font-mono); font-size: 0.76rem; white-space: pre-wrap;">${escapeHtml(receivedHdf.context_summary || '')}</div>
+            </div>
+          `;
+        }
+
+        if (!returnHdf && !receivedHdf) {
+          handoffHtml = `<span style="color: var(--text-muted);">Nenhum envelope de handoff emitido ainda. A sessão pode estar em andamento ou não ter emitido a ação <code>complete</code>.</span>`;
+        }
+        handoffsElem.innerHTML = handoffHtml;
+
+        // Render Diários
+        diariesCountElem.textContent = diaries.length;
+        if (diaries.length === 0) {
+          diariesContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 6px;">Nenhum pensamento intermediário registrado nesta sessão.</div>';
+        } else {
+          diariesContainer.innerHTML = diaries.map((d, idx) => {
+            const rawTime = d.created_at;
+            const ts = typeof rawTime === 'number' && rawTime < 10000000000 ? rawTime * 1000 : rawTime;
+            const timeStr = ts ? new Date(ts).toLocaleTimeString() : '';
+            const thoughtText = d.content || d.thought_log || '';
+            return `
+              <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: var(--amber); font-family: var(--font-mono);">
+                    Passo ${idx + 1} / Entrada #${d.id}
+                  </span>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">${timeStr}</span>
+                </div>
+                <div style="font-size: 0.78rem; color: #e2e8f0; line-height: 1.5; white-space: pre-wrap; font-family: var(--font-mono); background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px;">${escapeHtml(thoughtText)}</div>
+              </div>
+            `;
+          }).join('');
+        }
+
+      } catch (e) {
+        handoffsElem.textContent = `Erro ao inspecionar histórico: ${e.message}`;
+      }
+    }
+
+    function closeSubAgentHistoryModal() {
+      const modal = document.getElementById('modal-subagent-history');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     // INICIALIZAÇÃO NO CARREGAMENTO DA PÁGINA
     window.addEventListener('DOMContentLoaded', () => {
       fetchTelemetry();
       fetchRouterMatrix();
       fetchLocalModels();
+      fetchSubAgentSessions();
       fetchCloudChampions().then(() => {
         fetchProfiles();
       });
@@ -4988,6 +6074,7 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       }
 
       setInterval(fetchTelemetry, 3000);
+      setInterval(fetchSubAgentSessions, 8000);
     });
   </script>
 
@@ -5088,6 +6175,64 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
         <button class="btn btn-cyan" onclick="submitQuickApply()">
           <span>⚡</span> Confirmar e Aplicar
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: HISTÓRICO DE SUBAGENTE & HANDOFF PAYLOAD -->
+  <div class="modal-backdrop" id="modal-subagent-history">
+    <div class="modal-dialog" style="max-width: 780px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--amber);">📖</span>
+            <span id="subagent-modal-title">Diário & Handoff do Subagente</span>
+          </div>
+          <div id="subagent-modal-subtitle" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono);">
+            ID: --
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeSubAgentHistoryModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding: 20px;">
+        
+        <!-- CARD DO STATUS E RESUMO -->
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Agente / Perfil</div>
+              <div id="subagent-modal-profile" style="font-weight: 700; color: #fff; font-size: 0.95rem; margin-top: 2px;">--</div>
+            </div>
+            <div id="subagent-modal-status-badge"></div>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
+            Parent Session: <strong id="subagent-modal-parent" style="color: var(--cyan); font-family: var(--font-mono);">--</strong>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 1: HANDOFF PAYLOAD (RETORNO AO MESTRE) -->
+        <div style="margin-bottom: 20px;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--green); display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+            <span>📦</span> Envelope de Handoff (Retorno Sintetizado ao Mestre)
+          </div>
+          <div id="subagent-modal-handoffs" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-sm); padding: 12px; font-size: 0.8rem; font-family: var(--font-mono); color: #e2e8f0; white-space: pre-wrap; word-break: break-all;">
+            Nenhum envelope de handoff emitido para esta sessão.
+          </div>
+        </div>
+
+        <!-- SEÇÃO 2: DIÁRIO DE PENSAMENTOS (SUB_AGENT_DIARIES) -->
+        <div>
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--amber); display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+            <span>🧠</span> Diário de Raciocínio Passo a Passo (<span id="subagent-modal-diaries-count">0</span> pensamentos isolados)
+          </div>
+          <div id="subagent-modal-diaries-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+            <!-- Cards de pensamento renderizados dinamicamente -->
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeSubAgentHistoryModal()">Fechar</button>
       </div>
     </div>
   </div>

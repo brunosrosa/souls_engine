@@ -227,8 +227,9 @@ pub fn handle_routes() -> Value {
 pub async fn handle_tool_search(state: &AppState, args: &serde_json::Map<String, Value>) -> Value {
     let namespace = args.get("namespace").and_then(Value::as_str);
     let query = args.get("query").and_then(Value::as_str).unwrap_or("");
+    let top_k = args.get("top_k").and_then(Value::as_u64).map(|k| k as usize);
 
-    let decision = crate::mcp::switchboard::evaluate_switchboard(state, query, namespace).await;
+    let decision = crate::mcp::switchboard::evaluate_switchboard(state, query, namespace, top_k).await;
 
     json!({
         "content": [{
@@ -372,6 +373,85 @@ pub async fn handle_sub_agent(
                     "text": format!("Sub-agent '{}' status updated to {:?}.", record.agent_id, record.status)
                 }],
                 "structuredContent": record,
+                "isError": false
+            }))
+        }
+        "complete" => {
+            let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("");
+            let summary = args
+                .get("result_summary")
+                .or_else(|| args.get("summary"))
+                .and_then(Value::as_str)
+                .unwrap_or("Task completed successfully.");
+            let variables = args
+                .get("output_variables")
+                .or_else(|| args.get("variables"))
+                .cloned()
+                .unwrap_or(json!({}));
+
+            // 1. Update status to Completed
+            let record = sub_mgr
+                .update_status(agent_id, souls_memory::SubAgentStatus::Completed)
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            // 2. Automatically generate return handoff payload targeting the parent session
+            let return_handoff = sub_mgr
+                .create_handoff(
+                    &record.agent_id,
+                    &record.parent_session_id,
+                    summary,
+                    variables,
+                )
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!(
+                        "Sub-agent '{}' completed successfully. Return handoff '{}' generated for parent session '{}'.",
+                        record.agent_id, return_handoff.id, record.parent_session_id
+                    )
+                }],
+                "structuredContent": {
+                    "session": record,
+                    "return_handoff": return_handoff
+                },
+                "isError": false
+            }))
+        }
+        "history" => {
+            let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("");
+            let session = sub_mgr
+                .get_subagent(agent_id)
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?
+                .ok_or(McpDomainError::InternalEnginePanic)?;
+
+            let diaries = sub_mgr
+                .list_diaries(agent_id)
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            let handoff = sub_mgr
+                .get_handoff(agent_id)
+                .await
+                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            Ok(json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!(
+                        "History for sub-agent '{}': {} diary notes recorded, status: {:?}.",
+                        session.agent_id, diaries.len(), session.status
+                    )
+                }],
+                "structuredContent": {
+                    "session": session,
+                    "diaries": diaries,
+                    "handoff": handoff
+                },
                 "isError": false
             }))
         }

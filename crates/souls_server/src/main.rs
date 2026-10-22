@@ -1879,4 +1879,263 @@ model:
         let resp_cancel = app.clone().oneshot(req_cancel).await.unwrap();
         assert_eq!(resp_cancel.status(), StatusCode::OK);
     }
+
+    #[tokio::test]
+    async fn test_arena_routes_lifecycle() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. GET /api/v1/arena/models
+        let req_models = Request::builder()
+            .uri("/api/v1/arena/models")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_models = app.clone().oneshot(req_models).await.unwrap();
+        assert_eq!(resp_models.status(), StatusCode::OK);
+        let bytes = to_bytes(resp_models.into_body(), usize::MAX).await.unwrap();
+        let json_models: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json_models["status"], "success");
+        assert!(json_models["models"].is_array());
+
+        // 2. GET /api/v1/arena/benchmarks
+        let req_benchmarks = Request::builder()
+            .uri("/api/v1/arena/benchmarks")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_benchmarks = app.clone().oneshot(req_benchmarks).await.unwrap();
+        assert_eq!(resp_benchmarks.status(), StatusCode::OK);
+        let bytes_b = to_bytes(resp_benchmarks.into_body(), usize::MAX).await.unwrap();
+        let json_b: serde_json::Value = serde_json::from_slice(&bytes_b).unwrap();
+        assert_eq!(json_b["status"], "success");
+        assert!(json_b["history"].is_array());
+        assert!(json_b["profiles"].is_array());
+
+        // 3. POST /api/v1/arena/sync
+        let req_sync = Request::builder()
+            .uri("/api/v1/arena/sync")
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+        let resp_sync = app.clone().oneshot(req_sync).await.unwrap();
+        assert_eq!(resp_sync.status(), StatusCode::OK);
+        let bytes_sync = to_bytes(resp_sync.into_body(), usize::MAX).await.unwrap();
+        let json_sync: serde_json::Value = serde_json::from_slice(&bytes_sync).unwrap();
+        assert_eq!(json_sync["status"], "success");
+
+        // 4. POST /api/v1/arena/benchmark/run (with non-existent model)
+        let payload_err = serde_json::json!({
+            "model_id": "non_existent_dummy_model_xyz"
+        });
+        let req_run_err = Request::builder()
+            .uri("/api/v1/arena/benchmark/run")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload_err).unwrap()))
+            .unwrap();
+        let resp_run_err = app.clone().oneshot(req_run_err).await.unwrap();
+        assert_eq!(resp_run_err.status(), StatusCode::OK);
+        let bytes_err = to_bytes(resp_run_err.into_body(), usize::MAX).await.unwrap();
+        let json_err: serde_json::Value = serde_json::from_slice(&bytes_err).unwrap();
+        assert_eq!(json_err["status"], "error");
+    }
+
+    #[tokio::test]
+    async fn test_two_stage_switchboard_and_dynamic_projection() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. GET /api/v1/switchboard/health
+        let req_health = Request::builder()
+            .uri("/api/v1/switchboard/health")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_health = app.clone().oneshot(req_health).await.unwrap();
+        assert_eq!(resp_health.status(), StatusCode::OK);
+        let bytes_h = to_bytes(resp_health.into_body(), usize::MAX).await.unwrap();
+        let json_h: serde_json::Value = serde_json::from_slice(&bytes_h).unwrap();
+        assert_eq!(json_h["status"], "healthy");
+        assert_eq!(json_h["total_skills"], 15);
+        assert_eq!(json_h["total_tools"], 55);
+
+        // 2. GET /api/v1/switchboard/skills
+        let req_skills = Request::builder()
+            .uri("/api/v1/switchboard/skills")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_skills = app.clone().oneshot(req_skills).await.unwrap();
+        assert_eq!(resp_skills.status(), StatusCode::OK);
+        let bytes_s = to_bytes(resp_skills.into_body(), usize::MAX).await.unwrap();
+        let json_s: serde_json::Value = serde_json::from_slice(&bytes_s).unwrap();
+        assert_eq!(json_s["status"], "success");
+        assert_eq!(json_s["total"], 15);
+
+        // 3. POST /api/v1/switchboard/evaluate (Code refactor query -> souls-code-surgeon)
+        let eval_payload = serde_json::json!({
+            "query": "refatorar funcao e extrair ast symbol com syntax tree",
+            "top_k": 4
+        });
+        let req_eval = Request::builder()
+            .uri("/api/v1/switchboard/evaluate")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&eval_payload).unwrap()))
+            .unwrap();
+        let resp_eval = app.clone().oneshot(req_eval).await.unwrap();
+        assert_eq!(resp_eval.status(), StatusCode::OK);
+        let bytes_e = to_bytes(resp_eval.into_body(), usize::MAX).await.unwrap();
+        let json_e: serde_json::Value = serde_json::from_slice(&bytes_e).unwrap();
+        assert_eq!(json_e["status"], "success");
+        assert!(json_e["decision"]["confidence"].as_f64().unwrap() > 0.6);
+        let rec_skill = json_e["decision"]["recommended_skill"]["name"].as_str().unwrap();
+        assert_eq!(rec_skill, "souls-code-surgeon");
+        let tools_list = json_e["decision"]["tools"].as_array().unwrap();
+        assert!(tools_list.len() <= 4);
+
+        // 4. MCP tools/list with dynamic intent query
+        let mcp_dynamic_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 99,
+            "method": "tools/list",
+            "params": {
+                "query": "consultar fatos epistemicos e memoria sqlite",
+                "top_k": 3
+            }
+        });
+        let req_mcp = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&mcp_dynamic_payload).unwrap()))
+            .unwrap();
+        let resp_mcp = app.clone().oneshot(req_mcp).await.unwrap();
+        assert_eq!(resp_mcp.status(), StatusCode::OK);
+        let bytes_mcp = to_bytes(resp_mcp.into_body(), usize::MAX).await.unwrap();
+        let json_mcp: serde_json::Value = serde_json::from_slice(&bytes_mcp).unwrap();
+        assert_eq!(json_mcp["id"], 99);
+        let projected_tools = json_mcp["result"]["tools"].as_array().unwrap();
+        assert!(projected_tools.len() <= 3);
+        assert!(projected_tools.len() > 0);
+        assert!(json_mcp["result"]["switchboard"].is_object());
+    }
+
+    #[tokio::test]
+    async fn test_subagent_lifecycle_closed_loop_and_handoff() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Spawn subagent via REST
+        let spawn_payload = serde_json::json!({
+            "parent_session_id": "main_hermes_session_42",
+            "task_description": "Cirurgia sintatica na AST do parser",
+            "assigned_tier": "Tier1"
+        });
+        let req_spawn = Request::builder()
+            .uri("/api/v1/sessions/subagents/spawn")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&spawn_payload).unwrap()))
+            .unwrap();
+        let resp_spawn = app.clone().oneshot(req_spawn).await.unwrap();
+        assert_eq!(resp_spawn.status(), StatusCode::OK);
+        let bytes_sp = to_bytes(resp_spawn.into_body(), usize::MAX).await.unwrap();
+        let json_sp: serde_json::Value = serde_json::from_slice(&bytes_sp).unwrap();
+        assert_eq!(json_sp["status"], "success");
+        let agent_id = json_sp["subagent"]["agent_id"].as_str().unwrap().to_string();
+        assert_eq!(json_sp["subagent"]["status"], "SPAWNED");
+
+        // 2. Update status to RUNNING
+        let status_payload = serde_json::json!({ "status": "RUNNING" });
+        let req_status = Request::builder()
+            .uri(format!("/api/v1/sessions/subagents/{agent_id}/status"))
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&status_payload).unwrap()))
+            .unwrap();
+        let resp_status = app.clone().oneshot(req_status).await.unwrap();
+        assert_eq!(resp_status.status(), StatusCode::OK);
+
+        // 3. Record in-RAM diaries (zero context bleed to master)
+        let diary_payload_1 = serde_json::json!({ "content": "Analisando nodes da AST e calculando Myers Diff..." });
+        let req_d1 = Request::builder()
+            .uri(format!("/api/v1/sessions/subagents/{agent_id}/diary"))
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&diary_payload_1).unwrap()))
+            .unwrap();
+        let resp_d1 = app.clone().oneshot(req_d1).await.unwrap();
+        assert_eq!(resp_d1.status(), StatusCode::OK);
+
+        let diary_payload_2 = serde_json::json!({ "content": "Verificando integridade de tipos e testes locais..." });
+        let req_d2 = Request::builder()
+            .uri(format!("/api/v1/sessions/subagents/{agent_id}/diary"))
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&diary_payload_2).unwrap()))
+            .unwrap();
+        let resp_d2 = app.clone().oneshot(req_d2).await.unwrap();
+        assert_eq!(resp_d2.status(), StatusCode::OK);
+
+        // 4. Complete subagent with atomic return handoff payload
+        let complete_payload = serde_json::json!({
+            "result_summary": "Cirurgia sintatica concluida com 3 chunks aplicados e 0 warnings.",
+            "variables": { "status": "ok", "modified_files": ["src/parser.rs"] }
+        });
+        let req_comp = Request::builder()
+            .uri(format!("/api/v1/sessions/subagents/{agent_id}/complete"))
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&complete_payload).unwrap()))
+            .unwrap();
+        let resp_comp = app.clone().oneshot(req_comp).await.unwrap();
+        assert_eq!(resp_comp.status(), StatusCode::OK);
+        let bytes_comp = to_bytes(resp_comp.into_body(), usize::MAX).await.unwrap();
+        let json_comp: serde_json::Value = serde_json::from_slice(&bytes_comp).unwrap();
+        assert_eq!(json_comp["status"], "success");
+        assert_eq!(json_comp["subagent"]["status"], "COMPLETED");
+        assert_eq!(json_comp["return_handoff"]["target_agent_id"], "main_hermes_session_42");
+
+        // 5. Inspect full details via GET /api/v1/sessions/subagents/:id
+        let req_details = Request::builder()
+            .uri(format!("/api/v1/sessions/subagents/{agent_id}"))
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_details = app.clone().oneshot(req_details).await.unwrap();
+        assert_eq!(resp_details.status(), StatusCode::OK);
+        let bytes_det = to_bytes(resp_details.into_body(), usize::MAX).await.unwrap();
+        let json_det: serde_json::Value = serde_json::from_slice(&bytes_det).unwrap();
+        assert_eq!(json_det["status"], "success");
+        assert_eq!(json_det["diaries"].as_array().unwrap().len(), 2);
+        assert!(json_det["return_handoff"].is_object());
+
+        // 6. Test MCP sub_agent complete action
+        let mcp_complete_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 105,
+            "method": "tools/call",
+            "params": {
+                "name": "sub_agent",
+                "arguments": {
+                    "action": "history",
+                    "agent_id": agent_id
+                }
+            }
+        });
+        let req_mcp_hist = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&mcp_complete_payload).unwrap()))
+            .unwrap();
+        let resp_mcp_hist = app.clone().oneshot(req_mcp_hist).await.unwrap();
+        assert_eq!(resp_mcp_hist.status(), StatusCode::OK);
+        let bytes_mh = to_bytes(resp_mcp_hist.into_body(), usize::MAX).await.unwrap();
+        let json_mh: serde_json::Value = serde_json::from_slice(&bytes_mh).unwrap();
+        assert_eq!(json_mh["id"], 105);
+        assert!(!json_mh["result"]["isError"].as_bool().unwrap());
+    }
 }

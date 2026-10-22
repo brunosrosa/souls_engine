@@ -1,11 +1,14 @@
 //! Route definitions and router construction for `souls_server`.
 
+pub mod arena;
 pub mod chat;
 pub mod cloud;
 pub mod dashboard;
 pub mod health;
 pub mod inventory;
 pub mod models;
+pub mod sessions;
+pub mod switchboard;
 
 use axum::routing::{get, post};
 use axum::Router;
@@ -33,6 +36,24 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/profiles/:id", axum::routing::delete(dashboard::delete_profile_handler))
         .route("/api/v1/system/checkpoint", post(dashboard::system_checkpoint_handler))
         .route("/api/v1/system/curate-obsidian", post(dashboard::system_curate_obsidian_handler))
+        // Local Silicon Arena Endpoints
+        .route("/api/v1/arena/models", get(arena::arena_models_handler))
+        .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))
+        .route("/api/v1/arena/benchmark/run", post(arena::arena_run_benchmark_handler))
+        .route("/api/v1/arena/sync", post(arena::arena_sync_handler))
+        // Two-Stage Semantic Switchboard Endpoints (<1.7ms)
+        .route("/api/v1/switchboard/evaluate", post(switchboard::evaluate_handler))
+        .route("/api/v1/switchboard/skills", get(switchboard::list_skills_handler))
+        .route("/api/v1/switchboard/health", get(switchboard::health_handler))
+        // Sub-Agent Sessions & Handoff Endpoints (L3 Isolation)
+        .route("/api/v1/sessions/subagents", get(sessions::list_subagents_handler))
+        .route("/api/v1/sessions/subagents/:id", get(sessions::get_subagent_details_handler))
+        .route("/api/v1/sessions/subagents/spawn", post(sessions::spawn_subagent_handler))
+        .route("/api/v1/sessions/subagents/:id/status", post(sessions::update_status_handler))
+        .route("/api/v1/sessions/subagents/:id/diary", post(sessions::record_diary_handler))
+        .route("/api/v1/sessions/subagents/:id/complete", post(sessions::complete_subagent_handler))
+        .route("/api/v1/sessions/handoffs", post(sessions::create_handoff_handler))
+        .route("/api/v1/sessions/handoffs/:agent_id", get(sessions::get_handoff_handler))
         // Core API Endpoints
         .route("/health", get(health::health_handler))
         .route("/v1/models", get(models::models_handler))

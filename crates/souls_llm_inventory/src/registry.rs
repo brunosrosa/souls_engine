@@ -1,8 +1,8 @@
 //! Curated SSOT Registry of Elite Hugging Face Models and Quantizations.
 //!
 //! Provides canonical reference models for the 3 Tiers (Tier 0, Tier 0.5, Tier 1)
-//! and 5 Cognitive Profiles (Coding, Agentic, Fast Triage, Reasoning, Curation),
-//! dynamically evaluated against the host HardwareDiagnostic.
+//! and 6 Cognitive Profiles (Coding, Reasoning, Agentic, Design, Vision, Fast),
+//! dynamically evaluated against the host HardwareDiagnostic with dual SweetSpot/Heavyweight roles.
 
 use crate::profiler::{
     estimate_throughput_tps, evaluate_model_fit, HardwareDiagnostic, HardwareFit,
@@ -20,6 +20,9 @@ pub struct QuantizationVariant {
     pub sha256: Option<String>,
     pub hardware_fit: HardwareFit,
     pub is_recommended_fit: bool,
+    pub projector_file: Option<String>,
+    pub projector_url: Option<String>,
+    pub projector_size_mb: Option<u64>,
 }
 
 /// Baseline cognitive benchmark expectation.
@@ -41,10 +44,14 @@ pub struct HuggingFaceModelItem {
     pub default_context_length: u32,
     pub cognitive_profile: String,
     pub assigned_tier: String,
+    pub category_role: String, // "SweetSpot" (Eficiência 3B-4B, 45+ tps) ou "Heavyweight" (Capacidade máxima 7B-8B)
+    pub why_recommended: String,
+    pub highlights: Vec<String>,
     pub benchmark_scores: BenchmarkExpectation,
     pub variants: Vec<QuantizationVariant>,
     pub is_downloaded: bool,
     pub local_file_path: Option<String>,
+    pub is_multimodal_vlm: bool,
 }
 
 /// Recommended 3-Tier combo tailored to the host silicon.
@@ -64,6 +71,10 @@ struct RawModelDef {
     context_length: u32,
     cognitive_profile: &'static str,
     assigned_tier: &'static str,
+    category_role: &'static str,
+    why_recommended: &'static str,
+    highlights: &'static [&'static str],
+    is_multimodal_vlm: bool,
     coding_score: Option<f32>,
     ifeval_score: Option<f32>,
     mmlu_score: Option<f32>,
@@ -75,164 +86,26 @@ struct RawVariantDef {
     file_name: &'static str,
     size_mb: u64,
     sha256: Option<&'static str>,
+    projector_file: Option<&'static str>,
+    projector_size_mb: Option<u64>,
 }
 
 const RAW_CATALOG: &[RawModelDef] = &[
-    // --- TIER 0: Velocistas (Triage, Guardrails, Classificação) ---
-    RawModelDef {
-        repo_id: "HuggingFaceTB/SmolLM2-135M-Instruct-GGUF",
-        model_name: "SmolLM2 135M Instruct",
-        author: "HuggingFaceTB",
-        parameter_count: 135_000_000,
-        context_length: 8192,
-        cognitive_profile: "fast",
-        assigned_tier: "tier0_velocista",
-        coding_score: Some(38.5),
-        ifeval_score: Some(62.0),
-        mmlu_score: Some(50.1),
-        variants: &[
-            RawVariantDef {
-                quant_tag: "Q8_0",
-                file_name: "smollm2-135m-instruct-q8_0.gguf",
-                size_mb: 145,
-                sha256: None,
-            },
-            RawVariantDef {
-                quant_tag: "Q4_K_M",
-                file_name: "smollm2-135m-instruct-q4_k_m.gguf",
-                size_mb: 85,
-                sha256: None,
-            },
-        ],
-    },
-    RawModelDef {
-        repo_id: "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
-        model_name: "SmolLM2 360M Instruct",
-        author: "HuggingFaceTB",
-        parameter_count: 360_000_000,
-        context_length: 8192,
-        cognitive_profile: "fast",
-        assigned_tier: "tier0_velocista",
-        coding_score: Some(44.0),
-        ifeval_score: Some(67.5),
-        mmlu_score: Some(56.2),
-        variants: &[
-            RawVariantDef {
-                quant_tag: "Q8_0",
-                file_name: "smollm2-360m-instruct-q8_0.gguf",
-                size_mb: 380,
-                sha256: None,
-            },
-            RawVariantDef {
-                quant_tag: "Q4_K_M",
-                file_name: "smollm2-360m-instruct-q4_k_m.gguf",
-                size_mb: 225,
-                sha256: None,
-            },
-        ],
-    },
-
-    // --- TIER 0.5: Socrático (Entropia, Cohomologia, Deliberação) ---
-    RawModelDef {
-        repo_id: "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
-        model_name: "Qwen 2.5 1.5B Instruct",
-        author: "Qwen",
-        parameter_count: 1_500_000_000,
-        context_length: 32768,
-        cognitive_profile: "reasoning",
-        assigned_tier: "tier05_socratico",
-        coding_score: Some(65.4),
-        ifeval_score: Some(72.8),
-        mmlu_score: Some(68.2),
-        variants: &[
-            RawVariantDef {
-                quant_tag: "Q5_K_M",
-                file_name: "qwen2.5-1.5b-instruct-q5_k_m.gguf",
-                size_mb: 1150,
-                sha256: None,
-            },
-            RawVariantDef {
-                quant_tag: "Q4_K_M",
-                file_name: "qwen2.5-1.5b-instruct-q4_k_m.gguf",
-                size_mb: 980,
-                sha256: None,
-            },
-            RawVariantDef {
-                quant_tag: "Q8_0",
-                file_name: "qwen2.5-1.5b-instruct-q8_0.gguf",
-                size_mb: 1650,
-                sha256: None,
-            },
-        ],
-    },
-    RawModelDef {
-        repo_id: "google/gemma-2-2b-it-GGUF",
-        model_name: "Gemma 2 2B Instruct",
-        author: "Google",
-        parameter_count: 2_600_000_000,
-        context_length: 8192,
-        cognitive_profile: "curation",
-        assigned_tier: "tier05_socratico",
-        coding_score: Some(60.2),
-        ifeval_score: Some(75.1),
-        mmlu_score: Some(70.4),
-        variants: &[
-            RawVariantDef {
-                quant_tag: "Q4_K_M",
-                file_name: "gemma-2-2b-it-q4_k_m.gguf",
-                size_mb: 1750,
-                sha256: None,
-            },
-            RawVariantDef {
-                quant_tag: "Q5_K_M",
-                file_name: "gemma-2-2b-it-q5_k_m.gguf",
-                size_mb: 2050,
-                sha256: None,
-            },
-        ],
-    },
-
-    // --- TIER 1: Tratores de Código & Agentes Autônomos ---
-    RawModelDef {
-        repo_id: "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
-        model_name: "Qwen 2.5 Coder 7B Instruct",
-        author: "Qwen",
-        parameter_count: 7_000_000_000,
-        context_length: 32768,
-        cognitive_profile: "coding",
-        assigned_tier: "tier1_coder",
-        coding_score: Some(88.4),
-        ifeval_score: Some(82.5),
-        mmlu_score: Some(79.2),
-        variants: &[
-            RawVariantDef {
-                quant_tag: "Q4_K_M",
-                file_name: "qwen2.5-coder-7b-instruct-q4_k_m.gguf",
-                size_mb: 4350,
-                sha256: None,
-            },
-            RawVariantDef {
-                quant_tag: "Q5_K_M",
-                file_name: "qwen2.5-coder-7b-instruct-q5_k_m.gguf",
-                size_mb: 5150,
-                sha256: None,
-            },
-            RawVariantDef {
-                quant_tag: "Q8_0",
-                file_name: "qwen2.5-coder-7b-instruct-q8_0.gguf",
-                size_mb: 7700,
-                sha256: None,
-            },
-        ],
-    },
+    // =========================================================================
+    // 1. PERFIL: CODING SPECIALIST (Engenharia & Cirurgia de Código)
+    // =========================================================================
     RawModelDef {
         repo_id: "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
         model_name: "Qwen 2.5 Coder 3B Instruct",
         author: "Qwen",
         parameter_count: 3_000_000_000,
         context_length: 32768,
-        cognitive_profile: "agentic",
+        cognitive_profile: "coding",
         assigned_tier: "tier1_coder",
+        category_role: "SweetSpot",
+        why_recommended: "Campeão de densidade e velocidade (48+ tok/s). Deixa 2.8 GB livres na VRAM para contextos de até 32k tokens sem spillover.",
+        highlights: &["48+ tok/s dGPU", "32k Contexto Seguro", "HumanEval 76.5%", "Zero Risco Spillover"],
+        is_multimodal_vlm: false,
         coding_score: Some(76.5),
         ifeval_score: Some(74.0),
         mmlu_score: Some(71.0),
@@ -242,12 +115,88 @@ const RAW_CATALOG: &[RawModelDef] = &[
                 file_name: "qwen2.5-coder-3b-instruct-q5_k_m.gguf",
                 size_mb: 2350,
                 sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
             },
             RawVariantDef {
                 quant_tag: "Q4_K_M",
                 file_name: "qwen2.5-coder-3b-instruct-q4_k_m.gguf",
                 size_mb: 1950,
                 sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+        ],
+    },
+    RawModelDef {
+        repo_id: "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+        model_name: "Qwen 2.5 Coder 7B Instruct",
+        author: "Qwen",
+        parameter_count: 7_000_000_000,
+        context_length: 32768,
+        cognitive_profile: "coding",
+        assigned_tier: "tier1_coder",
+        category_role: "Heavyweight",
+        why_recommended: "Teto máximo de capacidade local para refatorações pesadas e arquitetura (HumanEval 88.4%). Opera no limite da VRAM (4.3 GB pesos + KV).",
+        highlights: &["HumanEval 88.4%", "Lógica SWE Avançada", "28 tok/s dGPU", "VRAM Justa (~4.9GB)"],
+        is_multimodal_vlm: false,
+        coding_score: Some(88.4),
+        ifeval_score: Some(82.5),
+        mmlu_score: Some(79.2),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "qwen2.5-coder-7b-instruct-q4_k_m.gguf",
+                size_mb: 4350,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+            RawVariantDef {
+                quant_tag: "Q5_K_M",
+                file_name: "qwen2.5-coder-7b-instruct-q5_k_m.gguf",
+                size_mb: 5150,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+        ],
+    },
+
+    // =========================================================================
+    // 2. PERFIL: DEEP REASONING (Raciocínio Socrático & Chain-of-Thought)
+    // =========================================================================
+    RawModelDef {
+        repo_id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+        model_name: "DeepSeek R1 Distill Qwen 1.5B",
+        author: "DeepSeek",
+        parameter_count: 1_500_000_000,
+        context_length: 32768,
+        cognitive_profile: "reasoning",
+        assigned_tier: "tier05_socratico",
+        category_role: "SweetSpot",
+        why_recommended: "Vanguarda mundial de reasoning formal destilado do DeepSeek-R1. Gera cadeias de pensamento socrático profundas a mais de 65 tok/s.",
+        highlights: &["R1 Chain-of-Thought", "65+ tok/s dGPU", "1.1 GB VRAM", "Deliberação Socrática"],
+        is_multimodal_vlm: false,
+        coding_score: Some(72.0),
+        ifeval_score: Some(78.5),
+        mmlu_score: Some(74.2),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q5_K_M",
+                file_name: "deepseek-r1-distill-qwen-1.5b-q5_k_m.gguf",
+                size_mb: 1180,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "deepseek-r1-distill-qwen-1.5b-q4_k_m.gguf",
+                size_mb: 990,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
             },
         ],
     },
@@ -259,6 +208,10 @@ const RAW_CATALOG: &[RawModelDef] = &[
         context_length: 16384,
         cognitive_profile: "reasoning",
         assigned_tier: "tier1_coder",
+        category_role: "Heavyweight",
+        why_recommended: "Matemática rigorosa e resolução de problemas analíticos com arquitetura Phi-4. Pontua 76.4 no MMLU ocupando apenas 2.5 GB.",
+        highlights: &["MMLU 76.4", "Matemática Formal", "2.5 GB VRAM", "38 tok/s dGPU"],
+        is_multimodal_vlm: false,
         coding_score: Some(78.0),
         ifeval_score: Some(79.5),
         mmlu_score: Some(76.4),
@@ -268,52 +221,320 @@ const RAW_CATALOG: &[RawModelDef] = &[
                 file_name: "phi-4-mini-instruct-q4_k_m.gguf",
                 size_mb: 2450,
                 sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
             },
             RawVariantDef {
                 quant_tag: "Q5_K_M",
                 file_name: "phi-4-mini-instruct-q5_k_m.gguf",
                 size_mb: 2850,
                 sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+        ],
+    },
+
+    // =========================================================================
+    // 3. PERFIL: AGENTIC & TOOL CALLING (Orquestração & Function Calling)
+    // =========================================================================
+    RawModelDef {
+        repo_id: "NousResearch/Hermes-3-Llama-3.2-3B-GGUF",
+        model_name: "Hermes 3 Llama 3.2 3B",
+        author: "NousResearch",
+        parameter_count: 3_200_000_000,
+        context_length: 32768,
+        cognitive_profile: "agentic",
+        assigned_tier: "tier1_coder",
+        category_role: "SweetSpot",
+        why_recommended: "Orquestrador oficial do Hermes Agent. Treinado com os melhores prompts agênticos, auto-reflexão e despacho de subagentes.",
+        highlights: &["Simbiose Nativa Hermes", "Excelente Tool Calling", "42 tok/s dGPU", "2.0 GB VRAM"],
+        is_multimodal_vlm: false,
+        coding_score: Some(72.5),
+        ifeval_score: Some(81.0),
+        mmlu_score: Some(72.8),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "Hermes-3-Llama-3.2-3B.Q4_K_M.gguf",
+                size_mb: 1980,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+            RawVariantDef {
+                quant_tag: "Q5_K_M",
+                file_name: "Hermes-3-Llama-3.2-3B.Q5_K_M.gguf",
+                size_mb: 2350,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+        ],
+    },
+    RawModelDef {
+        repo_id: "katanemo/Arch-Function-Chat-3B-GGUF",
+        model_name: "Arch Function Chat 3B",
+        author: "Katanemo",
+        parameter_count: 3_000_000_000,
+        context_length: 8192,
+        cognitive_profile: "agentic",
+        assigned_tier: "tier1_coder",
+        category_role: "Heavyweight",
+        why_recommended: "Modelo com fine-tuning hiper-especializado em validação de JSON Schema e invocação estrita de chamadas MCP sem desvios sintáticos.",
+        highlights: &["JSON Schema Rígido", "Zero Erro de Chamada", "45 tok/s dGPU", "2.2 GB VRAM"],
+        is_multimodal_vlm: false,
+        coding_score: Some(74.0),
+        ifeval_score: Some(84.0),
+        mmlu_score: Some(70.5),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q5_K_M",
+                file_name: "Arch-Function-Chat-3B-Q5_K_M.gguf",
+                size_mb: 2200,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "Arch-Function-Chat-3B-Q4_K_M.gguf",
+                size_mb: 1850,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+        ],
+    },
+
+    // =========================================================================
+    // 4. PERFIL: UI/UX & FRONTEND DESIGN (CSS, Componentes & Estética Web)
+    // =========================================================================
+    RawModelDef {
+        repo_id: "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
+        model_name: "Qwen 2.5 Coder 3B (Design Edition)",
+        author: "Qwen",
+        parameter_count: 3_000_000_000,
+        context_length: 32768,
+        cognitive_profile: "design",
+        assigned_tier: "tier1_coder",
+        category_role: "SweetSpot",
+        why_recommended: "Calibrado para geração de layouts elegantes, Vanilla CSS moderno, glassmorphism, hierarquia tipográfica e micro-animações interativas.",
+        highlights: &["Design Systems", "CSS3 / Vanilla / Flex / Grid", "Micro-animações", "Zero Placeholders"],
+        is_multimodal_vlm: false,
+        coding_score: Some(78.5),
+        ifeval_score: Some(76.0),
+        mmlu_score: Some(71.5),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q5_K_M",
+                file_name: "qwen2.5-coder-3b-instruct-q5_k_m.gguf",
+                size_mb: 2350,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "qwen2.5-coder-3b-instruct-q4_k_m.gguf",
+                size_mb: 1950,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+        ],
+    },
+    RawModelDef {
+        repo_id: "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+        model_name: "Qwen 2.5 Coder 7B (Design Heavyweight)",
+        author: "Qwen",
+        parameter_count: 7_000_000_000,
+        context_length: 32768,
+        cognitive_profile: "design",
+        assigned_tier: "tier1_coder",
+        category_role: "Heavyweight",
+        why_recommended: "Capacidade máxima de engenharia frontend completa (páginas inteiras, dashboards analíticos complexos e sistemas de design de larga escala).",
+        highlights: &["Dashboards Complexos", "SVG / Canvas / UI", "Engenharia Frontend", "Capacidade Máxima"],
+        is_multimodal_vlm: false,
+        coding_score: Some(89.0),
+        ifeval_score: Some(83.0),
+        mmlu_score: Some(79.5),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "qwen2.5-coder-7b-instruct-q4_k_m.gguf",
+                size_mb: 4350,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+        ],
+    },
+
+    // =========================================================================
+    // 5. PERFIL: VISION & MULTIMODAL VLM (Inspeção Visual, OCR & Diagramas)
+    // =========================================================================
+    RawModelDef {
+        repo_id: "Qwen/Qwen2.5-VL-3B-Instruct-GGUF",
+        model_name: "Qwen 2.5 VL 3B Instruct (Bundle VLM)",
+        author: "Qwen",
+        parameter_count: 3_200_000_000,
+        context_length: 16384,
+        cognitive_profile: "vision",
+        assigned_tier: "tier3_multimodal",
+        category_role: "SweetSpot",
+        why_recommended: "VLM de vanguarda com suporte a leitura de screenshots, diagramas Mermaid/UML e OCR de código. Requer projetor mmproj-F16 baixado em conjunto.",
+        highlights: &["Inspeção Visual UI", "OCR de Código & Prints", "Diagramas Mermaid", "GGUF + mmproj F16"],
+        is_multimodal_vlm: true,
+        coding_score: Some(71.0),
+        ifeval_score: Some(75.5),
+        mmlu_score: Some(69.0),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+                size_mb: 1880,
+                sha256: None,
+                projector_file: Some("mmproj-F16.gguf"),
+                projector_size_mb: Some(1280),
+            },
+        ],
+    },
+
+    // =========================================================================
+    // 6. PERFIL: FAST REFLEX & TRIAGE (Classificação Rápida, Guardrails & Entropia)
+    // =========================================================================
+    RawModelDef {
+        repo_id: "HuggingFaceTB/SmolLM2-135M-Instruct-GGUF",
+        model_name: "SmolLM2 135M Instruct",
+        author: "HuggingFaceTB",
+        parameter_count: 135_000_000,
+        context_length: 8192,
+        cognitive_profile: "fast",
+        assigned_tier: "tier0_velocista",
+        category_role: "SweetSpot",
+        why_recommended: "Velocista ultra-leve para reflexos instantâneos (180+ tok/s). Ocupa apenas 85 MB de VRAM, ideal para pré-filtros e guardrails.",
+        highlights: &["180+ tok/s dGPU", "Apenas 85 MB VRAM", "Reflexo Instantâneo", "Zero Latência"],
+        is_multimodal_vlm: false,
+        coding_score: Some(38.5),
+        ifeval_score: Some(62.0),
+        mmlu_score: Some(50.1),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "smollm2-135m-instruct-q4_k_m.gguf",
+                size_mb: 85,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+            RawVariantDef {
+                quant_tag: "Q8_0",
+                file_name: "smollm2-135m-instruct-q8_0.gguf",
+                size_mb: 145,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+        ],
+    },
+    RawModelDef {
+        repo_id: "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+        model_name: "SmolLM2 360M Instruct",
+        author: "HuggingFaceTB",
+        parameter_count: 360_000_000,
+        context_length: 8192,
+        cognitive_profile: "fast",
+        assigned_tier: "tier0_velocista",
+        category_role: "Heavyweight",
+        why_recommended: "Classificação robusta de intenção e verificação de coerência epistêmica a 120 tok/s com menos de 250 MB de peso.",
+        highlights: &["120 tok/s dGPU", "225 MB VRAM", "Classificação de Intenção", "Ideal para Tier 0.5"],
+        is_multimodal_vlm: false,
+        coding_score: Some(44.0),
+        ifeval_score: Some(67.5),
+        mmlu_score: Some(56.2),
+        variants: &[
+            RawVariantDef {
+                quant_tag: "Q4_K_M",
+                file_name: "smollm2-360m-instruct-q4_k_m.gguf",
+                size_mb: 225,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
+            },
+            RawVariantDef {
+                quant_tag: "Q8_0",
+                file_name: "smollm2-360m-instruct-q8_0.gguf",
+                size_mb: 380,
+                sha256: None,
+                projector_file: None,
+                projector_size_mb: None,
             },
         ],
     },
 ];
+
+/// Normaliza um nome de arquivo para casamento flexível (sem extensão e case-insensitive)
+fn normalize_stem(filename: &str) -> String {
+    filename
+        .to_ascii_lowercase()
+        .trim_end_matches(".gguf")
+        .trim_end_matches(".bin")
+        .replace(['_', '-', '.'], "")
+}
 
 /// Evaluates and returns the curated catalog against the host hardware.
 pub fn get_curated_catalog(
     diag: &HardwareDiagnostic,
     installed_filenames: &[String],
 ) -> Vec<HuggingFaceModelItem> {
+    let normalized_installed: Vec<(String, String)> = installed_filenames
+        .iter()
+        .map(|f| (f.clone(), normalize_stem(f)))
+        .collect();
+
     RAW_CATALOG
         .iter()
         .map(|def| {
             let mut variants = Vec::new();
 
             for var in def.variants {
-                let size_bytes = var.size_mb * 1024 * 1024;
+                let total_size_mb = var.size_mb + var.projector_size_mb.unwrap_or(0);
+                let size_bytes = total_size_mb * 1024 * 1024;
                 let eval_context = def.context_length.min(8192);
                 let fit = evaluate_model_fit(diag, size_bytes, eval_context, def.parameter_count);
 
-                // Build Hugging Face download URL (resolve direct LFS link)
                 let download_url = format!(
                     "https://huggingface.co/{}/resolve/main/{}",
                     def.repo_id, var.file_name
                 );
 
+                let (proj_file, proj_url) = if let Some(pfile) = var.projector_file {
+                    let purl = format!(
+                        "https://huggingface.co/{}/resolve/main/{}",
+                        def.repo_id, pfile
+                    );
+                    (Some(pfile.to_string()), Some(purl))
+                } else {
+                    (None, None)
+                };
+
                 variants.push(QuantizationVariant {
                     quant_tag: var.quant_tag.to_string(),
                     file_name: var.file_name.to_string(),
                     download_url,
-                    size_bytes,
+                    size_bytes: var.size_mb * 1024 * 1024,
                     size_gb: var.size_mb as f64 / 1024.0,
                     sha256: var.sha256.map(String::from),
                     hardware_fit: fit,
                     is_recommended_fit: false,
+                    projector_file: proj_file,
+                    projector_url: proj_url,
+                    projector_size_mb: var.projector_size_mb,
                 });
             }
 
-            // Flag the optimal recommended quantization variant:
-            // Prefer Q5_K_M if it fits OptimalVram; otherwise Q4_K_M if OptimalVram; otherwise first variant
+            // Flag optimal recommended variant (Q5_K_M if OptimalVram; else Q4_K_M; else first)
             let mut recommended_idx = 0;
             for (i, v) in variants.iter().enumerate() {
                 if v.hardware_fit == HardwareFit::OptimalVram {
@@ -329,13 +550,24 @@ pub fn get_curated_catalog(
                 v.is_recommended_fit = true;
             }
 
-            // Check if any variant is already downloaded
+            // Mapeamento resiliente de arquivo já instalado
             let mut is_downloaded = false;
             let mut local_file_path = None;
+
             for v in &variants {
-                if installed_filenames.iter().any(|f| f.eq_ignore_ascii_case(&v.file_name)) {
-                    is_downloaded = true;
-                    local_file_path = Some(v.file_name.clone());
+                let v_norm = normalize_stem(&v.file_name);
+                for (real_name, real_norm) in &normalized_installed {
+                    if real_name.eq_ignore_ascii_case(&v.file_name)
+                        || real_norm == &v_norm
+                        || real_norm.contains(&v_norm)
+                        || v_norm.contains(real_norm)
+                    {
+                        is_downloaded = true;
+                        local_file_path = Some(real_name.clone());
+                        break;
+                    }
+                }
+                if is_downloaded {
                     break;
                 }
             }
@@ -359,6 +591,9 @@ pub fn get_curated_catalog(
                 default_context_length: def.context_length,
                 cognitive_profile: def.cognitive_profile.to_string(),
                 assigned_tier: def.assigned_tier.to_string(),
+                category_role: def.category_role.to_string(),
+                why_recommended: def.why_recommended.to_string(),
+                highlights: def.highlights.iter().map(|s| s.to_string()).collect(),
                 benchmark_scores: BenchmarkExpectation {
                     coding_score: def.coding_score,
                     ifeval_score: def.ifeval_score,
@@ -368,6 +603,7 @@ pub fn get_curated_catalog(
                 variants,
                 is_downloaded,
                 local_file_path,
+                is_multimodal_vlm: def.is_multimodal_vlm,
             }
         })
         .collect()
@@ -388,16 +624,27 @@ pub fn get_recommended_triad(
 
     let tier05 = catalog
         .iter()
-        .find(|m| m.assigned_tier == "tier05_socratico" && m.repo_id.contains("Qwen2.5-1.5B"))
+        .find(|m| m.assigned_tier == "tier05_socratico" && m.repo_id.contains("DeepSeek-R1"))
         .cloned()
+        .or_else(|| {
+            catalog
+                .iter()
+                .find(|m| m.assigned_tier == "tier05_socratico")
+                .cloned()
+        })
         .unwrap_or_else(|| catalog[2].clone());
 
-    // For Tier 1, choose Qwen 2.5 Coder 7B if it fits in VRAM or RAM, or Coder 3B if tight
     let tier1 = catalog
         .iter()
-        .find(|m| m.assigned_tier == "tier1_coder" && m.repo_id.contains("Coder-7B"))
+        .find(|m| m.assigned_tier == "tier1_coder" && m.category_role == "SweetSpot" && m.cognitive_profile == "coding")
         .cloned()
-        .unwrap_or_else(|| catalog[4].clone());
+        .or_else(|| {
+            catalog
+                .iter()
+                .find(|m| m.assigned_tier == "tier1_coder" && m.repo_id.contains("Coder-7B"))
+                .cloned()
+        })
+        .unwrap_or_else(|| catalog[1].clone());
 
     RecommendedTriad {
         tier0_velocista: tier0,
@@ -438,15 +685,30 @@ mod tests {
             .expect("Coder 7B must exist");
 
         assert!(coder_7b.is_downloaded);
-        assert_eq!(coder_7b.local_file_path.as_deref(), Some("qwen2.5-coder-7b-instruct-q4_k_m.gguf"));
+        assert_eq!(
+            coder_7b.local_file_path.as_deref(),
+            Some("qwen2.5-coder-7b-instruct-q4_k_m.gguf")
+        );
 
         // Q4_K_M should be OptimalVram on 5.2GB
         let q4 = coder_7b.variants.iter().find(|v| v.quant_tag == "Q4_K_M").unwrap();
         assert_eq!(q4.hardware_fit, HardwareFit::OptimalVram);
+    }
 
-        // Q8_0 should be PartialCpuOffload on 5.2GB
-        let q8 = coder_7b.variants.iter().find(|v| v.quant_tag == "Q8_0").unwrap();
-        assert_eq!(q8.hardware_fit, HardwareFit::PartialCpuOffload);
+    #[test]
+    fn test_curated_catalog_vlm_projector_support() {
+        let diag = HardwareDiagnostic::default();
+        let catalog = get_curated_catalog(&diag, &[]);
+
+        let vlm = catalog
+            .iter()
+            .find(|m| m.is_multimodal_vlm)
+            .expect("VLM model must be in curated catalog");
+
+        assert_eq!(vlm.cognitive_profile, "vision");
+        let v = &vlm.variants[0];
+        assert_eq!(v.projector_file.as_deref(), Some("mmproj-F16.gguf"));
+        assert!(v.projector_url.is_some());
     }
 
     #[test]

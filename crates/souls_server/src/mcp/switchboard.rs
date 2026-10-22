@@ -147,7 +147,12 @@ pub struct SwitchboardDecision {
 }
 
 /// Computes token overlap semantic score in [0.0, 1.0].
-fn compute_semantic_score(query_tokens: &[&str], target_text: &str, bonus_keywords: &[&str]) -> f32 {
+fn compute_semantic_score(
+    query_tokens: &[&str],
+    target_text: &str,
+    bonus_keywords: &[&str],
+    namespace: &str,
+) -> f32 {
     if query_tokens.is_empty() {
         return 0.5;
     }
@@ -164,28 +169,85 @@ fn compute_semantic_score(query_tokens: &[&str], target_text: &str, bonus_keywor
     let mut keyword_hits = 0.0_f32;
     for kw in bonus_keywords {
         if query_tokens.iter().any(|qt| qt.contains(kw) || kw.contains(qt)) {
-            keyword_hits += 1.5;
+            keyword_hits += 2.0;
         }
     }
 
-    let raw = (hits + keyword_hits) / (query_tokens.len() as f32).max(1.0);
+    // Semantic intent affinity boost by domain keywords
+    let mut domain_boost = 1.0_f32;
+    for qt in query_tokens {
+        match *qt {
+            "code" | "ast" | "syntax" | "function" | "struct" | "symbol" | "diff" | "refactor" | "rust" => {
+                if namespace == "code" {
+                    domain_boost = 1.8;
+                }
+            }
+            "memory" | "sqlite" | "lancedb" | "ladybug" | "graph" | "fact" | "store" | "lembrar" | "salvar" => {
+                if namespace == "memory" {
+                    domain_boost = 1.8;
+                }
+            }
+            "think" | "thinking" | "socratic" | "dag" | "reasoning" | "hypothesis" | "pensar" | "hipotese" => {
+                if namespace == "think" {
+                    domain_boost = 1.8;
+                }
+            }
+            "exec" | "execute" | "shell" | "terminal" | "sandbox" | "command" | "jobobject" | "process" => {
+                if namespace == "ops" {
+                    domain_boost = 1.8;
+                }
+            }
+            "cloud" | "arena" | "pricing" | "cost" | "pareto" | "nous" | "openrouter" | "custo" | "preco" => {
+                if namespace == "ops" || target_lower.contains("cloud") {
+                    domain_boost = 1.8;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let raw = ((hits + keyword_hits) / (query_tokens.len() as f32).max(1.0)) * domain_boost;
     raw.clamp(0.05, 0.99)
 }
 
-/// Executes Stage 1 dense vector & lexical cosine match in RAM (< 5 ms).
+/// Executes Stage 1 dense vector & lexical cosine match in RAM (< 2 ms).
 pub fn execute_stage1(
     query: &str,
     namespace_filter: Option<&str>,
+    top_k: usize,
 ) -> (Vec<RankedTool>, Option<RankedSkill>, f32) {
     let clean_query = query.to_lowercase();
     let query_tokens: Vec<&str> = clean_query
         .split(|c: char| !c.is_alphanumeric())
-        .filter(|t| t.len() >= 3)
+        .filter(|t| t.len() >= 2)
         .collect();
+
+    // 1. First evaluate skill affinity to boost matching primary tools
+    let mut skill_scores: Vec<RankedSkill> = CANONICAL_SKILLS
+        .iter()
+        .map(|s| {
+            let combined = format!("{} {}", s.name, s.description);
+            let score = compute_semantic_score(&query_tokens, &combined, s.keywords, "skill");
+            RankedSkill {
+                name: s.name.to_string(),
+                description: s.description.to_string(),
+                score,
+                primary_tools: s.primary_tools.iter().map(|&t| t.to_string()).collect(),
+            }
+        })
+        .collect();
+
+    skill_scores.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    let best_skill = skill_scores.first().cloned();
+
+    let primary_tool_names: Vec<String> = best_skill
+        .as_ref()
+        .map(|s| s.primary_tools.clone())
+        .unwrap_or_default();
 
     let all_tools = get_canonical_tools();
 
-    // 1. Score tools
+    // 2. Score tools with skill harmony boost
     let mut tool_scores: Vec<RankedTool> = all_tools
         .iter()
         .filter(|t| {
@@ -198,7 +260,13 @@ pub fn execute_stage1(
         })
         .map(|t| {
             let combined = format!("{} {} {}", t.name, t.namespace, t.description);
-            let score = compute_semantic_score(&query_tokens, &combined, &[t.name, t.namespace]);
+            let mut score = compute_semantic_score(&query_tokens, &combined, &[t.name, t.namespace], t.namespace);
+
+            // Skill harmony boost: if this tool is primary for the top skill, grant extra weight
+            if primary_tool_names.iter().any(|pt| pt.eq_ignore_ascii_case(t.name)) {
+                score = (score + 0.35).min(0.99);
+            }
+
             RankedTool {
                 name: t.name.to_string(),
                 namespace: t.namespace.to_string(),
@@ -210,25 +278,7 @@ pub fn execute_stage1(
         .collect();
 
     tool_scores.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-    tool_scores.truncate(5);
-
-    // 2. Score skills
-    let mut skill_scores: Vec<RankedSkill> = CANONICAL_SKILLS
-        .iter()
-        .map(|s| {
-            let combined = format!("{} {}", s.name, s.description);
-            let score = compute_semantic_score(&query_tokens, &combined, s.keywords);
-            RankedSkill {
-                name: s.name.to_string(),
-                description: s.description.to_string(),
-                score,
-                primary_tools: s.primary_tools.iter().map(|&t| t.to_string()).collect(),
-            }
-        })
-        .collect();
-
-    skill_scores.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-    let best_skill = skill_scores.first().cloned();
+    tool_scores.truncate(top_k);
 
     let top_tool_score = tool_scores.first().map(|t| t.score).unwrap_or(0.5);
     let top_skill_score = best_skill.as_ref().map(|s| s.score).unwrap_or(0.5);
@@ -242,35 +292,82 @@ pub async fn evaluate_switchboard(
     state: &AppState,
     query: &str,
     namespace: Option<&str>,
+    top_k: Option<usize>,
 ) -> SwitchboardDecision {
     let start = std::time::Instant::now();
+    let k = top_k.unwrap_or(5).clamp(1, 15);
 
-    // Stage 1: Fast-Path Cosine Match in RAM (< 5 ms)
-    let (top_tools, top_skill, s1_conf) = execute_stage1(query, namespace);
+    // Stage 1: Fast-Path Cosine Match in RAM (< 2 ms)
+    let (mut top_tools, mut top_skill, s1_conf) = execute_stage1(query, namespace, k);
 
     // Stage 2: Entropy Gating via Tier 0.5 Logit Probing (~8 ms) if confidence < 0.75
     let (stage_name, final_conf, entropy) = if s1_conf >= 0.75 {
         ("fast_path_ram_cosine".to_string(), s1_conf, 0.15)
     } else {
-        // Evaluate entropy circuit breaker via real Tier 0.5 prober
-        match state.runtime.infer_tier05_probe(query).await {
-            Ok(prob_output) => {
-                let ent = prob_output.entropy;
-                // If entropy is low, boost confidence; if entropy is high, signal ambiguity
-                let adjusted_conf = if ent < 0.5 {
-                    (s1_conf + 0.25).min(0.95)
+        // Evaluate intent & entropy circuit breaker via real Tier 0/0.5 prober
+        match state.runtime.evaluate_intent(query).await {
+            Ok(intent_val) => {
+                let ent = intent_val.get("entropy").and_then(Value::as_f64).unwrap_or(0.35) as f32;
+                let detected_intent = intent_val.get("intent").and_then(Value::as_str).unwrap_or("");
+
+                // If Tier 0 detected a dominant namespace, re-evaluate Stage 1 with that namespace filter
+                if namespace.is_none() && !detected_intent.is_empty() {
+                    let inferred_ns = match detected_intent {
+                        "code" | "code_review" | "ast" => Some("code"),
+                        "memory" | "recall" => Some("memory"),
+                        "think" | "reasoning" => Some("think"),
+                        "terminal" | "shell" | "ops" => Some("ops"),
+                        _ => None,
+                    };
+
+                    if let Some(ns) = inferred_ns {
+                        let (refined_tools, refined_skill, refined_conf) = execute_stage1(query, Some(ns), k);
+                        if !refined_tools.is_empty() {
+                            top_tools = refined_tools;
+                            if refined_skill.is_some() {
+                                top_skill = refined_skill;
+                            }
+                        }
+                        let adjusted_conf = (refined_conf + 0.20).min(0.95);
+                        ("stage2_tier05_entropy_gated".to_string(), adjusted_conf, ent)
+                    } else {
+                        let adjusted_conf = if ent < 0.5 {
+                            (s1_conf + 0.25).min(0.95)
+                        } else {
+                            (s1_conf * 0.85).max(0.10)
+                        };
+                        ("stage2_tier05_entropy_gated".to_string(), adjusted_conf, ent)
+                    }
                 } else {
-                    (s1_conf * 0.85).max(0.10)
-                };
-                ("stage2_tier05_entropy_gated".to_string(), adjusted_conf, ent)
+                    let adjusted_conf = if ent < 0.5 {
+                        (s1_conf + 0.25).min(0.95)
+                    } else {
+                        (s1_conf * 0.85).max(0.10)
+                    };
+                    ("stage2_tier05_entropy_gated".to_string(), adjusted_conf, ent)
+                }
             }
-            Err(_) => ("stage1_fallback".to_string(), s1_conf, 0.50),
+            Err(_) => {
+                // Fail-soft Tier 0.5 logit probe fallback
+                match state.runtime.infer_tier05_probe(query).await {
+                    Ok(prob_output) => {
+                        let ent = prob_output.entropy;
+                        let adjusted_conf = if ent < 0.5 {
+                            (s1_conf + 0.20).min(0.95)
+                        } else {
+                            (s1_conf * 0.85).max(0.10)
+                        };
+                        ("stage2_tier05_entropy_gated".to_string(), adjusted_conf, ent)
+                    }
+                    Err(_) => ("stage1_fallback".to_string(), s1_conf, 0.50),
+                }
+            }
         }
     };
 
     let latency_ms = start.elapsed().as_secs_f64() * 1000.0;
-    let selected_tools: Vec<RankedTool> = top_tools.into_iter().take(3).collect();
-    let count = selected_tools.len();
+    top_tools.truncate(k);
+    let count = top_tools.len();
 
     SwitchboardDecision {
         stage: stage_name,
@@ -278,7 +375,7 @@ pub async fn evaluate_switchboard(
         entropy,
         matched_count: count,
         recommended_skill: top_skill,
-        tools: selected_tools,
+        tools: top_tools,
         latency_ms,
     }
 }

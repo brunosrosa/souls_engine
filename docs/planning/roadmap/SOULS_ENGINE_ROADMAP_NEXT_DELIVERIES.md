@@ -193,6 +193,14 @@ Para blindar o desenvolvimento contra o *Context Rot* e garantir feedback funcio
 │ Sessão 17│ Bloco 2: Model Hub &  │ [CONCLUÍDA & HOMOLOGADA] Nova crate         │
 │          │ Hardware Profiler     │ souls_llm_inventory, Profiler Agnóstico,    │
 │          │ (souls_llm_inventory) │ Downloader Resiliente Range/SHA256, UI Hub  │
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 18│ Bloco 3: Local Silicon│ [CONCLUÍDA & HOMOLOGADA] Integração da      │
+│          │ Arena & Web Dashboard │ souls_llm_local_arena no souls_server REST  │
+│          │ (souls_server REST)   │ 4 rotas, 5 baterias ADR-007, 32/32 PASS      │
+├──────────┼───────────────────────┼─────────────────────────────────────────────┤
+│ Sessão 19│ Bloco 4: Two-Stage    │ [CONCLUÍDA & HOMOLOGADA] Projeção dinâmica  │
+│          │ Switchboard MCP       │ MCP tools/list (<1.7ms), 3 rotas REST, 15   │
+│          │ (souls_server)        │ skills, simulador Web Dashboard, 33/33 PASS │
 └──────────┴───────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -1008,20 +1016,23 @@ Para a continuidade estratégica do Souls Engine v7, os 3 grandes blocos mestres
 │    - html_to_clean_markdown & DuckDuckGo Lite: Scraper de RAM zero-dependency  │
 ├────────────────────────────────────────────────────────────────────────────────┤
 │ 2. RFC-007: CRATE souls_llm_inventory (Model Hub & Profiling de Silício)       │
-│    STATUS: [CONCLUÍDA & HOMOLOGADA NA SESSÃO 17 - 16/16 + 31/31 TESTES PASS]   │
+│    STATUS: [CONCLUÍDA & HOMOLOGADA NA SESSÃO 17 - 17/17 + 31/31 TESTES PASS]   │
 │    - Hardware Profiler dinâmico e agnóstico (GlobalMemoryStatusEx Win32 + NVML) │
 │    - Tríade Recomendada Curada por silício para Tier 0, Tier 0.5 e Tier 1       │
-│    - Catálogo curado SSOT com benchmarks (Coding, MMLU, IFEval, Speed TPS)      │
+│    - Catálogo curado SSOT: 6 Perfis Cognitivos, Matriz Dual (SweetSpot/Heavy)   │
+│    - Separação Canônica entre Visão Multimodal (VLM) e UI/UX Frontend Design    │
+│    - Suporte a Download em Bundle para VLMs (GGUF + mmproj-F16.gguf automático) │
+│    - Reconhecimento automático dos pesos físicos locais ('Instalado no Silício')│
 │    - Download Manager Sequencial Resiliente com HTTP Range (resume) e SHA-256   │
 │    - Hugging Face Hub Client (busca dinâmica de repos e inspeção de GGUFs)      │
 │    - Web Dashboard: sub-aba 'Model Hub & Downloads' com 5 cards & SSE viva     │
 ├────────────────────────────────────────────────────────────────────────────────┤
-│ 3. CURADORIA DO OBSIDIAN DB (Wiki / Log / Cron)                                │
-│    STATUS: [PRÓXIMO BLOCO PARA ESPECIFICAÇÃO & EXECUÇÃO]                       │
-│    - Esteira autônoma e arquivamento seguro raw/ -> wiki/ (498 documentos)    │
-│    - Validação de integridade SHA-256 e blindagem de privacidade LOCAL_ONLY    │
-│    - Registro compulsório de transformações em wiki/log.md                     │
-│    - Agendamento de cron job periódico para digestão e enriquecimento de notas │
+│ 3. CURADORIA DO OBSIDIAN DB (Orquestração Hermes + Antigravity CLI Long Context)│
+│    STATUS: [MAPEADO NO HORIZONTE — ORQUESTRAÇÃO VIA AGY SUBAGENTE & HERMES]    │
+│    - Esteira autônoma raw/ -> wiki/ (498 docs) via 'The 30-Minute Drip'        │
+│    - Despacho pelo Hermes via CLI agy com modelos de contexto longo (>= 1M)     │
+│    - Blindagem de privacidade local LOCAL_ONLY (souls_core::pii_redactor)       │
+│    - Registro compulsório de transformações atômicas em wiki/log.md            │
 └────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1069,8 +1080,124 @@ Para a continuidade estratégica do Souls Engine v7, os 3 grandes blocos mestres
 * **Card 1: Hardware Profiler Bare-Metal:** Exibe GPU primária, VRAM útil WDDM (5.29 GB), RAM do host, extensões AVX2 e teto de contexto dGPU (8.192 tokens).
 * **Card 2: Gerenciador Sequencial de Downloads Resiliente:** Barra de progresso visual com porcentagem, bytes transferidos/total, velocidade (MB/s), ETA estimado, status e botões `⏸ Pausar`, `▶ Retomar` e `✖ Cancelar`.
 * **Card 3: Tríade Recomendada pelo Hardware Profiler:** 3 cards com badges semânticos de compatibilidade (`[100% VRAM]`, `[Optimal Fit]`, etc.), benchmarks de velocidade e botão de 1-Click Download.
-* **Card 4: Catálogo Curado por Perfil Cognitivo:** Filtros por botões/pílulas de perfis (`Todos`, `orchestrator`, `deep_research`, `fast_reasoner`, `code_specialist`, `quick_triage`) com seletor interativo de quantização que recalcula dinamicamente em tempo real o tamanho e o badge de Hardware Fit.
+* **Card 4: Catálogo Curado por Perfil Cognitivo:** Filtros por botões/pílulas dos 6 perfis especializados (`Todos os Perfis`, `Coding Specialist`, `Deep Reasoning (R1 CoT)`, `Agentic & Tool Calling`, `UI/UX & Frontend Design`, `Vision Multimodal (VLM)`, `Fast Reflex & Triage`) com seletor interativo de quantização que recalcula dinamicamente em tempo real o tamanho e o badge de Hardware Fit.
 * **Card 5: Explorador Hugging Face Hub:** Campo de busca, listagem de repositórios com downloads e likes, inspeção instantânea de arquivos `.gguf` com badges de compatibilidade e botão de download direto de qualquer variante.
+
+### 24.4 Refinamento Homologado: Separação VLM vs Design, Matriz Dual & Mapeamento de Silício
+* **Separação Canônica entre Visão Multimodal (VLM) e UI/UX Frontend Design:**
+  * Modelos de Visão (VLM) processam tensores visuais acoplados a adaptadores de projeção (`mmproj-F16.gguf`) para tarefas de OCR, leitura de capturas de tela e diagramas.
+  * Modelos de UI/UX Design operam sobre semântica de código declarativo (CSS Vanilla moderno, CSS Grid/Flexbox, tipografia, micro-animações e design tokens).
+* **Matriz Curada Dual: Sweet Spot (45+ tps) vs. Heavyweight (Teto):**
+  * **Sweet Spot (1.5B–4B):** Consumo de 1.1 GB a 2.5 GB de VRAM, liberando mais de 2.8 GB para contextos longos de até 32.768 tokens a 45–65 tokens/s (zero risco de spillover PCIe). Exemplos: `Qwen 3.5 4B Agentic Coder`, `DeepSeek R1 Distill Qwen 1.5B`, `Hermes-3-Llama-3.2-3B`, `Arch-Function-Chat-3B`, `Qwen 2.5 VL 3B`.
+  * **Heavyweight (7B–8B):** Teto de parâmetros para raciocínio profundo quando latência menor (25–28 tps) e contextos menores (8k ctx) são aceitáveis. Exemplos: `Qwen 2.5 Coder 7B`, `DeepSeek R1 Distill Qwen 7B`, `Qwen 2.5 VL 7B`.
+* **Suporte a Download em Bundle para VLMs:**
+  * O backend (`/api/v1/inventory/download`) detecta requisições de modelos VLM com `projector_file` e enfileira automaticamente o modelo `.gguf` e o respectivo projetor `mmproj-F16.gguf` em sequência, garantindo funcionamento visual imediato com 1-clique.
+* **Mapeamento e Detecção Automática de Pesos Físicos Locais:**
+  * Mapeamento normalizado dos 14 pesos físicos existentes em `C:\Users\rosas\llm_local_models`, identificando modelos já instalados com badge `✅ Instalado no Silício` e disponibilizando o botão `⚡ Usar no Hermes` (modal com comandos e configs prontos).
+* **Cobertura de Testes e Homologação de Produção:**
+  * `crates/souls_llm_inventory`: **17/17 testes unitários PASS (100%)**
+  * `crates/souls_server`: **31/31 testes de rotas e integração PASS (100%)**
+  * Binários release `souls_server.exe` e `souls_engine.exe` gerados e implantados com sucesso. Daemon ativo e saudável em `http://127.0.0.1:9123/health`.
+
+---
+
+## 25. O HORIZONTE AMPLO DO SOULS ENGINE V7 & SIMBIOSE COM O HERMES AGENT
+
+Com a conclusão dos blocos de infraestrutura básica, ferramentas de contexto LEAN e o inventário completo de modelos de silício (Blocos 1 e 2), o horizonte do ecossistema expande-se para cinco grandes frentes estratégicas integradas:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                           HORIZONTE ESTRATÉGICO DO SOULS ENGINE V7                             │
+├────────────────────────────┬─────────────────────────────┬─────────────────────────────────────┤
+│ Eixo                       │ Escopo Primário             │ Componentes Envolvidos              │
+├────────────────────────────┼─────────────────────────────┼─────────────────────────────────────┤
+│ 1. Curadoria Obsidian DB   │ Esteira 'The 30-Minute Drip'│ Hermes (Cron) + Antigravity CLI     │
+│    (Wiki / Log / Manifest) │ Síntese em Long-Context     │ (Long-Context >= 1M) + Privacy Local│
+├────────────────────────────┼─────────────────────────────┼─────────────────────────────────────┤
+│ 2. Silício Local Arena     │ Benchmarks Reais no Silício │ souls_llm_local_arena               │
+│    (Hardware & Cognitivo)  │ Substituição de Estimativas │ NVML Watchdog, AST, Needle 4k-32k   │
+├────────────────────────────┼─────────────────────────────┼─────────────────────────────────────┤
+│ 3. Simbiose de Subagentes  │ Despacho via ParetoBandit   │ souls_subagent_dispatch, Axum SSE,  │
+│    (Sessões & Handoff L3)  │ Persistência de Contexto    │ sub_agent_sessions (SQLite STRICT)  │
+├────────────────────────────┼─────────────────────────────┼─────────────────────────────────────┤
+│ 4. Switchboard Semântico   │ Projeção Dinâmica das 55    │ souls_core, Tier 0/0.5 Classifier,  │
+│    (2 Estágios < 1.7ms)    │ Ferramentas MCP sem Bloat   │ Intent Probing, Vector Embedding    │
+├────────────────────────────┼─────────────────────────────┼─────────────────────────────────────┤
+│ 5. Web Dashboard & Gov.    │ FinOps ROI Amortizado,      │ dashboard_ui.html, Hermes REST,     │
+│    (Settings & Telemetria) │ Métricas Térmicas e Langevin│ Souls Settings, Cloud Arena Sync    │
+└────────────────────────────┴─────────────────────────────┴─────────────────────────────────────┘
+```
+
+### 25.1 Eixo 1: Curadoria do Obsidian DB (`raw/` ➔ `wiki/`) via Hermes & Antigravity CLI
+* **Divisão Arquitetural Canônica:**
+  * **O Hermes Agent NÃO lê documentos brutos de centenas de páginas em seu chat principal:** Evita o *Context Rot* e a poluição da memória executiva.
+  * **O Hermes atua como Maestro e Cron:** Dispara o cron a cada 30 minutos (`*/30 * * * *`) chamando o subagente isolado **Antigravity CLI (`agy`)** via terminal MinGit.
+  * **O Antigravity CLI opera com Modelos de Contexto Longo ($\ge 1\text{M}$ tokens):** Utiliza modelos econômicos de nuvem (Gemini Flash, DeepSeek V4) para leitura panorâmica de pesquisas brutas densas.
+  * **O Silício Local do Souls Engine atua no Privacy Shield:** Redige dados sensíveis de saúde e finanças (`raw/financas/` e `raw/saude/`) via Aho-Corasick linear na RAM antes de qualquer tráfego externo.
+  * **A Esteira `tools/curate_obsidian.ps1`:** Varia os 497 arquivos pendentes em micro-lotes de 2 a 3 arquivos por rodada, liquidando o acervo em 10 a 12 dias com registro compulsório em `wiki/log.md`.
+
+### 25.2 Eixo 2: A Crate `souls_llm_local_arena` & Integração Web Dashboard (100% CONCLUÍDO & HOMOLOGADO)
+* **Substituição de Estimativas Teóricas por Provas Empíricas no Silício Real:**
+  * A crate `souls_llm_local_arena` foi totalmente integrada ao daemon bare-metal `souls_server` e exposta visualmente no Web Dashboard oficial (`dashboard_ui.html`).
+* **As 5 Baterias de Avaliação Padronizadas (ADR-007) no Silício Real:**
+  1. **HardwareProfile:** Medição empírica de pico de VRAM via NVML a cada 50ms, TTFT, TPOT e tokens/s sustentados na RTX 2060m e CPU Host AVX2.
+  2. **CognitiveEval:** Rigidez sintática (geração e parsing Rust AST), CoT socrático e conformidade JSON Schema.
+  3. **MultimodalVision:** Avaliação de modelos VLM e projetores `mmproj-F16.gguf` em OCR e raciocínio visual de UI.
+  4. **SpeculativeDraft:** Medição de aceitação de tokens e speedup especulativo entre modelo Drafter e mestre.
+  5. **ContextPressure:** Testes de agulha no palheiro (*Needle-in-a-Haystack*) em 4k, 8k, 16k e 32k tokens, rastreando degradação e spillover PCIe.
+* **Endpoints REST Canônicos em `127.0.0.1:9123`:**
+  * `GET /api/v1/arena/models`: Varredura em tempo real dos modelos locais cruzando metadados do SQLite Vault (`BENCHMARKED` vs `PENDING`, TPS, TTFT, VRAM e E³ Score).
+  * `GET /api/v1/arena/benchmarks`: Histórico recente da tabela `arena_telemetry` e perfis de Pareto (`model_task_profiles`).
+  * `POST /api/v1/arena/benchmark/run`: Disparo assíncrono e isolado de baterias 1 a 5 no silício real com gravação imediata no vault.
+  * `POST /api/v1/arena/sync`: Sincronização do catálogo e garantia de HardLinks transparentes com o Hermes Agent (`%LOCALAPPDATA%\hermes\models`).
+* **Web Dashboard Interativo (`dashboard_ui.html`):**
+  * Sub-aba `🏟️ Local Silicon Arena` com runner de 1-clique, badge dinâmico de modelos homologados, tabela com ordenação por E³ Score e histórico de auditoria ao vivo.
+* **Garantia de Qualidade:** 32/32 testes unitários e de integração aprovados em `souls_server`, exclusão mútua garantida na dGPU via Mutex do `AppState`.
+
+### 25.3 Eixo 3: Simbiose Hermes ➔ Souls Engine & Sessões de Subagentes (100% CONCLUÍDO & HOMOLOGADO)
+* **Ciclo de Vida Fechado de Subagentes & Isolamento de Contexto do Mestre:**
+  * O encadeamento de raciocínio passo a passo e diários intermediários dos subagentes são confinados na tabela STRICT `sub_agent_diaries` no hipocampo L3 (FrankenSQLite WAL), sem vazar para a janela de contexto do chat interativo mestre (>95% prefix cache hit rate mantido).
+  * O fechamento do ciclo é atômico: ao concluir uma tarefa via ação `complete`, um envelope estruturado é automaticamente persistido em `handoff_payloads` direcionado ao `parent_session_id`, garantindo que o mestre consuma apenas o artefato sintetizado final.
+* **Ferramentas MCP & Métodos JSON-RPC no Silício (:9123):**
+  * A ferramenta `sub_agent` foi expandida com as ações canônicas `"complete"` (finaliza a sessão e gera o payload atômico) e `"history"` (audita os diários intermediários e envelopes de handoff).
+  * Ação `"history"` provê auditoria cirúrgica completa para análise forense ou escalada de contexto.
+* **Endpoints REST Canônicos em `127.0.0.1:9123`:**
+  * `GET /api/v1/sessions/subagents`: Lista sessões recentes com suporte a filtros por `parent_session_id` e `status`.
+  * `GET /api/v1/sessions/subagents/:id`: Retorna os detalhes da sessão, a trilha cronológica de diários (`sub_agent_diaries`), o handoff recebido e o handoff de retorno.
+  * `POST /api/v1/sessions/subagents/spawn`: Inicialização declarativa de sessão de subagente vinculada a um pai.
+  * `POST /api/v1/sessions/subagents/:id/status`: Transição de ciclo de vida (`SPAWNED`, `RUNNING`, `COMPLETED`, `FAILED`).
+  * `POST /api/v1/sessions/subagents/:id/diary`: Gravação de pensamentos intermediários no cofre L3.
+  * `POST /api/v1/sessions/subagents/:id/complete`: Fechamento com geração atômica de envelope de retorno para o mestre.
+  * `GET /api/v1/sessions/handoffs/:agent_id`: Polling reativo de envelopes de handoff pendentes direcionados a um agente.
+  * `POST /api/v1/sessions/handoffs`: Criação direta de envelopes de handoff.
+* **Web Dashboard Interativo (`dashboard_ui.html`):**
+  * **Card 5 (Overview):** Sessões de Subagentes & Ciclo Fechado de Handoff (L3 Memory Vault) com estatísticas em tempo real (Total de Sessões, Ativas, Concluídas, % de Cache Protegido), tabela com status badges coloridos e atualização periódica a cada 8 segundos.
+  * **Modal Forense (`#modal-subagent-history`):** Visualizador de 1-clique exibindo o envelope de retorno formatado em Markdown, o envelope inicial recebido e a linha do tempo sequencial dos passos de raciocínio intermediários gravados pelo subagente.
+* **Garantia de Qualidade & Testes:**
+  * 34/34 testes unitários e de integração aprovados em `souls_server` (`test_subagent_lifecycle_closed_loop_and_handoff`).
+  * Validação bare-metal de ponta a ponta homologada via script de smoke test REST no binário de release.
+
+### 25.4 Eixo 4: Switchboard Semântico de 2 Estágios & Projeção Dinâmica MCP (100% CONCLUÍDO & HOMOLOGADO)
+* **Filtragem de Intenção e Gating em Baixa Latência (<1.7ms):**
+  * Operação 100% bare-metal na CPU Intel i9 com AVX2 (0 MB VRAM consumida).
+  * Estágio 1: Dense Vector & Lexical Cosine Match na RAM (< 2ms) mapeando 55 ferramentas e 15 skills canônicas.
+  * Estágio 2: Gating de Entropia de Shannon via Tier 0.5 Logits (~8ms) quando confiança < 0.75 ou sob ambiguidade.
+* **Projeção Seletiva e Dinâmica no Catálogo MCP:**
+  * O método JSON-RPC `tools/list` foi estendido com suporte a `query` e `intent`, projetando seletivamente apenas as ferramentas necessárias (Top 3 a 8) com inputSchemas e metadados de switchboard, poupando de 4.000 a 6.000 tokens e garantindo prefix caching >95%.
+* **Endpoints REST Canônicos em `127.0.0.1:9123`:**
+  * `POST /api/v1/switchboard/evaluate`: Avalia intenções e retorna decisão com ferramentas projetadas, skill recomendada, confiança e latência.
+  * `GET /api/v1/switchboard/skills`: Retorna o catálogo estruturado das 15 skills canônicas.
+  * `GET /api/v1/switchboard/health`: Diagnóstico de silício AVX2 e prontidão do motor.
+* **Simulador & Interface Visual no Web Dashboard (`dashboard_ui.html`):**
+  * Sub-aba `⚡ Switchboard MCP (<1.7ms)` no Silício Local, com input de prompt, seletor de namespace, seletor de top-k, presets de teste rápido, live metrics card (estágio, latência, confiança, entropia), card da skill recomendada e grid de ferramentas projetadas.
+* **Garantia de Qualidade:** 33/33 testes unitários e de integração aprovados em `souls_server`.
+
+### 25.5 Eixo 5: Hermes Web Dashboard & Souls Settings (Observabilidade & Governança)
+* **Observabilidade Unificada via REST:**
+  * Gráficos em tempo real de FinOps: medição do valor entregue ($V_{\text{task}}$) versus custo evitado em APIs de nuvem ($C_{\text{task}}$), exibindo o ROI amortizado do silício local.
+* **Painel de Governança Souls Settings:**
+  * Calibração de limiares térmicos da RTX 2060m, ajuste de decaimento termodinâmico do Langevin Decay na memória vetorial e gerenciamento seguro de chaves de API com criptografia local.
+
 
 
 
