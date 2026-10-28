@@ -519,6 +519,203 @@ pub async fn search_epistemic_fts5(
     Ok(results)
 }
 
+/// DTO representing a durable session pre-compress checkpoint (Audit Log v2).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct SessionCheckpointRecord {
+    pub id: String,
+    pub session_id: String,
+    pub checkpoint_version: i64,
+    pub raw_messages_blob: String,
+    pub message_count: i64,
+    pub pre_compress_tokens: i64,
+    pub hash_sha256: String,
+    pub created_at: i64,
+}
+
+/// Persists a pre-compress session checkpoint into the STRICT `session_checkpoints` table.
+pub async fn insert_session_checkpoint(
+    pool: &Pool<Sqlite>,
+    record: &SessionCheckpointRecord,
+) -> Result<(), MemoryError> {
+    sqlx::query(
+        r#"
+        INSERT INTO session_checkpoints
+        (id, session_id, checkpoint_version, raw_messages_blob, message_count, pre_compress_tokens, hash_sha256, created_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+        ON CONFLICT(id) DO UPDATE SET
+            raw_messages_blob = excluded.raw_messages_blob,
+            message_count = excluded.message_count,
+            pre_compress_tokens = excluded.pre_compress_tokens,
+            hash_sha256 = excluded.hash_sha256,
+            created_at = excluded.created_at
+        "#,
+    )
+    .bind(&record.id)
+    .bind(&record.session_id)
+    .bind(record.checkpoint_version)
+    .bind(&record.raw_messages_blob)
+    .bind(record.message_count)
+    .bind(record.pre_compress_tokens)
+    .bind(&record.hash_sha256)
+    .bind(record.created_at)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+/// Lists recent session checkpoints, optionally filtered by `session_id`.
+pub async fn list_session_checkpoints(
+    pool: &Pool<Sqlite>,
+    session_id: Option<&str>,
+    limit: usize,
+) -> Result<Vec<SessionCheckpointRecord>, MemoryError> {
+    let rows = if let Some(sid) = session_id {
+        sqlx::query(
+            r#"
+            SELECT id, session_id, checkpoint_version, raw_messages_blob, message_count, pre_compress_tokens, hash_sha256, created_at
+            FROM session_checkpoints
+            WHERE session_id = ?1
+            ORDER BY created_at DESC
+            LIMIT ?2
+            "#,
+        )
+        .bind(sid)
+        .bind(limit as i64)
+        .fetch_all(pool)
+        .await?
+    } else {
+        sqlx::query(
+            r#"
+            SELECT id, session_id, checkpoint_version, raw_messages_blob, message_count, pre_compress_tokens, hash_sha256, created_at
+            FROM session_checkpoints
+            ORDER BY created_at DESC
+            LIMIT ?1
+            "#,
+        )
+        .bind(limit as i64)
+        .fetch_all(pool)
+        .await?
+    };
+
+    Ok(rows
+        .into_iter()
+        .map(|r| SessionCheckpointRecord {
+            id: r.get(0),
+            session_id: r.get(1),
+            checkpoint_version: r.get(2),
+            raw_messages_blob: r.get(3),
+            message_count: r.get(4),
+            pre_compress_tokens: r.get(5),
+            hash_sha256: r.get(6),
+            created_at: r.get(7),
+        })
+        .collect())
+}
+
+/// Lists epistemic memories ordered by salience and updated_at, optionally filtered by partition.
+pub async fn list_epistemic_memories(
+    pool: &Pool<Sqlite>,
+    partition: Option<souls_protocol::EpistemicPartition>,
+    limit: usize,
+) -> Result<Vec<souls_protocol::EpistemicMemoryRecord>, MemoryError> {
+    let rows = if let Some(part) = partition {
+        let part_str = match part {
+            souls_protocol::EpistemicPartition::Stable => "STABLE",
+            souls_protocol::EpistemicPartition::Evolving => "EVOLVING",
+        };
+        sqlx::query(
+            r#"
+            SELECT id, session_id, category, content, partition, salience, access_count, source_ref, created_at, last_accessed_at, updated_at
+            FROM epistemic_memories
+            WHERE partition = ?1
+            ORDER BY salience DESC, updated_at DESC
+            LIMIT ?2
+            "#,
+        )
+        .bind(part_str)
+        .bind(limit as i64)
+        .fetch_all(pool)
+        .await?
+    } else {
+        sqlx::query(
+            r#"
+            SELECT id, session_id, category, content, partition, salience, access_count, source_ref, created_at, last_accessed_at, updated_at
+            FROM epistemic_memories
+            ORDER BY salience DESC, updated_at DESC
+            LIMIT ?1
+            "#,
+        )
+        .bind(limit as i64)
+        .fetch_all(pool)
+        .await?
+    };
+
+    let mut out = Vec::with_capacity(rows.len());
+    for r in rows {
+        let part_str: String = r.get(4);
+        let partition = match part_str.as_str() {
+            "STABLE" => souls_protocol::EpistemicPartition::Stable,
+            "EVOLVING" => souls_protocol::EpistemicPartition::Evolving,
+            other => return Err(MemoryError::InvalidPartition(other.to_string())),
+        };
+        out.push(souls_protocol::EpistemicMemoryRecord {
+            id: r.get(0),
+            session_id: r.get(1),
+            category: r.get(2),
+            content: r.get(3),
+            partition,
+            salience: r.get::<f64, _>(5) as f32,
+            access_count: r.get(6),
+            source_ref: r.get(7),
+            created_at: r.get(8),
+            last_accessed_at: r.get(9),
+            updated_at: r.get(10),
+        });
+    }
+    Ok(out)
+}
+
+/// Deletes an epistemic memory record by ID, returning true if a row was removed.
+pub async fn delete_epistemic_memory(
+    pool: &Pool<Sqlite>,
+    id: &str,
+) -> Result<bool, MemoryError> {
+    let res = sqlx::query("DELETE FROM epistemic_memories WHERE id = ?1")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(res.rows_affected() > 0)
+}
+
+/// Counts epistemic memory records grouped by partition `(stable_count, evolving_count)`.
+pub async fn count_epistemic_partitions(
+    pool: &Pool<Sqlite>,
+) -> Result<(usize, usize), MemoryError> {
+    let rows = sqlx::query(
+        r#"
+        SELECT partition, COUNT(*) as cnt
+        FROM epistemic_memories
+        GROUP BY partition
+        "#,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let mut stable = 0usize;
+    let mut evolving = 0usize;
+    for r in rows {
+        let part: String = r.get(0);
+        let cnt: i64 = r.get(1);
+        match part.as_str() {
+            "STABLE" => stable = cnt.max(0) as usize,
+            "EVOLVING" => evolving = cnt.max(0) as usize,
+            _ => {}
+        }
+    }
+    Ok((stable, evolving))
+}
+
 impl crate::SoulsMemoryStore {
     /// Gracefully tears down the memory store by draining the connection pool,
     /// then establishing an exclusive single-shot connection to truncate the WAL to zero bytes.

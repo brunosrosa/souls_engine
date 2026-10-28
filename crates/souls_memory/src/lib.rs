@@ -12,6 +12,7 @@ pub mod lancedb;
 pub mod mpsc_bridge;
 pub mod rrf;
 pub mod session_manager;
+pub mod snapshot;
 pub mod sqlite;
 pub mod thinking;
 
@@ -34,9 +35,16 @@ pub use session_manager::{
     HandoffPayloadRecord, SubAgentDiaryRecord, SubAgentManager, SubAgentSessionRecord,
     SubAgentStatus,
 };
+pub use snapshot::{
+    deduplicate_and_budget_matches, normalize_for_dedup, parse_markdown_entries,
+    resolve_default_hermes_home, sha256_hex, FrozenMemorySnapshot, HermesBootstrapFiles,
+    SnapshotCoordinator, DEFAULT_PREFETCH_MAX_CHARS, DEFAULT_PREFETCH_TOP_K,
+};
 pub use sqlite::{
-    create_in_memory_sqlite_pool, create_sqlite_pool, execute_read_only_query,
-    get_epistemic_memory, search_epistemic_fts5, upsert_epistemic_memory,
+    count_epistemic_partitions, create_in_memory_sqlite_pool, create_sqlite_pool,
+    delete_epistemic_memory, execute_read_only_query, get_epistemic_memory,
+    insert_session_checkpoint, list_epistemic_memories, list_session_checkpoints,
+    search_epistemic_fts5, upsert_epistemic_memory, SessionCheckpointRecord,
 };
 pub use thinking::{
     SocraticThoughtInput, SocraticThoughtRecord, ThinkingContext, ThinkingEngine,
@@ -56,6 +64,7 @@ pub struct SoulsMemoryStore {
     sub_agent_manager: Arc<SubAgentManager>,
     thinking_sessions: Arc<DashMap<String, Arc<RwLock<ThinkingEngine>>>>,
     bridge: Arc<MemoryMpscBridge>,
+    snapshots: Arc<SnapshotCoordinator>,
 }
 
 impl SoulsMemoryStore {
@@ -84,6 +93,7 @@ impl SoulsMemoryStore {
         let sub_agent_manager = Arc::new(SubAgentManager::new(pool_arc.clone()));
         let thinking_sessions = Arc::new(DashMap::new());
         let bridge = Arc::new(MemoryMpscBridge::spawn(pool_arc.clone(), 1024));
+        let snapshots = Arc::new(SnapshotCoordinator::new());
 
         Ok(Self {
             db_path: path,
@@ -95,6 +105,7 @@ impl SoulsMemoryStore {
             sub_agent_manager,
             thinking_sessions,
             bridge,
+            snapshots,
         })
     }
 
@@ -112,6 +123,7 @@ impl SoulsMemoryStore {
         let sub_agent_manager = Arc::new(SubAgentManager::new(pool_arc.clone()));
         let thinking_sessions = Arc::new(DashMap::new());
         let bridge = Arc::new(MemoryMpscBridge::spawn(pool_arc.clone(), 256));
+        let snapshots = Arc::new(SnapshotCoordinator::new());
 
         Ok(Self {
             db_path: PathBuf::from(":memory:"),
@@ -123,6 +135,7 @@ impl SoulsMemoryStore {
             sub_agent_manager,
             thinking_sessions,
             bridge,
+            snapshots,
         })
     }
 
@@ -164,6 +177,94 @@ impl SoulsMemoryStore {
     /// Accesses the non-blocking background MPSC persistence bridge.
     pub fn bridge(&self) -> &MemoryMpscBridge {
         &self.bridge
+    }
+
+    /// Accesses the `SnapshotCoordinator` managing global and session-pinned frozen snapshots.
+    pub fn snapshots(&self) -> &SnapshotCoordinator {
+        &self.snapshots
+    }
+
+    /// Pins or refreshes the `FrozenMemorySnapshot` for a given `session_id`.
+    pub async fn pin_session_snapshot(
+        &self,
+        session_id: &str,
+        force_refresh: bool,
+        hermes_home: Option<&Path>,
+        now_epoch_sec: i64,
+    ) -> Result<Arc<FrozenMemorySnapshot>, MemoryError> {
+        let pool = self.pool();
+        self.snapshots
+            .pin_session_snapshot(session_id, force_refresh, &pool, hermes_home, now_epoch_sec)
+            .await
+    }
+
+    /// Mirrors a built-in Hermes memory write (`on_memory_write`) into the `STABLE` partition.
+    pub async fn mirror_hermes_write(
+        &self,
+        action: &str,
+        target: &str,
+        content: &str,
+        session_id: &str,
+        now_epoch_sec: i64,
+    ) -> Result<Option<String>, MemoryError> {
+        let pool = self.pool();
+        self.snapshots
+            .mirror_hermes_write(&pool, action, target, content, session_id, now_epoch_sec)
+            .await
+    }
+
+    /// Executes Hybrid RRF recall and deduplicates candidates against the session's `FrozenMemorySnapshot`,
+    /// enforcing `top_k` (default 4) and `max_chars` (default 800 characters).
+    pub async fn recall_for_session(
+        &self,
+        session_id: &str,
+        query: &str,
+        query_vector: Option<Vec<f32>>,
+        top_k: usize,
+        max_chars: usize,
+    ) -> Result<Vec<UnifiedMatch>, MemoryError> {
+        let fetch_limit = top_k.max(4) * 3;
+        let raw_matches = self.hybrid_recall(query, query_vector, fetch_limit).await?;
+        let snap = self
+            .snapshots
+            .get_session_snapshot(session_id)
+            .unwrap_or_else(|| self.snapshots.current_global());
+        Ok(deduplicate_and_budget_matches(&snap, raw_matches, top_k, max_chars))
+    }
+
+    /// Persists a pre-compress session checkpoint (`on_pre_compress` Audit Log v2).
+    pub async fn save_pre_compress_checkpoint(
+        &self,
+        record: &SessionCheckpointRecord,
+    ) -> Result<(), MemoryError> {
+        let pool = self.pool();
+        insert_session_checkpoint(&pool, record).await
+    }
+
+    /// Lists recent pre-compress session checkpoints.
+    pub async fn list_checkpoints(
+        &self,
+        session_id: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<SessionCheckpointRecord>, MemoryError> {
+        let pool = self.pool();
+        list_session_checkpoints(&pool, session_id, limit).await
+    }
+
+    /// Lists epistemic memories ordered by salience, optionally filtered by partition.
+    pub async fn list_epistemic(
+        &self,
+        partition: Option<souls_protocol::EpistemicPartition>,
+        limit: usize,
+    ) -> Result<Vec<souls_protocol::EpistemicMemoryRecord>, MemoryError> {
+        let pool = self.pool();
+        list_epistemic_memories(&pool, partition, limit).await
+    }
+
+    /// Returns `(stable_count, evolving_count)` from `epistemic_memories`.
+    pub async fn partition_counts(&self) -> Result<(usize, usize), MemoryError> {
+        let pool = self.pool();
+        count_epistemic_partitions(&pool).await
     }
 
     /// Retrieves or instantiates in RAM a socratic thinking engine for a given session.
@@ -238,7 +339,7 @@ impl SoulsMemoryStore {
         let lexical_candidates: Vec<LexicalCandidate> = fts_raw
             .into_iter()
             .enumerate()
-            .map(|(idx, (id, category, content))| LexicalCandidate {
+            .map(|(idx, (id, content, category))| LexicalCandidate {
                 id,
                 category,
                 content,
