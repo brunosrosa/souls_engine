@@ -46,6 +46,38 @@
       padding: 0;
     }
 
+    /* GLOBAL SCROLLBAR HARMONIZATION (DARK CYAN GLASS) */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(10, 16, 28, 0.75);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(6, 182, 212, 0.3);
+      border-radius: 4px;
+      border: 1px solid rgba(6, 182, 212, 0.15);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(6, 182, 212, 0.6);
+      box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(6, 182, 212, 0.3) rgba(10, 16, 28, 0.75);
+    }
+
+    /* Oculta barras feias de rolagem nativas em trilhos de navegação horizontal */
+    .tabs-track, .subtabs-bar, .profile-selector, .filter-pills-group, .subtabs-track {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    .tabs-track::-webkit-scrollbar, .subtabs-bar::-webkit-scrollbar, .profile-selector::-webkit-scrollbar, .filter-pills-group::-webkit-scrollbar, .subtabs-track::-webkit-scrollbar {
+      display: none !important;
+      height: 0 !important;
+    }
+
     body {
       background-color: var(--bg-base);
       color: var(--text-main);
@@ -479,6 +511,8 @@
       margin-top: 12px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-subtle);
+      background: rgba(10, 16, 28, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
     table.arena-table {
@@ -489,12 +523,16 @@
     }
 
     table.arena-table th {
-      background: rgba(15, 23, 42, 0.85);
-      padding: 12px 14px;
+      background: rgba(15, 23, 42, 0.95);
+      padding: 12px 16px;
       font-weight: 600;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       color: var(--text-muted);
-      border-bottom: 1px solid var(--border-subtle);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       white-space: nowrap;
+      user-select: none;
     }
 
     table.arena-table th.text-center, table.arena-table td.text-center {
@@ -502,15 +540,51 @@
     }
 
     table.arena-table td {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
       color: var(--text-main);
-      background: rgba(16, 24, 40, 0.4);
+      background: rgba(16, 24, 40, 0.35);
       vertical-align: middle;
+      font-variant-numeric: tabular-nums;
+      transition: background 0.15s ease, box-shadow 0.15s ease;
     }
 
     table.arena-table tr:hover td {
-      background: rgba(23, 34, 57, 0.65);
+      background: rgba(23, 34, 57, 0.75);
+      box-shadow: inset 2px 0 0 var(--cyan);
+    }
+
+    /* FILTRO DE PROVEDOR CLOUD ARENA */
+    .filter-pills-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .filter-provider-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .filter-provider-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+      transform: translateY(-1px);
+    }
+    .filter-provider-btn.active {
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.16);
+      border-color: rgba(6, 182, 212, 0.45);
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
     }
 
     .model-id-box {
@@ -1797,11 +1871,11 @@
           <table class="arena-table">
             <thead>
               <tr>
-                <th>Capacidade / Perfil Cognitivo</th>
-                <th>Local Default (Silício $0)</th>
-                <th>Cloud Fallback (Nuvem)</th>
+                <th style="min-width: 200px;">Capacidade / Perfil Cognitivo</th>
+                <th style="min-width: 190px;">Local Default (Silício $0)</th>
+                <th style="min-width: 190px;">Cloud Fallback (Nuvem)</th>
                 <th>Regra de Decisão do ParetoBandit</th>
-                <th>Status</th>
+                <th class="text-center" style="width: 130px;">Status</th>
               </tr>
             </thead>
             <tbody id="integrator-tbody">
@@ -1870,7 +1944,7 @@
           <div class="card-header">
             <div class="card-title">
               <div class="card-icon icon-green">💰</div>
-              FinOps & Eficiência de Silício ($E^3$)
+              FinOps & Eficiência de Silício (E³)
             </div>
             <span class="badge badge-value">Zero Cloud Waste</span>
           </div>
@@ -1995,8 +2069,8 @@
           </div>
         </div>
 
-        <!-- STATS DOS SUBAGENTES -->
-        <div class="stat-row" style="margin-top: 0; margin-bottom: 16px;">
+        <!-- STATS DOS SUBAGENTES (GRID SIMÉTRICA 4 COLUNAS) -->
+        <div class="stat-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 0; margin-bottom: 16px;">
           <div class="stat-box">
             <div class="stat-lbl">Total Sessões</div>
             <div class="stat-num" id="stat-subagent-total">0</div>
@@ -2089,15 +2163,15 @@
             <table class="arena-table">
               <thead>
                 <tr style="cursor: pointer; user-select: none;">
-                  <th class="text-center">Tier</th>
-                  <th style="min-width: 220px;">Modelo / Identificador</th>
-                  <th class="text-center">Silício Alvo</th>
-                  <th>Tamanho / Quant</th>
-                  <th>VRAM Estimada</th>
-                  <th>Janela Ctx</th>
-                  <th>Tags Especializadas</th>
-                  <th class="text-center">Status Operacional</th>
-                  <th class="text-center">Ação</th>
+                  <th class="text-center" style="width: 90px;">Tier</th>
+                  <th style="min-width: 240px;">Modelo / Identificador Físico</th>
+                  <th class="text-center" style="width: 140px;">Silício Alvo</th>
+                  <th class="text-center" style="width: 140px;">Tamanho / Quant</th>
+                  <th class="text-center" style="width: 120px;">VRAM Estimada</th>
+                  <th class="text-center" style="width: 110px;">Janela Ctx</th>
+                  <th style="min-width: 160px;">Tags Especializadas</th>
+                  <th class="text-center" style="width: 140px;">Status Operacional</th>
+                  <th class="text-center" style="width: 90px;">Ação</th>
                 </tr>
               </thead>
               <tbody id="local-arena-tbody">
@@ -2566,13 +2640,25 @@
           </div>
         </div>
 
-        <!-- SELETOR DOS 5 PERFIS COGNITIVOS -->
-        <div class="profile-selector" id="profile-pill-container">
-          <button class="profile-pill active" onclick="selectProfile('coding')">💻 Coding / SWE</button>
-          <button class="profile-pill" onclick="selectProfile('agentic')">🤖 Agentic / Tools</button>
-          <button class="profile-pill" onclick="selectProfile('reasoning')">🧠 Reasoning / Math</button>
-          <button class="profile-pill" onclick="selectProfile('fast')">⚡ Fast / Triage</button>
-          <button class="profile-pill" onclick="selectProfile('design')">🎨 Design / Frontend</button>
+        <!-- BARRA DE CONTROLE: 5 PERFIS COGNITIVOS + FILTRO DE PROVEDOR -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+          <div class="profile-selector" id="profile-pill-container" style="margin-bottom: 0;">
+            <button class="profile-pill active" onclick="selectProfile('coding')">💻 Coding / SWE</button>
+            <button class="profile-pill" onclick="selectProfile('agentic')">🤖 Agentic / Tools</button>
+            <button class="profile-pill" onclick="selectProfile('reasoning')">🧠 Reasoning / Math</button>
+            <button class="profile-pill" onclick="selectProfile('fast')">⚡ Fast / Triage</button>
+            <button class="profile-pill" onclick="selectProfile('design')">🎨 Design / Frontend</button>
+          </div>
+
+          <!-- FILTRO DINÂMICO DE PROVEDOR CLOUD -->
+          <div style="display: flex; align-items: center; gap: 6px; background: rgba(15, 23, 42, 0.7); padding: 4px 8px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; padding-left: 4px;">Provedor:</span>
+            <div class="filter-pills-group" id="cloud-provider-filter-pills">
+              <button class="filter-provider-btn active" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')">🌐 Todos</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')">🧠 Nous Portal</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')">🔀 OpenRouter</button>
+            </div>
+          </div>
         </div>
 
         <!-- SEÇÃO 1: OS 3 CAMPEÕES DE PARETO -->
@@ -2580,22 +2666,22 @@
           <h4 style="font-size: 0.85rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px;">
             <span style="color: var(--amber);">👑</span> Tríade de Líderes de Pareto (Perfil Selecionado)
           </h4>
-          <span style="font-size: 0.72rem; color: var(--text-muted);">Recomendações canônicas de qualidade, ROI e economia</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-triad-sublabel">Recomendações canônicas de qualidade, ROI e economia</span>
         </div>
 
         <div class="table-container" style="margin-bottom: 24px;">
           <table class="arena-table">
             <thead>
               <tr>
-                <th class="text-center" style="width: 140px;">Status Pareto</th>
+                <th class="text-center" style="width: 150px;">Status Pareto</th>
                 <th style="min-width: 240px;">Modelo</th>
-                <th>Provedor</th>
-                <th>Custo Blended ($/1M)</th>
-                <th>Score Cognitivo</th>
-                <th>Índice ROI</th>
-                <th>Throughput (TPS)</th>
-                <th>Janela Ctx</th>
-                <th class="text-center">Ação</th>
+                <th class="text-center" style="width: 140px;">Provedor</th>
+                <th class="text-center" style="width: 130px;">Custo ($/1M)</th>
+                <th class="text-center" style="width: 110px;">Score</th>
+                <th class="text-center" style="width: 110px;">Índice ROI</th>
+                <th class="text-center" style="width: 120px;">Throughput</th>
+                <th class="text-center" style="width: 120px;">Janela Ctx</th>
+                <th class="text-center" style="width: 100px;">Ação</th>
               </tr>
             </thead>
             <tbody id="cloud-arena-tbody">
@@ -2622,13 +2708,13 @@
                 <th class="text-center" style="width: 50px;">#</th>
                 <th class="text-center" style="width: 110px;">Status</th>
                 <th style="min-width: 240px;">Modelo / Identificador</th>
-                <th>Provedor</th>
-                <th>Tarifa ($/1M)</th>
-                <th>Score</th>
-                <th>ROI Index</th>
-                <th>TPS</th>
-                <th>Janela Ctx</th>
-                <th class="text-center">Ação</th>
+                <th class="text-center" style="width: 140px;">Provedor</th>
+                <th class="text-center" style="width: 120px;">Tarifa ($/1M)</th>
+                <th class="text-center" style="width: 90px;">Score</th>
+                <th class="text-center" style="width: 100px;">ROI Index</th>
+                <th class="text-center" style="width: 100px;">TPS</th>
+                <th class="text-center" style="width: 120px;">Janela Ctx</th>
+                <th class="text-center" style="width: 90px;">Ação</th>
               </tr>
             </thead>
             <tbody id="cloud-ranked-tbody">
@@ -2728,7 +2814,7 @@
               </div>
             </div>
 
-            <div class="triad-grid" id="triad-cards-grid">
+            <div class="triad-grid" id="governance-triad-cards-grid">
               <!-- Renderizado dinamicamente via JavaScript -->
               <div class="triad-card leader">
                 <div>
@@ -3590,6 +3676,8 @@
     let activePreset = 'balanced';
     let currentProfile = 'coding';
     let cloudChampionsData = [];
+    let currentCloudProviderFilter = 'all';
+    let cachedCloudRankedModels = [];
 
     // NAVEGAÇÃO ENTRE ABAS
     function switchTab(tabId) {
@@ -3759,22 +3847,33 @@
       `).join('');
     }
 
+    let localModelsList = [];
+
     // 3. FETCH LOCAL SILICON ARENA (llm_local)
     async function fetchLocalModels() {
       const tbody = document.getElementById('local-arena-tbody');
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Consultando pesos físicos GGUF...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Consultando pesos físicos GGUF...</td></tr>';
       
       try {
         const res = await fetch('/api/v1/models/local');
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('local-total-models').innerText = (data.total_models || data.models.length) + ' modelos físicos';
-          document.getElementById('badge-local-count').innerText = data.total_models || data.models.length;
+          localModelsList = data.models || [];
+          document.getElementById('local-total-models').innerText = (data.total_models || localModelsList.length) + ' modelos físicos';
+          document.getElementById('badge-local-count').innerText = data.total_models || localModelsList.length;
           if (data.root_directory) document.getElementById('local-root-dir').innerText = data.root_directory;
-          renderLocalTable(data.models || []);
+          renderLocalTable(localModelsList);
+
+          // Se o catálogo curado já estiver em memória, re-renderiza para refletir badges de instalados
+          if (curatedCatalogData && curatedCatalogData.length > 0) {
+            renderCuratedCatalog(curatedCatalogData, hubHardwareData);
+          }
+          if (hubRecommendationsData) {
+            renderRecommendedTriad(hubRecommendationsData);
+          }
         }
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--red);">Erro ao carregar modelos locais.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--red);">Erro ao carregar modelos locais.</td></tr>';
       }
     }
 
@@ -3888,19 +3987,75 @@
               </div>
             </td>
             <td class="text-center"><span class="mono" style="color: ${isGpu ? 'var(--cyan)' : '#e2e8f0'};">${m.target || 'CPU Host'}</span></td>
-            <td class="mono">${sizeMb} &bull; <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
-            <td class="mono" style="color: var(--cyan);">${m.vram || '0 MB'}</td>
-            <td class="mono">${(m.context_window || 8192).toLocaleString()}</td>
+            <td class="mono text-center">${sizeMb} &bull; <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
+            <td class="mono text-center" style="color: var(--cyan);">${m.vram || '0 MB'}</td>
+            <td class="mono text-center">${(m.context_window || 8192).toLocaleString()}</td>
             <td>${tagsHtml}</td>
             <td class="text-center">${statusBadge}</td>
             <td class="text-center">
-              <button class="btn-apply-model local-btn" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
-                <span>⚡</span> Usar
-              </button>
+              <div style="display: flex; gap: 4px; justify-content: center;">
+                <button class="btn-apply-model local-btn" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
+                  <span>⚡</span> Usar
+                </button>
+                <button class="btn" style="padding: 4px 8px; font-size: 0.72rem; border-radius: 6px;" onclick="testModelInArena('${modelId}')" title="Testar na Local Silicon Arena">
+                  <span>🏟️</span>
+                </button>
+              </div>
             </td>
           </tr>
         `;
       }).join('');
+    }
+
+    // Correspondência inteligente com modelos reais baixados em disco
+    function findInstalledModelMatch(targetFileName, repoId = '', modelName = '') {
+      if (!localModelsList || localModelsList.length === 0) return null;
+      const targetLower = (targetFileName || '').toLowerCase().replace(/\.gguf$/, '');
+      const repoLower = (repoId || '').toLowerCase();
+      const nameLower = (modelName || '').toLowerCase();
+
+      for (const m of localModelsList) {
+        const filePath = m.file_path || '';
+        const realFileName = filePath.split(/[\\/]/).pop() || m.model || m.name || '';
+        const fnLower = realFileName.toLowerCase().replace(/\.gguf$/, '');
+        const modelLower = (m.model || m.name || '').toLowerCase();
+
+        // 1. Match exato de nome de arquivo GGUF
+        if (targetLower && fnLower === targetLower) return { ...m, realFileName };
+
+        // 2. Match de Stem & Quantização idênticos (ex: qwen2.5-coder-0.5b / q4_k_m)
+        if (targetLower && fnLower) {
+          const cleanTarget = targetLower.replace(/[-_.]/g, '');
+          const cleanFn = fnLower.replace(/[-_.]/g, '');
+          if (cleanTarget === cleanFn || cleanFn.includes(cleanTarget) || cleanTarget.includes(cleanFn)) {
+            return { ...m, realFileName };
+          }
+        }
+
+        // 3. Match por família de modelo
+        if (nameLower && modelLower) {
+          const cleanName = nameLower.replace(/[^a-z0-9]/g, '');
+          const cleanModel = modelLower.replace(/[^a-z0-9]/g, '');
+          if (cleanName.length > 5 && cleanModel.length > 5 && (cleanName.includes(cleanModel) || cleanModel.includes(cleanName))) {
+            return { ...m, realFileName };
+          }
+        }
+      }
+      return null;
+    }
+
+    function testModelInArena(modelId) {
+      switchLocalSubtab('arena');
+      const select = document.getElementById('arena-runner-model-select');
+      if (select) {
+        for (let i = 0; i < select.options.length; i++) {
+          if (select.options[i].value.toLowerCase().includes(modelId.toLowerCase()) || modelId.toLowerCase().includes(select.options[i].value.toLowerCase())) {
+            select.selectedIndex = i;
+            break;
+          }
+        }
+      }
+      showToast(`Modelo ${modelId} preparado na Local Silicon Arena. Pronto para aferição!`, 'success');
     }
 
     // ==========================================
@@ -4475,18 +4630,19 @@
 
         const sizeGb = variant.size_gb ? variant.size_gb.toFixed(2) : (variant.size_bytes / (1024 ** 3)).toFixed(2);
         const estTps = model.benchmark_scores && model.benchmark_scores.speed_tokens_sec_estimate ? `${model.benchmark_scores.speed_tokens_sec_estimate.toFixed(0)} tps` : '--';
-        const isDown = Boolean(model.is_downloaded);
-        const activeFile = model.local_file_path || variant.file_name;
+        const matched = findInstalledModelMatch(variant.file_name, model.repo_id, model.model_name);
+        const isDown = Boolean(model.is_downloaded || matched);
+        const activeFile = (matched && matched.realFileName) ? matched.realFileName : (model.local_file_path || variant.file_name);
 
         return `
-          <div class="triad-card">
+          <div class="triad-card ${isDown ? 'is-installed-card' : ''}">
             <div>
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                 <span style="font-size: 0.72rem; font-weight: 700; color: ${item.tierColor}; font-family: var(--font-mono); text-transform: uppercase;">
                   ${item.tierLabel}
                 </span>
                 <div style="display: flex; gap: 4px; align-items: center;">
-                  ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700;">✅ Instalado</span>' : ''}
+                  ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✅ Já Instalado no Silício</span>' : ''}
                   ${getFitBadgeHtml(variant.hardware_fit)}
                 </div>
               </div>
@@ -4505,9 +4661,12 @@
             </div>
             <div style="margin-top: 14px;">
               ${isDown ? `
-                <div style="display: flex; gap: 6px;">
-                  <button class="btn btn-green" style="flex: 1; justify-content: center; font-size: 0.78rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn btn-green" style="flex: 1; min-width: 120px; justify-content: center; font-size: 0.76rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
                     <span>⚡</span> Usar no Hermes
+                  </button>
+                  <button class="btn btn-cyan" style="padding: 6px 10px; font-size: 0.74rem;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
+                    <span>🏟️</span> Arena
                   </button>
                   <button class="btn" style="padding: 6px 10px; font-size: 0.74rem;" title="Baixar novamente" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
                     <span>🔄</span>
@@ -4535,26 +4694,31 @@
       renderCuratedCatalog(curatedCatalogData, hubHardwareData);
     }
 
+    let filteredCuratedModels = [];
+
     function renderCuratedCatalog(catalog, hw) {
       const container = document.getElementById('curated-models-grid');
       if (!container) return;
 
-      const filtered = (catalog || []).filter(m => {
+      filteredCuratedModels = (catalog || []).filter(m => {
         if (currentCuratedProfileFilter === 'all') return true;
         const prof = (m.cognitive_profile || '').toLowerCase();
         return prof === currentCuratedProfileFilter.toLowerCase();
       });
 
-      if (filtered.length === 0) {
+      if (filteredCuratedModels.length === 0) {
         container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Nenhum modelo curado para este perfil.</div>';
         return;
       }
 
-      container.innerHTML = filtered.map((m, idx) => {
+      container.innerHTML = filteredCuratedModels.map((m, idx) => {
         const variants = m.variants || [];
         const recommendedVariant = variants.find(v => v.is_recommended_fit) || variants[0] || {};
-        const isDown = Boolean(m.is_downloaded);
-        const activeFile = m.local_file_path || recommendedVariant.file_name;
+        
+        // Verificação inteligente com base no inventário real local
+        const matched = findInstalledModelMatch(recommendedVariant.file_name, m.repo_id, m.model_name);
+        const isDown = Boolean(m.is_downloaded || matched);
+        const activeFile = (matched && matched.realFileName) ? matched.realFileName : (m.local_file_path || recommendedVariant.file_name);
 
         const quantOptions = variants.map(v => `
           <option value="${v.quant_tag}" ${v.is_recommended_fit ? 'selected' : ''} data-size="${v.size_bytes}" data-url="${v.download_url}" data-file="${v.file_name}" data-fit="${v.hardware_fit}" data-sha256="${v.sha256 || ''}" data-proj-file="${v.projector_file || ''}" data-proj-url="${v.projector_url || ''}">
@@ -4566,7 +4730,7 @@
         const isSweet = m.category_role === 'SweetSpot';
 
         return `
-          <div class="curated-card" id="curated-card-${idx}">
+          <div class="curated-card ${isDown ? 'is-installed-card' : ''}" id="curated-card-${idx}">
             <div>
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 4px;">
                 <div style="display: flex; gap: 4px; align-items: center;">
@@ -4576,7 +4740,9 @@
                   ${m.is_multimodal_vlm ? '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.65rem;">👁️ Bundle VLM</span>' : ''}
                 </div>
                 <div style="display: flex; gap: 4px; align-items: center;">
-                  ${isDown ? `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700;">✅ Instalado</span>` : ''}
+                  <span id="curated-badge-installed-${idx}">
+                    ${isDown ? `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✅ Já Instalado no Silício</span>` : ''}
+                  </span>
                   <span id="curated-fit-${idx}">${fitBadge}</span>
                 </div>
               </div>
@@ -4612,20 +4778,25 @@
                 </select>
               </div>
 
-              ${isDown ? `
-                <div style="display: flex; gap: 6px;">
-                  <button class="btn btn-green" style="flex: 1; justify-content: center; font-size: 0.78rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)">
-                    <span>⚡</span> Usar no Hermes
+              <div id="curated-actions-${idx}">
+                ${isDown ? `
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button class="btn btn-green" style="flex: 1; min-width: 120px; justify-content: center; font-size: 0.76rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                      <span>⚡</span> Usar no Hermes
+                    </button>
+                    <button class="btn btn-cyan" style="padding: 6px 10px; font-size: 0.74rem;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
+                      <span>🏟️</span> Arena
+                    </button>
+                    <button class="btn" style="padding: 6px 10px; font-size: 0.74rem;" title="Baixar novamente" onclick="triggerCuratedDownload(${idx}, '${m.repo_id}')">
+                      <span>🔄</span>
+                    </button>
+                  </div>
+                ` : `
+                  <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="triggerCuratedDownload(${idx}, '${m.repo_id}')">
+                    <span>⬇️</span> ${m.is_multimodal_vlm ? 'Baixar Bundle VLM (GGUF + mmproj)' : 'Baixar Seleção'}
                   </button>
-                  <button class="btn" style="padding: 6px 12px; font-size: 0.74rem;" title="Baixar novamente" onclick="triggerCuratedDownload(${idx}, '${m.repo_id}')">
-                    <span>🔄</span>
-                  </button>
-                </div>
-              ` : `
-                <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="triggerCuratedDownload(${idx}, '${m.repo_id}')">
-                  <span>⬇️</span> ${m.is_multimodal_vlm ? 'Baixar Bundle VLM (GGUF + mmproj)' : 'Baixar Seleção'}
-                </button>
-              `}
+                `}
+              </div>
             </div>
           </div>
         `;
@@ -4637,9 +4808,49 @@
       if (!select) return;
       const opt = select.options[select.selectedIndex];
       const fitStatus = opt.getAttribute('data-fit') || 'OptimalVram';
+      const fileName = opt.getAttribute('data-file') || '';
       const fitEl = document.getElementById(`curated-fit-${idx}`);
       if (fitEl) {
         fitEl.innerHTML = getFitBadgeHtml(fitStatus);
+      }
+
+      // Reavalia dinamicamente se a quantização selecionada bate com o inventário físico
+      const model = filteredCuratedModels[idx] || curatedCatalogData[idx];
+      const repoId = model ? model.repo_id : '';
+      const modelName = model ? model.model_name : '';
+      const matched = findInstalledModelMatch(fileName, repoId, modelName);
+      const isDown = Boolean(matched || (model && model.local_file_path && model.local_file_path.toLowerCase().includes(fileName.toLowerCase())));
+      const activeFile = (matched && matched.realFileName) ? matched.realFileName : fileName;
+
+      const badgeContainer = document.getElementById(`curated-badge-installed-${idx}`);
+      const actionContainer = document.getElementById(`curated-actions-${idx}`);
+
+      if (badgeContainer) {
+        badgeContainer.innerHTML = isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✅ Já Instalado no Silício</span>' : '';
+      }
+
+      if (actionContainer) {
+        if (isDown) {
+          actionContainer.innerHTML = `
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-green" style="flex: 1; min-width: 120px; justify-content: center; font-size: 0.76rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                <span>⚡</span> Usar no Hermes
+              </button>
+              <button class="btn btn-cyan" style="padding: 6px 10px; font-size: 0.74rem;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
+                <span>🏟️</span> Arena
+              </button>
+              <button class="btn" style="padding: 6px 10px; font-size: 0.74rem;" title="Baixar novamente" onclick="triggerCuratedDownload(${idx}, '${repoId}')">
+                <span>🔄</span>
+              </button>
+            </div>
+          `;
+        } else {
+          actionContainer.innerHTML = `
+            <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="triggerCuratedDownload(${idx}, '${repoId}')">
+              <span>⬇️</span> ${model && model.is_multimodal_vlm ? 'Baixar Bundle VLM (GGUF + mmproj)' : 'Baixar Seleção'}
+            </button>
+          `;
+        }
       }
     }
 
@@ -4939,20 +5150,41 @@
                   const sizeGb = f.size_gb ? f.size_gb.toFixed(2) : (f.size_bytes / (1024 ** 3)).toFixed(2);
                   const fileName = f.file_name || f.filename;
                   const fitBadge = getFitBadgeHtml(f.hardware_fit);
+                  const matched = findInstalledModelMatch(fileName, repoId);
+                  const isDown = Boolean(matched);
+                  const activeFile = (matched && matched.realFileName) ? matched.realFileName : fileName;
+
                   return `
                     <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
                       <div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                           <span class="mono" style="font-size: 0.8rem; font-weight: 600; color: #fff;">${fileName}</span>
+                          ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✅ Já Instalado no Silício</span>' : ''}
                           ${fitBadge}
                         </div>
                         <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
                           Quant: <strong style="color: var(--cyan);">${f.quant_tag || '--'}</strong> &bull; Tamanho: <strong style="color: #fff;">${sizeGb} GB</strong> ${f.sha256 ? '&bull; LFS SHA-256 verificado' : ''}
                         </div>
                       </div>
-                      <button class="btn btn-cyan" style="padding: 4px 12px; font-size: 0.72rem;" onclick="requestModelDownload('${f.download_url}', '${fileName}', ${f.size_bytes}, '${f.sha256 || ''}')">
-                        <span>⬇️</span> Baixar
-                      </button>
+                      <div>
+                        ${isDown ? `
+                          <div style="display: flex; gap: 4px;">
+                            <button class="btn btn-green" style="padding: 4px 10px; font-size: 0.72rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                              <span>⚡</span> Usar
+                            </button>
+                            <button class="btn btn-cyan" style="padding: 4px 8px; font-size: 0.72rem;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
+                              <span>🏟️</span>
+                            </button>
+                            <button class="btn" style="padding: 4px 8px; font-size: 0.72rem;" title="Baixar novamente" onclick="requestModelDownload('${f.download_url}', '${fileName}', ${f.size_bytes}, '${f.sha256 || ''}')">
+                              <span>🔄</span>
+                            </button>
+                          </div>
+                        ` : `
+                          <button class="btn btn-cyan" style="padding: 4px 12px; font-size: 0.72rem;" onclick="requestModelDownload('${f.download_url}', '${fileName}', ${f.size_bytes}, '${f.sha256 || ''}')">
+                            <span>⬇️</span> Baixar
+                          </button>
+                        `}
+                      </div>
                     </div>
                   `;
                 }).join('')}
@@ -4994,37 +5226,103 @@
       fetchCloudRankedModels(currentProfile);
     }
 
+    function setCloudProviderFilter(provider) {
+      currentCloudProviderFilter = (provider || 'all').toLowerCase();
+      document.querySelectorAll('.filter-provider-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`btn-cloud-prov-${currentCloudProviderFilter}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const sublabel = document.getElementById('cloud-triad-sublabel');
+      if (sublabel) {
+        const provLabel = currentCloudProviderFilter === 'nous' ? 'Nous Portal (Foco)' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter (Foco)' : 'Todos os Provedores';
+        sublabel.innerText = `Recomendações canônicas de qualidade, ROI e economia • Provedor: ${provLabel}`;
+      }
+
+      renderCloudTable();
+      if (cachedCloudRankedModels && cachedCloudRankedModels.length > 0) {
+        renderCloudRankedTable(cachedCloudRankedModels);
+      }
+    }
+
     function renderCloudTable() {
       const tbody = document.getElementById('cloud-arena-tbody');
       if (!tbody) return;
       const profileReport = cloudChampionsData.find(c => c.profile.toLowerCase() === currentProfile);
 
-      if (!profileReport) {
+      if (!profileReport && (!cachedCloudRankedModels || cachedCloudRankedModels.length === 0)) {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum dado encontrado para o perfil ' + currentProfile + '.</td></tr>';
         return;
       }
 
-      const rows = [];
-      if (profileReport.quality_leader) {
-        rows.push({ tag: '🏆 Quality Leader', badgeClass: 'badge-champion', data: profileReport.quality_leader });
+      let rows = [];
+
+      if (currentCloudProviderFilter === 'all') {
+        if (profileReport) {
+          if (profileReport.quality_leader) {
+            rows.push({ tag: '🏆 Quality Leader', badgeClass: 'badge-champion', data: profileReport.quality_leader });
+          }
+          if (profileReport.best_value) {
+            rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: profileReport.best_value });
+          }
+          if (profileReport.ultra_low_cost) {
+            rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: profileReport.ultra_low_cost });
+          }
+        }
+      } else {
+        // Filtragem dedicada por provedor específico
+        const provModels = (cachedCloudRankedModels || []).filter(m => (m.provider || '').toLowerCase().includes(currentCloudProviderFilter));
+        if (provModels.length > 0) {
+          // 1. Quality Leader do provedor (maior composite_score)
+          const sortedByQuality = [...provModels].sort((a, b) => (b.composite_score || 0) - (a.composite_score || 0));
+          rows.push({ tag: '🏆 Quality Leader', badgeClass: 'badge-champion', data: sortedByQuality[0] });
+
+          // 2. Best Value do provedor (maior roi_index)
+          const sortedByRoi = [...provModels].sort((a, b) => (b.roi_index || 0) - (a.roi_index || 0));
+          const bestRoi = sortedByRoi[0];
+          if (bestRoi && bestRoi.canonical_id !== sortedByQuality[0].canonical_id) {
+            rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: bestRoi });
+          } else if (sortedByRoi.length > 1) {
+            rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: sortedByRoi[1] });
+          }
+
+          // 3. Ultra Low Cost do provedor (menor blended_cost)
+          const sortedByCost = [...provModels].sort((a, b) => (a.blended_cost || 0) - (b.blended_cost || 0));
+          const lowestCost = sortedByCost[0];
+          if (lowestCost && !rows.some(r => r.data.canonical_id === lowestCost.canonical_id)) {
+            rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: lowestCost });
+          } else if (sortedByCost.length > 1 && !rows.some(r => r.data.canonical_id === sortedByCost[1].canonical_id)) {
+            rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: sortedByCost[1] });
+          }
+        } else if (profileReport) {
+          // Fallback para os campeões já carregados se bater com o provedor
+          if (profileReport.quality_leader && (profileReport.quality_leader.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
+            rows.push({ tag: '🏆 Quality Leader', badgeClass: 'badge-champion', data: profileReport.quality_leader });
+          }
+          if (profileReport.best_value && (profileReport.best_value.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
+            rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: profileReport.best_value });
+          }
+          if (profileReport.ultra_low_cost && (profileReport.ultra_low_cost.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
+            rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: profileReport.ultra_low_cost });
+          }
+        }
       }
-      if (profileReport.best_value) {
-        rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: profileReport.best_value });
-      }
-      if (profileReport.ultra_low_cost) {
-        rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: profileReport.ultra_low_cost });
+
+      if (rows.length === 0) {
+        const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : currentCloudProviderFilter;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhum modelo da Tríade de Líderes encontrado especificamente para <strong>${provName}</strong> neste perfil.</td></tr>`;
+        return;
       }
 
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td class="text-center"><span class="badge ${r.badgeClass}">${r.tag}</span></td>
           <td>${formatModelDisplayName(r.data.canonical_id || r.data.display_name, false)}</td>
-          <td><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${r.data.provider}</span></td>
-          <td class="mono" style="color: #cbd5e1;">$${(r.data.blended_cost || 0).toFixed(4)}</td>
-          <td class="mono" style="font-weight: 700; color: var(--cyan);">${(r.data.composite_score || 0).toFixed(1)}</td>
-          <td class="mono" style="color: var(--green); font-weight: 600;">${(r.data.roi_index || 0).toFixed(1)}</td>
-          <td class="mono">${r.data.throughput_tps ? r.data.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
-          <td class="mono">${(r.data.context_window || 0).toLocaleString()}</td>
+          <td class="text-center"><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${r.data.provider}</span></td>
+          <td class="mono text-center" style="color: #cbd5e1;">$${(r.data.blended_cost || 0).toFixed(4)}</td>
+          <td class="mono text-center" style="font-weight: 700; color: var(--cyan);">${(r.data.composite_score || 0).toFixed(1)}</td>
+          <td class="mono text-center" style="color: var(--green); font-weight: 600;">${(r.data.roi_index || 0).toFixed(1)}</td>
+          <td class="mono text-center">${r.data.throughput_tps ? r.data.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
+          <td class="mono text-center">${(r.data.context_window || 0).toLocaleString()}</td>
           <td class="text-center">
             <button class="btn-apply-model" onclick="openQuickApplyModal('${r.data.canonical_id}', '${r.data.provider}', false)" title="Aplicar este campeão no Hermes">
               <span>⚡</span> Usar
@@ -5046,9 +5344,9 @@
         const res = await fetch(`/api/v1/cloud/models?profile=${profile || currentProfile}&limit=50`);
         if (res.ok) {
           const data = await res.json();
-          const models = data.models || [];
-          if (countEl) countEl.innerText = `${models.length} modelos classificados`;
-          renderCloudRankedTable(models);
+          cachedCloudRankedModels = data.models || [];
+          renderCloudRankedTable(cachedCloudRankedModels);
+          renderCloudTable(); // Re-renderiza Tríade para se beneficiar da lista em cache se houver filtro
         } else {
           tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--red);">Falha ao carregar ranking da Cloud Arena.</td></tr>';
         }
@@ -5060,12 +5358,27 @@
     function renderCloudRankedTable(models) {
       const tbody = document.getElementById('cloud-ranked-tbody');
       if (!tbody) return;
-      if (!models || models.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">Nenhum modelo avaliado encontrado para este perfil.</td></tr>';
+
+      let list = models || cachedCloudRankedModels || [];
+      cachedCloudRankedModels = list;
+
+      if (currentCloudProviderFilter && currentCloudProviderFilter !== 'all') {
+        list = list.filter(m => (m.provider || '').toLowerCase().includes(currentCloudProviderFilter));
+      }
+
+      const countEl = document.getElementById('cloud-ranked-count');
+      if (countEl) {
+        const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : 'Todos os Provedores';
+        countEl.innerText = `${list.length} modelos classificados (${provName})`;
+      }
+
+      if (list.length === 0) {
+        const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : currentCloudProviderFilter;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum modelo avaliado encontrado para o provedor selecionado (${provName}).</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = models.map((m, idx) => {
+      tbody.innerHTML = list.map((m, idx) => {
         const isTop3 = idx < 3;
         const tagClass = m.pareto_tag === 'Leader' ? 'badge-champion' : m.pareto_tag === 'BestValue' ? 'badge-value' : 'badge-dominated';
         const tagLabel = m.pareto_tag === 'Leader' ? '👑 Leader' : m.pareto_tag === 'BestValue' ? '💎 Best' : 'Dominated';
@@ -5073,15 +5386,15 @@
 
         return `
           <tr>
-            <td class="rank-cell ${isTop3 ? 'top3' : ''}">#${m.rank || (idx + 1)}</td>
+            <td class="rank-cell ${isTop3 ? 'top3' : ''} text-center">#${m.rank || (idx + 1)}</td>
             <td class="text-center"><span class="badge ${tagClass}">${tagLabel}</span></td>
             <td>${formatModelDisplayName(m.canonical_id, false)}</td>
-            <td><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${m.provider}</span></td>
-            <td class="mono" style="color: #cbd5e1;">${costStr}</td>
-            <td class="mono" style="font-weight: 700; color: var(--cyan);">${(m.composite_score || 0).toFixed(1)}</td>
-            <td class="mono" style="color: var(--green); font-weight: 600;">${(m.roi_index || 0).toFixed(1)}</td>
-            <td class="mono">${m.throughput_tps ? m.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
-            <td class="mono">${(m.context_window || 0).toLocaleString()}</td>
+            <td class="text-center"><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${m.provider}</span></td>
+            <td class="mono text-center" style="color: #cbd5e1;">${costStr}</td>
+            <td class="mono text-center" style="font-weight: 700; color: var(--cyan);">${(m.composite_score || 0).toFixed(1)}</td>
+            <td class="mono text-center" style="color: var(--green); font-weight: 600;">${(m.roi_index || 0).toFixed(1)}</td>
+            <td class="mono text-center">${m.throughput_tps ? m.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
+            <td class="mono text-center">${(m.context_window || 0).toLocaleString()}</td>
             <td class="text-center">
               <button class="btn-apply-model" onclick="openQuickApplyModal('${m.canonical_id}', '${m.provider}', false)" title="Aplicar este modelo no Hermes">
                 <span>⚡</span> Usar
@@ -5246,7 +5559,7 @@
     }
 
     function renderTriadCards() {
-      const grid = document.getElementById('triad-cards-grid');
+      const grid = document.getElementById('governance-triad-cards-grid') || document.getElementById('triad-cards-grid');
       if (!grid) return;
 
       const currentProfile = profilesData.find(p => p.id === activePreset);
