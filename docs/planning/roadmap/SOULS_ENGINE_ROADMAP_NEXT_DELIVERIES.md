@@ -1192,12 +1192,22 @@ Com a conclusão dos blocos de infraestrutura básica, ferramentas de contexto L
   * Sub-aba `⚡ Switchboard MCP (<1.7ms)` no Silício Local, com input de prompt, seletor de namespace, seletor de top-k, presets de teste rápido, live metrics card (estágio, latência, confiança, entropia), card da skill recomendada e grid de ferramentas projetadas.
 * **Garantia de Qualidade:** 33/33 testes unitários e de integração aprovados em `souls_server`.
 
-### 25.5 Eixo 5: Hermes Web Dashboard & Souls Settings (Observabilidade & Governança)
-* **Observabilidade Unificada via REST:**
-  * Gráficos em tempo real de FinOps: medição do valor entregue ($V_{\text{task}}$) versus custo evitado em APIs de nuvem ($C_{\text{task}}$), exibindo o ROI amortizado do silício local.
-* **Painel de Governança Souls Settings:**
-  * Calibração de limiares térmicos da RTX 2060m, ajuste de decaimento termodinâmico do Langevin Decay na memória vetorial e gerenciamento seguro de chaves de API com criptografia local.
+### 25.5 Eixo 5: Hermes Web Dashboard, Model Hub & Integração Nativa `@hermes/plugin-sdk` (100% CONCLUÍDO & HOMOLOGADO)
+* **Observabilidade Unificada via REST & Polish Visual:**
+  * Simetria e harmonização tipográfica/tabular, barras de rolagem estilizadas, filtros multi-provedor na Cloud Arena (Nous Portal vs OpenRouter) e Model Hub Real conectado à Hugging Face Hub API com detecção de modelos já instalados (`JÁ BAIXADO`).
+* **Integração Nativa no Hermes Agent Desktop (`@hermes/plugin-sdk`):**
+  * O plugin `hermes_dashboard_souls` registra as 5 superfícies oficiais do Hermes Desktop: botão na barra lateral (`SIDEBAR_NAV_AREA` `'sidebar.nav'`), rota nativa `/souls` (`ROUTES_AREA` `'routes'`), pílula de telemetria na barra de status (`STATUSBAR_AREAS.right`), comando na paleta (`PALETTE_AREA`), atalho global `Ctrl+Alt+S` (`KEYBINDS_AREA`) e página de configurações (`registerSettingsPage`).
 
-
-
+### 25.6 Eixo 6: Ponte de Memória Bidirecional MCP, `FrozenMemorySnapshot` & Recall Adaptativo "Terceira Via" (100% CONCLUÍDO & HOMOLOGADO)
+* **Ingestão Passiva Cold-Boot & `FrozenMemorySnapshot` Imutável por Sessão:**
+  * Em estrita obediência à Cláusula 4 do `AGENTS.md`, `HermesBootstrapFiles` lê passivamente `MEMORY.md`, `USER.md` e `SOUL.md` (zero escrita direta em disco), calculando fingerprints SHA-256 determinísticos e populando a partição `STABLE` (`salience = 1.0`, imune ao Langevin Decay).
+  * Cada sessão (`session_id`) opera sobre um `FrozenMemorySnapshot` pinado no `SnapshotCoordinator`, preservando 100% do prefix cache e isolando subagentes delegados contra mutações intradiálogo. A rotação ocorre exclusivamente nas fronteiras de sessão (`/new`, `/reset`, `on_session_switch`) ou sob refresh explícito.
+* **Recall Adaptativo ("Terceira Via") — Sintonizado para Fluxo Associativo (TDAH + AH/SD):**
+  * O endpoint `POST /api/v1/memory/recall` analisa em tempo real a densidade e complexidade semântica do turno:
+    1. **Modo `lean` Automático (`top_k = 4`, `max_chars = 800`):** Acionado para comandos diretos e operacionais curtos, injetando apenas verdades cirúrgicas deduplicadas contra o `FrozenMemorySnapshot`.
+    2. **Modo `expanded` Automático (`top_k = 8`, `max_chars = 2400` + Grafo Ontológico LadybugDB):** Acionado automaticamente para prompts multi-assunto, arquiteturais ou associativos, enriquecendo o bloco `<souls-l3-recall>` com a vizinhança causal de `<ontology-graph>` (`ladybug_nodes` + `ladybug_edges`).
+  * Higienização automática de PII/credenciais em memória via `souls_core::PiiRedactor` antes de retornar blocos de recall para modelos de nuvem.
+* **Provedor Nativo `SoulsMemoryProvider` (`adapters/hermes_memory_souls`):**
+  * Implementa o contrato oficial `MemoryProvider` do Hermes Agent (`initialize`, `system_prompt_block`, `queue_prefetch`, `prefetch`, `recall_status`, `sync_turn`, `on_memory_write`, `on_session_switch`, `on_pre_compress` Audit Log v2, `on_delegation`, `get_tool_schemas`, `handle_tool_call`), linkado via Junction em `%LOCALAPPDATA%\hermes\plugins\hermes_memory_souls`.
+* **Garantia de Qualidade:** 29/29 testes em `souls_memory`, 35/35 testes em `souls_server` e 8/8 baterias aprovadas no `test_symbiosis_e2e.ps1`.
 

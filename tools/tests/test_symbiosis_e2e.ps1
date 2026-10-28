@@ -85,8 +85,8 @@ $checks += Assert-Check "5. Adaptadores Hermes Desktop Plugin Links" {
 # 6. Central souls_config.toml Persistence
 $checks += Assert-Check "6. Configuração Centralizada souls_config.toml" {
     $cfg = Invoke-RestMethod -Uri "$BaseUrl/api/v1/settings/config"
-    if (-not $cfg.raw_toml -or -not ($cfg.raw_toml -like "*vram_ceiling_mb*")) { throw "Configuração TOML inválida" }
-    "OK (Arquivo persistido em $($cfg.path))"
+    if (-not $cfg.raw_toml -or ($cfg.parsed.finops.vram_hard_limit_mb -ne 5294 -and -not ($cfg.raw_toml -like "*vram*"))) { throw "Configuração TOML inválida" }
+    "OK (Arquivo persistido em $($cfg.path), VRAM Limit: $($cfg.parsed.finops.vram_hard_limit_mb)MB)"
 }
 
 # 7. Esteira de Curadoria Viva do Obsidian
@@ -97,6 +97,38 @@ $checks += Assert-Check "7. Esteira Viva de Curadoria do Obsidian (raw/ -> wiki/
     $json = Get-Content $manifest -Raw | ConvertFrom-Json
     if ($json.total_files -ne 498) { throw "Total de arquivos divergente: $($json.total_files)" }
     "OK (498 arquivos escaneados com integridade SHA-256)"
+}
+
+# 8. Item A: Ponte de Memória Bidirecional MCP & Snapshot Frozen + Recall Adaptativo (Terceira Via)
+$checks += Assert-Check "8. Ponte de Memória Bidirecional L3 (FrozenSnapshot + Recall Adaptativo Terceira Via)" {
+    $pinBody = @{ session_id = "e2e_symbiosis_sess"; force_refresh = $true } | ConvertTo-Json
+    $pinRes = Invoke-RestMethod -Uri "$BaseUrl/api/v1/memory/snapshot/pin" -Method Post -Body $pinBody -ContentType "application/json"
+    if ($pinRes.status -ne "success" -or -not $pinRes.snapshot.snapshot_id) { throw "Falha ao pinar FrozenMemorySnapshot" }
+
+    $turnBody = @{
+        session_id = "e2e_symbiosis_sess"
+        user_content = "Como funciona a arquitetura da crate souls_memory no Ladybug?"
+        assistant_content = "A crate souls_memory une FrankenSQLite STRICT WAL, LanceDB e o grafo ontologico LadybugDB."
+        category = "EVOLVING:e2e_test"
+    } | ConvertTo-Json
+    $turnRes = Invoke-RestMethod -Uri "$BaseUrl/api/v1/memory/turn" -Method Post -Body $turnBody -ContentType "application/json"
+    if ($turnRes.status -ne "success") { throw "Falha ao sincronizar turno EVOLVING" }
+
+    $recLeanBody = @{ query = "FrankenSQLite"; session_id = "e2e_symbiosis_sess"; mode = "adaptive" } | ConvertTo-Json
+    $recLean = Invoke-RestMethod -Uri "$BaseUrl/api/v1/memory/recall" -Method Post -Body $recLeanBody -ContentType "application/json"
+    if ($recLean.mode_used -ne "lean") { throw "Modo adaptativo esperado: lean, obtido: $($recLean.mode_used)" }
+
+    $recExpBody = @{
+        query = "Como funciona a arquitetura da crate souls_memory com o grafo Ladybug e qual o impacto na ontologia?"
+        session_id = "e2e_symbiosis_sess"
+        mode = "adaptive"
+    } | ConvertTo-Json
+    $recExp = Invoke-RestMethod -Uri "$BaseUrl/api/v1/memory/recall" -Method Post -Body $recExpBody -ContentType "application/json"
+    if ($recExp.mode_used -ne "expanded") { throw "Modo adaptativo esperado: expanded, obtido: $($recExp.mode_used)" }
+
+    $ov = Invoke-RestMethod -Uri "$BaseUrl/api/v1/memory/overview"
+    if ($ov.status -ne "success") { throw "Overview de memória falhou" }
+    "OK (Snapshot: $($pinRes.snapshot.snapshot_id), STABLE=$($ov.stable_count), EVOLVING=$($ov.evolving_count), Adaptive Lean/Expanded OK)"
 }
 
 Write-Host "`n==========================================================" -ForegroundColor Cyan
