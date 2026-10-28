@@ -91,7 +91,20 @@ pub async fn bootstrap_engine(data_dir: &Path) -> Result<AppState, Box<dyn std::
         ensure_dev_drive_mounted(data_dir);
         std::fs::create_dir_all(data_dir)?;
         let db_path = data_dir.join("souls_memory.db");
-        SoulsMemoryStore::new(&db_path, 16).await?
+        let store = SoulsMemoryStore::new(&db_path, 16).await?;
+        let now_epoch = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(1_700_000_000);
+        if let Err(err) = store
+            .pin_session_snapshot("global_boot", true, None, now_epoch)
+            .await
+        {
+            tracing::warn!("Cold-boot Hermes memory snapshot notice: {err}");
+        } else {
+            info!("Cold-boot FrozenMemorySnapshot initialized from Hermes bootstrap files.");
+        }
+        store
     };
 
     let pool = memory.pool();
@@ -2137,5 +2150,224 @@ model:
         let json_mh: serde_json::Value = serde_json::from_slice(&bytes_mh).unwrap();
         assert_eq!(json_mh["id"], 105);
         assert!(!json_mh["result"]["isError"].as_bool().unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_memory_bridge_frozen_snapshot_adaptive_recall_and_checkpoint_lifecycle() {
+        let state = bootstrap_engine(Path::new(":memory:")).await.unwrap();
+        let app = build_router(state.clone());
+
+        let temp_home = PathBuf::from("Z:/souls_engine/.souls_data/test_srv_mem_bridge_home");
+        let _ = std::fs::remove_dir_all(&temp_home);
+        let mem_dir = temp_home.join("memories");
+        std::fs::create_dir_all(&mem_dir).unwrap();
+
+        std::fs::write(
+            mem_dir.join("MEMORY.md"),
+            "- O daemon souls_server escuta na porta 9123 sem interface grafica.\n- O workspace possui 9 crates canonicas.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            mem_dir.join("USER.md"),
+            "- Arquiteto tem TDAH e AH/SD e prefere recall adaptativo Terceira Via.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            temp_home.join("SOUL.md"),
+            "# Identidade\nEngenheiro Principal Bare-Metal do Souls Engine.\n",
+        )
+        .unwrap();
+
+        // 1. Pin FrozenMemorySnapshot for session "sess_alpha"
+        let pin_payload = serde_json::json!({
+            "session_id": "sess_alpha",
+            "force_refresh": true,
+            "hermes_home": temp_home.to_string_lossy()
+        });
+        let req_pin = Request::builder()
+            .uri("/api/v1/memory/snapshot/pin")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&pin_payload).unwrap()))
+            .unwrap();
+        let resp_pin = app.clone().oneshot(req_pin).await.unwrap();
+        assert_eq!(resp_pin.status(), StatusCode::OK);
+        let bytes_pin = to_bytes(resp_pin.into_body(), usize::MAX).await.unwrap();
+        let json_pin: serde_json::Value = serde_json::from_slice(&bytes_pin).unwrap();
+        assert_eq!(json_pin["status"], "success");
+        assert_eq!(json_pin["stable_count"], 4);
+
+        // 2. Mirror a new Hermes memory write into STABLE
+        let mirror_payload = serde_json::json!({
+            "action": "add",
+            "target": "memory",
+            "content": "A crate souls_memory usa FrankenSQLite STRICT WAL e LanceDB.",
+            "session_id": "sess_alpha"
+        });
+        let req_mir = Request::builder()
+            .uri("/api/v1/memory/mirror")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&mirror_payload).unwrap()))
+            .unwrap();
+        let resp_mir = app.clone().oneshot(req_mir).await.unwrap();
+        assert_eq!(resp_mir.status(), StatusCode::OK);
+
+        // 3. Persist an EVOLVING turn insight containing sensitive PII (Bearer token) + architectural context
+        let turn_payload = serde_json::json!({
+            "session_id": "sess_alpha",
+            "user_content": "Como funciona a arquitetura da crate souls_memory no Ladybug?",
+            "assistant_content": "A crate souls_memory integra FrankenSQLite, LanceDB e o grafo Ladybug com Bearer super_secret_token_999.",
+            "category": "EVOLVING:architecture_note"
+        });
+        let req_turn = Request::builder()
+            .uri("/api/v1/memory/turn")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&turn_payload).unwrap()))
+            .unwrap();
+        let resp_turn = app.clone().oneshot(req_turn).await.unwrap();
+        assert_eq!(resp_turn.status(), StatusCode::OK);
+
+        // Seed an ontological relation in LadybugDB to verify Expanded Recall enrichment
+        let pool = state.memory.pool();
+        state
+            .memory
+            .ladybug()
+            .insert_node(
+                &pool,
+                souls_memory::OntologicalNode {
+                    id: "node_mem".to_string(),
+                    node_type: "Crate".to_string(),
+                    canonical_name: "souls_memory".to_string(),
+                    metadata_json: "{}".to_string(),
+                    banned_patterns: vec![],
+                },
+                1_700_000_100,
+            )
+            .await
+            .unwrap();
+        state
+            .memory
+            .ladybug()
+            .insert_node(
+                &pool,
+                souls_memory::OntologicalNode {
+                    id: "node_lady".to_string(),
+                    node_type: "Subsystem".to_string(),
+                    canonical_name: "LadybugDB".to_string(),
+                    metadata_json: "{}".to_string(),
+                    banned_patterns: vec![],
+                },
+                1_700_000_100,
+            )
+            .await
+            .unwrap();
+        state
+            .memory
+            .ladybug()
+            .insert_edge(
+                &pool,
+                souls_memory::OntologicalEdge {
+                    source_id: "node_mem".to_string(),
+                    target_id: "node_lady".to_string(),
+                    relationship: "implements".to_string(),
+                    weight: 0.95,
+                },
+                1_700_000_100,
+            )
+            .await
+            .unwrap();
+
+        // 4a. Test Adaptive Recall with a short direct prompt -> should select "lean"
+        let recall_lean_payload = serde_json::json!({
+            "query": "porta 9123 souls_memory",
+            "session_id": "sess_alpha",
+            "mode": "adaptive",
+            "redact_pii": true
+        });
+        let req_rec_lean = Request::builder()
+            .uri("/api/v1/memory/recall")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&recall_lean_payload).unwrap()))
+            .unwrap();
+        let resp_rec_lean = app.clone().oneshot(req_rec_lean).await.unwrap();
+        assert_eq!(resp_rec_lean.status(), StatusCode::OK);
+        let bytes_rl = to_bytes(resp_rec_lean.into_body(), usize::MAX).await.unwrap();
+        let json_rl: serde_json::Value = serde_json::from_slice(&bytes_rl).unwrap();
+        assert_eq!(json_rl["mode_used"], "lean");
+        // Notice: "porta 9123" was in FrozenMemorySnapshot for sess_alpha so it is deduplicated!
+        // Only the post-snapshot mirrored memory and evolving turn about souls_memory should appear.
+        let matches_rl = json_rl["matches"].as_array().unwrap();
+        assert!(!matches_rl.is_empty());
+        for m in matches_rl {
+            let content = m["content"].as_str().unwrap();
+            assert!(!content.contains("escuta na porta 9123"));
+            assert!(!content.contains("super_secret_token_999"));
+        }
+
+        // 4b. Test Adaptive Recall with a multi-topic / architectural prompt -> should select "expanded" + ontology graph
+        let recall_exp_payload = serde_json::json!({
+            "query": "Como funciona a arquitetura da crate souls_memory com o grafo Ladybug e qual o impacto na ontologia?",
+            "session_id": "sess_alpha",
+            "mode": "adaptive",
+            "redact_pii": true
+        });
+        let req_rec_exp = Request::builder()
+            .uri("/api/v1/memory/recall")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&recall_exp_payload).unwrap()))
+            .unwrap();
+        let resp_rec_exp = app.clone().oneshot(req_rec_exp).await.unwrap();
+        assert_eq!(resp_rec_exp.status(), StatusCode::OK);
+        let bytes_re = to_bytes(resp_rec_exp.into_body(), usize::MAX).await.unwrap();
+        let json_re: serde_json::Value = serde_json::from_slice(&bytes_re).unwrap();
+        assert_eq!(json_re["mode_used"], "expanded");
+        assert!(!json_re["ontology_relations"].as_array().unwrap().is_empty());
+        assert!(json_re["formatted_block"]
+            .as_str()
+            .unwrap()
+            .contains("<ontology-graph>"));
+
+        // 5. Test Pre-Compress Checkpoint (Audit Log v2)
+        let chk_payload = serde_json::json!({
+            "session_id": "sess_alpha",
+            "pre_compress_tokens": 14200,
+            "messages": [
+                {"role": "user", "content": "Vamos revisar o schema do FrankenSQLite."},
+                {"role": "assistant", "content": "Tabelas epistemic_memories e session_checkpoints verificadas."}
+            ]
+        });
+        let req_chk = Request::builder()
+            .uri("/api/v1/memory/checkpoint")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&chk_payload).unwrap()))
+            .unwrap();
+        let resp_chk = app.clone().oneshot(req_chk).await.unwrap();
+        assert_eq!(resp_chk.status(), StatusCode::OK);
+        let bytes_chk = to_bytes(resp_chk.into_body(), usize::MAX).await.unwrap();
+        let json_chk: serde_json::Value = serde_json::from_slice(&bytes_chk).unwrap();
+        assert_eq!(json_chk["status"], "success");
+        assert!(json_chk["checkpoint_id"].as_str().unwrap().starts_with("chk_"));
+
+        // 6. Verify Overview endpoint
+        let req_ov = Request::builder()
+            .uri("/api/v1/memory/overview")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_ov = app.clone().oneshot(req_ov).await.unwrap();
+        assert_eq!(resp_ov.status(), StatusCode::OK);
+        let bytes_ov = to_bytes(resp_ov.into_body(), usize::MAX).await.unwrap();
+        let json_ov: serde_json::Value = serde_json::from_slice(&bytes_ov).unwrap();
+        assert_eq!(json_ov["status"], "success");
+        assert_eq!(json_ov["checkpoints_count"], 1);
+        assert!(json_ov["stable_count"].as_i64().unwrap() >= 5);
+        assert!(json_ov["evolving_count"].as_i64().unwrap() >= 2);
+
+        let _ = std::fs::remove_dir_all(&temp_home);
     }
 }

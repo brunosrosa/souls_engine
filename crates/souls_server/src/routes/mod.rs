@@ -6,6 +6,7 @@ pub mod cloud;
 pub mod dashboard;
 pub mod health;
 pub mod inventory;
+pub mod memory;
 pub mod models;
 pub mod sessions;
 pub mod switchboard;
@@ -54,6 +55,14 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/sessions/subagents/:id/complete", post(sessions::complete_subagent_handler))
         .route("/api/v1/sessions/handoffs", post(sessions::create_handoff_handler))
         .route("/api/v1/sessions/handoffs/:agent_id", get(sessions::get_handoff_handler))
+        // Bidirectional Memory Bridge & Frozen Snapshot Endpoints (Item A)
+        .route("/api/v1/memory/snapshot", get(memory::get_snapshot_handler))
+        .route("/api/v1/memory/snapshot/pin", post(memory::pin_snapshot_handler))
+        .route("/api/v1/memory/recall", post(memory::recall_handler))
+        .route("/api/v1/memory/mirror", post(memory::mirror_handler))
+        .route("/api/v1/memory/turn", post(memory::turn_handler))
+        .route("/api/v1/memory/checkpoint", post(memory::checkpoint_handler))
+        .route("/api/v1/memory/overview", get(memory::overview_handler))
         // Core API Endpoints
         .route("/health", get(health::health_handler))
         .route("/v1/models", get(models::models_handler))
