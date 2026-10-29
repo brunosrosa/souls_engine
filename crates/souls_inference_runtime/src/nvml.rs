@@ -86,7 +86,7 @@ impl Default for GpuTelemetrySnapshot {
             vram_allocated_mb: 850,
             vram_free_mb: 5_294,
             vram_total_mb: RTX_2060M_VRAM_TOTAL_MB,
-            fan_speed_pct: 30,
+            fan_speed_pct: 0,
             power_usage_w: 15.0,
             temp_ewma_rate: 0.0,
             vram_ewma_mb: 850.0,
@@ -246,7 +246,7 @@ impl HardwareWatchdog {
                         .map(|m| (m.used / (1024 * 1024)) as u32)
                         .unwrap_or(850);
 
-                    let fan = device.fan_speed(0).unwrap_or(30);
+                    let fan = device.fan_speed(0).unwrap_or(0);
                     let power = device
                         .power_usage()
                         .map(|p| p as f32 / 1000.0)
@@ -324,8 +324,8 @@ impl HardwareWatchdog {
             vram_allocated_mb,
             vram_free_mb,
             vram_total_mb,
-            fan_speed_pct: if gpu_temp_c > 70.0 { 85 } else { 45 },
-            power_usage_w: 45.0,
+            fan_speed_pct: self.current_snapshot.fan_speed_pct,
+            power_usage_w: self.current_snapshot.power_usage_w,
             temp_ewma_rate: self.temp_ewma_rate,
             vram_ewma_mb: self.vram_ewma_mb,
             operational_zone: zone,
@@ -360,6 +360,12 @@ impl HardwareWatchdog {
                         .as_ref()
                         .map(|m| (m.used / (1024 * 1024)) as u32)
                         .unwrap_or(self.current_snapshot.vram_allocated_mb);
+
+                    self.current_snapshot.fan_speed_pct = device.fan_speed(0).unwrap_or(0);
+                    self.current_snapshot.power_usage_w = device
+                        .power_usage()
+                        .map(|p| p as f32 / 1000.0)
+                        .unwrap_or(self.current_snapshot.power_usage_w);
 
                     let dt = self.last_sample_time.elapsed().as_secs_f32();
                     return self.record_sample(temp, vram_allocated_mb, vram_total_mb, dt);
