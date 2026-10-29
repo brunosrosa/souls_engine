@@ -54,6 +54,10 @@ pub enum OperationalZone {
 /// Instantaneous GPU telemetry snapshot with EWMA predictions.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GpuTelemetrySnapshot {
+    /// Physical GPU name reported by NVML.
+    pub gpu_name: String,
+    /// Physical CPU name reported by host OS registry.
+    pub cpu_name: String,
     /// Instantaneous GPU temperature in Celsius.
     pub gpu_temp_c: f32,
     /// Projected GPU temperature in next 3 seconds based on EWMA rate.
@@ -66,6 +70,10 @@ pub struct GpuTelemetrySnapshot {
     pub vram_total_mb: u32,
     /// Fan speed percentage (0..100).
     pub fan_speed_pct: u32,
+    /// Real CPU fan speed in RPM (e.g. via ASUS ATKACPI).
+    pub cpu_fan_rpm: u32,
+    /// Real GPU fan speed in RPM (e.g. via ASUS ATKACPI or NVML).
+    pub gpu_fan_rpm: u32,
     /// Power draw in Watts.
     pub power_usage_w: f32,
     /// Temperature derivative EWMA (\Delta T / \Delta t in °C/s).
@@ -81,12 +89,16 @@ pub struct GpuTelemetrySnapshot {
 impl Default for GpuTelemetrySnapshot {
     fn default() -> Self {
         Self {
+            gpu_name: "NVIDIA GeForce RTX 2060".to_string(),
+            cpu_name: query_host_cpu_name(),
             gpu_temp_c: 45.0,
             projected_temp_c: 45.0,
             vram_allocated_mb: 850,
             vram_free_mb: 5_294,
             vram_total_mb: RTX_2060M_VRAM_TOTAL_MB,
             fan_speed_pct: 0,
+            cpu_fan_rpm: 0,
+            gpu_fan_rpm: 0,
             power_usage_w: 15.0,
             temp_ewma_rate: 0.0,
             vram_ewma_mb: 850.0,
@@ -94,6 +106,152 @@ impl Default for GpuTelemetrySnapshot {
             barrier_phi: 0.0,
         }
     }
+}
+
+/// Queries the Windows Registry for the exact host CPU brand string.
+#[cfg(windows)]
+pub fn query_host_cpu_name() -> String {
+    use windows_sys::Win32::System::Registry::{
+        RegCloseKey, RegOpenKeyExW, RegQueryValueExW, HKEY_LOCAL_MACHINE, KEY_READ,
+    };
+
+    let subkey: Vec<u16> = "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0\0"
+        .encode_utf16()
+        .collect();
+    let value_name: Vec<u16> = "ProcessorNameString\0".encode_utf16().collect();
+    let mut hkey = std::ptr::null_mut();
+
+    // SAFETY: Standard read-only RegOpenKeyExW on HKLM CentralProcessor\0.
+    let status = unsafe { RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey.as_ptr(), 0, KEY_READ, &mut hkey) };
+    if status != 0 || hkey.is_null() {
+        return "Intel Core i9".to_string();
+    }
+
+    let mut buf = [0u16; 128];
+    let mut buf_bytes = (buf.len() * 2) as u32;
+    // SAFETY: RegQueryValueExW reads UTF-16 processor brand string into stack buffer `buf`.
+    let q_status = unsafe {
+        RegQueryValueExW(
+            hkey,
+            value_name.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null_mut(),
+            buf.as_mut_ptr() as *mut u8,
+            &mut buf_bytes,
+        )
+    };
+    // SAFETY: Closes registry handle opened above.
+    unsafe {
+        RegCloseKey(hkey);
+    }
+
+    if q_status == 0 && buf_bytes >= 2 {
+        let len = (buf_bytes as usize / 2).saturating_sub(1);
+        let raw = String::from_utf16_lossy(&buf[..len]);
+        let trimmed = raw
+            .replace("(R)", "")
+            .replace("(TM)", "")
+            .split('@')
+            .next()
+            .unwrap_or(&raw)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !trimmed.is_empty() {
+            return trimmed;
+        }
+    }
+    "Intel Core i9".to_string()
+}
+
+#[cfg(not(windows))]
+pub fn query_host_cpu_name() -> String {
+    "Host CPU AVX2".to_string()
+}
+
+/// Queries live CPU and GPU fan tachometer RPM via the ASUS ATKACPI kernel driver (`\\.\ATKACPI`)
+/// on Windows laptops. Returns `(cpu_fan_rpm, gpu_fan_rpm)`.
+#[cfg(windows)]
+pub fn query_asus_atkacpi_fans_rpm() -> (u32, u32) {
+    use windows_sys::Win32::Foundation::{CloseHandle, GENERIC_READ, GENERIC_WRITE, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::Storage::FileSystem::{
+        CreateFileW, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+    };
+    use windows_sys::Win32::System::IO::DeviceIoControl;
+
+    const IOCTL_ASUS_ACPI: u32 = 0x0022240C;
+    const DSTS_METHOD_SIGNATURE: u32 = 0x53545344; // 'DSTS'
+    const DEVID_CPU_FAN_RPM: u32 = 0x00110013;
+    const DEVID_GPU_FAN_RPM: u32 = 0x00110014;
+
+    let path: Vec<u16> = "\\\\.\\ATKACPI\0".encode_utf16().collect();
+    // SAFETY: Opening read/write handle to the OEM kernel driver `\\.\ATKACPI` with shared access.
+    let handle = unsafe {
+        CreateFileW(
+            path.as_ptr(),
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            std::ptr::null(),
+            OPEN_EXISTING,
+            0,
+            std::ptr::null_mut(),
+        )
+    };
+
+    if handle == INVALID_HANDLE_VALUE || handle.is_null() {
+        return (0, 0);
+    }
+
+    let call_dsts = |device_id: u32| -> u32 {
+        let mut in_buf = [0u8; 16];
+        in_buf[0..4].copy_from_slice(&DSTS_METHOD_SIGNATURE.to_le_bytes());
+        in_buf[4..8].copy_from_slice(&8u32.to_le_bytes());
+        in_buf[8..12].copy_from_slice(&device_id.to_le_bytes());
+
+        let mut out_buf = [0u8; 16];
+        let mut bytes_returned = 0u32;
+
+        // SAFETY: Synchronous DeviceIoControl call to ATKACPI DSTS with 16-byte input/output buffers.
+        let ok = unsafe {
+            DeviceIoControl(
+                handle,
+                IOCTL_ASUS_ACPI,
+                in_buf.as_ptr() as *const _,
+                in_buf.len() as u32,
+                out_buf.as_mut_ptr() as *mut _,
+                out_buf.len() as u32,
+                &mut bytes_returned,
+                std::ptr::null_mut(),
+            )
+        };
+
+        if ok != 0 {
+            let raw = u32::from_le_bytes([out_buf[0], out_buf[1], out_buf[2], out_buf[3]]);
+            // ASUS DSTS returns 0x000100XX where XX is tachometer speed in hundreds of RPM
+            if (raw & 0xFFFF0000) == 0x00010000 {
+                (raw & 0xFFFF) * 100
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+    };
+
+    let cpu_rpm = call_dsts(DEVID_CPU_FAN_RPM);
+    let gpu_rpm = call_dsts(DEVID_GPU_FAN_RPM);
+
+    // SAFETY: Closing valid Win32 handle opened by CreateFileW.
+    unsafe {
+        CloseHandle(handle);
+    }
+
+    (cpu_rpm, gpu_rpm)
+}
+
+#[cfg(not(windows))]
+pub fn query_asus_atkacpi_fans_rpm() -> (u32, u32) {
+    (0, 0)
 }
 
 /// Computes the thermodynamic barrier \Phi(T_GPU, V_free, k) according to ADR-004.
@@ -190,12 +348,16 @@ impl HardwareWatchdog {
         let barrier = compute_thermodynamic_barrier(initial_temp_c, free, "Tier 1");
 
         let snapshot = GpuTelemetrySnapshot {
+            gpu_name: "NVIDIA GeForce RTX 2060".to_string(),
+            cpu_name: query_host_cpu_name(),
             gpu_temp_c: initial_temp_c,
             projected_temp_c: initial_temp_c,
             vram_allocated_mb: initial_vram_allocated_mb,
             vram_free_mb: free,
             vram_total_mb: total,
             fan_speed_pct: 45,
+            cpu_fan_rpm: 2100,
+            gpu_fan_rpm: 0,
             power_usage_w: 25.0,
             temp_ewma_rate: 0.0,
             vram_ewma_mb: initial_vram_allocated_mb as f32,
@@ -227,6 +389,10 @@ impl HardwareWatchdog {
         match nvml_wrapper::Nvml::init() {
             Ok(nvml) => match nvml.device_by_index(0) {
                 Ok(device) => {
+                    let gpu_name = device
+                        .name()
+                        .unwrap_or_else(|_| "NVIDIA GeForce RTX 2060".to_string());
+                    let cpu_name = query_host_cpu_name();
                     let temp = device
                         .temperature(nvml_wrapper::enum_wrappers::device::TemperatureSensor::Gpu)
                         .map(|t| t as f32)
@@ -247,6 +413,7 @@ impl HardwareWatchdog {
                         .unwrap_or(850);
 
                     let fan = device.fan_speed(0).unwrap_or(0);
+                    let (cpu_fan_rpm, gpu_fan_rpm) = query_asus_atkacpi_fans_rpm();
                     let power = device
                         .power_usage()
                         .map(|p| p as f32 / 1000.0)
@@ -255,16 +422,20 @@ impl HardwareWatchdog {
                     let zone = evaluate_operational_zone(temp, temp, vram_free_mb);
                     let barrier = compute_thermodynamic_barrier(temp, vram_free_mb, "Tier 1");
 
-                    info!("NVML Hardware Watchdog initialized successfully on dGPU.");
+                    info!("NVML Hardware Watchdog initialized successfully on dGPU ({gpu_name} / {cpu_name}).");
                     (
                         true,
                         GpuTelemetrySnapshot {
+                            gpu_name,
+                            cpu_name,
                             gpu_temp_c: temp,
                             projected_temp_c: temp,
                             vram_allocated_mb,
                             vram_free_mb,
                             vram_total_mb,
                             fan_speed_pct: fan,
+                            cpu_fan_rpm,
+                            gpu_fan_rpm,
                             power_usage_w: power,
                             temp_ewma_rate: 0.0,
                             vram_ewma_mb: vram_allocated_mb as f32,
@@ -319,12 +490,16 @@ impl HardwareWatchdog {
         self.last_sample_time = Instant::now();
 
         let snapshot = GpuTelemetrySnapshot {
+            gpu_name: self.current_snapshot.gpu_name.clone(),
+            cpu_name: self.current_snapshot.cpu_name.clone(),
             gpu_temp_c,
             projected_temp_c,
             vram_allocated_mb,
             vram_free_mb,
             vram_total_mb,
             fan_speed_pct: self.current_snapshot.fan_speed_pct,
+            cpu_fan_rpm: self.current_snapshot.cpu_fan_rpm,
+            gpu_fan_rpm: self.current_snapshot.gpu_fan_rpm,
             power_usage_w: self.current_snapshot.power_usage_w,
             temp_ewma_rate: self.temp_ewma_rate,
             vram_ewma_mb: self.vram_ewma_mb,
@@ -342,10 +517,17 @@ impl HardwareWatchdog {
 
     /// Performs one sampling tick using live NVML if available, or maintains healthy state.
     pub fn sample_once(&mut self) -> GpuTelemetrySnapshot {
+        let (cpu_rpm, gpu_rpm) = query_asus_atkacpi_fans_rpm();
+        self.current_snapshot.cpu_fan_rpm = cpu_rpm;
+        self.current_snapshot.gpu_fan_rpm = gpu_rpm;
+
         if self.nvml_available {
             // SAFETY: Safe dynamic FFI query on already validated NVML runtime.
             if let Ok(nvml) = nvml_wrapper::Nvml::init() {
                 if let Ok(device) = nvml.device_by_index(0) {
+                    if let Ok(name) = device.name() {
+                        self.current_snapshot.gpu_name = name;
+                    }
                     let temp = device
                         .temperature(nvml_wrapper::enum_wrappers::device::TemperatureSensor::Gpu)
                         .map(|t| t as f32)
