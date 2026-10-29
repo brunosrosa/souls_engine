@@ -1,17 +1,17 @@
-# CRATES_SPECIFICATION.md — Dicionário e Matriz Arquitetural das 10 Crates Canônicas (v7)
+# CRATES_SPECIFICATION.md — Dicionário e Matriz Arquitetural das 11 Crates Canônicas (v7)
 
 > **ESTATUS DO DOCUMENTO:** CANÔNICO E OBRIGATÓRIO (DOCS-AS-GUARDRAILS)
-> **APLICAÇÃO:** Todos os agentes de IA (Cursor, Windsurf, Claude Code) e engenheiros humanos.
+> **APLICAÇÃO:** Todos os agentes de IA (Cursor, Windsurf, Claude Code, Trae, Hermes) e engenheiros humanos.
 > **PROPÓSITO:** Congelar as fronteiras de software, eliminar acoplamentos circulares e erradicar o _Context Rot_ por invasão de escopo no Cargo Workspace do **Souls Engine v7**.
 
 ## 1. PREÂMBULO E TOPOLOGIA GERAL DO WORKSPACE
 
 O workspace do Souls Engine é concebido como um **Grafo Acíclico Dirigido (DAG)** de dependências estáticas de alta performance, projetado para compilação nativa no Windows 11 MSVC (`x86_64-pc-windows-msvc`) sobre Dev Drive ReFS (`Z:\souls_engine`).
 
-### 1.1 A Lei Inegociável da Topologia de 10 Crates
+### 1.1 A Lei Inegociável da Topologia de 11 Crates
 
-O workspace é composto por **exatamente 10 crates canônicas** (formalizadas pelo Arquiteto Humano no protocolo `/grill-me` da Sessão 5). É expressamente proibido:
-1. Adicionar crates satélites temporárias ou auxiliares fora das 10 canônicas.
+O workspace é composto por **exatamente 11 crates canônicas** (formalizadas pelo Arquiteto Humano no protocolo `/grill-me` e consolidada pelo ADR-010). É expressamente proibido:
+1. Adicionar crates satélites temporárias ou auxiliares fora das 11 canônicas.
 2. Fundir ou colapsar crates existentes.
 3. Criar dependências circulares diretas ou indiretas.
 
@@ -22,16 +22,17 @@ A tabela abaixo define a matriz estrita de importações permitidas no workspace
 
 | **Crate de Origem**           | **Dependências Permitidas no Workspace (Pode Importar)**                  | **Crates que Podem Importá-la (Pode ser Importada por)**                                                                                                         | **Nível Arquitetural**                 |
 | ----------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| **`souls_protocol`**          | _(Nenhuma dependência de workspace)_                                      | Todas as 9 crates do workspace                                                                                                                                   | **Nível 0 (Fundação Pura)**            |
+| **`souls_protocol`**          | _(Nenhuma dependência de workspace)_                                      | Todas as 10 crates do workspace                                                                                                                                  | **Nível 0 (Fundação Pura)**            |
 | **`souls_core`**              | `souls_protocol`                                                          | `souls_ast`, `souls_memory`, `souls_inference_runtime`, `souls_model_router`, `souls_llm_local_arena`, `souls_llm_cloud_arena`, `souls_anthropophagy`, `souls_server` | **Nível 1 (Infraestrutura Base)**      |
 | **`souls_ast`**               | `souls_protocol`, `souls_core`                                            | `souls_anthropophagy`, `souls_server`                                                                                                                            | **Nível 2 (Análise Estática)**         |
 | **`souls_memory`**            | `souls_protocol`, `souls_core`                                            | `souls_anthropophagy`, `souls_model_router`, `souls_server`                                                                                                      | **Nível 2 (Persistência & Hipocampo)** |
-| **`souls_inference_runtime`** | `souls_protocol`, `souls_core`                                            | `souls_llm_local_arena`, `souls_model_router`, `souls_server`                                                                                                    | **Nível 2 (Silício & Runtimes)**       |
+| **`souls_inference_runtime`** | `souls_protocol`, `souls_core`                                            | `souls_llm_local_arena`, `souls_llm_inventory`, `souls_model_router`, `souls_server`                                                                             | **Nível 2 (Silício & Runtimes)**       |
 | **`souls_llm_local_arena`**   | `souls_protocol`, `souls_core`, `souls_inference_runtime`                 | `souls_server`                                                                                                                                                   | **Nível 3 (Benchmarking Silício)**     |
 | **`souls_llm_cloud_arena`**   | `souls_protocol`, `souls_core`                                            | `souls_model_router`, `souls_server`                                                                                                                             | **Nível 3 (Benchmarking Nuvem)**      |
+| **`souls_llm_inventory`**     | `souls_protocol`, `souls_inference_runtime`                               | `souls_server`                                                                                                                                                   | **Nível 3 (Inventário & Downloader)**  |
 | **`souls_model_router`**      | `souls_protocol`, `souls_core`, `souls_memory`, `souls_inference_runtime`, `souls_llm_cloud_arena` | `souls_server`                                                                                                                          | **Nível 3 (Inteligência FinOps)**      |
 | **`souls_anthropophagy`**     | `souls_protocol`, `souls_core`, `souls_ast`, `souls_memory`               | `souls_server`                                                                                                                                                   | **Nível 3 (Engenharia Reversa)**       |
-| **`souls_server`**            | Todas as 9 crates anteriores                                              | _(Nenhuma — Binário Executável Raiz)_                                                                                                                            | **Nível 4 (Aplicação Executável)**     |
+| **`souls_server`**            | Todas as 10 crates anteriores                                             | _(Nenhuma — Binário Executável Raiz)_                                                                                                                            | **Nível 4 (Aplicação Executável)**     |
 
 ## 2. ESPECIFICAÇÃO DETALHADA DAS 10 CRATES
 
@@ -418,7 +419,34 @@ cargo check -p souls_anthropophagy
 cargo test -p souls_anthropophagy
 ```
 
-### 2.10 `souls_server`
+### 2.10 `souls_llm_inventory`
+
+#### Missão Canônica Única
+
+Gerenciar o inventário de modelos de IA locais, profiling de compatibilidade de hardware bare-metal (RAM via NT `GlobalMemoryStatusEx` e VRAM via NVML), aquisição resiliente de modelos em GGUF e bundles VLM (`mmproj-F16.gguf`) via downloads HTTP Range resumíveis com hash SHA-256 e integração com o Hugging Face Hub.
+
+#### Grafo de Dependências
+
+- **Dependências do Workspace:** `souls_protocol`, `souls_inference_runtime`.
+- **Crates Dependentes:** `souls_server`.
+- **Crates Externas Homologadas:** `tokio`, `reqwest`, `sha2`, `serde`, `serde_json`, `windows-sys` (`0.59`, feature `Win32_System_SystemInformation`), `thiserror`, `tracing`.
+
+#### Estrutura Canônica de Módulos (`crates/souls_llm_inventory/src/`)
+
+- `lib.rs`: Exposição canônica dos serviços de inventário e profilagem.
+- `hardware_profiler.rs`: Avaliação de compatibilidade (`FitCategory`: `FitGuaranteed`, `TightFit`, `ExceedsResources`) contra teto de 5.2GB WDDM e 32GB RAM.
+- `downloader.rs`: Fila FIFO de download assíncrono com Range requests, gravação em `.part` e validação SHA-256.
+- `hf_client.rs`: Cliente Hugging Face Hub para busca e inspeção de metadados de repositórios GGUF.
+- `matrix.rs`: Catálogo curado SweetSpot e Heavyweight.
+
+#### Comando de Validação
+
+```
+cargo check -p souls_llm_inventory
+cargo test -p souls_llm_inventory
+```
+
+### 2.11 `souls_server`
 
 #### Missão Canônica Única
 
@@ -426,7 +454,7 @@ Atuar como o daemon executável bare-metal **100% headless** (`souls_server.exe`
 
 #### Grafo de Dependências
 
-- **Dependências do Workspace:** Todas as 9 crates anteriores (`souls_protocol`, `souls_core`, `souls_ast`, `souls_memory`, `souls_inference_runtime`, `souls_llm_local_arena`, `souls_llm_cloud_arena`, `souls_model_router`, `souls_anthropophagy`).
+- **Dependências do Workspace:** Todas as 10 crates anteriores (`souls_protocol`, `souls_core`, `souls_ast`, `souls_memory`, `souls_inference_runtime`, `souls_llm_local_arena`, `souls_llm_cloud_arena`, `souls_llm_inventory`, `souls_model_router`, `souls_anthropophagy`).
 - **Crates Dependentes:** Nenhuma (é a raiz executável do binário).
 - **Crates Externas Homologadas:** `axum`, `tower-http`, `tokio`, `tracing`, `windows-sys` (`0.59`), `serde_json`.
 
