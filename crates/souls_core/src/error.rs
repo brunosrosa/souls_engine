@@ -48,4 +48,8 @@ pub enum CoreError {
     /// Logging / Tracing initialization failure.
     #[error("Tracing initialization error: {0}")]
     TracingInitError(String),
+
+    /// Asynchronous MPSC batch logging error.
+    #[error("Batch log error: {0}")]
+    BatchLogError(String),
 }

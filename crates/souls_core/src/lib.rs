@@ -30,7 +30,10 @@ pub use context_lean::{
 };
 pub use error::CoreError;
 pub use fs::{clone_file_refs, ensure_refs_directory, validate_refs_path};
-pub use logging::{init_tracing, sanitize_terminal_buffer};
+pub use logging::{
+    init_tracing, init_tracing_with_mpsc, sanitize_terminal_buffer, LogCommand, MpscBatchLogConfig,
+    MpscBatchLogWriter, MpscTracingLayer, RawLogEvent,
+};
 pub use panic::{run_safe_sync, run_safe_task};
 pub use pii_redactor::PiiRedactor;
 pub use sandbox::{
