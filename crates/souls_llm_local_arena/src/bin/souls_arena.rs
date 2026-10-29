@@ -24,6 +24,21 @@ async fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
+    // Check for direct gigatoken benchmark invocation
+    // e.g., `souls_arena --test gigatoken`, `souls_arena test gigatoken`, or `souls_arena gigatoken`
+    if args.iter().any(|a| a == "gigatoken") {
+        #[cfg(feature = "gigatoken_bench")]
+        {
+            return handle_gigatoken(&args[1..]).await;
+        }
+        #[cfg(not(feature = "gigatoken_bench"))]
+        {
+            eprintln!("[!] O benchmark Gigatoken requer a feature flag '--features gigatoken_bench'.");
+            eprintln!("    Execute: cargo run -p souls_llm_local_arena --bin souls_arena --features gigatoken_bench -- --test gigatoken");
+            return ExitCode::from(1);
+        }
+    }
+
     match args[1].to_lowercase().as_str() {
         "list" | "ls" => handle_list(&args[2..]),
         "sync" => handle_sync().await,
@@ -49,6 +64,9 @@ fn print_usage() {
     println!();
     println!("    souls_arena sync");
     println!("        Sincroniza os modelos descobertos no SQLite 'souls_heuristic_vault.db'.");
+    println!();
+    println!("    souls_arena --test gigatoken [--model <id>] [--bytes <n>] [--iterations <n>] [--file <caminho>]");
+    println!("        Executa o benchmark empírico comparativo A/B do Gigatoken (Zero-Copy Mmap + 64-token alignment).");
     println!();
     println!("    souls_arena run [--type <1|2|3|4|5|all>] [--model <nome>] [--tier <0|0.5|1|2|3|4>] [--engine <engine>] [--output <caminho>]");
     println!("        Executa a bateria de benchmark selecionada.");
@@ -334,4 +352,50 @@ fn parse_flag_value(args: &[String], flag: &str) -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(feature = "gigatoken_bench")]
+async fn handle_gigatoken(args: &[String]) -> ExitCode {
+    use souls_llm_local_arena::gigatoken_bench::{
+        print_gigatoken_report, run_gigatoken_ab_benchmark, GigatokenBenchmarkConfig,
+    };
+    use sqlx::sqlite::SqlitePoolOptions;
+
+    let mut config = GigatokenBenchmarkConfig::default();
+
+    if let Some(m) = parse_flag_value(args, "--model") {
+        config.model_id = m;
+    }
+    if let Some(bytes_str) = parse_flag_value(args, "--bytes") {
+        if let Ok(b) = bytes_str.parse::<usize>() {
+            config.sample_text_bytes = b;
+        }
+    }
+    if let Some(iter_str) = parse_flag_value(args, "--iterations") {
+        if let Ok(it) = iter_str.parse::<usize>() {
+            config.benchmark_iterations = it;
+        }
+    }
+    if let Some(file_str) = parse_flag_value(args, "--file") {
+        config.custom_text_path = Some(std::path::PathBuf::from(file_str));
+    }
+
+    let vault_path = resolve_vault_db_path();
+    let db_url = format!("sqlite://{}?mode=rwc", vault_path.to_string_lossy().replace('\\', "/"));
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_url)
+        .await
+        .ok();
+
+    match run_gigatoken_ab_benchmark(config, pool.as_ref()).await {
+        Ok(report) => {
+            print_gigatoken_report(&report);
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("[!] Erro durante execução do benchmark Gigatoken: {}", e);
+            ExitCode::from(1)
+        }
+    }
 }

@@ -8,7 +8,7 @@
 //! - `InferenceEngine` (Interchangeable backends: LlamaCpp CUDA/CPU, ONNX, Mock)
 //! - `BenchmarkType` (The 5 Canonical Evaluation Batteries: Types 1 to 5)
 
-#![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "gigatoken_bench"), forbid(unsafe_code))]
 
 pub mod batteries;
 pub mod discovery;
@@ -18,6 +18,9 @@ pub mod error;
 pub mod harness;
 pub mod inventory;
 pub mod reporters;
+
+#[cfg(feature = "gigatoken_bench")]
+pub mod gigatoken_bench;
 
 pub use inventory::{LocalModelInventory, LocalModelItem, RuntimeFlags, SAFE_WDDM_CEILING_MB};
 
@@ -44,6 +47,12 @@ pub use harness::{
 pub use reporters::{
     export_markdown_dossier, print_cognitive_eval_table, print_hardware_profile_table,
     print_model_list_table, print_pressure_table, print_speculative_table, print_vision_table,
+};
+
+#[cfg(feature = "gigatoken_bench")]
+pub use gigatoken_bench::{
+    run_gigatoken_ab_benchmark, GigatokenBenchmarkConfig, GigatokenBenchmarkResult,
+    GigatokenComparisonReport,
 };
 
 use std::path::Path;
