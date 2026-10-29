@@ -319,10 +319,12 @@ impl Tier1GenerativeEngine {
         let raw_text = self.execute_upstream_pass(prompt, params);
         let completion_tokens = (raw_text.len() / 4).max(1) as u32;
 
-        // 4. Structured Syntax & JSON Schema Enforcement (llguidance principles via DashMap cache)
+        // 4. Structured Syntax & JSON Schema Enforcement (llguidance-grade constrained decoding via StreamConstraintDecoder)
         let (raw_text, json_val) = if let Some(ref schema) = params.json_schema {
             let grammar = get_or_compile_grammar(schema);
-            let healed = match heal_json_response(&raw_text) {
+            let mut decoder = crate::constrained::StreamConstraintDecoder::from_json_schema(schema);
+            decoder.feed(&raw_text);
+            let healed = match decoder.finalize() {
                 Ok(h) => {
                     if grammar.validate(&h).is_ok() {
                         h
@@ -338,7 +340,9 @@ impl Tier1GenerativeEngine {
             let text_val = healed.to_string();
             (text_val, Some(healed))
         } else if raw_text.trim_start().starts_with('{') || raw_text.trim_start().starts_with('[') {
-            let healed = heal_json_response(&raw_text).ok();
+            let mut decoder = crate::constrained::StreamConstraintDecoder::unconstrained_json();
+            decoder.feed(&raw_text);
+            let healed = decoder.finalize().ok();
             (raw_text, healed)
         } else {
             (raw_text, None)
@@ -431,8 +435,14 @@ impl Tier1GenerativeEngine {
                     .arg(if prompt.len() > 16000 { "8192" } else { "4096" })
                     .arg("--no-warmup")
                     .arg("-no-cnv")
-                    .arg("--single-turn")
-                    .stdin(std::process::Stdio::null())
+                    .arg("--single-turn");
+
+                if let Some(ref schema) = params.json_schema {
+                    let gbnf = crate::constrained::GbnfGrammarGenerator::compile_json_schema(schema);
+                    cmd.arg("--grammar").arg(gbnf);
+                }
+
+                cmd.stdin(std::process::Stdio::null())
                     .stdout(std::process::Stdio::piped())
                     .stderr(std::process::Stdio::null());
 
@@ -745,6 +755,8 @@ pub struct CompiledGrammar {
     pub property_types: HashMap<String, String>,
     /// Pre-synthesized JSON template response matching this grammar.
     pub template_json: String,
+    /// Native GBNF grammar compiled for llama.cpp / sampler constraints.
+    pub gbnf_grammar: String,
     /// Compilation timestamp.
     pub compiled_at: Instant,
     /// Cache hit counter.
@@ -777,12 +789,14 @@ impl CompiledGrammar {
         }
 
         let template_json = Tier1GenerativeEngine::synthesize_schema_sample(schema);
+        let gbnf_grammar = crate::constrained::GbnfGrammarGenerator::compile_json_schema(schema);
 
         Self {
             schema_hash,
             required_properties,
             property_types,
             template_json,
+            gbnf_grammar,
             compiled_at: Instant::now(),
             hit_count: Arc::new(AtomicUsize::new(0)),
         }

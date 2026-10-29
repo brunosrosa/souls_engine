@@ -9,6 +9,7 @@
 //! - Response Healing: Deterministic stack-based JSON repair pipeline.
 
 pub mod cohomology;
+pub mod constrained;
 pub mod error;
 pub mod gguf_mmap;
 pub mod healing;
@@ -21,6 +22,9 @@ pub mod onnx;
 pub use cohomology::{
     boost_memory_conflict, compute_cohomology, CohomologyResult, FactEdge, RelationKind,
     RestrictionMatrix, SocraticFactGraph,
+};
+pub use constrained::{
+    ByteMask, GbnfGrammarGenerator, JsonParserState, StreamConstraintDecoder,
 };
 pub use error::InferenceError;
 pub use gguf_mmap::{
