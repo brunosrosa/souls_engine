@@ -4,6 +4,8 @@
 //! Listens on `127.0.0.1:9123` via Axum and Tokio multithread runtime.
 //! Zero UI, Zero Systray, strictly ReFS/NVMe bare-metal execution.
 
+#![recursion_limit = "256"]
+
 mod mcp;
 pub mod profiles;
 mod routes;
@@ -1261,7 +1263,8 @@ impl FixtureService {
         let bytes_root = to_bytes(resp_root.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(bytes_root.to_vec()).unwrap();
         assert!(html.contains("Souls Engine v7"));
-        assert!(html.contains("Silício Físico"));
+        assert!(html.contains("Hardware Local"));
+        assert!(html.contains("Memória de Longo Prazo & Cofre Pessoal"));
 
         // 2. Testa GET /dashboard
         let req_dash = Request::builder()

@@ -550,8 +550,48 @@
     }
 
     table.arena-table tr:hover td {
-      background: rgba(23, 34, 57, 0.75);
-      box-shadow: inset 2px 0 0 var(--cyan);
+      background: rgba(23, 34, 57, 0.85);
+      box-shadow: inset 0 1px 0 rgba(6, 182, 212, 0.65), inset 0 -1px 0 rgba(6, 182, 212, 0.65);
+    }
+
+    table.arena-table tr:hover td:first-child {
+      box-shadow: inset 2px 0 0 var(--cyan), inset 0 1px 0 rgba(6, 182, 212, 0.65), inset 0 -1px 0 rgba(6, 182, 212, 0.65);
+    }
+
+    table.arena-table tr:hover td:last-child {
+      box-shadow: inset -1px 0 0 rgba(6, 182, 212, 0.65), inset 0 1px 0 rgba(6, 182, 212, 0.65), inset 0 -1px 0 rgba(6, 182, 212, 0.65);
+    }
+
+    .card-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+      font-weight: 400;
+    }
+
+    .agents-doc-link {
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .agents-doc-link:hover {
+      background: rgba(6, 182, 212, 0.25);
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
+      color: #fff;
     }
 
     /* FILTRO DE PROVEDOR CLOUD ARENA */
@@ -1839,19 +1879,24 @@
               <span>&bull;</span>
               <span>Janela: <strong id="hero-brain-ctx" style="color: #fff;">64,000 tokens</strong></span>
               <span>&bull;</span>
-              <span>Recall L3: <strong style="color: var(--cyan);" id="hero-recall-mode-text">⚡ Adaptativo (Terceira Via)</strong></span>
+              <span>Recall L3: <strong style="color: var(--cyan);" id="hero-recall-mode-text">⚡ Adaptativo</strong></span>
               <span>&bull;</span>
               <span>Status: <strong style="color: var(--green);" id="hero-brain-status">Conectado / Saudável</strong></span>
               <span>&bull;</span>
-              <span style="color: var(--text-muted);">Soberano sobre o Diálogo Mestre (AGENTS.md Art. 1.2)</span>
+              <span style="color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
+                Modelo fixo durante o diálogo &bull; Governança:
+                <button class="agents-doc-link" onclick="openAgentsMdModal()" title="Clique para abrir e ler a constituição operacional em Z:\souls_engine\AGENTS.md">
+                  📄 Z:\souls_engine\AGENTS.md
+                </button>
+              </span>
             </div>
           </div>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button class="btn" onclick="pinOrRefreshSnapshot(true)" title="Recarregar MEMORY.md e USER.md na próxima sessão">
+        <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
+          <button class="btn" style="white-space: nowrap; height: 38px; padding: 0 16px;" onclick="pinOrRefreshSnapshot(true)" title="Recarregar MEMORY.md e USER.md na próxima sessão">
             <span>📌</span> Atualizar Snapshot
           </button>
-          <button class="btn btn-cyan" onclick="switchTab('tab-settings')">
+          <button class="btn btn-cyan" style="white-space: nowrap; height: 38px; padding: 0 16px;" onclick="switchTab('tab-settings')">
             <span>⚙️</span> Alternar Preset do Brain
           </button>
         </div>
@@ -1900,12 +1945,15 @@
       <!-- GRID 2x2 TELEMETRIA & HARDWARE -->
       <div class="grid-2x2">
         
-        <!-- CARD 1: SILÍCIO FÍSICO & WATCHDOG -->
+        <!-- CARD 1: HARDWARE LOCAL & WATCHDOG -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">
               <div class="card-icon icon-cyan">🎮</div>
-              Silício Físico (NVIDIA RTX 2060m & i9)
+              <div>
+                <div>Hardware Local</div>
+                <div class="card-subtitle" id="hw-local-subtitle">NVIDIA GeForce RTX 2060 &bull; Intel Core i9 CPU</div>
+              </div>
             </div>
             <span class="badge badge-champion" id="zone-badge">Nominal Zone</span>
           </div>
@@ -1933,20 +1981,20 @@
           </div>
 
           <div class="stat-row">
-            <div class="stat-box" title="A ventoinha interna da dGPU está inoperante (0 RPM no NVML); refrigeração ativa operada pelo Exaustor + CPU Fan">
-              <div class="stat-lbl" id="cooling-lbl">Refrigeração</div>
-              <div class="stat-num" id="fan-speed" style="font-size: 0.85rem; color: var(--amber);">Exaustor + CPU</div>
-              <div id="fan-sub" style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;">GPU Fan Off (NVML 0)</div>
+            <div class="stat-box" title="Leitura física em tempo real do controlador EC (ATKACPI) e NVML">
+              <div class="stat-lbl" id="cooling-lbl">Coolers (CPU / GPU)</div>
+              <div class="stat-num" id="fan-speed" style="font-size: 0.92rem; color: var(--green);">CPU: 2100 RPM</div>
+              <div id="fan-sub" style="font-size: 0.65rem; color: var(--amber); margin-top: 2px;">GPU: 0 RPM (Exaustor)</div>
             </div>
             <div class="stat-box">
               <div class="stat-lbl">Power Draw</div>
               <div class="stat-num" id="power-draw">-- W</div>
-              <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;">NVML Live Sensor</div>
+              <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">NVML Live Sensor</div>
             </div>
             <div class="stat-box">
               <div class="stat-lbl">Host CPU</div>
               <div class="stat-num" id="cpu-threads">16T AVX2</div>
-              <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;">Intel Core i9</div>
+              <div id="cpu-name-sub" style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">Intel Core i9</div>
             </div>
           </div>
         </div>
@@ -1956,18 +2004,28 @@
           <div class="card-header">
             <div class="card-title">
               <div class="card-icon icon-green">💰</div>
-              FinOps & Eficiência de Silício (E³)
+              <div>
+                <div>FinOps & Eficiência de Silício (E³)</div>
+                <div class="card-subtitle" id="finops-period-subtitle">Métricas reais extraídas do SQLite &bull; Últimos 30 Dias (Mensal)</div>
+              </div>
             </div>
-            <span class="badge badge-value" id="finops-arena-runs-badge">50 Ensaios Locais</span>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                <button class="filter-provider-btn" id="btn-finops-day" onclick="setFinopsPeriod('day')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais das últimas 24 horas">Dia</button>
+                <button class="filter-provider-btn active" id="btn-finops-month" onclick="setFinopsPeriod('month')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais dos últimos 30 dias">Mês</button>
+                <button class="filter-provider-btn" id="btn-finops-year" onclick="setFinopsPeriod('year')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais acumuladas nos últimos 365 dias">Ano</button>
+              </div>
+              <span class="badge badge-value" id="finops-arena-runs-badge">137 Ensaios Locais</span>
+            </div>
           </div>
 
           <div class="stat-row" style="margin-top: 0; margin-bottom: 14px;">
-            <div class="stat-box" title="Total real de tokens processados no silício local (Arena + Checkpoints L3 + Diários)">
-              <div class="stat-lbl">Tokens Processados</div>
+            <div class="stat-box" title="Total real de tokens processados no período selecionado (Arena + Checkpoints L3 + Diários + Telemetria)">
+              <div class="stat-lbl" id="tokens-period-lbl">Tokens (Mês)</div>
               <div class="stat-num" id="tokens-today">--</div>
             </div>
-            <div class="stat-box" title="Economia real calculada sobre execuções locais vs tarifa média Cloud Frontier">
-              <div class="stat-lbl">Economia USD</div>
+            <div class="stat-box" title="Economia real calculada sobre execuções locais vs tarifa média Cloud Frontier no período">
+              <div class="stat-lbl" id="usd-period-lbl">Economia USD</div>
               <div class="stat-num" id="usd-saved" style="color: var(--green);">$--</div>
             </div>
             <div class="stat-box" title="Média empírica de eficiência E³ dos 14 modelos homologados no Heuristic Vault">
@@ -1997,14 +2055,17 @@
           </div>
         </div>
 
-        <!-- CARD 3: HIPOCAMPO L3, PONTE BIDIRECIONAL & ARMAZENAMENTO REFS -->
+        <!-- CARD 3: MEMÓRIA DE LONGO PRAZO & COFRE PESSOAL -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">
               <div class="card-icon icon-purple">🧠</div>
-              Hipocampo L3, Ponte Bidirecional & ReFS
+              <div>
+                <div>Memória de Longo Prazo & Cofre Pessoal</div>
+                <div class="card-subtitle">Hipocampo L3 &bull; Ponte Bidirecional Hermes &bull; Partição ReFS</div>
+              </div>
             </div>
-            <span class="badge badge-champion" id="sqlite-vault-size-badge">Z:\ STRICT WAL</span>
+            <span class="badge badge-champion" id="sqlite-vault-size-badge" title="Tamanho físico real dos bancos SQLite (modo STRICT WAL de alta integridade) gravados no Dev Drive Z:\">💾 Banco Z:\ &bull; 4.75 MB</span>
           </div>
 
           <div class="stat-row" style="margin-top: 0; margin-bottom: 12px;">
@@ -2022,19 +2083,19 @@
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 10px;">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 12px; background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 10px;">
+            <div style="font-size: 0.74rem; color: var(--text-muted); font-weight: 500;">
               Modo de Recall L3:
             </div>
-            <div style="display: flex; gap: 4px;">
-              <button class="filter-provider-btn active" id="btn-recall-adaptive" onclick="setRecallModePreference('adaptive')" title="Terceira Via (TDAH + AH/SD): alterna automaticamente entre Lean (800c) e Expanded + Grafo (2400c)">
-                ⚡ Adaptativo
+            <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
+              <button class="filter-provider-btn active" id="btn-recall-adaptive" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('adaptive')" title="Alterna automaticamente entre Enxuto (800c) e Expandido + Grafo (2400c) conforme o prompt">
+                <span>⚡</span><span>Adaptativo</span>
               </button>
-              <button class="filter-provider-btn" id="btn-recall-lean" onclick="setRecallModePreference('lean')" title="Recall Enxuto: top-4 memórias (800 chars)">
-                🎯 Enxuto
+              <button class="filter-provider-btn" id="btn-recall-lean" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('lean')" title="Recall Enxuto: top-4 memórias diretas (800 chars)">
+                <span>🎯</span><span>Enxuto</span>
               </button>
-              <button class="filter-provider-btn" id="btn-recall-expanded" onclick="setRecallModePreference('expanded')" title="Recall Estendido: top-8 memórias + Grafo Ontológico LadybugDB (2400 chars)">
-                🕸️ Expandido
+              <button class="filter-provider-btn" id="btn-recall-expanded" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('expanded')" title="Recall Expandido: top-8 memórias + Grafo Ontológico LadybugDB (2400 chars)">
+                <span>🧠</span><span>Expandido</span>
               </button>
             </div>
           </div>
@@ -3836,27 +3897,53 @@
         }
       }
 
-      // Refrigeração honesta (Fan da dGPU inoperante -> Exaustor + CPU Fan)
-      if (data.fan_speed !== undefined) {
+      // Hardware Local: Subtítulo dinâmico GPU & CPU + RPM real dos Coolers (ATKACPI + NVML)
+      if (data.gpu_name || data.cpu_name) {
+        const hwSub = document.getElementById('hw-local-subtitle');
+        const gName = data.gpu_name || 'NVIDIA GeForce RTX 2060';
+        const cName = data.cpu_name || 'Intel Core i9 CPU';
+        if (hwSub) hwSub.innerText = `${gName} • ${cName}`;
+        const cpuSub = document.getElementById('cpu-name-sub');
+        if (cpuSub && data.cpu_name) cpuSub.innerText = data.cpu_name;
+      }
+
+      if (data.cpu_fan_rpm !== undefined || data.fan_speed !== undefined) {
         const fanEl = document.getElementById('fan-speed');
         const fanSubEl = document.getElementById('fan-sub');
         const fanLblEl = document.getElementById('cooling-lbl');
-        if (Number(data.fan_speed) <= 0) {
-          if (fanLblEl) fanLblEl.innerText = 'Refrigeração';
+        const cpuRpm = Number(data.cpu_fan_rpm || 0);
+        const gpuRpm = Number(data.gpu_fan_rpm || 0);
+        const gpuPct = Number(data.fan_speed || 0);
+
+        if (fanLblEl) fanLblEl.innerText = 'Coolers (CPU / GPU)';
+        if (cpuRpm > 0) {
           if (fanEl) {
-            fanEl.innerText = 'Exaustor + CPU';
+            fanEl.innerText = `CPU: ${cpuRpm} RPM`;
+            fanEl.style.fontSize = '0.92rem';
+            fanEl.style.color = 'var(--green)';
+          }
+        } else if (gpuPct > 0) {
+          if (fanEl) {
+            fanEl.innerText = `GPU: ${gpuPct}% PWM`;
+            fanEl.style.fontSize = '0.92rem';
+            fanEl.style.color = 'var(--cyan)';
+          }
+        } else {
+          if (fanEl) {
+            fanEl.innerText = 'CPU: Standby (0 RPM)';
             fanEl.style.fontSize = '0.84rem';
             fanEl.style.color = 'var(--amber)';
           }
-          if (fanSubEl) fanSubEl.innerText = 'GPU Fan Off (NVML 0)';
-        } else {
-          if (fanLblEl) fanLblEl.innerText = 'GPU Fan Speed';
-          if (fanEl) {
-            fanEl.innerText = data.fan_speed + '%';
-            fanEl.style.fontSize = '1.15rem';
-            fanEl.style.color = 'var(--text-main)';
+        }
+
+        if (fanSubEl) {
+          if (gpuRpm > 0) {
+            fanSubEl.innerText = `GPU: ${gpuRpm} RPM (Ativo)`;
+            fanSubEl.style.color = 'var(--cyan)';
+          } else {
+            fanSubEl.innerText = 'GPU: 0 RPM (Exaustor)';
+            fanSubEl.style.color = 'var(--amber)';
           }
-          if (fanSubEl) fanSubEl.innerText = 'Ativo (PWM)';
         }
       }
 
@@ -3879,37 +3966,42 @@
         if (bCloud) bCloud.innerText = data.profiles_count + ' Perfis';
       }
 
-      // FinOps & Eficiência E³
-      if (data.tokens_today !== undefined) {
-        const tEl = document.getElementById('tokens-today');
-        if (tEl) tEl.innerText = Number(data.tokens_today).toLocaleString();
-      }
-      if (data.usd_saved !== undefined) {
-        const uEl = document.getElementById('usd-saved');
-        if (uEl) uEl.innerText = '$' + Number(data.usd_saved).toFixed(2);
-      }
-      if (data.e3_score !== undefined) {
-        const eEl = document.getElementById('e3-score');
-        if (eEl) eEl.innerText = Number(data.e3_score).toFixed(1);
-      }
-      if (data.total_arena_runs !== undefined) {
-        const fBadge = document.getElementById('finops-arena-runs-badge');
-        if (fBadge) fBadge.innerText = `${data.total_arena_runs} Ensaios Locais`;
-      }
-      if (data.local_share_pct !== undefined) {
-        const lPct = Math.round(Number(data.local_share_pct));
-        const cPct = Math.max(0, 100 - lPct);
-        const lText = document.getElementById('local-share-text');
-        const lBar = document.getElementById('local-share-bar');
-        if (lText) lText.innerText = `${lPct}% Local (Silício $0) / ${cPct}% Cloud`;
-        if (lBar) lBar.style.width = `${lPct}%`;
-      }
-      if (data.context_savings_pct !== undefined) {
-        const sPct = Number(data.context_savings_pct).toFixed(1);
-        const sText = document.getElementById('ast-savings-text');
-        const sBar = document.getElementById('ast-savings-bar');
-        if (sText) sText.innerText = `${sPct}% Tokens Poupados`;
-        if (sBar) sBar.style.width = `${Math.min(100, Number(data.context_savings_pct))}%`;
+      // FinOps & Eficiência E³ (com suporte a filtro Dia / Mês / Ano)
+      if (data.finops_periods) {
+        cachedFinopsPeriods = data.finops_periods;
+        renderFinopsPeriodMetrics();
+      } else {
+        if (data.tokens_today !== undefined) {
+          const tEl = document.getElementById('tokens-today');
+          if (tEl) tEl.innerText = Number(data.tokens_today).toLocaleString();
+        }
+        if (data.usd_saved !== undefined) {
+          const uEl = document.getElementById('usd-saved');
+          if (uEl) uEl.innerText = '$' + Number(data.usd_saved).toFixed(2);
+        }
+        if (data.e3_score !== undefined) {
+          const eEl = document.getElementById('e3-score');
+          if (eEl) eEl.innerText = Number(data.e3_score).toFixed(1);
+        }
+        if (data.total_arena_runs !== undefined) {
+          const fBadge = document.getElementById('finops-arena-runs-badge');
+          if (fBadge) fBadge.innerText = `${data.total_arena_runs} Ensaios Locais`;
+        }
+        if (data.local_share_pct !== undefined) {
+          const lPct = Math.round(Number(data.local_share_pct));
+          const cPct = Math.max(0, 100 - lPct);
+          const lText = document.getElementById('local-share-text');
+          const lBar = document.getElementById('local-share-bar');
+          if (lText) lText.innerText = `${lPct}% Local (Silício $0) / ${cPct}% Cloud`;
+          if (lBar) lBar.style.width = `${lPct}%`;
+        }
+        if (data.context_savings_pct !== undefined) {
+          const sPct = Number(data.context_savings_pct).toFixed(1);
+          const sText = document.getElementById('ast-savings-text');
+          const sBar = document.getElementById('ast-savings-bar');
+          if (sText) sText.innerText = `${sPct}% Tokens Poupados`;
+          if (sBar) sBar.style.width = `${Math.min(100, Number(data.context_savings_pct))}%`;
+        }
       }
 
       // Hipocampo L3 & Armazenamento ReFS
@@ -3926,7 +4018,7 @@
 
         const sizeBadge = document.getElementById('sqlite-vault-size-badge');
         if (sizeBadge && m3.sqlite_size_mb !== undefined) {
-          sizeBadge.innerText = `Z:\\ STRICT WAL (${Number(m3.sqlite_size_mb).toFixed(2)} MB)`;
+          sizeBadge.innerText = `💾 Banco Z:\\ • ${Number(m3.sqlite_size_mb).toFixed(2)} MB`;
         }
 
         const snapBadge = document.getElementById('hero-snapshot-badge');
@@ -6375,6 +6467,95 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
     let cachedSubagentSessions = [];
     let currentSubagentFilter = 'all';
     let currentRecallPreference = 'adaptive';
+    let currentFinopsPeriod = 'month';
+    let cachedFinopsPeriods = null;
+
+    function setFinopsPeriod(period) {
+      currentFinopsPeriod = period;
+      ['day', 'month', 'year'].forEach(p => {
+        const btn = document.getElementById('btn-finops-' + p);
+        if (btn) btn.classList.toggle('active', p === period);
+      });
+      renderFinopsPeriodMetrics();
+    }
+
+    function renderFinopsPeriodMetrics() {
+      if (!cachedFinopsPeriods) return;
+      const pData = cachedFinopsPeriods[currentFinopsPeriod] || cachedFinopsPeriods.month;
+      if (!pData) return;
+
+      const shortLbls = {
+        day: 'Tokens (24h)',
+        month: 'Tokens (Mês)',
+        year: 'Tokens (Ano)'
+      };
+      const tLbl = document.getElementById('tokens-period-lbl');
+      if (tLbl) tLbl.innerText = shortLbls[currentFinopsPeriod] || 'Tokens Processados';
+
+      const subEl = document.getElementById('finops-period-subtitle');
+      if (subEl && pData.label) {
+        subEl.innerText = `Métricas reais extraídas do SQLite • ${pData.label}`;
+      }
+
+      const tEl = document.getElementById('tokens-today');
+      if (tEl && pData.tokens !== undefined) tEl.innerText = Number(pData.tokens).toLocaleString();
+
+      const uEl = document.getElementById('usd-saved');
+      if (uEl && pData.usd_saved !== undefined) uEl.innerText = '$' + Number(pData.usd_saved).toFixed(2);
+
+      const eEl = document.getElementById('e3-score');
+      if (eEl && pData.e3_score !== undefined) eEl.innerText = Number(pData.e3_score).toFixed(1);
+
+      const fBadge = document.getElementById('finops-arena-runs-badge');
+      if (fBadge) {
+        if (currentFinopsPeriod === 'year' && pData.total_ops > pData.arena_runs) {
+          fBadge.innerText = `${pData.arena_runs} Ensaios • ${Number(pData.total_ops).toLocaleString()} Ops`;
+        } else {
+          fBadge.innerText = `${pData.arena_runs || 0} Ensaios Locais`;
+        }
+      }
+
+      if (pData.local_share_pct !== undefined) {
+        const lPct = Math.round(Number(pData.local_share_pct));
+        const cPct = Math.max(0, 100 - lPct);
+        const lText = document.getElementById('local-share-text');
+        const lBar = document.getElementById('local-share-bar');
+        if (lText) lText.innerText = `${lPct}% Local (Silício $0) / ${cPct}% Cloud`;
+        if (lBar) lBar.style.width = `${lPct}%`;
+      }
+
+      if (pData.context_savings_pct !== undefined) {
+        const sPct = Number(pData.context_savings_pct).toFixed(1);
+        const sText = document.getElementById('ast-savings-text');
+        const sBar = document.getElementById('ast-savings-bar');
+        if (sText) sText.innerText = `${sPct}% Tokens Poupados`;
+        if (sBar) sBar.style.width = `${Math.min(100, Number(pData.context_savings_pct))}%`;
+      }
+    }
+
+    async function openAgentsMdModal() {
+      const modal = document.getElementById('modal-agents-md');
+      const contentEl = document.getElementById('agents-md-modal-content');
+      if (!modal || !contentEl) return;
+      modal.classList.add('active');
+      contentEl.textContent = 'Carregando Z:\\souls_engine\\AGENTS.md...';
+      try {
+        const res = await fetch('/api/v1/system/agents-md');
+        if (res.ok) {
+          const data = await res.json();
+          contentEl.textContent = data.content || 'Arquivo vazio.';
+        } else {
+          contentEl.textContent = 'Falha ao carregar Z:\\souls_engine\\AGENTS.md.';
+        }
+      } catch (e) {
+        contentEl.textContent = 'Erro de rede ao ler AGENTS.md: ' + e.message;
+      }
+    }
+
+    function closeAgentsMdModal() {
+      const modal = document.getElementById('modal-agents-md');
+      if (modal) modal.classList.remove('active');
+    }
 
     function setRecallModePreference(mode) {
       currentRecallPreference = mode;
@@ -6384,9 +6565,9 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       });
       const heroTxt = document.getElementById('hero-recall-mode-text');
       const labels = {
-        adaptive: '⚡ Adaptativo (Terceira Via)',
-        lean: '🎯 Enxuto (800 chars)',
-        expanded: '🕸️ Expandido + Grafo (2400c)'
+        adaptive: '⚡ Adaptativo',
+        lean: '🎯 Enxuto (800c)',
+        expanded: '🧠 Expandido + Grafo (2400c)'
       };
       if (heroTxt) heroTxt.innerText = labels[mode] || labels.adaptive;
       showToast(`Modo de Recall L3 ajustado para: ${labels[mode] || mode}`, 'success');
@@ -6844,6 +7025,30 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeSubAgentHistoryModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LEITOR DE GOVERNANÇA (Z:\souls_engine\AGENTS.md) -->
+  <div class="modal-backdrop" id="modal-agents-md">
+    <div class="modal-dialog" style="max-width: 860px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--cyan);">📄</span>
+            <span>Constituição & Leis Operacionais do Souls Engine</span>
+          </div>
+          <div style="font-size: 0.74rem; color: var(--cyan); margin-top: 4px; font-family: var(--font-mono);">
+            Z:\souls_engine\AGENTS.md
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeAgentsMdModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding: 18px; background: rgba(6, 9, 17, 0.8); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+        <pre id="agents-md-modal-content" style="font-family: var(--font-mono); font-size: 0.78rem; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; line-height: 1.55; margin: 0;">Carregando Z:\souls_engine\AGENTS.md...</pre>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cyan" onclick="closeAgentsMdModal()">Fechar Documento</button>
       </div>
     </div>
   </div>

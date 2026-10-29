@@ -37,6 +37,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/profiles/:id", axum::routing::delete(dashboard::delete_profile_handler))
         .route("/api/v1/system/checkpoint", post(dashboard::system_checkpoint_handler))
         .route("/api/v1/system/curate-obsidian", post(dashboard::system_curate_obsidian_handler))
+        .route("/api/v1/system/agents-md", get(dashboard::agents_md_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))

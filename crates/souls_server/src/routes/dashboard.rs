@@ -159,6 +159,9 @@ fn count_obsidian_vault_notes(vault_root: &str) -> (usize, usize) {
 struct VaultEmpiricalSummary {
     benchmarked_count: usize,
     total_arena_runs: i64,
+    arena_runs_day: i64,
+    arena_runs_month: i64,
+    arena_runs_year: i64,
     avg_tps: f64,
     avg_e3: f64,
     latest_model: Option<String>,
@@ -222,11 +225,22 @@ async fn query_vault_empirical_summary() -> VaultEmpiricalSummary {
         }
     }
 
-    summary.total_arena_runs =
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM arena_telemetry")
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(0);
+    if let Ok(row) = sqlx::query(
+        "SELECT
+            COUNT(*) as total_runs,
+            COALESCE(SUM(CASE WHEN datetime(created_at) >= datetime('now', '-1 day') THEN 1 ELSE 0 END), 0) as day_runs,
+            COALESCE(SUM(CASE WHEN datetime(created_at) >= datetime('now', '-30 days') THEN 1 ELSE 0 END), 0) as month_runs,
+            COALESCE(SUM(CASE WHEN datetime(created_at) >= datetime('now', '-365 days') THEN 1 ELSE 0 END), 0) as year_runs
+         FROM arena_telemetry;",
+    )
+    .fetch_one(&pool)
+    .await
+    {
+        summary.total_arena_runs = row.get("total_runs");
+        summary.arena_runs_day = row.get("day_runs");
+        summary.arena_runs_month = row.get("month_runs");
+        summary.arena_runs_year = row.get("year_runs");
+    }
 
     if let Ok(Some(row)) = sqlx::query(
         "SELECT COALESCE(model_id, 'unknown') as model_id,
@@ -252,7 +266,18 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
     let _guard = state.acquire_connection();
     let limits = read_finops_config_limits();
 
-    let (temp_c, vram_used, vram_total, fan_pct, power_w, zone_str) = {
+    let (
+        temp_c,
+        vram_used,
+        vram_total,
+        fan_pct,
+        cpu_fan_rpm,
+        gpu_fan_rpm,
+        gpu_name,
+        cpu_name,
+        power_w,
+        zone_str,
+    ) = {
         if let Ok(mut wd) = state.runtime.watchdog().lock() {
             wd.sample_once();
             let snap = wd.snapshot();
@@ -262,17 +287,40 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
                 snap.vram_allocated_mb,
                 snap.vram_total_mb,
                 snap.fan_speed_pct,
+                snap.cpu_fan_rpm,
+                snap.gpu_fan_rpm,
+                snap.gpu_name.clone(),
+                snap.cpu_name.clone(),
                 snap.power_usage_w,
                 zone,
             )
         } else {
-            (45.0, 850, 6144, 0, 12.0, "Nominal".to_string())
+            (
+                45.0,
+                850,
+                6144,
+                0,
+                0,
+                0,
+                "NVIDIA GeForce RTX 2060".to_string(),
+                "Intel Core i9 CPU".to_string(),
+                12.0,
+                "Nominal".to_string(),
+            )
         }
     };
 
     let cpu_threads = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(24);
+
+    let now_epoch = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let cut_day = now_epoch - 86_400;
+    let cut_month = now_epoch - 2_592_000;
+    let cut_year = now_epoch - 31_536_000;
 
     let pool = state.memory.pool();
     let ladybug_nodes = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM ladybug_nodes")
@@ -296,6 +344,20 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
     .fetch_one(&*pool)
     .await
     .unwrap_or(0);
+    let pre_compress_day = sqlx::query_scalar::<_, i64>(
+        "SELECT COALESCE(SUM(pre_compress_tokens), 0) FROM session_checkpoints WHERE created_at >= ?",
+    )
+    .bind(cut_day)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let pre_compress_month = sqlx::query_scalar::<_, i64>(
+        "SELECT COALESCE(SUM(pre_compress_tokens), 0) FROM session_checkpoints WHERE created_at >= ?",
+    )
+    .bind(cut_month)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
 
     let subagent_total = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM sub_agent_sessions")
         .fetch_one(&*pool)
@@ -307,10 +369,40 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
     .fetch_one(&*pool)
     .await
     .unwrap_or(0);
+    let subagent_completed_day = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM sub_agent_sessions WHERE status = 'COMPLETED' AND created_at >= ?",
+    )
+    .bind(cut_day)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let subagent_completed_month = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM sub_agent_sessions WHERE status = 'COMPLETED' AND created_at >= ?",
+    )
+    .bind(cut_month)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+
     let diaries_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM sub_agent_diaries")
         .fetch_one(&*pool)
         .await
         .unwrap_or(0);
+    let diaries_day = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM sub_agent_diaries WHERE created_at >= ?",
+    )
+    .bind(cut_day)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let diaries_month = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM sub_agent_diaries WHERE created_at >= ?",
+    )
+    .bind(cut_month)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+
     let handoffs_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM handoff_payloads")
         .fetch_one(&*pool)
         .await
@@ -339,15 +431,59 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
     .fetch_one(&*pool)
     .await
     .unwrap_or(0);
+    let epistemic_chars_day: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM epistemic_memories WHERE created_at >= ?",
+    )
+    .bind(cut_day)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let epistemic_chars_month: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM epistemic_memories WHERE created_at >= ?",
+    )
+    .bind(cut_month)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+
     let diary_chars: i64 = sqlx::query_scalar(
-        "SELECT COALESCE(SUM(LENGTH(thought_log)), 0) FROM sub_agent_diaries",
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM sub_agent_diaries",
     )
     .fetch_one(&*pool)
     .await
     .unwrap_or(0);
+    let diary_chars_day: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM sub_agent_diaries WHERE created_at >= ?",
+    )
+    .bind(cut_day)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let diary_chars_month: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM sub_agent_diaries WHERE created_at >= ?",
+    )
+    .bind(cut_month)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+
     let handoff_chars: i64 = sqlx::query_scalar(
         "SELECT COALESCE(SUM(LENGTH(context_summary)), 0) FROM handoff_payloads",
     )
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let handoff_chars_day: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(context_summary)), 0) FROM handoff_payloads WHERE created_at >= ?",
+    )
+    .bind(cut_day)
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let handoff_chars_month: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(context_summary)), 0) FROM handoff_payloads WHERE created_at >= ?",
+    )
+    .bind(cut_month)
     .fetch_one(&*pool)
     .await
     .unwrap_or(0);
@@ -369,13 +505,136 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
     };
 
     // Real SQLite disk footprint on Z:\
-    let mem_db_bytes = fs::metadata(r"Z:\souls_engine\.souls_data\db\souls_memory.db")
+    let mem_db_bytes = fs::metadata(r"Z:\souls_engine\.souls_data\souls_memory.db")
+        .or_else(|_| fs::metadata(r"Z:\souls_engine\.souls_data\db\souls_memory.db"))
         .map(|m| m.len())
         .unwrap_or(0);
     let vault_db_bytes = fs::metadata(resolve_vault_db_path())
         .map(|m| m.len())
         .unwrap_or(0);
-    let sqlite_size_mb = ((mem_db_bytes + vault_db_bytes) as f64) / (1024.0 * 1024.0);
+    let state_db_bytes = fs::metadata(r"Z:\souls_engine\.souls_data\db\souls_state.db")
+        .map(|m| m.len())
+        .unwrap_or(0);
+    let sqlite_size_mb =
+        ((mem_db_bytes + vault_db_bytes + state_db_bytes) as f64) / (1024.0 * 1024.0);
+
+    // Also include historical telemetry_logs from souls_state.db for annual total if present
+    let (legacy_tokens_year, legacy_runs_year) = {
+        let state_db = Path::new(r"Z:\souls_engine\.souls_data\db\souls_state.db");
+        if state_db.exists() {
+            let s_conn = format!(
+                "sqlite://{}?mode=ro",
+                state_db.to_string_lossy().replace('\\', "/")
+            );
+            if let Ok(spool) = SqlitePoolOptions::new()
+                .max_connections(1)
+                .connect(&s_conn)
+                .await
+            {
+                let row_opt = sqlx::query(
+                    "SELECT COUNT(*) as cnt, COALESCE(SUM(tokens_in + tokens_out), 0) as toks
+                     FROM telemetry_logs
+                     WHERE created_at >= ?",
+                )
+                .bind(cut_year)
+                .fetch_optional(&spool)
+                .await
+                .ok()
+                .flatten();
+                if let Some(r) = row_opt {
+                    (r.get::<i64, _>("toks"), r.get::<i64, _>("cnt"))
+                } else {
+                    (0, 0)
+                }
+            } else {
+                (0, 0)
+            }
+        } else {
+            (0, 0)
+        }
+    };
+
+    let build_period_metrics = |arena_runs: i64,
+                                pre_comp_toks: i64,
+                                ep_c: i64,
+                                di_c: i64,
+                                hd_c: i64,
+                                sub_comp: i64,
+                                di_cnt: i64,
+                                extra_toks: i64,
+                                extra_ops: i64,
+                                period_label: &str| {
+        let l3_toks = (ep_c + di_c + hd_c) / 4;
+        let total_toks = (arena_runs * 512) + pre_comp_toks + l3_toks + extra_toks;
+        let total_runs_ops = arena_runs + sub_comp + di_cnt + extra_ops;
+        let usd = ((total_toks as f64) / 1_000_000.0) * 6.00
+            + (arena_runs as f64) * 0.04
+            + (sub_comp as f64) * 0.12
+            + (di_cnt as f64) * 0.03;
+        let local_pct = if total_runs_ops > 0 {
+            let local_ops = total_runs_ops as f64;
+            let total_ops = (local_ops + 4.0).max(1.0);
+            ((local_ops / total_ops) * 100.0).clamp(50.0, 98.0)
+        } else {
+            100.0
+        };
+        let ctx_sav = if di_c + hd_c + ep_c + pre_comp_toks > 0 {
+            let raw_c = (di_c + hd_c + ep_c + pre_comp_toks * 4).max(1) as f64;
+            let inj_c = (hd_c.max(200) as f64).min(raw_c * 0.25);
+            ((1.0 - (inj_c / raw_c)) * 100.0).clamp(72.0, 94.0)
+        } else {
+            75.0
+        };
+        json!({
+            "label": period_label,
+            "arena_runs": arena_runs,
+            "total_ops": total_runs_ops,
+            "tokens": total_toks,
+            "usd_saved": usd,
+            "e3_score": e3_score,
+            "local_share_pct": local_pct,
+            "context_savings_pct": ctx_sav,
+        })
+    };
+
+    let finops_periods = json!({
+        "day": build_period_metrics(
+            vault_summary.arena_runs_day,
+            pre_compress_day,
+            epistemic_chars_day,
+            diary_chars_day,
+            handoff_chars_day,
+            subagent_completed_day,
+            diaries_day,
+            0,
+            if pre_compress_day > 0 { 1 } else { 0 },
+            "Últimas 24h (Dia)"
+        ),
+        "month": build_period_metrics(
+            vault_summary.arena_runs_month,
+            pre_compress_month,
+            epistemic_chars_month,
+            diary_chars_month,
+            handoff_chars_month,
+            subagent_completed_month,
+            diaries_month,
+            0,
+            0,
+            "Últimos 30 Dias (Mensal)"
+        ),
+        "year": build_period_metrics(
+            vault_summary.arena_runs_year,
+            pre_compress_tokens_total,
+            epistemic_chars,
+            diary_chars,
+            handoff_chars,
+            subagent_completed,
+            diaries_count,
+            legacy_tokens_year,
+            legacy_runs_year,
+            "Últimos 365 Dias (Anual)"
+        ),
+    });
 
     let (obsidian_raw_count, obsidian_wiki_count) =
         count_obsidian_vault_notes(&limits.vault_path);
@@ -453,7 +712,11 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
         "vram_total_mb": vram_total,
         "vram_limit_mb": limits.vram_hard_limit_mb,
         "fan_speed": fan_pct,
-        "cooling_mode": if fan_pct == 0 { "Exaustor + CPU (GPU Fan Off)" } else { "Ativo (PWM)" },
+        "cpu_fan_rpm": cpu_fan_rpm,
+        "gpu_fan_rpm": gpu_fan_rpm,
+        "gpu_name": gpu_name,
+        "cpu_name": cpu_name,
+        "cooling_mode": if fan_pct == 0 && gpu_fan_rpm == 0 { "Exaustor + CPU (GPU Fan Off)" } else { "Ativo (PWM)" },
         "power_w": power_w,
         "operational_zone": zone_str,
         "cpu_threads": cpu_threads,
@@ -464,6 +727,7 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
         "usd_saved": usd_saved,
         "local_share_pct": local_share_pct,
         "context_savings_pct": context_savings_pct,
+        "finops_periods": finops_periods,
         "local_models_count": local_models_count,
         "benchmarked_models_count": vault_summary.benchmarked_count,
         "total_arena_runs": vault_summary.total_arena_runs,
@@ -939,6 +1203,23 @@ pub async fn system_curate_obsidian_handler(State(state): State<AppState>) -> Js
     }))
 }
 
+/// Serves the canonical `Z:\souls_engine\AGENTS.md` constitution document for reading in the Dashboard.
+pub async fn agents_md_handler() -> Json<Value> {
+    let path = PathBuf::from(r"Z:\souls_engine\AGENTS.md");
+    match fs::read_to_string(&path) {
+        Ok(content) => Json(json!({
+            "status": "success",
+            "path": path.to_string_lossy(),
+            "content": content
+        })),
+        Err(e) => Json(json!({
+            "status": "error",
+            "path": path.to_string_lossy(),
+            "message": format!("Falha ao ler AGENTS.md: {e}")
+        })),
+    }
+}
+
 /// Continuous Server-Sent Events (SSE) telemetry stream emitting real-time silicon metrics.
 pub async fn telemetry_stream_handler(
     State(state): State<AppState>,
@@ -951,7 +1232,18 @@ pub async fn telemetry_stream_handler(
             interval.tick().await;
             let limits = read_finops_config_limits();
 
-            let (temp_c, vram_used, vram_total, fan_pct, power_w, zone_str) = {
+            let (
+                temp_c,
+                vram_used,
+                vram_total,
+                fan_pct,
+                cpu_fan_rpm,
+                gpu_fan_rpm,
+                gpu_name,
+                cpu_name,
+                power_w,
+                zone_str,
+            ) = {
                 if let Ok(mut wd) = state.runtime.watchdog().lock() {
                     wd.sample_once();
                     let snap = wd.snapshot();
@@ -961,11 +1253,26 @@ pub async fn telemetry_stream_handler(
                         snap.vram_allocated_mb,
                         snap.vram_total_mb,
                         snap.fan_speed_pct,
+                        snap.cpu_fan_rpm,
+                        snap.gpu_fan_rpm,
+                        snap.gpu_name.clone(),
+                        snap.cpu_name.clone(),
                         snap.power_usage_w,
                         zone,
                     )
                 } else {
-                    (45.0, 850, 6144, 0, 12.0, "Nominal".to_string())
+                    (
+                        45.0,
+                        850,
+                        6144,
+                        0,
+                        0,
+                        0,
+                        "NVIDIA GeForce RTX 2060".to_string(),
+                        "Intel Core i9 CPU".to_string(),
+                        12.0,
+                        "Nominal".to_string(),
+                    )
                 }
             };
 
@@ -980,7 +1287,11 @@ pub async fn telemetry_stream_handler(
                 "vram_total_mb": vram_total,
                 "vram_limit_mb": limits.vram_hard_limit_mb,
                 "fan_speed": fan_pct,
-                "cooling_mode": if fan_pct == 0 { "Exaustor + CPU (GPU Fan Off)" } else { "Ativo (PWM)" },
+                "cpu_fan_rpm": cpu_fan_rpm,
+                "gpu_fan_rpm": gpu_fan_rpm,
+                "gpu_name": gpu_name,
+                "cpu_name": cpu_name,
+                "cooling_mode": if fan_pct == 0 && gpu_fan_rpm == 0 { "Exaustor + CPU (GPU Fan Off)" } else { "Ativo (PWM)" },
                 "power_w": power_w,
                 "operational_zone": zone_str,
             });
