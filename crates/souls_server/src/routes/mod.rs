@@ -48,6 +48,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/switchboard/health", get(switchboard::health_handler))
         // Sub-Agent Sessions & Handoff Endpoints (L3 Isolation)
         .route("/api/v1/sessions/subagents", get(sessions::list_subagents_handler))
+        .route("/api/v1/sessions/subagents/cleanup", post(sessions::cleanup_subagents_handler))
         .route("/api/v1/sessions/subagents/:id", get(sessions::get_subagent_details_handler))
         .route("/api/v1/sessions/subagents/spawn", post(sessions::spawn_subagent_handler))
         .route("/api/v1/sessions/subagents/:id/status", post(sessions::update_status_handler))

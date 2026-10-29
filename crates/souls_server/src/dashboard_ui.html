@@ -1800,18 +1800,18 @@
       </button>
       <button class="tab-btn" id="btn-tab-local" onclick="switchTab('tab-local')">
         <span>⚡ Local Models (llm_local)</span>
-        <span class="tab-count-badge" id="badge-local-count">13</span>
+        <span class="tab-count-badge" id="badge-local-count">14</span>
       </button>
       <button class="tab-btn" id="btn-tab-cloud" onclick="switchTab('tab-cloud')">
         <span>🌐 Cloud Arena (llm_cloud)</span>
-        <span class="tab-count-badge">5 Perfis</span>
+        <span class="tab-count-badge" id="badge-cloud-profiles-count">5 Perfis</span>
       </button>
       <button class="tab-btn" id="btn-tab-settings" onclick="switchTab('tab-settings')">
         <span>⚙️ Governança & Presets</span>
       </button>
     </div>
     <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
-      Preset Ativo: <strong id="top-active-preset" style="color: var(--cyan);">Balanced Daily ⚖️</strong>
+      Preset Ativo: <strong id="top-active-preset" style="color: var(--cyan);">Frontier Balanced (Master Brain)</strong>
     </div>
   </nav>
 
@@ -1832,11 +1832,14 @@
               <span>Master Brain Geral:</span>
               <span id="hero-brain-model" style="color: var(--cyan);">deepseek/deepseek-chat</span>
               <span class="brain-badge badge-cloud" id="hero-brain-badge">Cloud API</span>
+              <span class="badge badge-champion" id="hero-snapshot-badge" style="font-size: 0.68rem; margin-left: 6px;" title="FrozenMemorySnapshot Imutável (Prefix Cache >95%)">🔒 Snap Ativo</span>
             </h3>
             <div class="brain-meta">
               <span>Provedor: <strong id="hero-brain-provider" style="color: #fff;">nous</strong></span>
               <span>&bull;</span>
               <span>Janela: <strong id="hero-brain-ctx" style="color: #fff;">64,000 tokens</strong></span>
+              <span>&bull;</span>
+              <span>Recall L3: <strong style="color: var(--cyan);" id="hero-recall-mode-text">⚡ Adaptativo (Terceira Via)</strong></span>
               <span>&bull;</span>
               <span>Status: <strong style="color: var(--green);" id="hero-brain-status">Conectado / Saudável</strong></span>
               <span>&bull;</span>
@@ -1844,7 +1847,10 @@
             </div>
           </div>
         </div>
-        <div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn" onclick="pinOrRefreshSnapshot(true)" title="Recarregar MEMORY.md e USER.md na próxima sessão">
+            <span>📌</span> Atualizar Snapshot
+          </button>
           <button class="btn btn-cyan" onclick="switchTab('tab-settings')">
             <span>⚙️</span> Alternar Preset do Brain
           </button>
@@ -1858,13 +1864,16 @@
             <div class="card-icon icon-cyan">🎯</div>
             Integrador de Decisões Preditivas (Pareto Selection Matrix)
           </div>
-          <div style="display: flex; gap: 8px;">
-            <span class="badge badge-champion">Zero Token Waste</span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="badge badge-champion" id="matrix-arena-summary-badge">14 Homologados • 50 Provas</span>
             <span class="badge badge-value">RTX 2060m First</span>
+            <button class="btn" style="padding: 4px 10px; font-size: 0.72rem;" onclick="fetchRouterMatrix()" title="Recarregar matriz empírica do Heuristic Vault">
+              <span>🔄</span> Sincronizar Matriz
+            </button>
           </div>
         </div>
         <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px;">
-          Mapeamento determinístico de roteamento: tarefas de suporte e subagentes despachados priorizam o silício local bare-metal a <strong>custo zero</strong>, escalando para nuvem apenas sob alta entropia ou estouro de raio de impacto.
+          Mapeamento real de roteamento alimentado pelo <strong>Heuristic Vault (SQLite STRICT)</strong> e pelos perfis do Hermes: subagentes e tarefas de suporte priorizam o silício local bare-metal a <strong>custo zero ($0.00)</strong>, escalando para o perfil Cloud apenas sob alta entropia ou estouro de raio de impacto.
         </p>
 
         <div class="table-container">
@@ -1872,10 +1881,10 @@
             <thead>
               <tr>
                 <th style="min-width: 200px;">Capacidade / Perfil Cognitivo</th>
-                <th style="min-width: 190px;">Local Default (Silício $0)</th>
-                <th style="min-width: 190px;">Cloud Fallback (Nuvem)</th>
+                <th style="min-width: 210px;">Local Default (Silício $0 • Medido)</th>
+                <th style="min-width: 200px;">Cloud Fallback (Perfil Ativo)</th>
                 <th>Regra de Decisão do ParetoBandit</th>
-                <th class="text-center" style="width: 130px;">Status</th>
+                <th class="text-center" style="width: 170px;">Status & Ações</th>
               </tr>
             </thead>
             <tbody id="integrator-tbody">
@@ -1903,12 +1912,12 @@
 
           <div class="metric-gauge-group">
             <div class="gauge-label">
-              <span>Alocação de VRAM sob WDDM</span>
-              <strong id="vram-text">-- GB / 5.29 GB</strong>
+              <span>Alocação de VRAM sob WDDM (Físico 6.00 GB)</span>
+              <strong id="vram-text">-- GB / 5.17 GB WDDM</strong>
             </div>
             <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" id="vram-bar" style="width: 25%;"></div>
-              <div class="gauge-marker" style="left: 86%;" title="Teto WDDM 5.29 GB"></div>
+              <div class="gauge-bar-fill" id="vram-bar" style="width: 12%;"></div>
+              <div class="gauge-marker" id="vram-wddm-marker" style="left: 86%;" title="Teto Útil WDDM (5.17 GB / 5294 MB)"></div>
             </div>
           </div>
 
@@ -1919,22 +1928,25 @@
             </div>
             <div class="gauge-bar-bg">
               <div class="gauge-bar-fill" id="temp-bar" style="width: 50%;"></div>
-              <div class="gauge-marker" style="left: 92%;" title="Alerta Térmico 78°C"></div>
+              <div class="gauge-marker" id="temp-limit-marker" style="left: 92%;" title="Alerta Térmico 78°C"></div>
             </div>
           </div>
 
           <div class="stat-row">
-            <div class="stat-box">
-              <div class="stat-lbl">Fan Speed</div>
-              <div class="stat-num" id="fan-speed">--%</div>
+            <div class="stat-box" title="A ventoinha interna da dGPU está inoperante (0 RPM no NVML); refrigeração ativa operada pelo Exaustor + CPU Fan">
+              <div class="stat-lbl" id="cooling-lbl">Refrigeração</div>
+              <div class="stat-num" id="fan-speed" style="font-size: 0.85rem; color: var(--amber);">Exaustor + CPU</div>
+              <div id="fan-sub" style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;">GPU Fan Off (NVML 0)</div>
             </div>
             <div class="stat-box">
               <div class="stat-lbl">Power Draw</div>
               <div class="stat-num" id="power-draw">-- W</div>
+              <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;">NVML Live Sensor</div>
             </div>
             <div class="stat-box">
               <div class="stat-lbl">Host CPU</div>
-              <div class="stat-num" id="cpu-threads">24T AVX2</div>
+              <div class="stat-num" id="cpu-threads">16T AVX2</div>
+              <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;">Intel Core i9</div>
             </div>
           </div>
         </div>
@@ -1946,75 +1958,91 @@
               <div class="card-icon icon-green">💰</div>
               FinOps & Eficiência de Silício (E³)
             </div>
-            <span class="badge badge-value">Zero Cloud Waste</span>
+            <span class="badge badge-value" id="finops-arena-runs-badge">50 Ensaios Locais</span>
           </div>
 
           <div class="stat-row" style="margin-top: 0; margin-bottom: 14px;">
-            <div class="stat-box">
-              <div class="stat-lbl">Tokens Hoje</div>
-              <div class="stat-num" id="tokens-today">248,120</div>
+            <div class="stat-box" title="Total real de tokens processados no silício local (Arena + Checkpoints L3 + Diários)">
+              <div class="stat-lbl">Tokens Processados</div>
+              <div class="stat-num" id="tokens-today">--</div>
             </div>
-            <div class="stat-box">
+            <div class="stat-box" title="Economia real calculada sobre execuções locais vs tarifa média Cloud Frontier">
               <div class="stat-lbl">Economia USD</div>
-              <div class="stat-num" id="usd-saved" style="color: var(--green);">$8.42</div>
+              <div class="stat-num" id="usd-saved" style="color: var(--green);">$--</div>
             </div>
-            <div class="stat-box">
-              <div class="stat-lbl">E³ Score</div>
-              <div class="stat-num" id="e3-score" style="color: var(--cyan);">94.8</div>
-            </div>
-          </div>
-
-          <div class="metric-gauge-group">
-            <div class="gauge-label">
-              <span>Divisão de Tokens (Local vs. Nuvem)</span>
-              <strong>82% Local (Silício $0) / 18% Cloud</strong>
-            </div>
-            <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" style="width: 82%; background: var(--green);"></div>
+            <div class="stat-box" title="Média empírica de eficiência E³ dos 14 modelos homologados no Heuristic Vault">
+              <div class="stat-lbl">E³ Score Médio</div>
+              <div class="stat-num" id="e3-score" style="color: var(--cyan);">--</div>
             </div>
           </div>
 
           <div class="metric-gauge-group">
             <div class="gauge-label">
-              <span>Economia de Janela via AST Outlines</span>
-              <strong>80.5% Tokens Poupados</strong>
+              <span>Execuções no Silício Local vs. Nuvem</span>
+              <strong id="local-share-text">--% Local (Silício $0)</strong>
             </div>
             <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" style="width: 80.5%; background: var(--purple);"></div>
+              <div class="gauge-bar-fill" id="local-share-bar" style="width: 85%; background: var(--green);"></div>
+            </div>
+          </div>
+
+          <div class="metric-gauge-group">
+            <div class="gauge-label">
+              <span>Economia de Janela (AST Outlines + Confinamento L3)</span>
+              <strong id="ast-savings-text">--% Tokens Poupados</strong>
+            </div>
+            <div class="gauge-bar-bg">
+              <div class="gauge-bar-fill" id="ast-savings-bar" style="width: 80.5%; background: var(--purple);"></div>
             </div>
           </div>
         </div>
 
-        <!-- CARD 3: HIPOCAMPO L2 -->
+        <!-- CARD 3: HIPOCAMPO L3, PONTE BIDIRECIONAL & ARMAZENAMENTO REFS -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">
               <div class="card-icon icon-purple">🧠</div>
-              Hipocampo L2 & Armazenamento ReFS
+              Hipocampo L3, Ponte Bidirecional & ReFS
             </div>
-            <span class="badge badge-champion">Z:\ Dev Drive</span>
+            <span class="badge badge-champion" id="sqlite-vault-size-badge">Z:\ STRICT WAL</span>
           </div>
 
-          <div class="stat-row" style="margin-top: 0; margin-bottom: 14px;">
-            <div class="stat-box">
-              <div class="stat-lbl">FrankenSQLite</div>
-              <div class="stat-num" style="font-size: 0.95rem;">STRICT WAL</div>
+          <div class="stat-row" style="margin-top: 0; margin-bottom: 12px;">
+            <div class="stat-box" title="Memórias Epistêmicas Imutáveis (STABLE) vs Aprendizados Dinâmicos (EVOLVING)">
+              <div class="stat-lbl">Partições L3</div>
+              <div class="stat-num" id="l3-partitions-stat" style="font-size: 0.95rem; color: var(--cyan);">-- STABLE / -- EVOLV</div>
             </div>
-            <div class="stat-box">
-              <div class="stat-lbl">Ladybug Nodes</div>
-              <div class="stat-num" id="ladybug-nodes">142</div>
+            <div class="stat-box" title="Grafo Causal Ontológico LadybugDB em RAM + SQLite">
+              <div class="stat-lbl">Grafo LadybugDB</div>
+              <div class="stat-num" id="ladybug-nodes" style="font-size: 0.95rem;">-- nós • -- arestas</div>
             </div>
-            <div class="stat-box">
-              <div class="stat-lbl">Obsidian DB</div>
-              <div class="stat-num">498 raw</div>
+            <div class="stat-box" title="Notas brutas imutáveis (raw/) e páginas destiladas (wiki/) no Cofre Obsidian">
+              <div class="stat-lbl">Cofre Obsidian</div>
+              <div class="stat-num" id="obsidian-vault-stat" style="font-size: 0.95rem;">-- raw • -- wiki</div>
             </div>
           </div>
 
-          <p style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.5;">
-            &bull; <strong>Metabolismo Epistêmico:</strong> Langevin Decay ativo com imunidade STABLE.<br>
-            &bull; <strong>LadybugDB Causal Graph:</strong> Nós ontológicos em RAM sincronizados com SQLite.<br>
-            &bull; <strong>Cofre Pessoal:</strong> Esteira <code>raw/ -> wiki/</code> com manifesto SHA-256 e blindagem de privacidade.
-          </p>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 10px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">
+              Modo de Recall L3:
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button class="filter-provider-btn active" id="btn-recall-adaptive" onclick="setRecallModePreference('adaptive')" title="Terceira Via (TDAH + AH/SD): alterna automaticamente entre Lean (800c) e Expanded + Grafo (2400c)">
+                ⚡ Adaptativo
+              </button>
+              <button class="filter-provider-btn" id="btn-recall-lean" onclick="setRecallModePreference('lean')" title="Recall Enxuto: top-4 memórias (800 chars)">
+                🎯 Enxuto
+              </button>
+              <button class="filter-provider-btn" id="btn-recall-expanded" onclick="setRecallModePreference('expanded')" title="Recall Estendido: top-8 memórias + Grafo Ontológico LadybugDB (2400 chars)">
+                🕸️ Expandido
+              </button>
+            </div>
+          </div>
+
+          <div style="font-size: 0.73rem; color: var(--text-muted); line-height: 1.45; display: flex; justify-content: space-between; align-items: center;">
+            <span id="l3-snapshot-summary-line">&bull; Snapshot Imutável: carregando...</span>
+            <span class="mono" style="color: var(--green);" id="l3-checkpoints-count-label">0 Checkpoints v2</span>
+          </div>
         </div>
 
         <!-- CARD 4: ATIVIDADE AGÊNTICA -->
@@ -2022,26 +2050,26 @@
           <div class="card-header">
             <div class="card-title">
               <div class="card-icon icon-amber">🤖</div>
-              Atividade Agêntica & Roteamento
+              Atividade Agêntica & Roteamento Real
             </div>
             <span class="badge badge-lowcost">MCP Loopback :9123</span>
           </div>
 
           <div style="font-size: 0.75rem; color: var(--text-muted);">
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
-              <span>Última Microtarefa Despachada:</span>
-              <strong class="mono" style="color: var(--cyan);">AST Dehydration Parser</strong>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); gap: 10px;">
+              <span>Última Tarefa / Prova Registrada:</span>
+              <strong class="mono" id="act-last-task" style="color: var(--cyan); text-align: right; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Carregando...</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); gap: 10px;">
+              <span>Último Modelo no Silício:</span>
+              <strong class="mono" id="act-last-model" style="color: #fff; text-align: right;">Carregando...</strong>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
-              <span>Modelo Alocado (ParetoBandit):</span>
-              <strong class="mono">qwen3.5-agentic-coder (Tier 1)</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
-              <span>Throughput Médio Registrado:</span>
-              <strong class="mono" style="color: var(--green);">28.4 tokens/s</strong>
+              <span>Throughput Médio Empírico (14 GGUFs):</span>
+              <strong class="mono" id="act-avg-tps" style="color: var(--green);">-- tokens/s</strong>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-              <span>Tempo de Sessão Mestre:</span>
+              <span>Uptime do Daemon & Conexões Ativas:</span>
               <strong class="mono" id="server-uptime">-- min</strong>
             </div>
           </div>
@@ -2061,7 +2089,15 @@
               Ciclo de vida isolado de subagentes: raciocínio passo a passo blindado em <code class="mono">sub_agent_diaries</code> e envelopes atômicos em <code class="mono">handoff_payloads</code>.
             </p>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <div class="filter-pills-group" style="background: rgba(15, 23, 42, 0.6); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+              <button class="filter-provider-btn active" id="btn-subfilter-all" onclick="setSubagentFilter('all')">Todas</button>
+              <button class="filter-provider-btn" id="btn-subfilter-completed" onclick="setSubagentFilter('completed')">Concluídas</button>
+              <button class="filter-provider-btn" id="btn-subfilter-active" onclick="setSubagentFilter('active')">Ativas</button>
+            </div>
+            <button class="btn" onclick="cleanupOrphanSubagents()" style="padding: 6px 12px; font-size: 0.74rem; border-color: rgba(245, 158, 11, 0.35); color: var(--amber);" title="Remove sessões antigas de teste presas em SPAWNED/FAILED sem diário nem handoff">
+              <span>🧹</span> Limpar Órfãs
+            </button>
             <button class="btn btn-cyan" onclick="fetchSubAgentSessions()" style="padding: 6px 14px; font-size: 0.75rem;">
               <span>🔄</span> Atualizar Sessões
             </button>
@@ -2083,9 +2119,9 @@
             <div class="stat-lbl">Concluídas (Handoffs)</div>
             <div class="stat-num" id="stat-subagent-completed" style="color: var(--green);">0</div>
           </div>
-          <div class="stat-box">
-            <div class="stat-lbl">Janela Mestre Protegida</div>
-            <div class="stat-num" id="stat-subagent-prefix-cache" style="color: var(--cyan);">&gt;95% Cache</div>
+          <div class="stat-box" title="Registros isolados no L3 que não poluem a janela principal do Hermes Agent">
+            <div class="stat-lbl">Artefatos Confinados L3</div>
+            <div class="stat-num" id="stat-subagent-prefix-cache" style="color: var(--cyan); font-size: 0.98rem;">0 Diários • 0 Handoffs</div>
           </div>
         </div>
 
@@ -3735,61 +3771,221 @@
     }
 
     function updateDashboardMetrics(data) {
-      // VRAM
+      // VRAM (WDDM limit vs physical 6144 MB)
       if (data.vram_used_mb !== undefined) {
         const limit = data.vram_limit_mb || 5294;
-        const vramPct = Math.round((data.vram_used_mb / limit) * 100);
-        document.getElementById('pill-vram').innerText = (data.vram_used_mb / 1024).toFixed(1) + ' / 5.2 GB';
-        document.getElementById('vram-text').innerText = (data.vram_used_mb / 1024).toFixed(2) + ' GB / ' + (limit / 1024).toFixed(2) + ' GB (' + vramPct + '%)';
-        document.getElementById('vram-bar').style.width = Math.min(100, vramPct) + '%';
+        const total = data.vram_total_mb || 6144;
+        const wddmPct = Math.round((data.vram_used_mb / limit) * 100);
+        const barWidthPct = Math.min(100, Math.round((data.vram_used_mb / total) * 100));
+        const markerLeftPct = Math.min(98, Math.round((limit / total) * 100));
+
+        const pillVram = document.getElementById('pill-vram');
+        if (pillVram) pillVram.innerText = (data.vram_used_mb / 1024).toFixed(2) + ' / ' + (limit / 1024).toFixed(2) + ' GB';
+
+        const vramText = document.getElementById('vram-text');
+        if (vramText) {
+          vramText.innerText = (data.vram_used_mb / 1024).toFixed(2) + ' GB / ' + (limit / 1024).toFixed(2) + ' GB WDDM (' + wddmPct + '%)';
+        }
+        const vramBar = document.getElementById('vram-bar');
+        if (vramBar) vramBar.style.width = barWidthPct + '%';
+
+        const vramMarker = document.getElementById('vram-wddm-marker');
+        if (vramMarker) vramMarker.style.left = markerLeftPct + '%';
       }
 
-      // Temperatura
+      // Temperatura & Watchdog Zone
       if (data.gpu_temp_c !== undefined) {
-        const temp = Math.round(data.gpu_temp_c);
-        document.getElementById('pill-temp').innerText = temp + '°C';
-        document.getElementById('temp-text').innerText = temp + '.0°C (Limite 78.0°C)';
-        const tempPct = Math.round((temp / 78.0) * 100);
-        document.getElementById('temp-bar').style.width = Math.min(100, tempPct) + '%';
+        const temp = Number(data.gpu_temp_c);
+        const prevLimit = Number(data.gpu_temp_preventive_c || 72.0);
+        const throttleLimit = Number(data.gpu_temp_throttle_c || 78.0);
+
+        const pillTemp = document.getElementById('pill-temp');
+        if (pillTemp) pillTemp.innerText = Math.round(temp) + '°C';
+
+        const tempText = document.getElementById('temp-text');
+        if (tempText) tempText.innerText = temp.toFixed(1) + '°C (Limite ' + throttleLimit.toFixed(1) + '°C)';
+
+        const tempPct = Math.round((temp / 85.0) * 100);
+        const tempBar = document.getElementById('temp-bar');
+        if (tempBar) tempBar.style.width = Math.min(100, tempPct) + '%';
+
+        const tempMarker = document.getElementById('temp-limit-marker');
+        if (tempMarker) tempMarker.style.left = Math.min(98, Math.round((throttleLimit / 85.0) * 100)) + '%';
 
         // Reatividade do Mascote
         const mascot = document.getElementById('mascot-img');
         const badge = document.getElementById('zone-badge');
-        if (temp >= 78) {
-          mascot.src = '/dashboard/icon/red';
-          badge.innerText = 'Critical Zone';
-          badge.className = 'badge badge-danger';
-        } else if (temp >= 72) {
-          mascot.src = '/dashboard/icon/amber';
-          badge.innerText = 'Preventive Zone';
-          badge.className = 'badge badge-lowcost';
+        if (temp >= throttleLimit) {
+          if (mascot) mascot.src = '/dashboard/icon/red';
+          if (badge) {
+            badge.innerText = 'Critical Zone';
+            badge.className = 'badge badge-danger';
+          }
+        } else if (temp >= prevLimit) {
+          if (mascot) mascot.src = '/dashboard/icon/amber';
+          if (badge) {
+            badge.innerText = 'Preventive Zone';
+            badge.className = 'badge badge-lowcost';
+          }
         } else {
-          mascot.src = '/dashboard/icon/cyan';
-          badge.innerText = 'Nominal Zone';
-          badge.className = 'badge badge-champion';
+          if (mascot) mascot.src = '/dashboard/icon/cyan';
+          if (badge) {
+            badge.innerText = (data.operational_zone || 'Nominal') + ' Zone';
+            badge.className = 'badge badge-champion';
+          }
         }
       }
 
-      if (data.fan_speed !== undefined) document.getElementById('fan-speed').innerText = data.fan_speed + '%';
-      if (data.power_w !== undefined) document.getElementById('power-draw').innerText = data.power_w.toFixed(1) + ' W';
-      if (data.cpu_threads !== undefined) document.getElementById('cpu-threads').innerText = data.cpu_threads + 'T AVX2';
-      if (data.ladybug_nodes !== undefined) document.getElementById('ladybug-nodes').innerText = data.ladybug_nodes;
-      if (data.tokens_today !== undefined) document.getElementById('tokens-today').innerText = data.tokens_today.toLocaleString();
-      if (data.usd_saved !== undefined) document.getElementById('usd-saved').innerText = '$' + data.usd_saved.toFixed(2);
-      if (data.e3_score !== undefined) document.getElementById('e3-score').innerText = data.e3_score.toFixed(1);
+      // Refrigeração honesta (Fan da dGPU inoperante -> Exaustor + CPU Fan)
+      if (data.fan_speed !== undefined) {
+        const fanEl = document.getElementById('fan-speed');
+        const fanSubEl = document.getElementById('fan-sub');
+        const fanLblEl = document.getElementById('cooling-lbl');
+        if (Number(data.fan_speed) <= 0) {
+          if (fanLblEl) fanLblEl.innerText = 'Refrigeração';
+          if (fanEl) {
+            fanEl.innerText = 'Exaustor + CPU';
+            fanEl.style.fontSize = '0.84rem';
+            fanEl.style.color = 'var(--amber)';
+          }
+          if (fanSubEl) fanSubEl.innerText = 'GPU Fan Off (NVML 0)';
+        } else {
+          if (fanLblEl) fanLblEl.innerText = 'GPU Fan Speed';
+          if (fanEl) {
+            fanEl.innerText = data.fan_speed + '%';
+            fanEl.style.fontSize = '1.15rem';
+            fanEl.style.color = 'var(--text-main)';
+          }
+          if (fanSubEl) fanSubEl.innerText = 'Ativo (PWM)';
+        }
+      }
 
-      const mins = Math.round((data.uptime_secs || 0) / 60);
-      document.getElementById('pill-uptime').innerText = mins + 'm';
-      document.getElementById('server-uptime').innerText = mins + ' min';
+      if (data.power_w !== undefined) {
+        const pEl = document.getElementById('power-draw');
+        if (pEl) pEl.innerText = Number(data.power_w).toFixed(1) + ' W';
+      }
+      if (data.cpu_threads !== undefined) {
+        const cEl = document.getElementById('cpu-threads');
+        if (cEl) cEl.innerText = data.cpu_threads + 'T AVX2';
+      }
 
-      // Atualiza Master Brain
+      // Badges de Contagem nas Abas Superiores
+      if (data.local_models_count !== undefined) {
+        const bLocal = document.getElementById('badge-local-count');
+        if (bLocal) bLocal.innerText = data.local_models_count;
+      }
+      if (data.profiles_count !== undefined) {
+        const bCloud = document.getElementById('badge-cloud-profiles-count');
+        if (bCloud) bCloud.innerText = data.profiles_count + ' Perfis';
+      }
+
+      // FinOps & Eficiência E³
+      if (data.tokens_today !== undefined) {
+        const tEl = document.getElementById('tokens-today');
+        if (tEl) tEl.innerText = Number(data.tokens_today).toLocaleString();
+      }
+      if (data.usd_saved !== undefined) {
+        const uEl = document.getElementById('usd-saved');
+        if (uEl) uEl.innerText = '$' + Number(data.usd_saved).toFixed(2);
+      }
+      if (data.e3_score !== undefined) {
+        const eEl = document.getElementById('e3-score');
+        if (eEl) eEl.innerText = Number(data.e3_score).toFixed(1);
+      }
+      if (data.total_arena_runs !== undefined) {
+        const fBadge = document.getElementById('finops-arena-runs-badge');
+        if (fBadge) fBadge.innerText = `${data.total_arena_runs} Ensaios Locais`;
+      }
+      if (data.local_share_pct !== undefined) {
+        const lPct = Math.round(Number(data.local_share_pct));
+        const cPct = Math.max(0, 100 - lPct);
+        const lText = document.getElementById('local-share-text');
+        const lBar = document.getElementById('local-share-bar');
+        if (lText) lText.innerText = `${lPct}% Local (Silício $0) / ${cPct}% Cloud`;
+        if (lBar) lBar.style.width = `${lPct}%`;
+      }
+      if (data.context_savings_pct !== undefined) {
+        const sPct = Number(data.context_savings_pct).toFixed(1);
+        const sText = document.getElementById('ast-savings-text');
+        const sBar = document.getElementById('ast-savings-bar');
+        if (sText) sText.innerText = `${sPct}% Tokens Poupados`;
+        if (sBar) sBar.style.width = `${Math.min(100, Number(data.context_savings_pct))}%`;
+      }
+
+      // Hipocampo L3 & Armazenamento ReFS
+      if (data.memory_l3) {
+        const m3 = data.memory_l3;
+        const partEl = document.getElementById('l3-partitions-stat');
+        if (partEl) partEl.innerText = `${m3.stable_count || 0} STABLE / ${m3.evolving_count || 0} EVOLV`;
+
+        const lbEl = document.getElementById('ladybug-nodes');
+        if (lbEl) lbEl.innerText = `${m3.ladybug_nodes || 0} nós • ${m3.ladybug_edges || 0} arestas`;
+
+        const obsEl = document.getElementById('obsidian-vault-stat');
+        if (obsEl) obsEl.innerText = `${m3.obsidian_raw_count || 0} raw • ${m3.obsidian_wiki_count || 0} wiki`;
+
+        const sizeBadge = document.getElementById('sqlite-vault-size-badge');
+        if (sizeBadge && m3.sqlite_size_mb !== undefined) {
+          sizeBadge.innerText = `Z:\\ STRICT WAL (${Number(m3.sqlite_size_mb).toFixed(2)} MB)`;
+        }
+
+        const snapBadge = document.getElementById('hero-snapshot-badge');
+        if (snapBadge && m3.snapshot_id) {
+          snapBadge.innerText = `🔒 ${m3.snapshot_id.substring(0, 13)} (${(m3.memory_entries_count || 0) + (m3.user_entries_count || 0)} itens)`;
+        }
+
+        const snapLine = document.getElementById('l3-snapshot-summary-line');
+        if (snapLine && m3.snapshot_id) {
+          const shortSha = (m3.composite_sha256 || '').substring(0, 10);
+          snapLine.innerHTML = `&bull; Snapshot: <code class="mono" style="color: var(--cyan);">${m3.snapshot_id}</code> (SHA <code class="mono">${shortSha}</code>)`;
+        }
+
+        const chkLbl = document.getElementById('l3-checkpoints-count-label');
+        if (chkLbl) chkLbl.innerText = `${m3.checkpoints_count || 0} Checkpoints v2`;
+      } else if (data.ladybug_nodes !== undefined) {
+        const lbEl = document.getElementById('ladybug-nodes');
+        if (lbEl) lbEl.innerText = `${data.ladybug_nodes} nós`;
+      }
+
+      // Atividade Agêntica & Roteamento Real
+      const mins = Math.max(1, Math.round((data.uptime_secs || 0) / 60));
+      const pillUp = document.getElementById('pill-uptime');
+      if (pillUp) pillUp.innerText = mins + 'm';
+
+      const srvUp = document.getElementById('server-uptime');
+      if (srvUp) {
+        const conns = data.active_connections || 1;
+        srvUp.innerText = `${mins} min • ${conns} conn ativa(s)`;
+      }
+
+      if (data.agentic_activity) {
+        const act = data.agentic_activity;
+        const taskEl = document.getElementById('act-last-task');
+        if (taskEl && act.last_task) {
+          taskEl.innerText = act.last_task;
+          taskEl.title = act.last_task;
+        }
+        const modEl = document.getElementById('act-last-model');
+        if (modEl && act.last_model) modEl.innerText = act.last_model;
+        const tpsEl = document.getElementById('act-avg-tps');
+        if (tpsEl && act.avg_tps !== undefined) {
+          tpsEl.innerText = `${Number(act.avg_tps).toFixed(1)} tokens/s (Último: ${Number(act.latest_tps || act.avg_tps).toFixed(1)} tok/s)`;
+        }
+      }
+
+      // Atualiza Master Brain & Topbar Preset
       if (data.master_brain) {
         const mb = data.master_brain;
         document.getElementById('top-brain-name').innerText = mb.model;
         document.getElementById('hero-brain-model').innerText = mb.model;
         document.getElementById('hero-brain-provider').innerText = mb.provider;
         document.getElementById('hero-brain-ctx').innerText = (mb.context_window || 64000).toLocaleString() + ' tokens';
-        
+
+        if (mb.active_profile_name) {
+          const topPresetEl = document.getElementById('top-active-preset');
+          if (topPresetEl) topPresetEl.innerText = mb.active_profile_name;
+        }
+
         const badgeEl = document.getElementById('hero-brain-badge');
         if (mb.is_local) {
           badgeEl.innerText = 'Silício Bare-Metal';
@@ -3807,6 +4003,10 @@
         const res = await fetch('/api/v1/router/matrix');
         if (res.ok) {
           const data = await res.json();
+          const summaryBadge = document.getElementById('matrix-arena-summary-badge');
+          if (summaryBadge && data.benchmarked_count !== undefined) {
+            summaryBadge.innerText = `${data.benchmarked_count} Homologados • ${data.total_arena_runs || 0} Provas`;
+          }
           renderRouterMatrix(data.matrix || []);
         }
       } catch (e) {
@@ -3821,7 +4021,14 @@
         return;
       }
 
-      tbody.innerHTML = matrix.map(item => `
+      tbody.innerHTML = matrix.map(item => {
+        const localModel = item.local_default.model || '';
+        const cloudModel = item.cloud_fallback.model || '';
+        const profId = item.profile_id || (item.cloud_fallback && item.cloud_fallback.profile_id) || 'frontier_balanced';
+        const isBench = item.local_default.benchmarked;
+        const badgeClass = isBench ? 'badge-value' : 'badge-champion';
+
+        return `
         <tr>
           <td>
             <div style="font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;">
@@ -3830,21 +4037,32 @@
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${item.description}</div>
           </td>
           <td>
-            ${formatModelDisplayName(item.local_default.model, true)}
-            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${item.local_default.target} &bull; ${item.local_default.tps}</div>
+            ${formatModelDisplayName(localModel, true)}
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${item.local_default.target} &bull; <strong style="color: var(--green);">${item.local_default.tps}</strong></div>
           </td>
           <td>
-            ${formatModelDisplayName(item.cloud_fallback.model, false)}
-            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${item.cloud_fallback.provider} &bull; ${item.cloud_fallback.cost}</div>
+            ${formatModelDisplayName(cloudModel, false)}
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${item.cloud_fallback.provider} &bull; <strong style="color: var(--cyan);">${item.cloud_fallback.cost}</strong></div>
           </td>
           <td>
             <div style="font-size: 0.75rem; color: #cbd5e1; line-height: 1.4;">${item.pareto_rule}</div>
           </td>
           <td class="text-center">
-            <span class="badge badge-value">${item.status}</span>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <span class="badge ${badgeClass}">${item.status}</span>
+              <div style="display: flex; gap: 4px;">
+                <button class="btn" style="padding: 3px 8px; font-size: 0.68rem; border-radius: 5px;" onclick="switchTab('tab-local'); testModelInArena('${localModel}')" title="Aferir este modelo local na Silicon Arena">
+                  🏟️ Aferir
+                </button>
+                <button class="btn" style="padding: 3px 8px; font-size: 0.68rem; border-radius: 5px;" onclick="switchTab('tab-settings'); selectProfilePreset('${profId}')" title="Configurar o perfil ${profId} em Governança">
+                  ⚙️ Perfil
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     }
 
     let localModelsList = [];
@@ -6154,13 +6372,87 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
     // ==========================================
     // 7. SESSÕES DE SUBAGENTES & CICLO DE HANDOFF (L3)
     // ==========================================
+    let cachedSubagentSessions = [];
+    let currentSubagentFilter = 'all';
+    let currentRecallPreference = 'adaptive';
+
+    function setRecallModePreference(mode) {
+      currentRecallPreference = mode;
+      ['adaptive', 'lean', 'expanded'].forEach(m => {
+        const btn = document.getElementById('btn-recall-' + m);
+        if (btn) btn.classList.toggle('active', m === mode);
+      });
+      const heroTxt = document.getElementById('hero-recall-mode-text');
+      const labels = {
+        adaptive: '⚡ Adaptativo (Terceira Via)',
+        lean: '🎯 Enxuto (800 chars)',
+        expanded: '🕸️ Expandido + Grafo (2400c)'
+      };
+      if (heroTxt) heroTxt.innerText = labels[mode] || labels.adaptive;
+      showToast(`Modo de Recall L3 ajustado para: ${labels[mode] || mode}`, 'success');
+    }
+
+    async function pinOrRefreshSnapshot(forceRefresh = true) {
+      try {
+        const res = await fetch('/api/v1/memory/snapshot/pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: 'hermes_master_default',
+            force_refresh: forceRefresh
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.snapshot) {
+            showToast(`FrozenMemorySnapshot ${data.snapshot.snapshot_id} sincronizado (${data.stable_count} STABLE / ${data.evolving_count} EVOLVING)!`, 'success');
+            fetchTelemetry();
+          }
+        }
+      } catch (err) {
+        showToast('Erro ao atualizar FrozenMemorySnapshot: ' + err.message, 'error');
+      }
+    }
+
+    function setSubagentFilter(filter) {
+      currentSubagentFilter = filter;
+      ['all', 'completed', 'active'].forEach(f => {
+        const btn = document.getElementById('btn-subfilter-' + f);
+        if (btn) btn.classList.toggle('active', f === filter);
+      });
+      renderSubAgentSessions(cachedSubagentSessions);
+    }
+
+    async function cleanupOrphanSubagents() {
+      try {
+        const res = await fetch('/api/v1/sessions/subagents/cleanup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const purged = data.purged_sessions || 0;
+          showToast(`Higiene L3 concluída: ${purged} sessão(ões) órfã(s) de teste removida(s).`, 'success');
+          await fetchSubAgentSessions();
+          fetchTelemetry();
+        }
+      } catch (err) {
+        showToast('Erro ao limpar sessões órfãs: ' + err.message, 'error');
+      }
+    }
+
     async function fetchSubAgentSessions() {
       try {
         const res = await fetch('/api/v1/sessions/subagents');
         if (!res.ok) return;
         const data = await res.json();
-        const sessions = data.subagents || data.sessions || [];
-        renderSubAgentSessions(sessions);
+        cachedSubagentSessions = data.subagents || data.sessions || [];
+        const statArtifacts = document.getElementById('stat-subagent-prefix-cache');
+        if (statArtifacts && data.diaries_count !== undefined) {
+          statArtifacts.textContent = `${data.diaries_count} Diários • ${data.handoffs_count || 0} Handoffs`;
+        }
+        renderSubAgentSessions(cachedSubagentSessions);
       } catch (err) {
         console.error("Erro ao carregar sessões de subagentes:", err);
       }
@@ -6180,33 +6472,41 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
 
       let activeCount = 0;
       let completedCount = 0;
+      for (const s of sessions) {
+        const st = (s.status || 'SPAWNED').toUpperCase();
+        if (st === 'COMPLETED') completedCount++;
+        else if (st === 'RUNNING' || st === 'SPAWNED') activeCount++;
+      }
+      if (statActive) statActive.textContent = activeCount;
+      if (statCompleted) statCompleted.textContent = completedCount;
 
-      if (sessions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhuma sessão de subagente registrada ainda.</td></tr>`;
-        if (statActive) statActive.textContent = '0';
-        if (statCompleted) statCompleted.textContent = '0';
+      const filtered = sessions.filter(s => {
+        const st = (s.status || 'SPAWNED').toUpperCase();
+        if (currentSubagentFilter === 'completed') return st === 'COMPLETED';
+        if (currentSubagentFilter === 'active') return st === 'RUNNING' || st === 'SPAWNED';
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhuma sessão encontrada para o filtro selecionado.</td></tr>`;
         return;
       }
 
       let rowsHtml = '';
-      for (const s of sessions) {
+      for (const s of filtered) {
         const statusUpper = (s.status || 'SPAWNED').toUpperCase();
         let statusBadge = '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.35);">SPAWNED</span>';
         if (statusUpper === 'RUNNING') {
-          activeCount++;
           statusBadge = '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.35);">RUNNING ⚡</span>';
         } else if (statusUpper === 'COMPLETED') {
-          completedCount++;
           statusBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.35);">COMPLETED ✅</span>';
         } else if (statusUpper === 'FAILED') {
           statusBadge = '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.35);">FAILED ❌</span>';
-        } else {
-          activeCount++;
         }
 
         const rawCreated = s.created_at;
         const ts = typeof rawCreated === 'number' && rawCreated < 10000000000 ? rawCreated * 1000 : rawCreated;
-        const dateStr = ts ? new Date(ts).toLocaleTimeString() : '--:--';
+        const dateStr = ts ? new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
         const parentId = s.parent_session_id || 'Mestre (Chat)';
         const agentKey = s.agent_id || s.id;
 
@@ -6231,8 +6531,6 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
         `;
       }
 
-      if (statActive) statActive.textContent = activeCount;
-      if (statCompleted) statCompleted.textContent = completedCount;
       tbody.innerHTML = rowsHtml;
     }
 

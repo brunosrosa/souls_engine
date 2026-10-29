@@ -123,9 +123,20 @@ pub async fn list_subagents_handler(
         list.push(record);
     }
 
+    let diaries_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sub_agent_diaries")
+        .fetch_one(&*pool)
+        .await
+        .unwrap_or(0);
+    let handoffs_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM handoff_payloads")
+        .fetch_one(&*pool)
+        .await
+        .unwrap_or(0);
+
     Ok(Json(json!({
         "status": "success",
         "total": list.len(),
+        "diaries_count": diaries_count,
+        "handoffs_count": handoffs_count,
         "subagents": list
     })))
 }
@@ -320,3 +331,67 @@ pub async fn create_handoff_handler(
         "handoff": record
     })))
 }
+
+#[derive(Debug, Deserialize, Default)]
+pub struct CleanupSubagentsRequest {
+    pub agent_id: Option<String>,
+    /// Modes: `"stale_spawned"` (default: deletes SPAWNED/FAILED/KILLED sessions without diaries) or `"all_non_running"`.
+    pub mode: Option<String>,
+}
+
+/// Cleans up orphan/stale test sub-agent sessions from `sub_agent_sessions`.
+///
+/// `POST /api/v1/sessions/subagents/cleanup`
+pub async fn cleanup_subagents_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<CleanupSubagentsRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let pool = state.memory.pool();
+
+    let affected = if let Some(ref aid) = payload.agent_id {
+        let res = sqlx::query("DELETE FROM sub_agent_sessions WHERE agent_id = ?1")
+            .bind(aid)
+            .execute(&*pool)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "status": "error", "message": e.to_string() })),
+                )
+            })?;
+        res.rows_affected()
+    } else {
+        let mode = payload.mode.as_deref().unwrap_or("stale_spawned");
+        let res = if mode == "all_non_completed" {
+            sqlx::query("DELETE FROM sub_agent_sessions WHERE status IN ('SPAWNED', 'FAILED', 'KILLED')")
+                .execute(&*pool)
+                .await
+        } else {
+            sqlx::query(
+                r#"
+                DELETE FROM sub_agent_sessions
+                WHERE status IN ('SPAWNED', 'FAILED', 'KILLED')
+                  AND (
+                    task_description LIKE 'general subagent task%'
+                    OR agent_id NOT IN (SELECT DISTINCT agent_id FROM sub_agent_diaries)
+                  )
+                "#,
+            )
+            .execute(&*pool)
+            .await
+        }
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "error", "message": e.to_string() })),
+            )
+        })?;
+        res.rows_affected()
+    };
+
+    Ok(Json(json!({
+        "status": "success",
+        "deleted_sessions": affected,
+    })))
+}
+
