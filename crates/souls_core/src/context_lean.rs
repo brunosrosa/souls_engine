@@ -8,6 +8,7 @@ use std::collections::{HashMap, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::sync::{OnceLock, RwLock};
+use gigatoken_core::pretokenize::FastCl100kPretokenizer;
 use tiktoken::CoreBpe;
 use crate::ansi_filter::strip_ansi_escapes;
 use crate::error::CoreError;
@@ -76,14 +77,22 @@ pub fn get_global_tokenizer() -> Option<&'static CoreBpe> {
     *GLOBAL_TOKENIZER.get_or_init(|| tiktoken::get_encoding("cl100k_base"))
 }
 
-/// Fast synchronous token count using `cl100k_base` encoding on CPU.
+/// Ultra-fast SWAR/ILP token counting using gigatoken FastCl100kPretokenizer with tiktoken fallback.
+///
+/// Complies with ADR-011 for 3x-4x throughput improvement over legacy regex-based tokenization.
 pub fn count_tokens(text: &str) -> usize {
     if text.is_empty() {
         return 0;
     }
-    match get_global_tokenizer() {
-        Some(enc) => enc.count(text),
-        None => text.len() / 4,
+    // Primary high-performance SWAR/ILP pretokenization path
+    let count = FastCl100kPretokenizer::new(text.as_bytes()).count();
+    if count > 0 {
+        count
+    } else {
+        match get_global_tokenizer() {
+            Some(enc) => enc.count(text),
+            None => (text.len() / 4).max(1),
+        }
     }
 }
 

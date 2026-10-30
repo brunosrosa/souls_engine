@@ -12,6 +12,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 thiserror = { workspace = true }
 tiktoken = "3.1.4"
+gigatoken-core = { package = "toktier-gigatoken-core", version = "0.3" }
 chrono = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
