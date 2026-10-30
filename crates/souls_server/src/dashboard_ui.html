@@ -1850,8 +1850,9 @@
         <span>⚙️ Governança & Presets</span>
       </button>
     </div>
-    <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
-      Preset Ativo: <strong id="top-active-preset" style="color: var(--cyan);">Frontier Balanced (Master Brain)</strong>
+    <div class="telemetry-pill" id="pill-active-preset" onclick="switchTab('tab-settings')" title="Clique para alternar o Preset operacional ativo do Master Brain" style="cursor: pointer;">
+      <span>🎛️ Preset Ativo:</span>
+      <strong id="top-active-preset" style="color: var(--cyan);">Frontier Balanced (Master Brain)</strong>
     </div>
   </nav>
 
@@ -1885,8 +1886,8 @@
               <span>&bull;</span>
               <span style="color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
                 Modelo fixo durante o diálogo &bull; Governança:
-                <button class="agents-doc-link" onclick="openAgentsMdModal()" title="Clique para abrir e ler a constituição operacional em Z:\souls_engine\AGENTS.md">
-                  📄 Z:\souls_engine\AGENTS.md
+                <button class="agents-doc-link" onclick="openAgentsMdModal('hermes')" title="Clique para ler o AGENTS.md do Hermes Agent (Invariantes de Prompt Caching e Arquitetura)">
+                  📄 Hermes AGENTS.md
                 </button>
               </span>
             </div>
@@ -6533,22 +6534,40 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       }
     }
 
-    async function openAgentsMdModal() {
+    let currentAgentsDocSource = 'hermes';
+
+    async function openAgentsMdModal(source = 'hermes') {
       const modal = document.getElementById('modal-agents-md');
-      const contentEl = document.getElementById('agents-md-modal-content');
-      if (!modal || !contentEl) return;
+      if (!modal) return;
       modal.classList.add('active');
-      contentEl.textContent = 'Carregando Z:\\souls_engine\\AGENTS.md...';
+      await loadAgentsMdDoc(source);
+    }
+
+    async function loadAgentsMdDoc(source = 'hermes') {
+      currentAgentsDocSource = source;
+      const titleEl = document.getElementById('agents-md-modal-title');
+      const pathEl = document.getElementById('agents-md-modal-path');
+      const contentEl = document.getElementById('agents-md-modal-content');
+      const btnHermes = document.getElementById('btn-doc-hermes');
+      const btnSouls = document.getElementById('btn-doc-souls');
+
+      if (btnHermes) btnHermes.classList.toggle('active', source === 'hermes');
+      if (btnSouls) btnSouls.classList.toggle('active', source === 'souls');
+
+      if (contentEl) contentEl.textContent = `Carregando AGENTS.md (${source === 'hermes' ? 'Hermes Agent' : 'Souls Engine'})...`;
+
       try {
-        const res = await fetch('/api/v1/system/agents-md');
+        const res = await fetch(`/api/v1/system/agents-md?source=${encodeURIComponent(source)}`);
         if (res.ok) {
           const data = await res.json();
-          contentEl.textContent = data.content || 'Arquivo vazio.';
+          if (titleEl && data.title) titleEl.textContent = data.title;
+          if (pathEl && data.path) pathEl.textContent = data.path;
+          if (contentEl) contentEl.textContent = data.content || 'Arquivo vazio.';
         } else {
-          contentEl.textContent = 'Falha ao carregar Z:\\souls_engine\\AGENTS.md.';
+          if (contentEl) contentEl.textContent = `Falha ao carregar AGENTS.md (${source}).`;
         }
       } catch (e) {
-        contentEl.textContent = 'Erro de rede ao ler AGENTS.md: ' + e.message;
+        if (contentEl) contentEl.textContent = 'Erro de rede ao ler AGENTS.md: ' + e.message;
       }
     }
 
@@ -7029,25 +7048,36 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
     </div>
   </div>
 
-  <!-- MODAL: LEITOR DE GOVERNANÇA (Z:\souls_engine\AGENTS.md) -->
+  <!-- MODAL: LEITOR DE GOVERNANÇA & AGENTS.MD (HERMES / SOULS) -->
   <div class="modal-backdrop" id="modal-agents-md">
-    <div class="modal-dialog" style="max-width: 860px;">
+    <div class="modal-dialog" style="max-width: 880px;">
       <div class="modal-header">
         <div>
           <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
             <span style="color: var(--cyan);">📄</span>
-            <span>Constituição & Leis Operacionais do Souls Engine</span>
+            <span id="agents-md-modal-title">Hermes Agent — Invariantes de Prompt Caching & Guia</span>
           </div>
-          <div style="font-size: 0.74rem; color: var(--cyan); margin-top: 4px; font-family: var(--font-mono);">
-            Z:\souls_engine\AGENTS.md
+          <div style="font-size: 0.74rem; color: var(--cyan); margin-top: 4px; font-family: var(--font-mono);" id="agents-md-modal-path">
+            %LOCALAPPDATA%\hermes\hermes-agent\AGENTS.md
           </div>
         </div>
-        <button class="modal-close" onclick="closeAgentsMdModal()">&times;</button>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
+            <button class="filter-provider-btn active" id="btn-doc-hermes" onclick="loadAgentsMdDoc('hermes')" style="padding: 4px 10px; font-size: 0.7rem;" title="Ver guia de desenvolvimento e invariantes sagrados do Hermes Agent">
+              <span>🤖 Hermes AGENTS.md</span>
+            </button>
+            <button class="filter-provider-btn" id="btn-doc-souls" onclick="loadAgentsMdDoc('souls')" style="padding: 4px 10px; font-size: 0.7rem;" title="Ver leis operacionais e guardrails bare-metal do Souls Engine">
+              <span>⚙️ Souls AGENTS.md</span>
+            </button>
+          </div>
+          <button class="modal-close" onclick="closeAgentsMdModal()">&times;</button>
+        </div>
       </div>
       <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding: 18px; background: rgba(6, 9, 17, 0.8); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
-        <pre id="agents-md-modal-content" style="font-family: var(--font-mono); font-size: 0.78rem; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; line-height: 1.55; margin: 0;">Carregando Z:\souls_engine\AGENTS.md...</pre>
+        <pre id="agents-md-modal-content" style="font-family: var(--font-mono); font-size: 0.78rem; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; line-height: 1.55; margin: 0;">Carregando...</pre>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Invariante Simbiótico: Prompt Caching sagrado &bull; Modelo mestre imutável intradiálogo</span>
         <button class="btn btn-cyan" onclick="closeAgentsMdModal()">Fechar Documento</button>
       </div>
     </div>

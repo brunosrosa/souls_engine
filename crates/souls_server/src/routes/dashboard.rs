@@ -13,7 +13,7 @@ use std::convert::Infallible;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use axum::extract::{Path as AxumPath, State};
+use axum::extract::{Path as AxumPath, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{Html, IntoResponse, Json, Response};
@@ -1203,19 +1203,46 @@ pub async fn system_curate_obsidian_handler(State(state): State<AppState>) -> Js
     }))
 }
 
-/// Serves the canonical `Z:\souls_engine\AGENTS.md` constitution document for reading in the Dashboard.
-pub async fn agents_md_handler() -> Json<Value> {
-    let path = PathBuf::from(r"Z:\souls_engine\AGENTS.md");
+#[derive(Debug, Deserialize)]
+pub struct AgentsMdQuery {
+    pub source: Option<String>,
+}
+
+/// Serves the canonical AGENTS.md document (Hermes Agent or Souls Engine) for reading in the Dashboard.
+pub async fn agents_md_handler(Query(query): Query<AgentsMdQuery>) -> Json<Value> {
+    let source = query.source.as_deref().unwrap_or("hermes");
+    let (path, title) = if source == "souls" {
+        (
+            PathBuf::from(r"Z:\souls_engine\AGENTS.md"),
+            "Souls Engine — Leis Operacionais Bare-Metal (v7 Canônica)".to_string(),
+        )
+    } else {
+        let local_appdata = std::env::var("LOCALAPPDATA")
+            .unwrap_or_else(|_| r"C:\Users\rosas\AppData\Local".to_string());
+        let hermes_path = PathBuf::from(local_appdata)
+            .join("hermes")
+            .join("hermes-agent")
+            .join("AGENTS.md");
+        (
+            hermes_path,
+            "Hermes Agent — Invariantes de Prompt Caching & Guia de Desenvolvimento".to_string(),
+        )
+    };
+
     match fs::read_to_string(&path) {
         Ok(content) => Json(json!({
             "status": "success",
+            "source": source,
+            "title": title,
             "path": path.to_string_lossy(),
             "content": content
         })),
         Err(e) => Json(json!({
             "status": "error",
+            "source": source,
+            "title": title,
             "path": path.to_string_lossy(),
-            "message": format!("Falha ao ler AGENTS.md: {e}")
+            "message": format!("Falha ao ler {}: {e}", path.display())
         })),
     }
 }
