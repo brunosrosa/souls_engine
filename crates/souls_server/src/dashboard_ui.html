@@ -2475,7 +2475,7 @@
                   <th class="text-center" style="width: 120px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM">VRAM Estimada ↕</th>
                   <th class="text-center" style="width: 110px;" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
                   <th style="min-width: 160px;">Tags Especializadas</th>
-                  <th class="text-center" style="min-width: 175px;">Status & Silício</th>
+                  <th class="text-center" style="width: 160px;">Status & Silício Alvo</th>
                 </tr>
               </thead>
               <tbody id="local-arena-tbody">
@@ -4517,7 +4517,7 @@
       let bg = 'rgba(139, 92, 246, 0.18)';
       let color = '#c084fc';
       let border = 'rgba(168, 85, 247, 0.5)';
-      let subtitle = 'Master dGPU';
+      let subtitle = 'Master Coder';
       
       if (lower.includes('tier 0.5') || lower.includes('tier 05')) {
         // Tier 0.5: Epistemic & Intent Probing (Emerald / Mint)
@@ -4536,13 +4536,13 @@
         bg = 'rgba(139, 92, 246, 0.18)';
         color = '#c084fc';
         border = 'rgba(168, 85, 247, 0.5)';
-        subtitle = 'Master Coder';
+        subtitle = 'Master dGPU';
       } else if (lower.includes('tier 2')) {
         // Tier 2: MoE Offload CPU (Amber / Gold)
         bg = 'rgba(245, 158, 11, 0.16)';
         color = '#fbbf24';
         border = 'rgba(245, 158, 11, 0.45)';
-        subtitle = 'MoE Reasoning';
+        subtitle = 'MoE Deep Reasoning';
       } else if (lower.includes('tier 3')) {
         // Tier 3: Vision VLM (Rose / Coral)
         bg = 'rgba(244, 63, 94, 0.16)';
@@ -4559,7 +4559,7 @@
       return `
         <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
           <span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); padding: 2px 7px; border-radius: 9999px;">${t}</span>
-          <span style="font-size: 0.62rem; color: ${color}; opacity: 0.9; white-space: nowrap; font-weight: 600; letter-spacing: 0.02em;">${subtitle}</span>
+          <span style="font-size: 0.60rem; color: ${color}; opacity: 0.9; white-space: nowrap; font-weight: 600; letter-spacing: 0.02em;">${subtitle}</span>
         </div>
       `;
     }
@@ -4699,7 +4699,7 @@
             <td class="mono text-center" style="color: var(--cyan);">${m.vram || '0 MB'}</td>
             <td class="mono text-center">${(m.context_window || 8192).toLocaleString()}</td>
             <td>${tagsHtml}</td>
-            <td class="text-center" style="vertical-align: middle;">${statusBadge}</td>
+            <td class="text-center">${statusBadge}</td>
           </tr>
         `;
       }).join('');
