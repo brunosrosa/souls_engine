@@ -210,6 +210,24 @@ impl ChyrosDaemon {
         Ok((report, new_pool))
     }
 
+    /// Simulates a progression of N consecutive metabolism days over an in-memory or live pool
+    /// returning the chronological sequence of metabolism reports.
+    pub async fn simulate_multiday_progression(
+        &self,
+        pool: &Pool<Sqlite>,
+        start_epoch_sec: i64,
+        days: usize,
+    ) -> Result<Vec<ChyrosMetabolismReport>, MemoryError> {
+        let mut reports = Vec::with_capacity(days);
+        let mut current_epoch = start_epoch_sec;
+        for _ in 0..days {
+            current_epoch += 86400;
+            let (rep, _) = self.run_metabolism_cycle(pool, current_epoch).await?;
+            reports.push(rep);
+        }
+        Ok(reports)
+    }
+
     /// Executes NT-safe VACUUM INTO followed by pool closure and atomic Win32 MoveFileExW swap.
     pub async fn rotate_and_compact_db(
         &self,
@@ -430,5 +448,174 @@ mod tests {
         let _ = std::fs::remove_file(&test_db_path);
         let _ = std::fs::remove_file(test_db_path.with_extension("db-wal"));
         let _ = std::fs::remove_file(test_db_path.with_extension("db-shm"));
+    }
+
+    #[test]
+    fn test_langevin_gaussian_stochasticity_distribution() {
+        let n = 10_000;
+        let sigma = LANGEVIN_SIGMA;
+        let mut sum = 0.0;
+        let mut sum_sq = 0.0;
+
+        for i in 0..n {
+            let val = gaussian_noise(i as u64, sigma);
+            assert!(val.is_finite(), "Gaussian noise must never be NaN or Inf");
+            sum += val;
+            sum_sq += val * val;
+        }
+
+        let mean = sum / (n as f64);
+        let variance = (sum_sq / (n as f64)) - (mean * mean);
+        let stddev = variance.sqrt();
+
+        assert!(
+            mean.abs() < 0.01,
+            "Gaussian noise mean should be close to 0.0, got: {mean}"
+        );
+        assert!(
+            (stddev - sigma).abs() < 0.005,
+            "Gaussian noise stddev should match sigma ({sigma}), got: {stddev}"
+        );
+    }
+
+    #[test]
+    fn test_langevin_access_count_half_life_protection() {
+        let delta_days = 30.0;
+        let initial_salience = 0.85;
+
+        let node_a = compute_langevin_salience(initial_salience, "EVOLVING", delta_days, 0, 100);
+        let node_b = compute_langevin_salience(initial_salience, "EVOLVING", delta_days, 5, 100);
+        let node_c = compute_langevin_salience(initial_salience, "EVOLVING", delta_days, 20, 100);
+
+        // Half-life expansion guarantees monotonic retention with access count
+        assert!(
+            node_c > node_b,
+            "Node C (20 accesses, salience {node_c}) must retain more than Node B (5 accesses, salience {node_b})"
+        );
+        assert!(
+            node_b > node_a,
+            "Node B (5 accesses, salience {node_b}) must retain more than Node A (0 accesses, salience {node_a})"
+        );
+        assert!(
+            node_a < PURGE_SALIENCE_THRESHOLD,
+            "Node A with 0 accesses after 30 days should fall below purge threshold (got {node_a})"
+        );
+        assert!(
+            node_c > 0.65,
+            "Node C with 20 accesses should strongly retain salience (got {node_c})"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_autodream_langevin_stress_1000_nodes_multi_cycle() {
+        let pool = create_in_memory_sqlite_pool().await.unwrap();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+
+        // 1. Bulk insert 1,000 nodes in a single atomic transaction
+        let mut tx = pool.begin().await.unwrap();
+
+        // 200 STABLE nodes
+        for i in 0..200 {
+            sqlx::query(
+                "INSERT INTO epistemic_memories 
+                (id, session_id, category, content, partition, salience, access_count, created_at, last_accessed_at, updated_at)
+                VALUES (?1, 's_stress', 'arch', 'Stable rule content', 'STABLE', 1.0, 0, ?2, ?2, ?2)",
+            )
+            .bind(format!("stable_{i}"))
+            .bind(now - (i as i64 * 86400))
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        }
+
+        // 400 EVOLVING Active nodes (high access count = 20, accessed 3 days ago)
+        for i in 0..400 {
+            sqlx::query(
+                "INSERT INTO epistemic_memories 
+                (id, session_id, category, content, partition, salience, access_count, created_at, last_accessed_at, updated_at)
+                VALUES (?1, 's_stress', 'code', 'Active working knowledge', 'EVOLVING', 0.9, 20, ?2, ?3, ?2)",
+            )
+            .bind(format!("active_{i}"))
+            .bind(now - 30 * 86400)
+            .bind(now - 3 * 86400)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        }
+
+        // 400 EVOLVING Decaying nodes (0 access count, accessed 75 days ago)
+        for i in 0..400 {
+            sqlx::query(
+                "INSERT INTO epistemic_memories 
+                (id, session_id, category, content, partition, salience, access_count, created_at, last_accessed_at, updated_at)
+                VALUES (?1, 's_stress', 'chat', 'Obsolete transient chat', 'EVOLVING', 0.35, 0, ?2, ?2, ?2)",
+            )
+            .bind(format!("decaying_{i}"))
+            .bind(now - 75 * 86400)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        }
+
+        tx.commit().await.unwrap();
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM epistemic_memories")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1000, "Database must hold exactly 1,000 memories before cycle");
+
+        // 2. Measure execution performance of the 1,000-node metabolism cycle
+        let daemon = ChyrosDaemon::new_in_memory();
+        let start = std::time::Instant::now();
+        let (report, _) = daemon.run_metabolism_cycle(&pool, now).await.unwrap();
+        let duration_ms = start.elapsed().as_millis();
+
+        // 3. Assert rigorous SLAs and architectural invariants
+        assert!(
+            duration_ms < 500,
+            "1,000-node Langevin metabolism must complete in < 500ms (got {duration_ms}ms)"
+        );
+        assert_eq!(
+            report.stable_nodes_preserved, 200,
+            "All 200 STABLE nodes must be preserved with 0 drift"
+        );
+        assert_eq!(
+            report.evolving_nodes_decayed, 400,
+            "All 400 active EVOLVING nodes must be safely decayed without purging"
+        );
+        assert_eq!(
+            report.purged_node_ids.len(), 400,
+            "All 400 obsolete EVOLVING nodes must be cleanly purged"
+        );
+
+        // 4. Verify database state post-purge
+        let final_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM epistemic_memories")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(final_count, 600, "Remaining memories must be 600 (200 STABLE + 400 Active)");
+
+        // 5. Verify STABLE nodes salience integrity
+        let min_stable: f32 = sqlx::query_scalar(
+            "SELECT MIN(salience) FROM epistemic_memories WHERE partition = 'STABLE'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(min_stable, 1.0, "STABLE salience must strictly remain 1.0");
+
+        // 6. Multi-day progression simulation over remaining 600 nodes
+        let progression = daemon
+            .simulate_multiday_progression(&pool, now, 5)
+            .await
+            .unwrap();
+        assert_eq!(progression.len(), 5);
+        for day_rep in progression {
+            assert_eq!(day_rep.stable_nodes_preserved, 200);
+        }
     }
 }
