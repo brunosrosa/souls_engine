@@ -2409,13 +2409,13 @@
           <span>💾 Modelos Locais Instalados</span>
           <span class="tab-count-badge" id="badge-subtab-installed-count">13</span>
         </button>
-        <button class="subtab-btn" id="btn-subtab-arena" onclick="switchLocalSubtab('arena')">
-          <span>🏟️ Local Silicon Arena</span>
-          <span class="tab-count-badge" id="badge-subtab-arena-benchmarks" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); display: none;">0</span>
-        </button>
         <button class="subtab-btn" id="btn-subtab-hub" onclick="switchLocalSubtab('hub')">
           <span>✨ Model Hub & Downloads</span>
           <span class="tab-count-badge" id="badge-active-downloads-count" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); display: none;">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-subtab-arena" onclick="switchLocalSubtab('arena')">
+          <span>🏟️ Local Silicon Arena</span>
+          <span class="tab-count-badge" id="badge-subtab-arena-benchmarks" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); display: none;">0</span>
         </button>
         <button class="subtab-btn" id="btn-subtab-switchboard" onclick="switchLocalSubtab('switchboard')">
           <span>⚡ Switchboard MCP (<1.7ms)</span>
@@ -2468,21 +2468,20 @@
             <table class="arena-table">
               <thead>
                 <tr style="cursor: pointer; user-select: none;">
-                  <th class="text-center" style="width: 90px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier ↕</th>
-                  <th style="min-width: 240px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
-                  <th class="text-center" style="width: 140px;" onclick="sortLocalModels('target')" title="Clique para ordenar por Silício">Silício Alvo ↕</th>
+                  <th class="text-center" style="width: 105px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier ↕</th>
+                  <th class="text-center" style="width: 130px;">Ações</th>
+                  <th style="min-width: 250px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
                   <th class="text-center" style="width: 140px;" onclick="sortLocalModels('size')" title="Clique para ordenar por Tamanho">Tamanho / Quant ↕</th>
                   <th class="text-center" style="width: 120px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM">VRAM Estimada ↕</th>
                   <th class="text-center" style="width: 110px;" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
                   <th style="min-width: 160px;">Tags Especializadas</th>
-                  <th class="text-center" style="width: 140px;">Status Operacional</th>
-                  <th class="text-center" style="width: 130px;">Ações</th>
+                  <th class="text-center" style="min-width: 175px;">Status & Silício</th>
                 </tr>
               </thead>
               <tbody id="local-arena-tbody">
                 <!-- Renderizado dinamicamente via JS -->
                 <tr>
-                  <td colspan="9" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
+                  <td colspan="8" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
                 </tr>
               </tbody>
             </table>
@@ -4518,39 +4517,51 @@
       let bg = 'rgba(139, 92, 246, 0.18)';
       let color = '#c084fc';
       let border = 'rgba(168, 85, 247, 0.5)';
+      let subtitle = 'Master dGPU';
       
       if (lower.includes('tier 0.5') || lower.includes('tier 05')) {
         // Tier 0.5: Epistemic & Intent Probing (Emerald / Mint)
         bg = 'rgba(16, 185, 129, 0.16)';
         color = '#34d399';
         border = 'rgba(16, 185, 129, 0.45)';
+        subtitle = 'Epistemic Probing';
       } else if (lower.includes('tier 0')) {
         // Tier 0: Fast Triage / Bootstrap SLM (Sky Cyan)
         bg = 'rgba(6, 182, 212, 0.16)';
         color = '#38bdf8';
         border = 'rgba(6, 182, 212, 0.45)';
+        subtitle = 'Fast Triage';
       } else if (lower.includes('tier 1')) {
         // Tier 1: Master dGPU Coder (Violet / Purple)
         bg = 'rgba(139, 92, 246, 0.18)';
         color = '#c084fc';
         border = 'rgba(168, 85, 247, 0.5)';
+        subtitle = 'Master Coder';
       } else if (lower.includes('tier 2')) {
         // Tier 2: MoE Offload CPU (Amber / Gold)
         bg = 'rgba(245, 158, 11, 0.16)';
         color = '#fbbf24';
         border = 'rgba(245, 158, 11, 0.45)';
+        subtitle = 'MoE Reasoning';
       } else if (lower.includes('tier 3')) {
         // Tier 3: Vision VLM (Rose / Coral)
         bg = 'rgba(244, 63, 94, 0.16)';
         color = '#fb7185';
         border = 'rgba(244, 63, 94, 0.45)';
+        subtitle = 'Vision / VLM';
       } else if (lower.includes('tier 4')) {
         // Tier 4: Speculative Draft (Electric Blue)
         bg = 'rgba(59, 130, 246, 0.16)';
         color = '#60a5fa';
         border = 'rgba(59, 130, 246, 0.45)';
+        subtitle = 'Speculative Draft';
       }
-      return `<span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); padding: 3px 8px; border-radius: 9999px;">${t}</span>`;
+      return `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+          <span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); padding: 2px 7px; border-radius: 9999px;">${t}</span>
+          <span style="font-size: 0.62rem; color: ${color}; opacity: 0.9; white-space: nowrap; font-weight: 600; letter-spacing: 0.02em;">${subtitle}</span>
+        </div>
+      `;
     }
 
     function copyMcpConfigSnippet() {
@@ -4650,7 +4661,7 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
         return;
       }
 
@@ -4659,26 +4670,16 @@
           (m.tags || []).map(t => `<span class="badge" style="background: rgba(255,255,255,0.07); color: #cbd5e1; font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; line-height: 1.2; border: 1px solid rgba(255,255,255,0.08); margin: 0;">${t}</span>`).join('') +
           `</div>`;
         const isGpu = m.target && m.target.includes('dGPU');
-        const statusBadge = isGpu ? '<span class="badge badge-champion">Pronto na dGPU</span>' : '<span class="badge badge-value">Pronto na CPU</span>';
+        const statusBadge = isGpu 
+          ? '<span class="badge badge-champion" style="font-size: 0.70rem; padding: 3px 8px; white-space: nowrap;">🎮 dGPU (RTX 2060m)</span>' 
+          : '<span class="badge badge-value" style="font-size: 0.70rem; padding: 3px 8px; white-space: nowrap;">⚡ Host CPU (AVX2)</span>';
         const sizeMb = m.size_mb ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(2) + ' GB' : m.size_mb.toFixed(0) + ' MB') : '--';
         const modelId = m.model || m.name;
 
         return `
           <tr>
-            <td class="text-center">${renderTierBadge(m.tier)}</td>
-            <td>
-              ${formatModelDisplayName(modelId, true)}
-              <div style="font-size: 0.68rem; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
-                ${m.file_path || ''}
-              </div>
-            </td>
-            <td class="text-center"><span class="mono" style="color: ${isGpu ? 'var(--cyan)' : '#e2e8f0'};">${m.target || 'CPU Host'}</span></td>
-            <td class="mono text-center" style="white-space: nowrap;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
-            <td class="mono text-center" style="color: var(--cyan);">${m.vram || '0 MB'}</td>
-            <td class="mono text-center">${(m.context_window || 8192).toLocaleString()}</td>
-            <td>${tagsHtml}</td>
-            <td class="text-center">${statusBadge}</td>
-            <td class="text-center">
+            <td class="text-center" style="vertical-align: middle;">${renderTierBadge(m.tier)}</td>
+            <td class="text-center" style="vertical-align: middle;">
               <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
                 <button class="btn-apply-model local-btn" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
                   <span>⚡</span> Usar
@@ -4688,6 +4689,17 @@
                 </button>
               </div>
             </td>
+            <td>
+              ${formatModelDisplayName(modelId, true)}
+              <div style="font-size: 0.68rem; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
+                ${m.file_path || ''}
+              </div>
+            </td>
+            <td class="mono text-center" style="white-space: nowrap;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
+            <td class="mono text-center" style="color: var(--cyan);">${m.vram || '0 MB'}</td>
+            <td class="mono text-center">${(m.context_window || 8192).toLocaleString()}</td>
+            <td>${tagsHtml}</td>
+            <td class="text-center" style="vertical-align: middle;">${statusBadge}</td>
           </tr>
         `;
       }).join('');
