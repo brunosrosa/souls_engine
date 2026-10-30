@@ -42,23 +42,69 @@ pub struct LogitProbingOutput {
 }
 
 /// Simulated or FFI batch structure matching llama.cpp batch layout.
+#[derive(Debug, Clone)]
 pub struct LlamaBatchLayout {
     pub n_tokens: usize,
+    pub padded_boundary: usize,
     pub logits: Vec<bool>,
+    pub tokens: Option<Vec<u32>>,
+    pub is_aligned_64: bool,
 }
 
 impl LlamaBatchLayout {
     pub fn new(n_tokens: usize) -> Self {
         Self {
             n_tokens,
+            padded_boundary: n_tokens,
             logits: vec![false; n_tokens],
+            tokens: None,
+            is_aligned_64: n_tokens > 0 && (n_tokens % 64 == 0),
         }
     }
 
     /// Explicitly activates logits for a token index (ADR requirement: final token).
     pub fn set_logits(&mut self, token_idx: usize, enabled: bool) {
-        if token_idx < self.n_tokens {
+        if token_idx < self.logits.len() {
             self.logits[token_idx] = enabled;
+        }
+    }
+
+    /// Creates an aligned batch layout for forward-pass prefill, padded to a multiple of 64 tokens.
+    ///
+    /// Logits flag is enabled exclusively on the final logical prompt token (`n_tokens - 1`).
+    pub fn aligned_prefill(n_tokens: usize, padder: &crate::padder::BlockBoundaryPadder) -> Self {
+        let padded_boundary = padder.calculate_padded_len(n_tokens);
+        let mut logits = vec![false; padded_boundary];
+        if n_tokens > 0 && n_tokens <= padded_boundary {
+            logits[n_tokens - 1] = true;
+        }
+        Self {
+            n_tokens,
+            padded_boundary,
+            logits,
+            tokens: None,
+            is_aligned_64: padder.is_aligned(padded_boundary),
+        }
+    }
+
+    /// Creates a batch from raw token IDs, padding to a multiple of 64 tokens with `pad_token_id`.
+    ///
+    /// Logits flag is enabled on the final logical token before padding.
+    pub fn from_tokens(tokens: Vec<u32>, pad_token_id: u32) -> Self {
+        let n_tokens = tokens.len();
+        let padder = crate::padder::BlockBoundaryPadder::new(64, pad_token_id);
+        let mut padded_tokens = tokens;
+        let padded_boundary = padder.pad_tokens(&mut padded_tokens);
+        let mut logits = vec![false; padded_boundary];
+        if n_tokens > 0 && n_tokens <= padded_boundary {
+            logits[n_tokens - 1] = true;
+        }
+        Self {
+            n_tokens,
+            padded_boundary,
+            logits,
+            tokens: Some(padded_tokens),
+            is_aligned_64: padder.is_aligned(padded_boundary),
         }
     }
 }
@@ -155,12 +201,16 @@ impl LlamaLogitProber {
     pub fn probe_logits(&self, prompt: &str) -> Result<LogitProbingOutput, InferenceError> {
         let start = Instant::now();
 
-        // 1. Prepare batch layout with forward pass prefill
+        // 1. Prepare batch layout with forward pass prefill aligned to 64-token boundary
         let estimated_tokens = (prompt.len() / 4).max(1);
-        let mut batch = LlamaBatchLayout::new(estimated_tokens);
-
-        // Explicitly activate batch logits flag exclusively on the last token
-        batch.set_logits(batch.n_tokens - 1, true);
+        let padder = crate::padder::BlockBoundaryPadder::for_model(
+            self.model_path
+                .as_deref()
+                .and_then(|p| p.file_name())
+                .and_then(|f| f.to_str())
+                .unwrap_or("phi-4-mini"),
+        );
+        let batch = LlamaBatchLayout::aligned_prefill(estimated_tokens, &padder);
 
         // 2. Extract logits via native binding or prompt-derived features
         let (logits, source) = if self.is_model_present {
@@ -401,5 +451,34 @@ mod tests {
         batch.set_logits(batch.n_tokens - 1, true);
         assert!(batch.logits[7]);
         assert!(!batch.logits[6]);
+    }
+
+    #[test]
+    fn test_batch_layout_aligned_prefill_and_from_tokens() {
+        let padder = crate::padder::BlockBoundaryPadder::for_model("qwen2.5");
+        let batch = LlamaBatchLayout::aligned_prefill(10, &padder);
+        assert_eq!(batch.n_tokens, 10);
+        assert_eq!(batch.padded_boundary, 64);
+        assert!(batch.is_aligned_64);
+        // Logits enabled exclusively on final logical prompt token (index 9)
+        assert!(batch.logits[9]);
+        assert!(!batch.logits[8]);
+        assert!(!batch.logits[10]);
+        assert!(!batch.logits[63]);
+
+        // from_tokens
+        let tokens = vec![101, 102, 103];
+        let token_batch = LlamaBatchLayout::from_tokens(tokens, 151643);
+        assert_eq!(token_batch.n_tokens, 3);
+        assert_eq!(token_batch.padded_boundary, 64);
+        assert!(token_batch.is_aligned_64);
+        assert!(token_batch.tokens.is_some());
+        let inner_tokens = token_batch.tokens.as_ref().unwrap();
+        assert_eq!(inner_tokens.len(), 64);
+        assert_eq!(inner_tokens[0..3], [101, 102, 103]);
+        assert_eq!(inner_tokens[3], 151643);
+        assert_eq!(inner_tokens[63], 151643);
+        assert!(token_batch.logits[2]); // final logical token
+        assert!(!token_batch.logits[3]);
     }
 }

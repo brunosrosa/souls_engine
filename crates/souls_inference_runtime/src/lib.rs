@@ -17,6 +17,7 @@ pub mod inference;
 pub mod llamacpp;
 pub mod nvml;
 pub mod onnx;
+pub mod padder;
 
 // Re-export canonical types and functions
 pub use cohomology::{
@@ -49,6 +50,11 @@ pub use nvml::{
 pub use onnx::{
     ClassificationLabel, ClassificationOutput, OrtClassifierEngine, OrtSessionBuilder,
     OrtSessionConfig, MAX_TRIAGE_CHARS,
+};
+pub use padder::{
+    apply_block_boundary_padding, resolve_model_pad_token, resolve_model_pad_token_from_path,
+    BlockBoundaryPadder, IngestedBuffer, PromptPackagingInfo, BLOCK_BOUNDARY_ALIGNMENT,
+    MMAP_THRESHOLD_BYTES,
 };
 pub use souls_protocol::{
     DynamicReasoningRecommendation, ProviderReasoningPayloads, ReasoningEffortLevel,
@@ -184,6 +190,18 @@ impl InferenceRuntime {
         force_cpu: bool,
     ) -> Result<HardwareProfileMetrics, InferenceError> {
         self.tier1.profile_model_hardware(model_path, n_prompt, n_gen, force_cpu)
+    }
+
+    /// Returns a block boundary padder configured dynamically for a specific model or architecture family.
+    pub fn block_padder(&self, model_id_or_arch: &str) -> BlockBoundaryPadder {
+        BlockBoundaryPadder::for_model(model_id_or_arch)
+    }
+
+    /// Calculates packaging metrics for an inference prompt with 64-token block boundary alignment.
+    pub fn package_prompt(&self, prompt: &str, model_id_or_arch: &str) -> PromptPackagingInfo {
+        let padder = self.block_padder(model_id_or_arch);
+        let raw_tokens = (prompt.len() / 4).max(1);
+        PromptPackagingInfo::from_raw_tokens(raw_tokens, &padder)
     }
 }
 
@@ -375,5 +393,27 @@ mod tests {
         assert_eq!(esc_xhigh.reasoning_effort, ReasoningEffortLevel::Ultra);
         assert_eq!(esc_xhigh.thinking_budget_tokens, 32768);
         assert!(esc_xhigh.is_escalated_retry);
+    }
+
+    #[test]
+    fn test_unified_inference_runtime_prompt_packaging_and_padder() {
+        let runtime = InferenceRuntime::new();
+
+        // Qwen model family
+        let qwen_padder = runtime.block_padder("qwen2.5-coder-7b-instruct");
+        assert_eq!(qwen_padder.pad_token_id, 151643);
+        assert_eq!(qwen_padder.alignment, 64);
+
+        let qwen_pkg = runtime.package_prompt("fn test() { let x = 1; }", "qwen2.5");
+        assert_eq!(qwen_pkg.pad_token_id, 151643);
+        assert_eq!(qwen_pkg.padded_token_boundary % 64, 0);
+        assert!(qwen_pkg.is_64_aligned);
+        assert!(qwen_pkg.prefix_cache_friendly);
+
+        // Llama / DeepSeek family
+        let llama_pkg = runtime.package_prompt("Explain monads in category theory", "llama-3.2-3b");
+        assert_eq!(llama_pkg.pad_token_id, 128001);
+        assert_eq!(llama_pkg.padded_token_boundary % 64, 0);
+        assert!(llama_pkg.is_64_aligned);
     }
 }

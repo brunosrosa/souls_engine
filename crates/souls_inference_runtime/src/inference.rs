@@ -106,6 +106,8 @@ pub struct GenOutput {
     pub text: String,
     pub json_value: Option<Value>,
     pub prompt_tokens: u32,
+    #[serde(default)]
+    pub padded_prompt_tokens: u32,
     pub completion_tokens: u32,
     pub total_latency_ms: u64,
     pub vram_used_mb: u32,
@@ -238,6 +240,21 @@ impl Tier1GenerativeEngine {
         &self.kv_config
     }
 
+    /// Returns the active `BlockBoundaryPadder` for the model associated with this engine.
+    pub fn padder(&self) -> crate::padder::BlockBoundaryPadder {
+        if let Some(ref path) = self.model_path {
+            crate::padder::BlockBoundaryPadder::for_path(path)
+        } else {
+            crate::padder::BlockBoundaryPadder::default()
+        }
+    }
+
+    /// Calculates packaging metrics for an inference prompt with 64-token alignment.
+    pub fn package_prompt(&self, prompt: &str) -> crate::padder::PromptPackagingInfo {
+        let raw_token_estimate = (prompt.len() / 4).max(1);
+        crate::padder::PromptPackagingInfo::from_raw_tokens(raw_token_estimate, &self.padder())
+    }
+
     /// Resolves canonical Tier 1 model locations (e.g. Qwen2.5-Coder / Qwen3.5-4B / Hermes-3).
     fn resolve_tier1_model_path() -> Option<PathBuf> {
         let candidates = [
@@ -312,8 +329,10 @@ impl Tier1GenerativeEngine {
             });
         }
 
-        // 2. Compute approximate token metrics
+        // 2. Compute approximate token metrics & 64-token block boundary padding
+        let padder = self.padder();
         let prompt_tokens = (prompt.len() / 4).max(1) as u32;
+        let padded_prompt_tokens = padder.calculate_padded_len(prompt_tokens as usize) as u32;
 
         // 3. Generate raw response (via physical llama.cpp upstream or verified execution mock)
         let raw_text = self.execute_upstream_pass(prompt, params);
@@ -354,14 +373,17 @@ impl Tier1GenerativeEngine {
             text: raw_text,
             json_value: json_val,
             prompt_tokens,
+            padded_prompt_tokens,
             completion_tokens,
             total_latency_ms: latency_ms,
             vram_used_mb: if self.gpu_layers > 0 { 2_100 + 900 } else { 0 },
             kv_cache_mode: format!(
-                "Asymmetric(K={}, V={}, FlashAttn={})",
+                "Asymmetric(K={}, V={}, FlashAttn={}, PadToken={}, 64Aligned={})",
                 self.kv_config.type_k.as_str(),
                 self.kv_config.type_v.as_str(),
-                self.kv_config.flash_attention
+                self.kv_config.flash_attention,
+                padder.pad_token_id,
+                padder.is_aligned(padded_prompt_tokens as usize)
             ),
         })
     }
@@ -500,7 +522,9 @@ impl Tier1GenerativeEngine {
         }
 
         let start = std::time::Instant::now();
+        let padder = crate::padder::BlockBoundaryPadder::for_path(model_path);
         let prompt_tokens = (prompt.len() / 4).max(1) as u32;
+        let padded_prompt_tokens = padder.calculate_padded_len(prompt_tokens as usize) as u32;
         let raw_text = self.execute_model_pass(model_path, prompt, params);
         let completion_tokens = (raw_text.len() / 4).max(1) as u32;
 
@@ -527,14 +551,17 @@ impl Tier1GenerativeEngine {
             text: raw_text,
             json_value: json_val,
             prompt_tokens,
+            padded_prompt_tokens,
             completion_tokens,
             total_latency_ms: latency_ms,
             vram_used_mb: if self.gpu_layers > 0 { 2_100 + 900 } else { 0 },
             kv_cache_mode: format!(
-                "Asymmetric(K={}, V={}, FlashAttn={})",
+                "Asymmetric(K={}, V={}, FlashAttn={}, PadToken={}, 64Aligned={})",
                 self.kv_config.type_k.as_str(),
                 self.kv_config.type_v.as_str(),
-                self.kv_config.flash_attention
+                self.kv_config.flash_attention,
+                padder.pad_token_id,
+                padder.is_aligned(padded_prompt_tokens as usize)
             ),
         })
     }
