@@ -68,12 +68,23 @@ pub struct ChatChoice {
     pub finish_reason: String,
 }
 
+/// Prompt token details breakdown (OpenAI-compatible prefix cache telemetry).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PromptTokensDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub padded_tokens: Option<u32>,
+}
+
 /// Usage statistics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UsageInfo {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
     pub total_tokens: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_tokens_details: Option<PromptTokensDetails>,
 }
 
 /// Non-streaming Chat Completion response.
@@ -147,7 +158,15 @@ pub async fn chat_completions_handler(
         .collect::<Vec<_>>()
         .join("\n");
 
-    let prompt_tokens = (prompt.len() / 4).max(1) as u32;
+    let packaging = state.runtime.package_prompt(&prompt, &model_name);
+    let prompt_tokens = packaging.raw_token_estimate as u32;
+    let padded_tokens = packaging.padded_token_boundary as u32;
+
+    info!(
+        "Chat request packaging: model='{}', prompt_tokens={}, padded_boundary={} (PadTokenId={}, 64Aligned={})",
+        model_name, prompt_tokens, padded_tokens, packaging.pad_token_id, packaging.is_64_aligned
+    );
+
     let completion_id = format!("chatcmpl-{}", souls_core::fs::validate_refs_path(&std::path::PathBuf::from("Z:/souls_engine")).map(|_| uuid_like_id()).unwrap_or_else(|_| uuid_like_id()));
     let created_ts = current_timestamp_sec();
 
@@ -189,6 +208,7 @@ pub async fn chat_completions_handler(
             created_ts,
             params,
             prompt_tokens,
+            padded_tokens,
             task_category,
         )
         .await
@@ -201,6 +221,7 @@ pub async fn chat_completions_handler(
             created_ts,
             params,
             prompt_tokens,
+            padded_tokens,
             task_category,
         )
         .await
@@ -217,6 +238,7 @@ async fn handle_sync_completion(
     created_ts: i64,
     params: GenParams,
     prompt_tokens: u32,
+    padded_tokens: u32,
     task_category: &'static str,
 ) -> Response {
     let start = Instant::now();
@@ -298,6 +320,14 @@ async fn handle_sync_completion(
             prompt_tokens,
             completion_tokens,
             total_tokens: prompt_tokens + completion_tokens,
+            prompt_tokens_details: Some(PromptTokensDetails {
+                cached_tokens: if padded_tokens >= prompt_tokens {
+                    Some(padded_tokens - prompt_tokens)
+                } else {
+                    None
+                },
+                padded_tokens: Some(padded_tokens),
+            }),
         },
     };
 
@@ -314,6 +344,7 @@ async fn handle_streaming_completion(
     created_ts: i64,
     params: GenParams,
     prompt_tokens: u32,
+    _padded_tokens: u32,
     task_category: &'static str,
 ) -> Response {
     let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(64);
