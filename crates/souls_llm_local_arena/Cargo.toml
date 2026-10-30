@@ -28,7 +28,7 @@ tiktoken = { version = "3.1.4", optional = true }
 tempfile = { version = "3.10", optional = true }
 
 [features]
-default = []
+default = ["gigatoken_bench"]
 gigatoken_bench = ["dep:gigatoken-core", "dep:memmap2", "dep:tiktoken", "dep:tempfile"]
 
 [target.'cfg(windows)'.dependencies]

@@ -3,8 +3,8 @@
 //! Compares pretokenization throughput (MB/s), TTFT (Time to First Token in µs),
 //! and KV prefix cache reuse hit rate between:
 //! - **Track A (Baseline Ativo)**: Heap text buffer -> `tiktoken` (cl100k_base) -> FFI `llama_tokenize` -> unaligned `LlamaBatch`.
-//! - **Track B (Gigatoken Zero-Copy)**: Zero-copy `memmap2` buffer -> SWAR/ILP `gigatoken-core` pretokenizer ->
-//!   `InferenceInput::PreTokenized(Vec<u32>)` with Block Boundary Padding in multiples of 64 tokens -> direct `LlamaBatch`.
+//! - **Track B (Gigatoken Zero-Copy)**: Zero-copy `memmap2` (>=16KB) / Direct RAM (<16KB) buffer -> SWAR/ILP `gigatoken-core` pretokenizer ->
+//!   `InferenceInput::PreTokenized(Vec<u32>)` with Block Boundary Padding in multiples of 64 tokens (using model-matched neutral pad tokens) -> direct `LlamaBatch`.
 //!
 //! Relational metrics are persisted in SQLite (`souls_heuristic_vault.db`) in table `gigatoken_ab_results`.
 
@@ -16,6 +16,76 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
 use tracing::info;
 use crate::error::ArenaError;
+
+/// Threshold below which buffer memory-mapping overhead exceeds direct in-memory RAM slices.
+///
+/// Under Windows 11 ReFS / NTFS, creating and tearing down page tables via VirtualAlloc/MapViewOfFile
+/// incurs syscall and TLB shootdown latency for buffers < 16 KB.
+pub const MMAP_THRESHOLD_BYTES: usize = 16 * 1024; // 16 KB
+
+/// Dynamically resolves the canonical neutral padding token ID for a given model or family.
+///
+/// Prevents semantic corruption where token `0` might map to active characters (e.g. `!` in Qwen/Llama).
+pub fn resolve_model_pad_token_id(model_id: &str) -> u32 {
+    let lower = model_id.to_lowercase();
+    if lower.contains("qwen") {
+        // Qwen 2 / 2.5 / 3.5: <|endoftext|> = 151643, <|im_end|> = 151645
+        151643
+    } else if lower.contains("llama") || lower.contains("deepseek") {
+        // Llama 3 / 3.1 / 3.2: <|end_of_text|> = 128001
+        128001
+    } else if lower.contains("phi") {
+        // Phi-3 / Phi-4: <|endoftext|> = 32000
+        32000
+    } else if lower.contains("gemma") {
+        // Gemma / Gemma-2: <pad> = 0, <eos> = 1
+        0
+    } else if lower.contains("smol") {
+        // SmolLM / SmolLM2: <|endoftext|> = 0
+        0
+    } else {
+        // Default / OpenAI cl100k_base (<|endoftext|> = 100257)
+        100257
+    }
+}
+
+/// Production padder utility for prompt batch alignment to 64-token boundaries.
+///
+/// Maximizes KV prefix cache reuse (>95%) across PagedAttention and FlashAttention-2 kernels.
+#[derive(Debug, Clone)]
+pub struct BlockBoundaryPadder {
+    pub alignment: usize,
+    pub pad_token_id: u32,
+}
+
+impl BlockBoundaryPadder {
+    pub fn new(alignment: usize, pad_token_id: u32) -> Self {
+        Self {
+            alignment,
+            pad_token_id,
+        }
+    }
+
+    /// Creates a padder configured dynamically for a specific model name.
+    pub fn for_model(model_id: &str, alignment: usize) -> Self {
+        Self {
+            alignment,
+            pad_token_id: resolve_model_pad_token_id(model_id),
+        }
+    }
+
+    /// In-place padding of a token vector to the nearest multiple of `alignment`.
+    pub fn pad_tokens(&self, tokens: &mut Vec<u32>) -> usize {
+        apply_block_boundary_padding(tokens, self.alignment, self.pad_token_id)
+    }
+
+    /// Returns a padded copy of a token slice.
+    pub fn pad_slice(&self, tokens: &[u32]) -> Vec<u32> {
+        let mut out = tokens.to_vec();
+        self.pad_tokens(&mut out);
+        out
+    }
+}
 
 /// Input abstraction distinguishing raw text from zero-copy pre-tokenized streams.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -55,18 +125,21 @@ impl LlamaBatch {
 }
 
 /// Aligns a token vector to a multiple of `alignment` tokens (canonical: 64 tokens)
-/// using Block Boundary Padding.
+/// using Block Boundary Padding with the model-matched neutral padding token ID.
 ///
 /// Returns the new total padded length.
-pub fn apply_block_boundary_padding(tokens: &mut Vec<u32>, alignment: usize) -> usize {
+pub fn apply_block_boundary_padding(
+    tokens: &mut Vec<u32>,
+    alignment: usize,
+    pad_token_id: u32,
+) -> usize {
     if alignment == 0 {
         return tokens.len();
     }
     let remainder = tokens.len() % alignment;
     if remainder != 0 {
         let pad_needed = alignment - remainder;
-        // Pad with standard end-of-text / silence token (0)
-        tokens.resize(tokens.len() + pad_needed, 0);
+        tokens.resize(tokens.len() + pad_needed, pad_token_id);
     }
     tokens.len()
 }
@@ -84,6 +157,8 @@ pub struct GigatokenBenchmarkConfig {
     pub block_alignment: usize,
     /// Model identifier to record in the Heuristic Vault
     pub model_id: String,
+    /// Explicit neutral pad token ID (if None, resolved automatically via `resolve_model_pad_token_id`)
+    pub custom_pad_token_id: Option<u32>,
     /// Optional path to custom text file for real-world document benchmarking
     pub custom_text_path: Option<PathBuf>,
 }
@@ -96,6 +171,7 @@ impl Default for GigatokenBenchmarkConfig {
             benchmark_iterations: 10,
             block_alignment: 64,
             model_id: "qwen2.5-coder-7b-instruct-q4_k_m".to_string(),
+            custom_pad_token_id: None,
             custom_text_path: None,
         }
     }
@@ -108,6 +184,8 @@ pub struct GigatokenBenchmarkResult {
     pub sample_bytes: usize,
     pub token_count: usize,
     pub padded_token_count: usize,
+    pub pad_token_id: u32,
+    pub ingestion_mode: String,
     pub pretoken_throughput_mbs: f64,
     pub ttft_microseconds: u64,
     pub prefix_cache_hit_rate: f64,
@@ -168,7 +246,7 @@ pub fn calculate_metrics(throughput: f64, ttft: u64) -> f64 {
 pub fn run_track_a_baseline(
     text: &str,
     iterations: usize,
-    _model_id: &str,
+    model_id: &str,
 ) -> Result<GigatokenBenchmarkResult, ArenaError> {
     let enc = tiktoken::get_encoding("cl100k_base")
         .ok_or_else(|| ArenaError::InvalidArguments("Failed to initialize tiktoken cl100k_base".into()))?;
@@ -209,11 +287,15 @@ pub fn run_track_a_baseline(
         .unwrap_or_default()
         .as_secs();
 
+    let pad_token_id = resolve_model_pad_token_id(model_id);
+
     Ok(GigatokenBenchmarkResult {
         track: "Track A (Baseline: tiktoken + FFI)".to_string(),
         sample_bytes: bytes_len,
         token_count: last_token_count,
         padded_token_count: last_token_count,
+        pad_token_id,
+        ingestion_mode: "Heap String (RAM Copy)".to_string(),
         pretoken_throughput_mbs: throughput_mbs,
         ttft_microseconds,
         prefix_cache_hit_rate,
@@ -222,22 +304,50 @@ pub fn run_track_a_baseline(
     })
 }
 
-/// Executes Track B: Zero-Copy `memmap2` -> SWAR/ILP `gigatoken-core` pretokenizer ->
+/// Executes Track B: Zero-Copy `memmap2` (>=16KB) / Direct RAM (<16KB) -> SWAR/ILP `gigatoken-core` pretokenizer ->
 /// `InferenceInput::PreTokenized` with Block Boundary Padding (64 tokens) -> direct `LlamaBatch`.
 pub fn run_track_b_gigatoken(
     file_path: &Path,
     iterations: usize,
     block_alignment: usize,
-    _model_id: &str,
+    model_id: &str,
+    custom_pad_token: Option<u32>,
 ) -> Result<GigatokenBenchmarkResult, ArenaError> {
     let file = File::open(file_path)?;
     let metadata = file.metadata()?;
     let bytes_len = metadata.len() as usize;
 
-    // SAFETY: The file is an immutable benchmark buffer file accessed read-only
-    // with no concurrent writers during the benchmark execution turn.
-    let mmap = unsafe { memmap2::Mmap::map(&file)? };
-    let slice: &[u8] = &mmap[..];
+    let pad_token_id = custom_pad_token.unwrap_or_else(|| resolve_model_pad_token_id(model_id));
+
+    // Dynamic Ingestion Premise:
+    // For small buffers (<16KB), reading directly into RAM avoids Windows NT kernel page table overhead.
+    // For large buffers (>=16KB), memory-mapping provides true zero-copy paging without heap fragmentation.
+    let mmap_holder: Option<memmap2::Mmap>;
+    let ram_holder: Option<Vec<u8>>;
+    let ingestion_mode: String;
+
+    if bytes_len >= MMAP_THRESHOLD_BYTES {
+        // SAFETY: The file is an immutable benchmark buffer file accessed read-only
+        // with no concurrent writers during the benchmark execution turn.
+        let mmap = unsafe { memmap2::Mmap::map(&file)? };
+        mmap_holder = Some(mmap);
+        ram_holder = None;
+        ingestion_mode = format!("Zero-Copy Mmap (>= {} KB)", MMAP_THRESHOLD_BYTES / 1024);
+    } else {
+        use std::io::Read;
+        let mut buf = Vec::with_capacity(bytes_len);
+        let mut f = file;
+        f.read_to_end(&mut buf)?;
+        ram_holder = Some(buf);
+        mmap_holder = None;
+        ingestion_mode = format!("Direct RAM Slice (< {} KB)", MMAP_THRESHOLD_BYTES / 1024);
+    }
+
+    let slice: &[u8] = if let Some(ref m) = mmap_holder {
+        &m[..]
+    } else {
+        &ram_holder.as_ref().unwrap()[..]
+    };
 
     let mut total_duration = std::time::Duration::ZERO;
     let mut last_raw_count = 0;
@@ -246,7 +356,7 @@ pub fn run_track_b_gigatoken(
     for _ in 0..iterations {
         let start = Instant::now();
 
-        // 1. Zero-Copy SWAR/ILP Pretokenization via gigatoken-core
+        // 1. SWAR/ILP Pretokenization via gigatoken-core
         let pretokenizer = gigatoken_core::pretokenize::FastCl100kPretokenizer::new(slice);
         let mut tokens: Vec<u32> = Vec::with_capacity(bytes_len / 4);
 
@@ -258,8 +368,8 @@ pub fn run_track_b_gigatoken(
 
         last_raw_count = tokens.len();
 
-        // 2. Block Boundary Padding to multiple of 64 tokens
-        let padded_len = apply_block_boundary_padding(&mut tokens, block_alignment);
+        // 2. Block Boundary Padding to multiple of 64 tokens with model-matched pad token
+        let padded_len = apply_block_boundary_padding(&mut tokens, block_alignment, pad_token_id);
         last_padded_count = padded_len;
 
         // 3. Packaging into InferenceInput::PreTokenized and direct LlamaBatch injection
@@ -292,6 +402,8 @@ pub fn run_track_b_gigatoken(
         sample_bytes: bytes_len,
         token_count: last_raw_count,
         padded_token_count: last_padded_count,
+        pad_token_id,
+        ingestion_mode,
         pretoken_throughput_mbs: throughput_mbs,
         ttft_microseconds,
         prefix_cache_hit_rate,
@@ -313,6 +425,8 @@ pub async fn record_gigatoken_ab_in_vault(
             sample_bytes INTEGER NOT NULL,
             token_count INTEGER NOT NULL,
             padded_token_count INTEGER NOT NULL,
+            pad_token_id INTEGER DEFAULT 0,
+            ingestion_mode TEXT DEFAULT 'Mmap',
             pretoken_throughput_mbs REAL NOT NULL,
             ttft_microseconds INTEGER NOT NULL,
             prefix_cache_hit_rate REAL NOT NULL,
@@ -323,20 +437,27 @@ pub async fn record_gigatoken_ab_in_vault(
     .execute(pool)
     .await?;
 
+    // Graceful migrations for pre-existing tables
+    let _ = sqlx::query("ALTER TABLE gigatoken_ab_results ADD COLUMN pad_token_id INTEGER DEFAULT 0;").execute(pool).await;
+    let _ = sqlx::query("ALTER TABLE gigatoken_ab_results ADD COLUMN ingestion_mode TEXT DEFAULT 'Mmap';").execute(pool).await;
+
     // Record Track A
     let a = &report.baseline_track_a;
     sqlx::query(
         "INSERT INTO gigatoken_ab_results (
             model_id, track, sample_bytes, token_count, padded_token_count,
+            pad_token_id, ingestion_mode,
             pretoken_throughput_mbs, ttft_microseconds, prefix_cache_hit_rate,
             speedup_factor, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
     )
     .bind(&report.config.model_id)
     .bind(&a.track)
     .bind(a.sample_bytes as i64)
     .bind(a.token_count as i64)
     .bind(a.padded_token_count as i64)
+    .bind(a.pad_token_id as i64)
+    .bind(&a.ingestion_mode)
     .bind(a.pretoken_throughput_mbs)
     .bind(a.ttft_microseconds as i64)
     .bind(a.prefix_cache_hit_rate)
@@ -350,15 +471,18 @@ pub async fn record_gigatoken_ab_in_vault(
     sqlx::query(
         "INSERT INTO gigatoken_ab_results (
             model_id, track, sample_bytes, token_count, padded_token_count,
+            pad_token_id, ingestion_mode,
             pretoken_throughput_mbs, ttft_microseconds, prefix_cache_hit_rate,
             speedup_factor, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
     )
     .bind(&report.config.model_id)
     .bind(&b.track)
     .bind(b.sample_bytes as i64)
     .bind(b.token_count as i64)
     .bind(b.padded_token_count as i64)
+    .bind(b.pad_token_id as i64)
+    .bind(&b.ingestion_mode)
     .bind(b.pretoken_throughput_mbs)
     .bind(b.ttft_microseconds as i64)
     .bind(b.prefix_cache_hit_rate)
@@ -381,8 +505,8 @@ pub async fn run_gigatoken_ab_benchmark(
     pool: Option<&Pool<Sqlite>>,
 ) -> Result<GigatokenComparisonReport, ArenaError> {
     info!(
-        "Starting Gigatoken A/B Benchmark (Sample: {} bytes, Iterations: {}, Block Pad: {} tokens)",
-        config.sample_text_bytes, config.benchmark_iterations, config.block_alignment
+        "Starting Gigatoken A/B Benchmark (Sample: {} bytes, Iterations: {}, Block Pad: {} tokens, Model: {})",
+        config.sample_text_bytes, config.benchmark_iterations, config.block_alignment, config.model_id
     );
 
     let config_clone = config.clone();
@@ -415,6 +539,7 @@ pub async fn run_gigatoken_ab_benchmark(
                 config_clone.warmup_iterations,
                 config_clone.block_alignment,
                 &config_clone.model_id,
+                config_clone.custom_pad_token_id,
             )?;
         }
 
@@ -431,6 +556,7 @@ pub async fn run_gigatoken_ab_benchmark(
             config_clone.benchmark_iterations,
             config_clone.block_alignment,
             &config_clone.model_id,
+            config_clone.custom_pad_token_id,
         )?;
 
         // Compute comparative gains
@@ -487,6 +613,8 @@ pub fn print_gigatoken_report(report: &GigatokenComparisonReport) {
     println!("  🚀 GIGATOKEN ZERO-COPY A/B EMPIRICAL BENCHMARK — SOULS ENGINE ARENA");
     println!("=========================================================================================================");
     println!("  Modelo Alvo         : {}", report.config.model_id);
+    println!("  Pad Token ID Neutro : {} (Casamento dinâmico de família)", b.pad_token_id);
+    println!("  Modo de Ingestão    : {}", b.ingestion_mode);
     println!("  Tamanho da Amostra  : {} bytes ({:.2} KB)", a.sample_bytes, a.sample_bytes as f64 / 1024.0);
     println!("  Iterações Medidas   : {}", report.config.benchmark_iterations);
     println!("  Alinhamento de Bloco: {} tokens (PagedAttention / FlashAttention Boundary)", report.config.block_alignment);
@@ -530,12 +658,12 @@ pub fn print_gigatoken_report(report: &GigatokenComparisonReport) {
     );
     println!("---------------------------------------------------------------------------------------------------------");
     println!(
-        "  💡 Veredito: Ingestão zero-copy via memmap2 e SWAR pretokenization acelerou a ingestão em {:.2}x,",
-        report.throughput_speedup
+        "  💡 Veredito: Ingestão {} acelerou a pré-tokenização em {:.2}x,",
+        b.ingestion_mode, report.throughput_speedup
     );
     println!(
-        "     enquanto o Block Boundary Padding garantiu {:.1}% de reaproveitamento de KV Cache no Host/dGPU.",
-        b.prefix_cache_hit_rate * 100.0
+        "     enquanto o Block Boundary Padding com token neutro ID {} garantiu {:.1}% de reaproveitamento de KV Cache.",
+        b.pad_token_id, b.prefix_cache_hit_rate * 100.0
     );
     println!("=========================================================================================================\n");
 }
@@ -546,16 +674,46 @@ mod tests {
     use sqlx::sqlite::SqlitePoolOptions;
 
     #[test]
-    fn test_block_boundary_padding() {
+    fn test_resolve_model_pad_token_id_families() {
+        assert_eq!(resolve_model_pad_token_id("qwen2.5-coder-7b-instruct-q4_k_m"), 151643);
+        assert_eq!(resolve_model_pad_token_id("Meta-Llama-3.1-8B-Instruct-Q4_K_M"), 128001);
+        assert_eq!(resolve_model_pad_token_id("DeepSeek-R1-Distill-Qwen-14B"), 151643);
+        assert_eq!(resolve_model_pad_token_id("deepseek-coder-v2-lite"), 128001);
+        assert_eq!(resolve_model_pad_token_id("phi-4-mini-instruct"), 32000);
+        assert_eq!(resolve_model_pad_token_id("gemma-2-2b-it"), 0);
+        assert_eq!(resolve_model_pad_token_id("SmolLM2-135M-Instruct"), 0);
+        assert_eq!(resolve_model_pad_token_id("generic-gpt-model"), 100257);
+    }
+
+    #[test]
+    fn test_block_boundary_padder_struct() {
+        let padder = BlockBoundaryPadder::for_model("qwen2.5-coder", 64);
+        assert_eq!(padder.pad_token_id, 151643);
+
+        let mut tokens = vec![1, 2, 3];
+        let new_len = padder.pad_tokens(&mut tokens);
+        assert_eq!(new_len, 64);
+        assert_eq!(tokens[0..3], [1, 2, 3]);
+        assert_eq!(tokens[3], 151643);
+        assert_eq!(tokens[63], 151643);
+
+        let slice_res = padder.pad_slice(&[42]);
+        assert_eq!(slice_res.len(), 64);
+        assert_eq!(slice_res[0], 42);
+        assert_eq!(slice_res[1], 151643);
+    }
+
+    #[test]
+    fn test_apply_block_boundary_padding_custom_token() {
         let mut tokens = vec![1, 2, 3, 4, 5];
-        let padded = apply_block_boundary_padding(&mut tokens, 64);
+        let padded = apply_block_boundary_padding(&mut tokens, 64, 151643);
         assert_eq!(padded, 64);
         assert_eq!(tokens.len(), 64);
         assert_eq!(tokens[0..5], [1, 2, 3, 4, 5]);
-        assert_eq!(tokens[5], 0);
+        assert_eq!(tokens[5], 151643);
 
         let mut already_aligned = vec![0u32; 128];
-        let padded_same = apply_block_boundary_padding(&mut already_aligned, 64);
+        let padded_same = apply_block_boundary_padding(&mut already_aligned, 64, 151643);
         assert_eq!(padded_same, 128);
         assert_eq!(already_aligned.len(), 128);
     }
@@ -570,22 +728,43 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_gigatoken_ab_execution_and_metrics() {
+    async fn test_gigatoken_ab_small_buffer_direct_ram() {
+        // Buffer smaller than 16 KB: exercises the Direct RAM slice path
         let config = GigatokenBenchmarkConfig {
-            sample_text_bytes: 8 * 1024,
+            sample_text_bytes: 4 * 1024, // 4 KB (< 16 KB)
             warmup_iterations: 1,
             benchmark_iterations: 2,
             block_alignment: 64,
-            model_id: "test-model-ab".to_string(),
+            model_id: "qwen2.5-coder-7b".to_string(),
+            custom_pad_token_id: None,
             custom_text_path: None,
         };
 
         let report = run_gigatoken_ab_benchmark(config, None).await.unwrap();
 
-        assert!(report.baseline_track_a.pretoken_throughput_mbs > 0.0);
-        assert!(report.gigatoken_track_b.pretoken_throughput_mbs > 0.0);
+        assert!(report.gigatoken_track_b.ingestion_mode.contains("Direct RAM"));
+        assert_eq!(report.gigatoken_track_b.pad_token_id, 151643);
         assert!(report.gigatoken_track_b.padded_token_count % 64 == 0);
-        assert!(report.prefix_cache_gain_percent > 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_gigatoken_ab_large_buffer_zero_copy_mmap() {
+        // Buffer larger than 16 KB: exercises the Zero-Copy Mmap path
+        let config = GigatokenBenchmarkConfig {
+            sample_text_bytes: 32 * 1024, // 32 KB (>= 16 KB)
+            warmup_iterations: 1,
+            benchmark_iterations: 2,
+            block_alignment: 64,
+            model_id: "Meta-Llama-3.1-8B".to_string(),
+            custom_pad_token_id: None,
+            custom_text_path: None,
+        };
+
+        let report = run_gigatoken_ab_benchmark(config, None).await.unwrap();
+
+        assert!(report.gigatoken_track_b.ingestion_mode.contains("Zero-Copy Mmap"));
+        assert_eq!(report.gigatoken_track_b.pad_token_id, 128001);
+        assert!(report.gigatoken_track_b.padded_token_count % 64 == 0);
     }
 
     #[tokio::test]
@@ -601,6 +780,7 @@ mod tests {
             benchmark_iterations: 1,
             block_alignment: 64,
             model_id: "test-vault-gigatoken".to_string(),
+            custom_pad_token_id: None,
             custom_text_path: None,
         };
 

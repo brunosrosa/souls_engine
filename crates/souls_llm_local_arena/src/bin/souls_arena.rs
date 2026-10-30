@@ -65,7 +65,7 @@ fn print_usage() {
     println!("    souls_arena sync");
     println!("        Sincroniza os modelos descobertos no SQLite 'souls_heuristic_vault.db'.");
     println!();
-    println!("    souls_arena --test gigatoken [--model <id>] [--bytes <n>] [--iterations <n>] [--file <caminho>]");
+    println!("    souls_arena --test gigatoken [--model <id>] [--bytes <n>] [--iterations <n>] [--pad-token <id>] [--file <caminho>]");
     println!("        Executa o benchmark empírico comparativo A/B do Gigatoken (Zero-Copy Mmap + 64-token alignment).");
     println!();
     println!("    souls_arena run [--type <1|2|3|4|5|all>] [--model <nome>] [--tier <0|0.5|1|2|3|4>] [--engine <engine>] [--output <caminho>]");
@@ -374,6 +374,11 @@ async fn handle_gigatoken(args: &[String]) -> ExitCode {
     if let Some(iter_str) = parse_flag_value(args, "--iterations") {
         if let Ok(it) = iter_str.parse::<usize>() {
             config.benchmark_iterations = it;
+        }
+    }
+    if let Some(pad_str) = parse_flag_value(args, "--pad-token") {
+        if let Ok(p) = pad_str.parse::<u32>() {
+            config.custom_pad_token_id = Some(p);
         }
     }
     if let Some(file_str) = parse_flag_value(args, "--file") {

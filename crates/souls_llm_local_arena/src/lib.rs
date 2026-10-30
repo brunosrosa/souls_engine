@@ -51,8 +51,9 @@ pub use reporters::{
 
 #[cfg(feature = "gigatoken_bench")]
 pub use gigatoken_bench::{
-    run_gigatoken_ab_benchmark, GigatokenBenchmarkConfig, GigatokenBenchmarkResult,
-    GigatokenComparisonReport,
+    apply_block_boundary_padding, resolve_model_pad_token_id, run_gigatoken_ab_benchmark,
+    BlockBoundaryPadder, GigatokenBenchmarkConfig, GigatokenBenchmarkResult,
+    GigatokenComparisonReport, MMAP_THRESHOLD_BYTES,
 };
 
 use std::path::Path;
