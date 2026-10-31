@@ -75,3 +75,25 @@ Ao rodar `hermes update`, pacotes binários dentro de `%LOCALAPPDATA%\hermes\too
 ### 4.2 Causa & Procedimento
 1. O Windows 11 bloqueia renomeações atômicas de pastas se houver processos em segundo plano com handles de DLL ou arquivo abertos (ex: áudio do Hermes ou terminal em execução).
 2. O comando `hermes update` deve ser executado obrigatoriamente a partir de um terminal **PowerShell com privilégios de Administrador**, com os gateways do Hermes previamente pausados (`hermes gateway stop`).
+
+---
+
+## 5. POST-MORTEM: CLASSIFICAÇÃO DE PARÂMETROS, ARQUITETURAS MoE E ANCORAGEM FLEXBOX
+
+### 5.1 Contexto & Sintoma (Sessão Model Hub)
+1. **Falso Positivo em Modelos MoE:** Um modelo com identificador `35B-A3B` foi incorretamente rotulado como `⚡ Sweet Spot dGPU (100% VRAM)` no explorador do Hugging Face.
+2. **Desalinhamento Vertical de Cards Flexbox:** A introdução do badge `✓ INSTALADO` no canto superior direito empurrou os elementos do lado esquerdo para baixo em 12px.
+3. **Equívoco de Teto de KV Cache:** Exibição inicial de 32k tokens de contexto sem considerar que modelos 7B em Q4_K_M deixam apenas ~920 MB de VRAM livre, estourando a VRAM em KV cache FP16.
+
+### 5.2 Causa-Raiz Técnica
+1. **Parsing por Substring Ingênua:** O teste utilizava `.includes('3b')`, que casava com o `"3b"` do sufixo de parâmetros ativos `"a3b"` dentro de `"35b-a3b"`, ignorando que o modelo tem 35 bilhões de parâmetros totais em disco (~20 GB).
+2. **Quebra de Fluxo em Contêiner Flex:** O elemento wrapper `<span id="curated-badge-installed-...">` permaneceu como filho inline no fluxo de um container flex (`flex-direction: column; gap: 12px;`), ativando o espaçamento vertical mesmo com o badge interno posicionado como absoluto.
+3. **Cálculo Teórico Desacoplado da dGPU:** Em modelos de 7B/8B, o KV cache FP16 em 32k demanda ~1.88 GB. Sem quantização de KV cache (`Q4_0`), o spillover PCIe colapsa a inferência.
+
+### 5.3 Solução Implementada & Regras Canônicas
+1. **Parser Regex com Fronteiras e Detecção MoE:**
+   - Detecção explícita de notações MoE `(\d+)b-a(\d+)b` e `(\d+)x(\d+)b`. Modelos MoE como `35B-A3B` são atribuídos ao **Tier 2 (CPU Host AVX2 / 32 GB RAM)** com badge de aviso.
+   - Modelos densos usam regex estrito `\b(\d+)b\b`. Apenas modelos $\le 4\text{B}$ recebem o selo `Sweet Spot dGPU`.
+2. **Âncoras Absolutas Fora de Fluxo:** Todo elemento de canto superior em card flexbox deve residir em um container com `position: absolute; pointer-events: none;` (`.installed-badge-anchor`), garantindo impacto zero no alinhamento vertical dos filhos do flex.
+3. **Partição Explícita de VRAM:** A telemetria física expõe explicitamente `Teto Pesos: ~3.8 GB (Q4_K_M)` e `Margem KV Cache: ~1.3 GB`, com teto seguro para 7B calibrado em `16.384 tokens (até 32k c/ KV Q4)`.
+
