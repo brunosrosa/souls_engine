@@ -672,6 +672,18 @@
       vertical-align: middle;
       cursor: help;
     }
+    #panel-local-installed table.arena-table th {
+      padding: 9px 8px;
+      font-size: 0.67rem;
+    }
+    #panel-local-installed table.arena-table td {
+      padding: 8px 8px;
+      font-size: 0.74rem;
+    }
+    #panel-local-installed .model-name-text {
+      max-width: 180px;
+      font-size: 0.78rem;
+    }
     .btn-apply-model {
       background: rgba(6, 182, 212, 0.14);
       color: var(--cyan);
@@ -2430,7 +2442,7 @@
             <div>
               <div class="card-title">
                 <div class="card-icon icon-cyan">⚡</div>
-                Inventário Físico de Modelos GGUF (Silício Local)
+                Inventário Físico de Modelos
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
                 Diretório Físico: <code class="mono" id="local-root-dir">C:\Users\rosas\llm_local_models</code> <span style="color: var(--cyan); margin: 0 4px; font-weight: bold;">•</span> Total: <strong id="local-total-models" style="color: var(--cyan);">13 modelos físicos</strong> (23.98 GB)
@@ -2468,20 +2480,23 @@
             <table class="arena-table">
               <thead>
                 <tr style="cursor: pointer; user-select: none;">
-                  <th class="text-center" style="width: 105px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier ↕</th>
-                  <th class="text-center" style="width: 130px;">Ações</th>
-                  <th style="min-width: 250px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
-                  <th class="text-center" style="width: 140px;" onclick="sortLocalModels('size')" title="Clique para ordenar por Tamanho">Tamanho / Quant ↕</th>
-                  <th class="text-center" style="width: 120px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM">VRAM Estimada ↕</th>
-                  <th class="text-center" style="width: 110px;" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
-                  <th style="min-width: 160px;">Tags Especializadas</th>
-                  <th class="text-center" style="width: 160px;">Status & Silício Alvo</th>
+                  <th class="text-center" style="width: 78px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier ↕</th>
+                  <th class="text-center" style="width: 105px;">Ações</th>
+                  <th style="min-width: 160px; max-width: 200px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
+                  <th style="width: 120px;" onclick="sortLocalModels('profile')" title="Clique para ordenar por Perfil Agêntico">Perfil Agêntico ↕</th>
+                  <th class="text-center" style="width: 105px;" onclick="sortLocalModels('size')" title="Clique para ordenar por Tamanho">Tamanho / Quant ↕</th>
+                  <th class="text-center" style="width: 110px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM e Folga">VRAM & Folga WDDM ↕</th>
+                  <th class="text-center" style="width: 100px;" onclick="sortLocalModels('tps')" title="Clique para ordenar por Velocidade">Velocidade (Arena) ↕</th>
+                  <th class="text-center" style="width: 75px;" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
+                  <th style="min-width: 130px; max-width: 160px;">Tags Especializadas</th>
+                  <th class="text-center" style="width: 85px;" onclick="sortLocalModels('freshness')" title="Clique para ordenar por Data de Adição">Freshness ↕</th>
+                  <th class="text-center" style="width: 135px; white-space: nowrap;">Status & Silício Alvo</th>
                 </tr>
               </thead>
               <tbody id="local-arena-tbody">
                 <!-- Renderizado dinamicamente via JS -->
                 <tr>
-                  <td colspan="8" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
+                  <td colspan="11" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
                 </tr>
               </tbody>
             </table>
@@ -4584,6 +4599,78 @@
       }
     }
 
+    function renderTagBadge(tag) {
+      if (!tag) return '';
+      const t = tag.trim().toLowerCase();
+      let bg = 'rgba(148, 163, 184, 0.12)';
+      let color = '#94a3b8';
+      let border = 'rgba(148, 163, 184, 0.25)';
+
+      // 1. Código, AST & Sintaxe (Roxo / Violeta)
+      if (t.includes('code') || t.includes('rust') || t.includes('ast') || t.includes('syntax') || t.includes('refactor')) {
+        bg = 'rgba(139, 92, 246, 0.16)';
+        color = '#c084fc';
+        border = 'rgba(168, 85, 247, 0.4)';
+      }
+      // 2. Ferramentas, Protocolos & Schemas (Ciano / Azul Céu)
+      else if (t.includes('tool') || t.includes('mcp') || t.includes('json') || t.includes('schema') || t.includes('agentic') || t.includes('function') || t.includes('fc')) {
+        bg = 'rgba(6, 182, 212, 0.16)';
+        color = '#38bdf8';
+        border = 'rgba(6, 182, 212, 0.4)';
+      }
+      // 3. Raciocínio Profundo, CoT & Prova (Índigo / Safira)
+      else if (t.includes('reason') || t.includes('cot') || t.includes('logic') || t.includes('math') || t.includes('thinking')) {
+        bg = 'rgba(99, 102, 241, 0.16)';
+        color = '#818cf8';
+        border = 'rgba(99, 102, 241, 0.4)';
+      }
+      // 4. Triagem Rápida, Hardware & Silício (Esmeralda / Menta)
+      else if (t.includes('triage') || t.includes('fast') || t.includes('avx') || t.includes('cpu') || t.includes('dgpu') || t.includes('bootstrap')) {
+        bg = 'rgba(16, 185, 129, 0.16)';
+        color = '#34d399';
+        border = 'rgba(16, 185, 129, 0.4)';
+      }
+      // 5. Visão, VLM & Multimodal (Rosa / Framboesa)
+      else if (t.includes('vision') || t.includes('vlm') || t.includes('multi') || t.includes('image')) {
+        bg = 'rgba(244, 63, 94, 0.16)';
+        color = '#fb7185';
+        border = 'rgba(244, 63, 94, 0.4)';
+      }
+
+      return `<span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; line-height: 1.2; font-weight: 500; margin: 0;">${tag}</span>`;
+    }
+
+    function resolveAgenticProfile(m) {
+      const t = (m.tier || '').toLowerCase();
+      const name = `${m.model || ''} ${m.name || ''} ${(m.tags || []).join(' ')}`.toLowerCase();
+
+      if (t.includes('tier 0.5')) {
+        return { icon: '🔍', title: 'Intent Probing', color: '#34d399' };
+      }
+      if (t.includes('tier 0')) {
+        return { icon: '⚡', title: 'Fast Triage', color: '#38bdf8' };
+      }
+      if (t.includes('tier 4')) {
+        return { icon: '🚀', title: 'Speculative Draft', color: '#60a5fa' };
+      }
+      if (t.includes('tier 3') || name.includes('vl') || name.includes('vision')) {
+        return { icon: '👁️', title: 'Multimodal / Vision', color: '#fb7185' };
+      }
+      if (name.includes('coder') || name.includes('code')) {
+        return { icon: '🤖', title: 'Code Surgeon', color: '#c084fc' };
+      }
+      if (name.includes('function') || name.includes('tool') || name.includes('fc')) {
+        return { icon: '🛠️', title: 'Tool Specialist', color: '#38bdf8' };
+      }
+      if (name.includes('reasoning') || name.includes('phi') || name.includes('cot')) {
+        return { icon: '💡', title: 'Deep Reasoning', color: '#818cf8' };
+      }
+      if (name.includes('hermes')) {
+        return { icon: '👑', title: 'Master Candidate', color: '#fbbf24' };
+      }
+      return { icon: '🤖', title: 'General Subagent', color: '#94a3b8' };
+    }
+
     function sortLocalModels(key) {
       if (localModelSortKey === key) {
         localModelSortAsc = !localModelSortAsc;
@@ -4611,7 +4698,7 @@
     function renderLocalTable(models) {
       const tbody = document.getElementById('local-arena-tbody');
       if (!models || models.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum modelo físico encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo físico encontrado.</td></tr>';
         return;
       }
 
@@ -4632,7 +4719,8 @@
         if (localModelSiliconFilter === 'cpu' && isGpu) return false;
 
         if (localModelFilterQuery) {
-          const hay = `${m.model || ''} ${m.name || ''} ${m.tier || ''} ${m.quantization || ''} ${(m.tags || []).join(' ')} ${m.file_path || ''}`.toLowerCase();
+          const prof = resolveAgenticProfile(m);
+          const hay = `${m.model || ''} ${m.name || ''} ${m.tier || ''} ${prof.title} ${m.quantization || ''} ${(m.tags || []).join(' ')} ${m.file_path || ''}`.toLowerCase();
           if (!hay.includes(localModelFilterQuery)) return false;
         }
         return true;
@@ -4646,28 +4734,34 @@
           if (cmp === 0) cmp = (a.model || a.name || '').localeCompare(b.model || b.name || '');
         } else if (localModelSortKey === 'name') {
           cmp = (a.model || a.name || '').localeCompare(b.model || b.name || '');
-        } else if (localModelSortKey === 'target') {
-          cmp = (a.target || '').localeCompare(b.target || '');
+        } else if (localModelSortKey === 'profile') {
+          cmp = resolveAgenticProfile(a).title.localeCompare(resolveAgenticProfile(b).title);
         } else if (localModelSortKey === 'size') {
           cmp = (a.size_mb || 0) - (b.size_mb || 0);
         } else if (localModelSortKey === 'vram') {
           const vA = parseFloat(a.vram) || 0;
           const vB = parseFloat(b.vram) || 0;
           cmp = vA - vB;
+        } else if (localModelSortKey === 'tps') {
+          const tA = a.tps || 0;
+          const tB = b.tps || 0;
+          cmp = tA - tB;
         } else if (localModelSortKey === 'context') {
           cmp = (a.context_window || 0) - (b.context_window || 0);
+        } else if (localModelSortKey === 'freshness') {
+          cmp = (a.freshness_days !== undefined ? a.freshness_days : 999) - (b.freshness_days !== undefined ? b.freshness_days : 999);
         }
         return localModelSortAsc ? cmp : -cmp;
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
         return;
       }
 
       tbody.innerHTML = filtered.map(m => {
-        const tagsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 4px 6px; max-width: 220px; align-items: center;">` +
-          (m.tags || []).map(t => `<span class="badge" style="background: rgba(255,255,255,0.07); color: #cbd5e1; font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; line-height: 1.2; border: 1px solid rgba(255,255,255,0.08); margin: 0;">${t}</span>`).join('') +
+        const tagsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 3px 5px; max-width: 155px; align-items: center;">` +
+          (m.tags || []).map(t => renderTagBadge(t)).join('') +
           `</div>`;
         const isGpu = m.target && m.target.includes('dGPU');
         const statusBadge = isGpu 
@@ -4676,30 +4770,95 @@
         const sizeMb = m.size_mb ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(2) + ' GB' : m.size_mb.toFixed(0) + ' MB') : '--';
         const modelId = m.model || m.name;
 
+        // Opção D: Perfil Agêntico
+        const prof = resolveAgenticProfile(m);
+        const profileHtml = `
+          <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+            <span style="font-size: 0.85rem;">${prof.icon}</span>
+            <span style="font-size: 0.74rem; font-weight: 600; color: ${prof.color};">${prof.title}</span>
+          </div>
+        `;
+
+        // Opção B: VRAM & Margem WDDM (teto 5.17 GB)
+        let vramHtml = '';
+        if (isGpu) {
+          const vramGb = m.size_mb ? (m.size_mb / 1024).toFixed(1) : '0';
+          const headroom = Math.max(0, (5.17 - (m.size_mb / 1024))).toFixed(1);
+          let folgaColor = '#34d399';
+          let folgaLabel = `🟢 Folga ${headroom} GB`;
+          if (headroom < 0.6) {
+            folgaColor = '#ef4444';
+            folgaLabel = `🔴 Folga ${headroom} GB (Risco)`;
+          } else if (headroom < 1.2) {
+            folgaColor = '#fbbf24';
+            folgaLabel = `🟡 Folga ${headroom} GB`;
+          }
+          vramHtml = `
+            <div class="mono text-center" style="color: var(--cyan); font-weight: 600; font-size: 0.78rem;">${vramGb} GB</div>
+            <div style="font-size: 0.62rem; color: ${folgaColor}; margin-top: 2px; white-space: nowrap; font-weight: 500;">${folgaLabel}</div>
+          `;
+        } else {
+          vramHtml = `
+            <div class="mono text-center" style="color: var(--text-muted); font-size: 0.78rem;">0 MB</div>
+            <div style="font-size: 0.62rem; color: var(--green); margin-top: 2px; white-space: nowrap; font-weight: 500;">⚡ Host RAM</div>
+          `;
+        }
+
+        // Opção A: Velocidade Empírica (Throughput & TTFT)
+        let speedHtml = '';
+        if (m.tps && m.tps > 0) {
+          const ttftStr = m.ttft_ms ? `${m.ttft_ms.toFixed(0)}ms` : '--';
+          speedHtml = `
+            <div class="mono text-center" style="color: var(--green); font-weight: 600; font-size: 0.76rem;">⚡ ${m.tps.toFixed(1)} tok/s</div>
+            <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;">TTFT: <strong style="color: var(--cyan);">${ttftStr}</strong></div>
+          `;
+        } else {
+          const approxTps = isGpu ? (m.size_mb > 3000 ? '28~45' : '45~75') : '90~150';
+          speedHtml = `
+            <div style="font-size: 0.68rem; color: var(--text-muted); text-align: center;">~${approxTps} tok/s</div>
+            <div style="text-align: center; margin-top: 2px;">
+              <button class="btn" style="padding: 1px 7px; font-size: 0.62rem; border-radius: 4px; border-color: rgba(6, 182, 212, 0.3); color: var(--cyan); white-space: nowrap;" onclick="testModelInArena('${modelId}')" title="Aferir velocidade na Local Silicon Arena">
+                Aferir 🏟️
+              </button>
+            </div>
+          `;
+        }
+
+        // Opção E: Freshness ("Há X dias")
+        const freshnessLabel = m.freshness || 'Hoje';
+        const freshnessHtml = `
+          <div class="text-center" style="font-size: 0.72rem; color: #cbd5e1; white-space: nowrap;">
+            📅 ${freshnessLabel}
+          </div>
+        `;
+
         return `
           <tr>
             <td class="text-center" style="vertical-align: middle;">${renderTierBadge(m.tier)}</td>
             <td class="text-center" style="vertical-align: middle;">
-              <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
-                <button class="btn-apply-model local-btn" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
+              <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+                <button class="btn-apply-model local-btn" style="padding: 3px 6px; font-size: 0.68rem;" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
                   <span>⚡</span> Usar
                 </button>
-                <button class="btn" style="padding: 4px 8px; font-size: 0.72rem; border-radius: 6px; white-space: nowrap;" onclick="testModelInArena('${modelId}')" title="Aferir este modelo na Local Silicon Arena">
+                <button class="btn" style="padding: 3px 6px; font-size: 0.68rem; border-radius: 5px; white-space: nowrap;" onclick="testModelInArena('${modelId}')" title="Aferir este modelo na Local Silicon Arena">
                   <span>🏟️</span> Aferir
                 </button>
               </div>
             </td>
             <td>
               ${formatModelDisplayName(modelId, true)}
-              <div style="font-size: 0.68rem; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
+              <div style="font-size: 0.65rem; color: var(--text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
                 ${m.file_path || ''}
               </div>
             </td>
-            <td class="mono text-center" style="white-space: nowrap;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
-            <td class="mono text-center" style="color: var(--cyan);">${m.vram || '0 MB'}</td>
-            <td class="mono text-center">${(m.context_window || 8192).toLocaleString()}</td>
-            <td>${tagsHtml}</td>
-            <td class="text-center">${statusBadge}</td>
+            <td style="vertical-align: middle;">${profileHtml}</td>
+            <td class="mono text-center" style="white-space: nowrap; vertical-align: middle;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
+            <td class="text-center" style="vertical-align: middle;">${vramHtml}</td>
+            <td class="text-center" style="vertical-align: middle;">${speedHtml}</td>
+            <td class="mono text-center" style="vertical-align: middle;">${(m.context_window || 8192).toLocaleString()}</td>
+            <td style="vertical-align: middle;">${tagsHtml}</td>
+            <td style="vertical-align: middle;">${freshnessHtml}</td>
+            <td class="text-center" style="vertical-align: middle;">${statusBadge}</td>
           </tr>
         `;
       }).join('');

@@ -1037,6 +1037,29 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
 pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> {
     let _guard = state.acquire_connection();
 
+    // Consultar benchmarks empíricos reais na tabela arena_telemetry
+    let db_path = resolve_vault_db_path();
+    let mut arena_map: HashMap<String, (f64, f64)> = HashMap::new();
+    if let Ok(pool) = SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect(&format!("sqlite://{}", db_path.display()))
+        .await
+    {
+        if let Ok(rows) = sqlx::query("SELECT model_id, tps, ttft_ms FROM arena_telemetry WHERE tps > 0 ORDER BY id ASC")
+            .fetch_all(&pool)
+            .await
+        {
+            for r in rows {
+                let mid: Option<String> = r.try_get("model_id").ok();
+                let tps: f64 = r.try_get("tps").unwrap_or(0.0);
+                let ttft: f64 = r.try_get("ttft_ms").unwrap_or(0.0);
+                if let Some(m_id) = mid {
+                    arena_map.insert(m_id.to_lowercase(), (tps, ttft));
+                }
+            }
+        }
+    }
+
     let inventory = souls_llm_local_arena::LocalModelInventory::scan();
     if !inventory.is_empty() {
         let items: Vec<Value> = inventory
@@ -1048,6 +1071,39 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                 } else {
                     "Pronto na CPU (AVX2)"
                 };
+
+                // Opção E: Freshness física do arquivo GGUF ("Há X dias")
+                let (freshness_str, freshness_days) = if let Ok(meta) = fs::metadata(&m.file_path) {
+                    if let Ok(mtime) = meta.modified() {
+                        if let Ok(elapsed) = std::time::SystemTime::now().duration_since(mtime) {
+                            let days = elapsed.as_secs() / 86400;
+                            let label = if days == 0 {
+                                "Hoje".to_string()
+                            } else if days == 1 {
+                                "Há 1 dia".to_string()
+                            } else {
+                                format!("Há {} dias", days)
+                            };
+                            (label, days)
+                        } else {
+                            ("--".to_string(), 999)
+                        }
+                    } else {
+                        ("--".to_string(), 999)
+                    }
+                } else {
+                    ("--".to_string(), 999)
+                };
+
+                // Opção A: Throughput & TTFT da Silicon Arena
+                let bench = arena_map
+                    .get(&m.model_id.to_lowercase())
+                    .or_else(|| arena_map.get(&m.name.to_lowercase()));
+                let (tps, ttft_ms) = match bench {
+                    Some(&(t, tt)) => (Some(t), Some(tt)),
+                    None => (None, None),
+                };
+
                 json!({
                     "tier": m.tier,
                     "model": m.model_id,
@@ -1061,6 +1117,10 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                     "tags": m.tags,
                     "wddm_safe": m.wddm_safe,
                     "file_path": m.file_path.to_string_lossy(),
+                    "freshness": freshness_str,
+                    "freshness_days": freshness_days,
+                    "tps": tps,
+                    "ttft_ms": ttft_ms,
                 })
             })
             .collect();
