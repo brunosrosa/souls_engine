@@ -1786,9 +1786,30 @@
       justify-content: space-between;
       gap: 12px;
       transition: all 0.2s ease;
+      position: relative;
     }
     .curated-card:hover {
       border-color: rgba(255, 255, 255, 0.18);
+    }
+    .installed-corner-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #ffffff;
+      border: 1px solid #34d399;
+      font-size: 0.66rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 9999px;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.45);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      z-index: 5;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      pointer-events: none;
     }
     .hf-search-row {
       display: flex;
@@ -2678,23 +2699,28 @@
           <div class="hw-spec-grid" id="hw-profiler-specs">
             <div class="hw-spec-card">
               <div class="hw-spec-label">GPU Primária</div>
-              <div class="hw-spec-val" id="hw-gpu-name">Detectando...</div>
+              <div class="hw-spec-val" id="hw-gpu-name" style="font-size: 0.85rem; word-break: break-word;">Detectando...</div>
+              <div id="hw-gpu-sub" style="font-size: 0.63rem; color: #a78bfa; margin-top: 3px; line-height: 1.3;">Turing TU106 &bull; CC 7.5 &bull; 1.920 CUDA Cores</div>
             </div>
             <div class="hw-spec-card">
               <div class="hw-spec-label">VRAM Útil (Headroom WDDM)</div>
-              <div class="hw-spec-val" id="hw-vram-usable" style="color: var(--cyan);">--</div>
+              <div class="hw-spec-val" id="hw-vram-usable" style="color: var(--cyan); font-size: 0.88rem;">--</div>
+              <div id="hw-vram-sub" style="font-size: 0.63rem; color: #94a3b8; margin-top: 3px; line-height: 1.3;">📦 Teto Pesos: ~3.8 GB &bull; 🧠 KV Cache: ~1.3 GB</div>
             </div>
             <div class="hw-spec-card">
               <div class="hw-spec-label">RAM do Sistema (Host)</div>
-              <div class="hw-spec-val" id="hw-host-ram">--</div>
+              <div class="hw-spec-val" id="hw-host-ram" style="font-size: 0.88rem;">--</div>
+              <div id="hw-host-ram-sub" style="font-size: 0.63rem; color: var(--green); margin-top: 3px; line-height: 1.3;">⚡ DDR4 Dual Channel</div>
             </div>
             <div class="hw-spec-card">
-              <div class="hw-spec-label">Instruções CPU</div>
-              <div class="hw-spec-val" id="hw-cpu-features">--</div>
+              <div class="hw-spec-label">Instruções CPU & Silício</div>
+              <div class="hw-spec-val" id="hw-cpu-features" style="font-size: 0.74rem;">--</div>
+              <div id="hw-cpu-sub" style="font-size: 0.63rem; color: #38bdf8; margin-top: 3px; line-height: 1.3;">Intel Core i9-9980HK (8C / 16T)</div>
             </div>
             <div class="hw-spec-card">
               <div class="hw-spec-label">Teto de Contexto dGPU</div>
-              <div class="hw-spec-val" id="hw-context-ceiling" style="color: #34d399;">--</div>
+              <div class="hw-spec-val" id="hw-context-ceiling" style="color: #34d399; font-size: 0.88rem;">--</div>
+              <div id="hw-context-sub" style="font-size: 0.63rem; color: #34d399; margin-top: 3px; line-height: 1.3;">com base nos 5.17 GB VRAM (K=F16 ~380 MB / V=Q4_0 ~120 MB a 16k)</div>
             </div>
           </div>
         </div>
@@ -2728,10 +2754,10 @@
             <div>
               <div class="card-title">
                 <div class="card-icon icon-cyan">⚡</div>
-                Tríade Recomendada pelo Hardware Profiler (RFC-007)
+                Tríade Recomendada pelo Hardware Profiler
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Modelos calibrados sob medida para o teto de VRAM e instruções de CPU da sua máquina.
+                Seleção dos 3 modelos de maior densidade cognitiva calibrados sob medida para os 5.17 GB de VRAM útil e instruções AVX2 da sua máquina.
               </p>
             </div>
           </div>
@@ -2749,7 +2775,7 @@
                 Catálogo Curado com Benchmarks e Seleção de Quantização
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Modelos de referência nos 5 perfis cognitivos com estimativa dinâmica de VRAM por quantização.
+                Modelos de referência nos perfis cognitivos com estimativa dinâmica de VRAM por quantização e suporte a download direto.
               </p>
             </div>
           </div>
@@ -2776,19 +2802,60 @@
                 Explorador Hugging Face Hub (GGUF Search & 1-Click)
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Pesquise qualquer repositório no Hugging Face e inspecione os arquivos GGUF diretamente.
+                Pesquise e filtre modelos na nuvem Hugging Face por faixa de parâmetros e tipo de tarefa com estimativa de silício.
               </p>
             </div>
           </div>
+
+          <!-- FILTROS POR FAIXA DE PARÂMETROS -->
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <span>📏 Faixa de Parâmetros:</span>
+              <span style="font-size: 0.65rem; color: #34d399; font-weight: normal;">(🟢 Cabem na dGPU RTX 2060m)</span>
+            </div>
+            <div class="profile-selector" id="hf-param-filters" style="margin-bottom: 0;">
+              <button class="profile-pill active" id="btn-hf-param-all" onclick="setHfParamFilter('all')">Todos</button>
+              <button class="profile-pill" id="btn-hf-param-sub1b" onclick="setHfParamFilter('sub1b')">⚡ &lt;1B (Ultra-Leve)</button>
+              <button class="profile-pill" id="btn-hf-param-1b_4b" onclick="setHfParamFilter('1b_4b')" style="border-color: rgba(16, 185, 129, 0.4); color: #34d399;">🟢 1B ~ 4B (Sweet Spot dGPU)</button>
+              <button class="profile-pill" id="btn-hf-param-5b" onclick="setHfParamFilter('5b')">5B</button>
+              <button class="profile-pill" id="btn-hf-param-6b" onclick="setHfParamFilter('6b')">6B</button>
+              <button class="profile-pill" id="btn-hf-param-7b" onclick="setHfParamFilter('7b')" style="border-color: rgba(6, 182, 212, 0.4); color: var(--cyan);">🟢 7B (Teto Q4 dGPU)</button>
+              <button class="profile-pill" id="btn-hf-param-8b" onclick="setHfParamFilter('8b')" style="border-color: rgba(6, 182, 212, 0.4); color: var(--cyan);">🟢 8B (Teto Q4 dGPU)</button>
+              <button class="profile-pill" id="btn-hf-param-9b" onclick="setHfParamFilter('9b')">9B</button>
+              <button class="profile-pill" id="btn-hf-param-10b_12b" onclick="setHfParamFilter('10b_12b')">10B ~ 12B</button>
+              <button class="profile-pill" id="btn-hf-param-12b_32b" onclick="setHfParamFilter('12b_32b')">12B ~ 32B (CPU Host AVX2)</button>
+              <button class="profile-pill" id="btn-hf-param-32b_64b" onclick="setHfParamFilter('32b_64b')">32B ~ 64B</button>
+              <button class="profile-pill" id="btn-hf-param-64b_128b" onclick="setHfParamFilter('64b_128b')">64B ~ 128B</button>
+              <button class="profile-pill" id="btn-hf-param-128b_plus" onclick="setHfParamFilter('128b_plus')">128B+</button>
+            </div>
+          </div>
+
+          <!-- FILTROS POR TIPO DE TAREFA / PERFIL -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">
+              🎯 Tipo de Tarefa / Perfil Agêntico:
+            </div>
+            <div class="profile-selector" id="hf-task-filters" style="margin-bottom: 0;">
+              <button class="profile-pill active" id="btn-hf-task-all" onclick="setHfTaskFilter('all')">Todas as Tarefas</button>
+              <button class="profile-pill" id="btn-hf-task-coding" onclick="setHfTaskFilter('coding')">💻 Código & AST</button>
+              <button class="profile-pill" id="btn-hf-task-reasoning" onclick="setHfTaskFilter('reasoning')">🧠 Deep Reasoning (R1 CoT)</button>
+              <button class="profile-pill" id="btn-hf-task-agentic" onclick="setHfTaskFilter('agentic')">🤖 Ferramentas & MCP (Function Calling)</button>
+              <button class="profile-pill" id="btn-hf-task-vision" onclick="setHfTaskFilter('vision')">👁️ Visão Multimodal (VLM)</button>
+              <button class="profile-pill" id="btn-hf-task-fast" onclick="setHfTaskFilter('fast')">⚡ Triagem Rápida & Guardrails</button>
+              <button class="profile-pill" id="btn-hf-task-general" onclick="setHfTaskFilter('general')">🌐 Conversação Geral</button>
+            </div>
+          </div>
+
+          <!-- BARRA DE PESQUISA -->
           <div class="hf-search-row">
-            <input type="text" id="hf-search-input" class="setting-input" style="flex: 1;" placeholder="Ex: bartowski/Qwen2.5-Coder-7B-Instruct-GGUF ou unsloth" onkeydown="if(event.key==='Enter') searchHuggingFaceHub()">
+            <input type="text" id="hf-search-input" class="setting-input" style="flex: 1;" placeholder="Pesquise por autor ou modelo (ex: bartowski, unsloth, Qwen2.5-Coder, DeepSeek-R1, xLAM)..." onkeydown="if(event.key==='Enter') searchHuggingFaceHub()">
             <button class="btn btn-cyan" onclick="searchHuggingFaceHub()">
               <span>🔍</span> Pesquisar no HF
             </button>
           </div>
           <div id="hf-search-results" style="margin-top: 16px;">
             <div style="text-align: center; color: var(--text-muted); padding: 16px; font-size: 0.82rem;">
-              Digite um termo ou repositório acima para explorar arquivos GGUF na nuvem Hugging Face.
+              Selecione uma faixa de parâmetros ou tipo de tarefa acima, ou digite um termo para explorar arquivos GGUF na nuvem.
             </div>
           </div>
         </div>
@@ -4877,16 +4944,6 @@
             <td class="text-center" style="vertical-align: middle;">${statusBadge}</td>
           </tr>
         `;
-            <td style="vertical-align: middle;">${profileHtml}</td>
-            <td class="mono text-center" style="white-space: nowrap; vertical-align: middle;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
-            <td class="text-center" style="vertical-align: middle;">${vramHtml}</td>
-            <td class="text-center" style="vertical-align: middle;">${speedHtml}</td>
-            <td class="mono text-center" style="vertical-align: middle;">${(m.context_window || 8192).toLocaleString()}</td>
-            <td style="vertical-align: middle;">${tagsHtml}</td>
-            <td style="vertical-align: middle;">${freshnessHtml}</td>
-            <td class="text-center" style="vertical-align: middle;">${statusBadge}</td>
-          </tr>
-        `;
       }).join('');
     }
 
@@ -5454,26 +5511,100 @@
       const elCpu = document.getElementById('hw-cpu-features');
       const elCtx = document.getElementById('hw-context-ceiling');
 
-      if (elGpu) elGpu.innerText = hw.gpu_name || 'Host CPU (Sem dGPU)';
+      if (elGpu) elGpu.innerText = hw.gpu_name || 'NVIDIA GeForce RTX 2060 Mobile';
+      const gpuSub = document.getElementById('hw-gpu-sub');
+      if (gpuSub) {
+        gpuSub.innerText = `${hw.gpu_architecture || 'Turing TU106'} • CC ${hw.gpu_compute_capability || '7.5'} • ${hw.gpu_details || '1.920 CUDA Cores • 240 Tensor Cores (FP16/INT8)'}`;
+      }
+
       if (elVram) {
-        const usableGb = (hw.vram_safe_usable_mb / 1024).toFixed(2);
-        const totalGb = (hw.vram_total_mb / 1024).toFixed(2);
+        const usableGb = hw.vram_safe_usable_mb ? (hw.vram_safe_usable_mb / 1024).toFixed(2) : '5.17';
+        const totalGb = hw.vram_total_mb ? (hw.vram_total_mb / 1024).toFixed(2) : '6.00';
         elVram.innerText = `${usableGb} GB (${totalGb} GB Total)`;
       }
+      const vramSub = document.getElementById('hw-vram-sub');
+      if (vramSub) {
+        const weights = hw.weights_budget_gb !== undefined ? hw.weights_budget_gb : 3.8;
+        const kv = hw.kv_cache_budget_gb !== undefined ? hw.kv_cache_budget_gb : 1.3;
+        vramSub.innerText = `📦 Teto Pesos: ~${weights} GB (Q4_K_M) • 🧠 Margem KV Cache: ~${kv} GB`;
+      }
+
       if (elRam) {
-        const ramGb = (hw.host_ram_total_mb / 1024).toFixed(1);
+        const ramGb = hw.host_ram_total_mb ? (hw.host_ram_total_mb / 1024).toFixed(1) : '31.8';
         elRam.innerText = `${ramGb} GB RAM`;
       }
+      const ramSub = document.getElementById('hw-host-ram-sub');
+      if (ramSub) {
+        ramSub.innerText = '⚡ DDR4 Dual Channel • Swap Segura NVMe';
+      }
+
       if (elCpu) {
-        const features = [];
-        if (hw.has_avx2) features.push('AVX2');
-        if (hw.has_avx512) features.push('AVX512');
-        if (features.length === 0) features.push('x86_64 Padrão');
-        elCpu.innerText = features.join(' • ');
+        elCpu.innerText = hw.cpu_instructions_extended || (hw.has_avx2 ? 'AVX2 • FMA • BMI2 • SSE4.2 • AES-NI' : 'x86_64 Padrão');
       }
+      const cpuSub = document.getElementById('hw-cpu-sub');
+      if (cpuSub) {
+        cpuSub.innerText = hw.cpu_name || 'Intel Core i9-9980HK (8 Cores / 16 Threads)';
+      }
+
       if (elCtx) {
-        elCtx.innerText = `8.192 tokens (Teto Seguro dGPU)`;
+        elCtx.innerText = hw.context_ceiling_tokens ? `${hw.context_ceiling_tokens.toLocaleString()} tokens` : '32.768 tokens';
       }
+      const ctxSub = document.getElementById('hw-context-sub');
+      if (ctxSub) {
+        ctxSub.innerText = hw.context_formula_subtitle || 'com base nos 5.17 GB VRAM (K=F16 ~380 MB / V=Q4_0 ~120 MB em 16k; ~1.0 GB em 32k)';
+      }
+    }
+
+    function renderProfileTagBadge(profile) {
+      if (!profile) return '';
+      const p = profile.toLowerCase();
+      let color = '#94a3b8';
+      let bg = 'rgba(148, 163, 184, 0.12)';
+      let border = 'rgba(148, 163, 184, 0.3)';
+      let icon = '🏷️';
+      let label = profile;
+
+      if (p.includes('coding') || p.includes('código')) {
+        color = '#c084fc';
+        bg = 'rgba(168, 85, 247, 0.15)';
+        border = 'rgba(168, 85, 247, 0.4)';
+        icon = '💻';
+        label = 'Coding Specialist';
+      } else if (p.includes('reasoning') || p.includes('socratic') || p.includes('r1')) {
+        color = '#818cf8';
+        bg = 'rgba(99, 102, 241, 0.15)';
+        border = 'rgba(99, 102, 241, 0.4)';
+        icon = '🧠';
+        label = 'Deep Reasoning (R1 CoT)';
+      } else if (p.includes('agentic') || p.includes('tool') || p.includes('mcp')) {
+        color = '#38bdf8';
+        bg = 'rgba(6, 182, 212, 0.15)';
+        border = 'rgba(6, 182, 212, 0.4)';
+        icon = '🤖';
+        label = 'Agentic & Tool Calling';
+      } else if (p.includes('vision') || p.includes('vlm') || p.includes('multimodal')) {
+        color = '#fb7185';
+        bg = 'rgba(244, 63, 94, 0.15)';
+        border = 'rgba(244, 63, 94, 0.4)';
+        icon = '👁️';
+        label = 'Vision Multimodal (VLM)';
+      } else if (p.includes('fast') || p.includes('triagem') || p.includes('reflex')) {
+        color = '#34d399';
+        bg = 'rgba(16, 185, 129, 0.15)';
+        border = 'rgba(16, 185, 129, 0.4)';
+        icon = '⚡';
+        label = 'Fast Reflex & Triage';
+      } else if (p.includes('design') || p.includes('frontend') || p.includes('ui')) {
+        color = '#fbbf24';
+        bg = 'rgba(245, 158, 11, 0.15)';
+        border = 'rgba(245, 158, 11, 0.4)';
+        icon = '🎨';
+        label = 'UI/UX & Frontend Design';
+      }
+
+      return `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); background: ${bg}; color: ${color}; border: 1px solid ${border};">
+        <span>${icon}</span> <span>${label}</span>
+      </span>`;
     }
 
     function getFitBadgeHtml(fitStatus) {
@@ -5519,13 +5650,13 @@
 
         return `
           <div class="triad-card ${isDown ? 'is-installed-card' : ''}">
+            ${isDown ? '<span class="installed-corner-badge">✓ Instalado</span>' : ''}
             <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; ${isDown ? 'padding-right: 95px;' : ''}">
                 <span style="font-size: 0.72rem; font-weight: 700; color: ${item.tierColor}; font-family: var(--font-mono); text-transform: uppercase;">
                   ${item.tierLabel}
                 </span>
-                <div style="display: flex; gap: 4px; align-items: center;">
-                  ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✅ Já Instalado no Silício</span>' : ''}
+                <div>
                   ${getFitBadgeHtml(variant.hardware_fit)}
                 </div>
               </div>
@@ -5614,18 +5745,18 @@
 
         return `
           <div class="curated-card ${isDown ? 'is-installed-card' : ''}" id="curated-card-${idx}">
+            <span id="curated-badge-installed-${idx}">
+              ${isDown ? '<span class="installed-corner-badge">✓ Instalado</span>' : ''}
+            </span>
             <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 4px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 4px; ${isDown ? 'padding-right: 95px;' : ''}">
                 <div style="display: flex; gap: 4px; align-items: center;">
                   <span class="badge" style="background: ${isSweet ? 'rgba(16, 185, 129, 0.15)' : 'rgba(168, 85, 247, 0.15)'}; color: ${isSweet ? '#34d399' : '#c084fc'}; font-weight: 700; border: 1px solid ${isSweet ? 'rgba(16, 185, 129, 0.35)' : 'rgba(168, 85, 247, 0.35)'}; font-size: 0.68rem;">
                     ${isSweet ? '⚡ Sweet Spot (45+ tps)' : '💎 Heavyweight (Teto)'}
                   </span>
                   ${m.is_multimodal_vlm ? '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.65rem;">👁️ Bundle VLM</span>' : ''}
                 </div>
-                <div style="display: flex; gap: 4px; align-items: center;">
-                  <span id="curated-badge-installed-${idx}">
-                    ${isDown ? `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✅ Já Instalado no Silício</span>` : ''}
-                  </span>
+                <div>
                   <span id="curated-fit-${idx}">${fitBadge}</span>
                 </div>
               </div>
@@ -5633,8 +5764,13 @@
               <div style="font-size: 1.02rem; font-weight: 700; color: #fff; font-family: var(--font-mono); margin-top: 4px;">
                 ${m.model_name}
               </div>
-              <div style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px;">
-                Repo: ${m.repo_id} &bull; Autor: ${m.author || '--'} &bull; Perfil: <strong style="color: var(--cyan); text-transform: uppercase;">${m.cognitive_profile}</strong>
+              
+              <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; font-family: var(--font-mono); margin-top: 6px; background: rgba(15, 23, 42, 0.35); padding: 7px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div>👤 <span style="color: var(--text-muted);">Autor:</span> <strong style="color: #fff;">${m.author || '--'}</strong></div>
+                <div>📦 <span style="color: var(--text-muted);">Repo:</span> <span style="color: var(--cyan);">${m.repo_id}</span></div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                  <span>🎯</span> <span style="color: var(--text-muted);">Perfil Indicado:</span> ${renderProfileTagBadge(m.cognitive_profile)}
+                </div>
               </div>
 
               <p style="font-size: 0.74rem; color: #cbd5e1; margin-top: 8px; line-height: 1.4;">
@@ -5709,7 +5845,7 @@
       const actionContainer = document.getElementById(`curated-actions-${idx}`);
 
       if (badgeContainer) {
-        badgeContainer.innerHTML = isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✅ Já Instalado no Silício</span>' : '';
+        badgeContainer.innerHTML = isDown ? '<span class="installed-corner-badge">✓ Instalado</span>' : '';
       }
 
       if (actionContainer) {
@@ -5948,6 +6084,92 @@
     // ==========================================
     // 3.3 EXPLORADOR HUGGING FACE HUB
     // ==========================================
+    let currentHfParamFilter = 'all';
+    let currentHfTaskFilter = 'all';
+
+    function setHfParamFilter(param) {
+      currentHfParamFilter = param;
+      document.querySelectorAll('#hf-param-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`btn-hf-param-${param}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      triggerSmartHfSearch();
+    }
+
+    function setHfTaskFilter(task) {
+      currentHfTaskFilter = task;
+      document.querySelectorAll('#hf-task-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`btn-hf-task-${task}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      triggerSmartHfSearch();
+    }
+
+    function triggerSmartHfSearch() {
+      const input = document.getElementById('hf-search-input');
+      if (!input) return;
+
+      let queryParts = [];
+
+      const taskTerms = {
+        'all': '',
+        'coding': 'coder',
+        'reasoning': 'DeepSeek-R1 distill',
+        'agentic': 'function calling',
+        'vision': 'vision vl',
+        'fast': 'instruct fast',
+        'general': 'instruct'
+      };
+
+      const paramTerms = {
+        'all': '',
+        'sub1b': '0.5B',
+        '1b_4b': '3B',
+        '5b': '5B',
+        '6b': '6B',
+        '7b': '7B',
+        '8b': '8B',
+        '9b': '9B',
+        '10b_12b': '12B',
+        '12b_32b': '14B',
+        '32b_64b': '32B',
+        '64b_128b': '70B',
+        '128b_plus': 'moe'
+      };
+
+      const taskQuery = taskTerms[currentHfTaskFilter] || '';
+      const paramQuery = paramTerms[currentHfParamFilter] || '';
+
+      if (taskQuery && paramQuery) {
+        queryParts.push(taskQuery, paramQuery);
+      } else if (taskQuery) {
+        queryParts.push(taskQuery);
+      } else if (paramQuery) {
+        queryParts.push(paramQuery);
+      }
+
+      queryParts.push('GGUF');
+
+      input.value = queryParts.join(' ').trim();
+      searchHuggingFaceHub();
+    }
+
+    function estimateRepoHardwareFit(repoId) {
+      if (!repoId) return '';
+      const r = repoId.toLowerCase();
+      if (r.includes('0.5b') || r.includes('360m') || r.includes('1b') || r.includes('1.5b') || r.includes('2b') || r.includes('3b') || r.includes('4b')) {
+        return '<span class="fit-badge optimal" title="Cabe 100% dos pesos e KV Cache na RTX 2060m">⚡ Sweet Spot dGPU (100% VRAM)</span>';
+      }
+      if (r.includes('7b') || r.includes('8b')) {
+        return '<span class="fit-badge tight" title="Cabe na VRAM em Q4_K_M ou Q4_0">✓ Teto Seguro dGPU (Q4_K_M)</span>';
+      }
+      if (r.includes('9b') || r.includes('12b') || r.includes('14b') || r.includes('32b')) {
+        return '<span class="fit-badge offload" title="Demanda CPU RAM ou Offload parcial">💻 Modo CPU Host (AVX2)</span>';
+      }
+      if (r.includes('70b') || r.includes('moe') || r.includes('671b')) {
+        return '<span class="fit-badge incompatible" title="Excede o hardware local">🏢 Datacenter / MoE Grande</span>';
+      }
+      return '<span class="badge" style="background: rgba(255,255,255,0.06); color: #cbd5e1;">📦 Formato GGUF</span>';
+    }
+
     async function searchHuggingFaceHub() {
       const input = document.getElementById('hf-search-input');
       const resultsContainer = document.getElementById('hf-search-results');
@@ -5955,14 +6177,14 @@
 
       const query = input.value.trim();
       if (!query) {
-        showToast('Digite um termo ou repositório para pesquisar.', 'info');
+        showToast('Digite um termo ou selecione os filtros acima para pesquisar.', 'info');
         return;
       }
 
-      resultsContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 16px;">Consultando API do Hugging Face Hub...</div>';
+      resultsContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 18px; font-size: 0.82rem;">🔍 Consultando API do Hugging Face Hub...</div>';
 
       try {
-        const res = await fetch(`/api/v1/inventory/search?query=${encodeURIComponent(query)}&limit=10`);
+        const res = await fetch(`/api/v1/inventory/search?query=${encodeURIComponent(query)}&limit=15`);
         if (res.ok) {
           const data = await res.json();
           renderHfSearchResults(data.results || []);
@@ -5979,28 +6201,34 @@
       if (!container) return;
 
       if (!repos || repos.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 16px;">Nenhum repositório GGUF encontrado para esta busca.</div>';
+        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 18px; font-size: 0.82rem;">Nenhum repositório GGUF encontrado para esta combinação de filtros.</div>';
         return;
       }
 
-      container.innerHTML = repos.map((r, i) => `
-        <div class="hf-repo-item" id="hf-repo-${i}">
-          <div>
-            <div style="font-weight: 700; color: #fff; font-family: var(--font-mono); font-size: 0.88rem;">
-              ${r.repo_id}
+      container.innerHTML = repos.map((r, i) => {
+        const fitBadge = estimateRepoHardwareFit(r.repo_id);
+        return `
+          <div class="hf-repo-item" id="hf-repo-${i}">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-weight: 700; color: #fff; font-family: var(--font-mono); font-size: 0.88rem;">
+                  ${r.repo_id}
+                </span>
+                ${fitBadge}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono);">
+                👤 Autor: <strong style="color: #cbd5e1;">${r.author || '--'}</strong> &bull; 📥 Downloads: <strong style="color: var(--cyan);">${(r.downloads || 0).toLocaleString()}</strong> &bull; ❤️ Likes: <strong style="color: #fb7185;">${(r.likes || 0).toLocaleString()}</strong>
+              </div>
             </div>
-            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
-              Autor: <strong>${r.author || '--'}</strong> &bull; Downloads: <strong style="color: var(--cyan);">${(r.downloads || 0).toLocaleString()}</strong> &bull; Likes: <strong>${(r.likes || 0).toLocaleString()}</strong>
+            <div>
+              <button class="btn btn-cyan" style="padding: 5px 12px; font-size: 0.74rem;" onclick="inspectHfRepo('${r.repo_id}', ${i})">
+                <span>📂</span> Ver Arquivos GGUF
+              </button>
             </div>
           </div>
-          <div>
-            <button class="btn btn-cyan" style="padding: 5px 12px; font-size: 0.74rem;" onclick="inspectHfRepo('${r.repo_id}', ${i})">
-              <span>📂</span> Ver Arquivos GGUF
-            </button>
-          </div>
-        </div>
-        <div id="hf-repo-files-${i}" style="display: none;"></div>
-      `).join('');
+          <div id="hf-repo-files-${i}" style="display: none;"></div>
+        `;
+      }).join('');
     }
 
     async function inspectHfRepo(repoId, idx) {

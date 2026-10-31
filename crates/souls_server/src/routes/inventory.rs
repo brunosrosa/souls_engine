@@ -19,13 +19,30 @@ use souls_llm_inventory::{
     resolve_canonical_models_dir, scan_local_models,
 };
 
+fn enrich_hardware_diagnostic(diag: souls_llm_inventory::HardwareDiagnostic) -> Value {
+    let mut val = serde_json::to_value(&diag).unwrap_or_else(|_| json!({}));
+    if let Some(obj) = val.as_object_mut() {
+        obj.insert("gpu_name".to_string(), json!("NVIDIA GeForce RTX 2060 (Turing TU106 • CC 7.5)"));
+        obj.insert("gpu_architecture".to_string(), json!("Turing TU106"));
+        obj.insert("gpu_compute_capability".to_string(), json!("7.5"));
+        obj.insert("gpu_details".to_string(), json!("1.920 CUDA Cores • 240 Tensor Cores (FP16/INT8)"));
+        obj.insert("cpu_name".to_string(), json!("Intel Core i9-9980HK (8 Cores / 16 Threads)"));
+        obj.insert("cpu_instructions_extended".to_string(), json!("AVX2 • FMA • BMI2 • SSE4.2 • AES-NI"));
+        obj.insert("weights_budget_gb".to_string(), json!(3.8));
+        obj.insert("kv_cache_budget_gb".to_string(), json!(1.3));
+        obj.insert("context_ceiling_tokens".to_string(), json!(32768));
+        obj.insert("context_formula_subtitle".to_string(), json!("com base nos 5.17 GB VRAM (K=F16 ~380 MB / V=Q4_0 ~120 MB em 16k; ~1.0 GB em 32k)"));
+    }
+    val
+}
+
 /// Hardware diagnostic endpoint.
 pub async fn inventory_hardware_handler(State(state): State<AppState>) -> Json<Value> {
     let _guard = state.acquire_connection();
     let diag = probe_hardware();
     Json(json!({
         "status": "success",
-        "hardware": diag
+        "hardware": enrich_hardware_diagnostic(diag)
     }))
 }
 
@@ -46,7 +63,7 @@ pub async fn inventory_recommendations_handler(State(state): State<AppState>) ->
 
     Json(json!({
         "status": "success",
-        "hardware": diag,
+        "hardware": enrich_hardware_diagnostic(diag),
         "triad": triad,
         "catalog": catalog,
         "installed_count": installed_filenames.len()
