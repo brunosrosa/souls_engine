@@ -1033,6 +1033,86 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
     }))
 }
 
+fn resolve_multi_tier_and_tags(model_id: &str, primary_tier: &str, existing_tags: &[String]) -> (Vec<String>, Vec<String>) {
+    let lower_id = model_id.to_lowercase();
+    let mut tiers = vec![primary_tier.to_string()];
+    let mut tags = existing_tags.to_vec();
+
+    // 1. Multimodal / Vision
+    if lower_id.contains("vl") || lower_id.contains("vision") || lower_id.contains("minicpm-v") || lower_id.contains("llava") {
+        if !tiers.contains(&"Tier 3".to_string()) {
+            tiers.insert(0, "Tier 3".to_string());
+        }
+        if !tiers.contains(&"Tier 1".to_string()) {
+            tiers.push("Tier 1".to_string());
+        }
+        for extra in ["multimodal", "vision_vlm", "ocr", "ui_inspection", "image_to_code", "tool_calling"] {
+            if !tags.contains(&extra.to_string()) {
+                tags.push(extra.to_string());
+            }
+        }
+    }
+
+    // 2. Reasoning CoT / Socrático (SmolLM2 Reasoning, DeepSeek R1, Phi-4)
+    if lower_id.contains("reasoning") || lower_id.contains("r1") || lower_id.contains("phi-4") {
+        if !tiers.contains(&"Tier 0.5".to_string()) {
+            tiers.push("Tier 0.5".to_string());
+        }
+        for extra in ["deep_reasoning", "cot", "socratic", "math_logic"] {
+            if !tags.contains(&extra.to_string()) {
+                tags.push(extra.to_string());
+            }
+        }
+    }
+
+    // 3. Ultra-fast triage (< 500M)
+    if (lower_id.contains("135m") || lower_id.contains("360m")) && !tiers.contains(&"Tier 0".to_string()) {
+        tiers.push("Tier 0".to_string());
+        if !tags.contains(&"fast_triage".to_string()) {
+            tags.push("fast_triage".to_string());
+        }
+    }
+
+    // 4. Drafters / Speculative (0.5B - 1.5B ou mtp)
+    if lower_id.contains("0-5b") || lower_id.contains("0.5b") || lower_id.contains("mtp") {
+        if !tiers.contains(&"Tier 4".to_string()) {
+            tiers.push("Tier 4".to_string());
+        }
+        if !tags.contains(&"speculative_draft".to_string()) {
+            tags.push("speculative_draft".to_string());
+        }
+    }
+
+    // 5. Tool Calling Specialists
+    if lower_id.contains("xlam") || lower_id.contains("function") || lower_id.contains("agentic") {
+        if !tiers.contains(&"Tier 1".to_string()) {
+            tiers.push("Tier 1".to_string());
+        }
+        for extra in ["tool_calling", "mcp_tools", "function_calling", "json_schema"] {
+            if !tags.contains(&extra.to_string()) {
+                tags.push(extra.to_string());
+            }
+        }
+    }
+
+    // Deduplicate preserving order
+    let mut deduped_tiers = Vec::new();
+    for t in tiers {
+        if !deduped_tiers.contains(&t) {
+            deduped_tiers.push(t);
+        }
+    }
+
+    let mut deduped_tags = Vec::new();
+    for tg in tags {
+        if !deduped_tags.contains(&tg) {
+            deduped_tags.push(tg);
+        }
+    }
+
+    (deduped_tiers, deduped_tags)
+}
+
 /// Inventory of local bare-metal models.
 pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> {
     let _guard = state.acquire_connection();
@@ -1104,8 +1184,11 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                     None => (None, None),
                 };
 
+                let (multi_tiers, multi_tags) = resolve_multi_tier_and_tags(&m.model_id, &m.tier, &m.tags);
+
                 json!({
                     "tier": m.tier,
+                    "tiers": multi_tiers,
                     "model": m.model_id,
                     "name": m.name,
                     "target": if m.is_gpu_accelerated { "dGPU RTX 2060m" } else { "CPU Host (AVX2)" },
@@ -1114,7 +1197,7 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                     "context_window": m.context_window,
                     "vram": if m.is_gpu_accelerated { format!("{:.1} GB", m.size_mb / 1024.0) } else { "0 MB".to_string() },
                     "status": status,
-                    "tags": m.tags,
+                    "tags": multi_tags,
                     "wddm_safe": m.wddm_safe,
                     "file_path": m.file_path.to_string_lossy(),
                     "freshness": freshness_str,

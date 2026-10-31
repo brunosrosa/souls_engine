@@ -681,8 +681,8 @@
       font-size: 0.74rem;
     }
     #panel-local-installed .model-name-text {
-      max-width: 180px;
-      font-size: 0.78rem;
+      max-width: 230px;
+      font-size: 0.80rem;
     }
     .btn-apply-model {
       background: rgba(6, 182, 212, 0.14);
@@ -2480,15 +2480,15 @@
             <table class="arena-table">
               <thead>
                 <tr style="cursor: pointer; user-select: none;">
-                  <th class="text-center" style="width: 78px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier ↕</th>
+                  <th style="min-width: 220px; max-width: 270px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
                   <th class="text-center" style="width: 105px;">Ações</th>
-                  <th style="min-width: 160px; max-width: 200px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
+                  <th class="text-center" style="width: 95px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier(s) ↕</th>
                   <th style="width: 120px;" onclick="sortLocalModels('profile')" title="Clique para ordenar por Perfil Agêntico">Perfil Agêntico ↕</th>
                   <th class="text-center" style="width: 105px;" onclick="sortLocalModels('size')" title="Clique para ordenar por Tamanho">Tamanho / Quant ↕</th>
                   <th class="text-center" style="width: 110px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM e Folga">VRAM & Folga WDDM ↕</th>
                   <th class="text-center" style="width: 100px;" onclick="sortLocalModels('tps')" title="Clique para ordenar por Velocidade">Velocidade (Arena) ↕</th>
                   <th class="text-center" style="width: 75px;" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
-                  <th style="min-width: 130px; max-width: 160px;">Tags Especializadas</th>
+                  <th style="min-width: 140px; max-width: 180px;">Tags Especializadas</th>
                   <th class="text-center" style="width: 85px;" onclick="sortLocalModels('freshness')" title="Clique para ordenar por Data de Adição">Freshness ↕</th>
                   <th class="text-center" style="width: 135px; white-space: nowrap;">Status & Silício Alvo</th>
                 </tr>
@@ -4572,9 +4572,18 @@
         subtitle = 'Speculative Draft';
       }
       return `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
           <span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); padding: 2px 7px; border-radius: 9999px;">${t}</span>
-          <span style="font-size: 0.60rem; color: ${color}; opacity: 0.9; white-space: nowrap; font-weight: 600; letter-spacing: 0.02em;">${subtitle}</span>
+          <span style="font-size: 0.58rem; color: ${color}; opacity: 0.9; white-space: nowrap; font-weight: 600; letter-spacing: 0.02em;">${subtitle}</span>
+        </div>
+      `;
+    }
+
+    function renderTierBadges(m) {
+      const tiers = (m.tiers && m.tiers.length > 0) ? m.tiers : (m.tier ? [m.tier] : ['Tier 1']);
+      return `
+        <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center;">
+          ${tiers.map(t => renderTierBadge(t)).join('')}
         </div>
       `;
     }
@@ -4607,65 +4616,69 @@
       let border = 'rgba(148, 163, 184, 0.25)';
 
       // 1. Código, AST & Sintaxe (Roxo / Violeta)
-      if (t.includes('code') || t.includes('rust') || t.includes('ast') || t.includes('syntax') || t.includes('refactor')) {
+      if (t.includes('code') || t.includes('rust') || t.includes('ast') || t.includes('syntax') || t.includes('refactor') || t.includes('image_to_code')) {
         bg = 'rgba(139, 92, 246, 0.16)';
         color = '#c084fc';
         border = 'rgba(168, 85, 247, 0.4)';
       }
       // 2. Ferramentas, Protocolos & Schemas (Ciano / Azul Céu)
-      else if (t.includes('tool') || t.includes('mcp') || t.includes('json') || t.includes('schema') || t.includes('agentic') || t.includes('function') || t.includes('fc')) {
+      else if (t.includes('tool') || t.includes('mcp') || t.includes('json') || t.includes('schema') || t.includes('agentic') || t.includes('function') || t.includes('fc') || t.includes('ui_inspection')) {
         bg = 'rgba(6, 182, 212, 0.16)';
         color = '#38bdf8';
         border = 'rgba(6, 182, 212, 0.4)';
       }
       // 3. Raciocínio Profundo, CoT & Prova (Índigo / Safira)
-      else if (t.includes('reason') || t.includes('cot') || t.includes('logic') || t.includes('math') || t.includes('thinking')) {
+      else if (t.includes('reason') || t.includes('cot') || t.includes('logic') || t.includes('math') || t.includes('thinking') || t.includes('socratic')) {
         bg = 'rgba(99, 102, 241, 0.16)';
         color = '#818cf8';
         border = 'rgba(99, 102, 241, 0.4)';
       }
       // 4. Triagem Rápida, Hardware & Silício (Esmeralda / Menta)
-      else if (t.includes('triage') || t.includes('fast') || t.includes('avx') || t.includes('cpu') || t.includes('dgpu') || t.includes('bootstrap')) {
+      else if (t.includes('triage') || t.includes('fast') || t.includes('avx') || t.includes('cpu') || t.includes('dgpu') || t.includes('bootstrap') || t.includes('intent') || t.includes('guardrail')) {
         bg = 'rgba(16, 185, 129, 0.16)';
         color = '#34d399';
         border = 'rgba(16, 185, 129, 0.4)';
       }
       // 5. Visão, VLM & Multimodal (Rosa / Framboesa)
-      else if (t.includes('vision') || t.includes('vlm') || t.includes('multi') || t.includes('image')) {
+      else if (t.includes('vision') || t.includes('vlm') || t.includes('multi') || t.includes('image') || t.includes('ocr')) {
         bg = 'rgba(244, 63, 94, 0.16)';
         color = '#fb7185';
         border = 'rgba(244, 63, 94, 0.4)';
       }
+      // 6. Especulativo / Drafter (Âmbar / Laranja)
+      else if (t.includes('draft') || t.includes('speculative') || t.includes('mtp')) {
+        bg = 'rgba(245, 158, 11, 0.16)';
+        color = '#f59e0b';
+        border = 'rgba(245, 158, 11, 0.4)';
+      }
 
-      return `<span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; line-height: 1.2; font-weight: 500; margin: 0;">${tag}</span>`;
+      return `<span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.64rem; padding: 2px 6px; border-radius: 4px; line-height: 1.2; font-weight: 500; margin: 0;">${tag}</span>`;
     }
 
     function resolveAgenticProfile(m) {
-      const t = (m.tier || '').toLowerCase();
+      const tiers = (m.tiers && m.tiers.length > 0) ? m.tiers : (m.tier ? [m.tier] : []);
+      const t = tiers.join(' ').toLowerCase();
       const name = `${m.model || ''} ${m.name || ''} ${(m.tags || []).join(' ')}`.toLowerCase();
 
-      if (t.includes('tier 0.5')) {
-        return { icon: '🔍', title: 'Intent Probing', color: '#34d399' };
+      if (t.includes('tier 3') || name.includes('vl') || name.includes('vision') || name.includes('multimodal')) {
+        return { icon: '👁️', title: 'Multimodal Vision', color: '#fb7185' };
       }
-      if (t.includes('tier 0')) {
-        return { icon: '⚡', title: 'Fast Triage', color: '#38bdf8' };
-      }
-      if (t.includes('tier 4')) {
-        return { icon: '🚀', title: 'Speculative Draft', color: '#60a5fa' };
-      }
-      if (t.includes('tier 3') || name.includes('vl') || name.includes('vision')) {
-        return { icon: '👁️', title: 'Multimodal / Vision', color: '#fb7185' };
-      }
-      if (name.includes('coder') || name.includes('code')) {
-        return { icon: '🤖', title: 'Code Surgeon', color: '#c084fc' };
-      }
-      if (name.includes('function') || name.includes('tool') || name.includes('fc')) {
+      if (name.includes('function') || name.includes('tool') || name.includes('fc') || name.includes('xlam')) {
         return { icon: '🛠️', title: 'Tool Specialist', color: '#38bdf8' };
       }
-      if (name.includes('reasoning') || name.includes('phi') || name.includes('cot')) {
-        return { icon: '💡', title: 'Deep Reasoning', color: '#818cf8' };
+      if (name.includes('mtp') || t.includes('tier 4') || name.includes('draft')) {
+        return { icon: '🚀', title: 'Speculative Draft', color: '#60a5fa' };
       }
-      if (name.includes('hermes')) {
+      if (name.includes('reasoning') || name.includes('r1') || t.includes('tier 0.5') || name.includes('socratic')) {
+        return { icon: '🔍', title: 'Intent Probing', color: '#34d399' };
+      }
+      if (t.includes('tier 0') || name.includes('135m')) {
+        return { icon: '⚡', title: 'Fast Triage', color: '#38bdf8' };
+      }
+      if (name.includes('coder') || name.includes('code') || name.includes('temper')) {
+        return { icon: '🤖', title: 'Code Surgeon', color: '#c084fc' };
+      }
+      if (name.includes('hermes') || name.includes('nemotron')) {
         return { icon: '👑', title: 'Master Candidate', color: '#fbbf24' };
       }
       return { icon: '🤖', title: 'General Subagent', color: '#94a3b8' };
@@ -4720,7 +4733,8 @@
 
         if (localModelFilterQuery) {
           const prof = resolveAgenticProfile(m);
-          const hay = `${m.model || ''} ${m.name || ''} ${m.tier || ''} ${prof.title} ${m.quantization || ''} ${(m.tags || []).join(' ')} ${m.file_path || ''}`.toLowerCase();
+          const tiersStr = (m.tiers || [m.tier]).join(' ');
+          const hay = `${m.model || ''} ${m.name || ''} ${tiersStr} ${prof.title} ${m.quantization || ''} ${(m.tags || []).join(' ')} ${m.file_path || ''}`.toLowerCase();
           if (!hay.includes(localModelFilterQuery)) return false;
         }
         return true;
@@ -4730,7 +4744,9 @@
       filtered.sort((a, b) => {
         let cmp = 0;
         if (localModelSortKey === 'tier') {
-          cmp = getTierRank(a.tier) - getTierRank(b.tier);
+          const tA = (a.tiers && a.tiers.length > 0) ? a.tiers[0] : a.tier;
+          const tB = (b.tiers && b.tiers.length > 0) ? b.tiers[0] : b.tier;
+          cmp = getTierRank(tA) - getTierRank(tB);
           if (cmp === 0) cmp = (a.model || a.name || '').localeCompare(b.model || b.name || '');
         } else if (localModelSortKey === 'name') {
           cmp = (a.model || a.name || '').localeCompare(b.model || b.name || '');
@@ -4760,7 +4776,7 @@
       }
 
       tbody.innerHTML = filtered.map(m => {
-        const tagsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 3px 5px; max-width: 155px; align-items: center;">` +
+        const tagsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 3px 5px; max-width: 175px; align-items: center;">` +
           (m.tags || []).map(t => renderTagBadge(t)).join('') +
           `</div>`;
         const isGpu = m.target && m.target.includes('dGPU');
@@ -4834,7 +4850,12 @@
 
         return `
           <tr>
-            <td class="text-center" style="vertical-align: middle;">${renderTierBadge(m.tier)}</td>
+            <td>
+              ${formatModelDisplayName(modelId, true)}
+              <div style="font-size: 0.65rem; color: var(--text-muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
+                ${m.file_path || ''}
+              </div>
+            </td>
             <td class="text-center" style="vertical-align: middle;">
               <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
                 <button class="btn-apply-model local-btn" style="padding: 3px 6px; font-size: 0.68rem;" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
@@ -4845,12 +4866,17 @@
                 </button>
               </div>
             </td>
-            <td>
-              ${formatModelDisplayName(modelId, true)}
-              <div style="font-size: 0.65rem; color: var(--text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
-                ${m.file_path || ''}
-              </div>
-            </td>
+            <td class="text-center" style="vertical-align: middle;">${renderTierBadges(m)}</td>
+            <td style="vertical-align: middle;">${profileHtml}</td>
+            <td class="mono text-center" style="white-space: nowrap; vertical-align: middle;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
+            <td class="text-center" style="vertical-align: middle;">${vramHtml}</td>
+            <td class="text-center" style="vertical-align: middle;">${speedHtml}</td>
+            <td class="mono text-center" style="vertical-align: middle;">${(m.context_window || 8192).toLocaleString()}</td>
+            <td style="vertical-align: middle;">${tagsHtml}</td>
+            <td style="vertical-align: middle;">${freshnessHtml}</td>
+            <td class="text-center" style="vertical-align: middle;">${statusBadge}</td>
+          </tr>
+        `;
             <td style="vertical-align: middle;">${profileHtml}</td>
             <td class="mono text-center" style="white-space: nowrap; vertical-align: middle;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
             <td class="text-center" style="vertical-align: middle;">${vramHtml}</td>
