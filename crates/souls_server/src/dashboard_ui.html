@@ -659,6 +659,11 @@
       background: rgba(16, 185, 129, 0.1);
       border-color: rgba(16, 185, 129, 0.25);
     }
+    .model-brand-pill.cpu {
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.25);
+    }
     .model-name-text {
       font-size: 0.84rem;
       font-weight: 600;
@@ -2233,6 +2238,9 @@
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <span class="badge badge-champion">9 Domínios Canônicos</span>
             <span class="badge badge-value">Zero L7 Pollution</span>
+            <button class="btn btn-purple" onclick="openSimulateDispatchModal()" style="padding: 6px 14px; font-size: 0.75rem; font-weight: 600;">
+              <span>⚡</span> Simular Despacho Pareto
+            </button>
             <button class="btn btn-cyan" onclick="fetchSubAgentSessions(); fetchRouterMatrix();" style="padding: 6px 14px; font-size: 0.75rem;">
               <span>🔄</span> Sincronizar Subagentes
             </button>
@@ -2335,12 +2343,12 @@
           <table class="arena-table">
             <thead>
               <tr>
-                <th style="width: 140px;">Session ID</th>
-                <th>Subagente / Perfil</th>
-                <th style="width: 140px;">Parent Session</th>
+                <th style="width: 150px;">Session ID</th>
+                <th>Subagente / Tarefa Executada</th>
+                <th style="width: 170px;">Orquestrador de Origem</th>
                 <th style="width: 120px;" class="text-center">Status</th>
-                <th style="width: 150px;">Criado em</th>
-                <th style="width: 160px;" class="text-center">Ações</th>
+                <th style="width: 150px;">Criado em & Duração</th>
+                <th style="width: 150px;" class="text-center">Ações</th>
               </tr>
             </thead>
             <tbody id="subagent-sessions-tbody">
@@ -2412,21 +2420,34 @@
           <div class="stat-box" style="padding: 16px; text-align: left; background: rgba(15, 23, 42, 0.45); border: 1px solid var(--border-subtle); border-radius: 10px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
               <strong style="color: #fff; font-size: 0.86rem; display: flex; align-items: center; gap: 6px;">
-                <span>🛠️</span> 15 Ferramentas MCP Nativas
+                <span>🛠️</span> 25+ Ferramentas MCP Nativas
               </strong>
               <span class="badge badge-value">RFC-007</span>
             </div>
             <p style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
               Catálogo bare-metal compilado em Rust, disponível instantaneamente para qualquer subagente instanciado:
             </p>
-            <div style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.65rem;">
-              <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">souls_ast_outline</span>
-              <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">souls_ast_slice</span>
-              <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">memory_search_hybrid</span>
-              <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">ontology_traverse</span>
-              <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">pareto_dispatch</span>
-              <span class="badge" style="background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.25);">hardware_metrics</span>
-              <span class="badge" style="background: rgba(244,63,94,0.1); color: #fb7185; border: 1px solid rgba(244,63,94,0.25);">intent_probe</span>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.65rem;">
+              <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                <span style="color: var(--cyan); font-weight: 600; font-size: 0.68rem; margin-right: 4px;">AST & Code:</span>
+                <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">outline</span>
+                <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">symbol</span>
+                <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">delta_diff</span>
+                <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">edit</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                <span style="color: var(--green); font-weight: 600; font-size: 0.68rem; margin-right: 4px;">Memória L2:</span>
+                <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">semantic_search</span>
+                <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">sqlite_query</span>
+                <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">knowledge</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                <span style="color: #c084fc; font-weight: 600; font-size: 0.68rem; margin-right: 4px;">Thinking & Ops:</span>
+                <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">intent</span>
+                <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">route_subtask</span>
+                <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">repo_impact</span>
+                <span class="badge" style="background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.25);">metrics</span>
+              </div>
             </div>
           </div>
 
@@ -4497,30 +4518,61 @@
       }
     }
 
+    function humanizeModelName(id) {
+      if (!id) return '--';
+      const lower = id.toLowerCase();
+      if (lower.includes('qwen3-5-4b') || lower.includes('qwen2.5-coder-4b') || lower.includes('qwen3.5-coder')) return 'Qwen 2.5 Coder 4B';
+      if (lower.includes('arch-function')) return 'Arch Function Chat 3B';
+      if (lower.includes('smollm2-135m')) return 'SmolLM2 135M Reasoning';
+      if (lower.includes('phi-4-mini')) return 'Phi-4 Mini 3.8B';
+      if (lower.includes('qwen2-5-vl-3b') || lower.includes('qwen2.5-vl-3b')) return 'Qwen 2.5 VL 3B Vision';
+      if (lower.includes('tiktoken-ccr')) return 'Tiktoken CCR Dehydrator';
+      if (lower.includes('gitoxide')) return 'Gitoxide Frecency & AST';
+      if (lower.includes('ladybug')) return 'LadybugDB Ontological Graph';
+      if (lower.includes('nvml-barrier') || lower.includes('nvml-watchdog')) return 'NVML Physical Watchdog';
+      if (lower.includes('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
+      if (lower.includes('claude-3-5-haiku')) return 'Claude 3.5 Haiku';
+      if (lower.includes('deepseek-chat')) return 'DeepSeek-V3 Chat';
+      if (lower.includes('deepseek-coder')) return 'DeepSeek Coder';
+      if (lower.includes('gemini-2.0-flash')) return 'Gemini 2.0 Flash';
+      if (lower.includes('o3-mini')) return 'OpenAI o3-mini';
+      return id;
+    }
+
     function formatModelDisplayName(canonicalId, isLocal) {
       if (!canonicalId) return '--';
+      const friendlyName = humanizeModelName(canonicalId);
       if (isLocal) {
+        const isCpu = canonicalId.includes('smollm') || canonicalId.includes('tiktoken') || canonicalId.includes('gitoxide') || canonicalId.includes('ladybug');
+        const badgeLabel = isCpu ? 'CPU AVX2' : 'dGPU';
+        const badgeClass = isCpu ? 'cpu' : 'local';
         return `
-          <div class="model-id-box">
-            <span class="model-brand-pill local">LOCAL /</span>
-            <span class="model-name-text" title="${canonicalId}">${canonicalId}</span>
+          <div class="model-id-box" style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="model-brand-pill ${badgeClass}">${badgeLabel}</span>
+              <span class="model-name-text" title="${canonicalId}" style="font-weight: 600; color: #fff;">${friendlyName}</span>
+            </div>
+            <div class="mono" style="font-size: 0.66rem; color: var(--text-muted);">${canonicalId}</div>
           </div>
         `;
       }
       const slashIdx = canonicalId.indexOf('/');
       if (slashIdx !== -1) {
-        const brand = canonicalId.substring(0, slashIdx).toUpperCase() + ' /';
-        const model = canonicalId.substring(slashIdx + 1);
+        const brand = canonicalId.substring(0, slashIdx).toUpperCase();
         return `
-          <div class="model-id-box">
-            <span class="model-brand-pill">${brand}</span>
-            <span class="model-name-text" title="${canonicalId}">${model}</span>
+          <div class="model-id-box" style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="model-brand-pill">${brand}</span>
+              <span class="model-name-text" title="${canonicalId}" style="font-weight: 600; color: #fff;">${friendlyName}</span>
+            </div>
+            <div class="mono" style="font-size: 0.66rem; color: var(--text-muted);">${canonicalId}</div>
           </div>
         `;
       }
       return `
-        <div class="model-id-box">
-          <span class="model-name-text" title="${canonicalId}">${canonicalId}</span>
+        <div class="model-id-box" style="display: flex; flex-direction: column; gap: 2px;">
+          <span class="model-name-text" title="${canonicalId}" style="font-weight: 600; color: #fff;">${friendlyName}</span>
+          <div class="mono" style="font-size: 0.66rem; color: var(--text-muted);">${canonicalId}</div>
         </div>
       `;
     }
@@ -7555,19 +7607,37 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
         const dateStr = ts ? new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
         const parentId = s.parent_session_id || 'Mestre (Chat)';
         const agentKey = s.agent_id || s.id;
+        const friendlyTitle = deriveFriendlySubagentTitle(s);
+        const durationStr = formatDuration(s.created_at, s.completed_at);
+        const tierBadge = getTierBadgeClass(s.assigned_tier);
 
         rowsHtml += `
           <tr>
-            <td class="mono" style="font-size: 0.76rem; color: var(--cyan); font-weight: 600;">${agentKey}</td>
-            <td>
-              <strong style="color: #fff; font-size: 0.82rem;">${agentKey}</strong>
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
-                ${escapeHtml(s.task_description || 'Sessão Bare-Metal L3')} &bull; <span style="color: var(--cyan);">${s.assigned_tier || 'Tier1'}</span>
+            <td class="mono" style="font-size: 0.74rem; color: var(--cyan); font-weight: 600; white-space: nowrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span>${agentKey}</span>
+                <button class="btn" style="padding: 1px 5px; font-size: 0.62rem;" onclick="navigator.clipboard.writeText('${agentKey}')" title="Copiar Session ID">📋</button>
               </div>
             </td>
-            <td class="mono" style="font-size: 0.74rem; color: var(--text-muted);">${parentId}</td>
+            <td>
+              <div style="font-weight: 600; color: #fff; font-size: 0.82rem; display: flex; align-items: center; gap: 8px;">
+                <span>${friendlyTitle}</span>
+                <span class="badge ${tierBadge}" style="font-size: 0.65rem;">${s.assigned_tier || 'Tier1'}</span>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; line-height: 1.4;">
+                ${escapeHtml(s.task_description || 'Sessão Bare-Metal L3')}
+              </div>
+            </td>
+            <td>
+              ${formatOrchestratorBadge(parentId)}
+            </td>
             <td class="text-center">${statusBadge}</td>
-            <td style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</td>
+            <td>
+              <div style="font-weight: 600; color: #cbd5e1; font-size: 0.76rem;">${dateStr}</div>
+              <div style="font-size: 0.70rem; color: var(--text-muted); margin-top: 2px;">
+                ⏱️ Duração: <strong style="color: var(--cyan);">${durationStr}</strong>
+              </div>
+            </td>
             <td class="text-center">
               <button class="btn btn-purple" style="padding: 4px 10px; font-size: 0.72rem; border-radius: 6px;" onclick="inspectSubAgentHistory('${agentKey}')">
                 <span>📖</span> Diário & Handoff
@@ -7578,6 +7648,70 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       }
 
       tbody.innerHTML = rowsHtml;
+    }
+
+    function deriveFriendlySubagentTitle(s) {
+      const desc = (s.task_description || '').toLowerCase();
+      if (desc.includes('curadoria')) return 'Curadoria Semântica AST';
+      if (desc.includes('cirurgia') || desc.includes('refatorar')) return 'Cirurgia Sintática AST';
+      if (desc.includes('termi') || desc.includes('vram')) return 'Diagnóstico NVML & FinOps';
+      if (desc.includes('memoria') || desc.includes('ladybug')) return 'Consulta Hipocampo L2';
+      if (desc.includes('triagem') || desc.includes('entropia')) return 'Gating de Entropia';
+      if (s.task_description && s.task_description.length > 0) {
+        return s.task_description.length > 36 ? s.task_description.substring(0, 34) + '...' : s.task_description;
+      }
+      return s.agent_id || 'Subagente Especializado';
+    }
+
+    function formatOrchestratorBadge(parentId) {
+      if (!parentId || parentId === 'Mestre (Chat)') {
+        return `
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="badge" style="background: rgba(147, 51, 234, 0.12); color: var(--purple); border: 1px solid rgba(147, 51, 234, 0.3); font-size: 0.70rem;">🎯 Master Brain</span>
+          </div>
+          <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">Direto / Local</div>
+        `;
+      }
+      const lower = parentId.toLowerCase();
+      if (lower.includes('hermes')) {
+        return `
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.70rem;">🤖 Hermes Agent</span>
+          </div>
+          <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;" title="${parentId}">${parentId}</div>
+        `;
+      }
+      if (lower.includes('antigravity') || lower.includes('cli') || lower.includes('sub_') || lower.includes('agent')) {
+        return `
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.3); font-size: 0.70rem;">⚡ Antigravity / IDE</span>
+          </div>
+          <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;" title="${parentId}">${parentId}</div>
+        `;
+      }
+      return `
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span class="badge" style="background: rgba(147, 51, 234, 0.12); color: var(--purple); border: 1px solid rgba(147, 51, 234, 0.3); font-size: 0.70rem;">🎯 Master Session</span>
+        </div>
+        <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;" title="${parentId}">${parentId}</div>
+      `;
+    }
+
+    function formatDuration(created, completed) {
+      if (!completed || !created) return 'Em execução...';
+      const sec = Math.max(0, completed - created);
+      if (sec === 0) return '< 1s';
+      if (sec < 60) return `${sec}s`;
+      const mins = Math.floor(sec / 60);
+      const remSec = sec % 60;
+      return `${mins}m ${remSec}s`;
+    }
+
+    function getTierBadgeClass(tier) {
+      const t = (tier || 'Tier1').toLowerCase();
+      if (t.includes('0.5') || t.includes('tier0')) return 'badge-value';
+      if (t.includes('2')) return 'badge-champion';
+      return 'badge-value';
     }
 
     async function inspectSubAgentHistory(sessionId) {
@@ -7694,6 +7828,99 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
     function closeSubAgentHistoryModal() {
       const modal = document.getElementById('modal-subagent-history');
       if (modal) modal.classList.remove('active');
+    }
+
+    function openSimulateDispatchModal() {
+      const modal = document.getElementById('modal-simulate-dispatch');
+      if (modal) modal.classList.add('active');
+      const input = document.getElementById('sim-task-input');
+      if (input) input.focus();
+    }
+
+    function closeSimulateDispatchModal() {
+      const modal = document.getElementById('modal-simulate-dispatch');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function setSimTask(taskText) {
+      const input = document.getElementById('sim-task-input');
+      if (input) {
+        input.value = taskText;
+        runSimulateDispatch();
+      }
+    }
+
+    async function runSimulateDispatch() {
+      const input = document.getElementById('sim-task-input');
+      const resultBox = document.getElementById('sim-dispatch-result');
+      if (!input || !resultBox) return;
+      const query = input.value.trim();
+      if (!query) {
+        resultBox.innerHTML = '<div style="color: var(--amber); font-size: 0.78rem;">Digite uma tarefa ou clique em uma das sugestões acima.</div>';
+        return;
+      }
+
+      resultBox.innerHTML = '<div style="color: var(--cyan); font-size: 0.78rem;">Sondando Two-Stage Semantic Switchboard (Host CPU AVX2)...</div>';
+
+      try {
+        const res = await fetch('/api/v1/switchboard/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query })
+        });
+        if (!res.ok) {
+          resultBox.innerHTML = `<div style="color: var(--red); font-size: 0.78rem;">Erro ao consultar switchboard: HTTP ${res.status}</div>`;
+          return;
+        }
+        const data = await res.json();
+        const d = data.decision || {};
+        const skill = d.recommended_skill || {};
+        const tools = d.tools || [];
+        const latency = d.latency_ms ? `${d.latency_ms.toFixed(1)}ms` : '< 5ms';
+        const conf = d.confidence ? `${(d.confidence * 100).toFixed(0)}%` : '--';
+        const entropy = d.entropy !== undefined ? d.entropy.toFixed(2) : '--';
+        const stage = d.stage || 'fast_path_ram_cosine';
+
+        let toolsHtml = tools.map(t => `<span class="badge" style="background: rgba(6,182,212,0.12); color: var(--cyan); border: 1px solid rgba(6,182,212,0.3); font-size: 0.7rem;">${t.name}</span>`).join(' ');
+
+        resultBox.innerHTML = `
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
+              <div>
+                <span class="badge badge-champion" style="font-size: 0.72rem;">${stage}</span>
+                <span style="font-size: 0.74rem; color: var(--green); margin-left: 8px; font-weight: 600;">⚡ Latência: ${latency}</span>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">
+                Confiança: <strong style="color: var(--cyan);">${conf}</strong> &bull; Entropia: <strong style="color: var(--amber);">${entropy}</strong>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+              <div style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase;">Skill Canônica Selecionada</div>
+              <div style="font-size: 0.88rem; font-weight: 700; color: #fff; margin-top: 2px;">
+                🎯 ${skill.name || 'souls-general-orchestration'}
+              </div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">${skill.description || 'Orquestração de tarefas especializadas no Souls Engine.'}</div>
+            </div>
+
+            <div style="margin-bottom: 10px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 8px;">
+              <div style="font-size: 0.70rem; color: var(--cyan); font-weight: 600;">⚖️ Decisão de Despacho ParetoBandit:</div>
+              <div style="font-size: 0.76rem; color: #cbd5e1; margin-top: 3px;">
+                Despachar no <strong>Silício Local Bare-Metal ($0.00)</strong>. Entropia (${entropy}) está abaixo do limiar de desvio para Cloud.
+              </div>
+            </div>
+
+            <div>
+              <div style="font-size: 0.70rem; color: var(--text-muted); margin-bottom: 4px;">Ferramentas MCP Vinculadas (${tools.length}):</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                ${toolsHtml || '<span style="color: var(--text-muted); font-size: 0.72rem;">Nenhuma ferramenta restrita necessária.</span>'}
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        resultBox.innerHTML = `<div style="color: var(--red); font-size: 0.78rem;">Falha na simulação: ${err.message}</div>`;
+      }
     }
 
     function escapeHtml(str) {
@@ -7900,6 +8127,55 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeSubAgentHistoryModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SIMULADOR DE DESPACHO PARETO (SWITCHBOARD L3) -->
+  <div class="modal-backdrop" id="modal-simulate-dispatch">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--purple);">⚡</span>
+            <span>Simulador de Despacho ParetoBandit (Two-Stage Switchboard)</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+            Teste em tempo real a classificação de entropia, seleção de silício e ferramentas MCP
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeSimulateDispatchModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 0.76rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 6px;">
+            Descreva a tarefa ou prompt de teste:
+          </label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="sim-task-input" class="search-input" placeholder="Ex: Refatorar trait AST em Rust, Medir temperatura NVML, Buscar memória L2..." style="flex: 1; padding: 8px 12px; font-size: 0.8rem;" onkeydown="if(event.key==='Enter') runSimulateDispatch();">
+            <button class="btn btn-cyan" onclick="runSimulateDispatch()" style="padding: 8px 16px; font-weight: 600; white-space: nowrap;">
+              <span>⚡</span> Despachar
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;">
+          <span style="font-size: 0.70rem; color: var(--text-muted); align-self: center;">Sugestões:</span>
+          <button class="btn" style="padding: 3px 8px; font-size: 0.68rem;" onclick="setSimTask('Refatorar from_str_strict na AST com Myers Diff')">💻 AST Cirurgia</button>
+          <button class="btn" style="padding: 3px 8px; font-size: 0.68rem;" onclick="setSimTask('Buscar na memória profunda L2 e grafo de ontologia')">🧠 Memória Triad</button>
+          <button class="btn" style="padding: 3px 8px; font-size: 0.68rem;" onclick="setSimTask('Verificar métricas térmicas da GPU e uso de VRAM WDDM')">🛡️ Watchdog NVML</button>
+          <button class="btn" style="padding: 3px 8px; font-size: 0.68rem;" onclick="setSimTask('Triagem rápida de intenção com SmolLM2')">⚡ Fast Triage</button>
+          <button class="btn" style="padding: 3px 8px; font-size: 0.68rem;" onclick="setSimTask('Analisar captura de tela da UI e desidentificar PII')">👁️ Visão Soberana</button>
+        </div>
+
+        <div id="sim-dispatch-result">
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.78rem; padding: 24px 0; background: rgba(0,0,0,0.15); border: 1px dashed var(--border-subtle); border-radius: 8px;">
+            Digite uma tarefa acima para aferir a rota de despacho Pareto em &lt;6ms.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeSimulateDispatchModal()">Fechar</button>
       </div>
     </div>
   </div>

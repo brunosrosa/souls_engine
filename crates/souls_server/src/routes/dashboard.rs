@@ -808,32 +808,37 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
         |model_id: &str, default_target: &str, fallback_tps: f64, fallback_vram_mb: f64| {
             let key = model_id.to_lowercase();
             let empirical = vault.models_map.get(&key).copied();
+            let is_cpu = default_target.to_lowercase().contains("cpu");
             let (tps, ttft_ms, vram_mb, e3, is_benchmarked) = match empirical {
-                Some((t, ttft, v, e)) if t > 0.0 => (t, ttft, v, e, true),
+                Some((t, ttft, v, e)) if t > 0.0 => {
+                    // Safety: Avoid Windows DWM ambient VRAM attribution for CPU host models
+                    let clean_vram = if is_cpu { 0.0 } else { v };
+                    (t, ttft, clean_vram, e, true)
+                }
                 _ => (fallback_tps, 180.0, fallback_vram_mb, 92.0, false),
             };
 
-            let target_str = if vram_mb > 10.0 {
+            let target_str = if is_cpu || vram_mb <= 10.0 {
+                format!("{} (0 MB VRAM • RAM)", default_target)
+            } else {
                 format!(
                     "{} ({:.2} GB Pico NVML)",
                     default_target,
                     vram_mb / 1024.0
                 )
-            } else {
-                format!("{} (0 MB VRAM • RAM)", default_target)
             };
 
             let tps_str = format!("{:.1} tok/s • {:.0}ms TTFT", tps, ttft_ms);
             let status_str = if is_benchmarked {
-                if vram_mb > 10.0 {
-                    "✅ Homologado (dGPU)"
+                if is_cpu || vram_mb <= 10.0 {
+                    "✅ Homologado (CPU Host AVX2)"
                 } else {
-                    "✅ Homologado (CPU AVX2)"
+                    "✅ Homologado (dGPU)"
                 }
-            } else if vram_mb > 10.0 {
-                "Pronto (dGPU)"
+            } else if is_cpu || vram_mb <= 10.0 {
+                "Pronto (CPU Host AVX2)"
             } else {
-                "Pronto (CPU AVX2)"
+                "Pronto (dGPU)"
             };
 
             (
@@ -935,6 +940,30 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
         49.5,
         1624.0,
     );
+    let (context_local, context_status) = format_local_cell(
+        "tiktoken-ccr-fast",
+        "CPU Host AVX2",
+        1250.0,
+        0.0,
+    );
+    let (blast_local, blast_status) = format_local_cell(
+        "gitoxide-frecency-native",
+        "CPU Host AVX2",
+        950.0,
+        0.0,
+    );
+    let (obsidian_local, obsidian_status) = format_local_cell(
+        "ladybug-ontological-graph",
+        "CPU Host AVX2",
+        480.0,
+        0.0,
+    );
+    let (hardware_local, hardware_status) = format_local_cell(
+        "nvml-barrier-watchdog",
+        "dGPU RTX 2060m",
+        1000.0,
+        0.0,
+    );
 
     let matrix = vec![
         json!({
@@ -1021,6 +1050,74 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
             }),
             "pareto_rule": "Processamento de imagens e dados clínicos/financeiros diretamente na RTX 2060m sem tráfego externo.",
             "status": vision_status
+        }),
+        json!({
+            "id": "context_lean",
+            "profile_id": "ultra_fast",
+            "category": "Context Lean & Compressão Semântica (CCR)",
+            "icon": "🗜️",
+            "description": "Deduplicação de AST e compressão na RAM bare-metal, economizando 70% a 85% de tokens de contexto.",
+            "local_default": context_local,
+            "cloud_fallback": format_cloud_cell(
+                "ultra_fast",
+                "fast",
+                "google/gemini-2.0-flash-001",
+                "Nous Portal",
+                "$0.10 / 1M (Blended)"
+            ),
+            "pareto_rule": "100% executado na RAM do host via CPU AVX2 (<1ms); escala para nuvem apenas em payloads brutos > 200k tokens.",
+            "status": context_status
+        }),
+        json!({
+            "id": "blast_radius",
+            "profile_id": "deep_swe",
+            "category": "Blast Radius & Frecency Git",
+            "icon": "🎯",
+            "description": "Grafo de acoplamento reverso BFS e medição de calor temporal via commit graph nativo gitoxide.",
+            "local_default": blast_local,
+            "cloud_fallback": format_cloud_cell(
+                "deep_swe",
+                "coding",
+                "anthropic/claude-3-7-sonnet",
+                "Nous Portal",
+                "$3.00 / 1M (Blended)"
+            ),
+            "pareto_rule": "Cálculo puramente determinístico em silício host; aciona LLM em nuvem apenas se entropia de refatoração exigir decomposição arquitetural.",
+            "status": blast_status
+        }),
+        json!({
+            "id": "obsidian_curator",
+            "profile_id": "frontier_balanced",
+            "category": "Obsidian Vault Curator & Grafo L2",
+            "icon": "📓",
+            "description": "Higienização de PII com Privacy Shield e vinculação ontológica no grafo LadybugDB do cofre Obsidian.",
+            "local_default": obsidian_local,
+            "cloud_fallback": format_cloud_cell(
+                "frontier_balanced",
+                "agentic",
+                "anthropic/claude-3-5-haiku",
+                "Nous Portal / OpenRouter",
+                "$0.80 / 1M (Blended)"
+            ),
+            "pareto_rule": "Desidentificação local inviolável; síntese de notas consolidada atomicamente em wiki/log.md.",
+            "status": obsidian_status
+        }),
+        json!({
+            "id": "hardware_watchdog",
+            "profile_id": "local_sovereign",
+            "category": "Hardware Watchdog & FinOps Silício",
+            "icon": "🛡️",
+            "description": "Vigilância termodinâmica contínua a 1Hz da RTX 2060m e CPU AVX2 com Barreira Física Phi.",
+            "local_default": hardware_local,
+            "cloud_fallback": json!({
+                "profile_id": "local_sovereign",
+                "profile_name": "Soberania Física 🛡️",
+                "model": "nvml-barrier-daemon",
+                "provider": "Kernel Bare-Metal Local",
+                "cost": "$0.00 (Inviolável)"
+            }),
+            "pareto_rule": "Telemetria soberana exclusiva bare-metal; bloqueia spillover de VRAM no WDDM e descarrega subagentes se GPU > 78°C.",
+            "status": hardware_status
         })
     ];
 
