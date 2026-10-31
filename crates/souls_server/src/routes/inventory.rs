@@ -30,8 +30,9 @@ fn enrich_hardware_diagnostic(diag: souls_llm_inventory::HardwareDiagnostic) -> 
         obj.insert("cpu_instructions_extended".to_string(), json!("AVX2 • FMA • BMI2 • SSE4.2 • AES-NI"));
         obj.insert("weights_budget_gb".to_string(), json!(3.8));
         obj.insert("kv_cache_budget_gb".to_string(), json!(1.3));
-        obj.insert("context_ceiling_tokens".to_string(), json!(32768));
-        obj.insert("context_formula_subtitle".to_string(), json!("com base nos 5.17 GB VRAM (K=F16 ~380 MB / V=Q4_0 ~120 MB em 16k; ~1.0 GB em 32k)"));
+        obj.insert("context_ceiling_tokens".to_string(), json!(16384));
+        obj.insert("context_ceiling_display".to_string(), json!("16.384 tokens (até 32k c/ KV Q4)"));
+        obj.insert("context_formula_subtitle".to_string(), json!("Com base nos 5.17 GB VRAM (16k em 7B FP16; 32k em 3B ou c/ KV Q4_0)"));
     }
     val
 }
