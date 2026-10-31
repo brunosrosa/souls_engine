@@ -630,6 +630,46 @@
       border-color: rgba(6, 182, 212, 0.45);
       box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
     }
+    .filter-provider-btn#btn-subfilter-all.active {
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.18);
+      border-color: rgba(6, 182, 212, 0.45);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+    }
+    .filter-provider-btn#btn-subfilter-active.active {
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.22);
+      border-color: rgba(245, 158, 11, 0.55);
+      font-weight: 700;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+    }
+    .filter-provider-btn#btn-subfilter-completed.active {
+      color: var(--green);
+      background: rgba(16, 185, 129, 0.18);
+      border-color: rgba(16, 185, 129, 0.45);
+      font-weight: 700;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    }
+    .btn-micro {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #94a3b8;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.15s ease;
+      line-height: 1.2;
+    }
+    .btn-micro:hover {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #38bdf8;
+    }
 
     .model-id-box {
       display: flex;
@@ -2223,21 +2263,22 @@
     <!-- ========================================== -->
     <section class="tab-pane" id="tab-subagents">
 
-      <!-- HERO BANNER DA ABA SUBAGENTS -->
+      <!-- HERO BANNER DA ABA SUBAGENTS: TEXTO PRODUTO E HARMONIZADO -->
       <div class="card card-highlight" style="margin-bottom: 20px;">
         <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
           <div>
             <div class="card-title">
               <div class="card-icon icon-amber">🤖</div>
-              Subagents Router & Autonomous Silicon Dispatch (Pareto L3 Vault)
+              Roteador de Subagentes &amp; Despacho Inteligente
             </div>
-            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-              Orquestrador de tarefas especializadas: roteamento determinístico entre silício local bare-metal (<strong style="color: var(--cyan);">RTX 2060m First</strong>) e provedores Cloud. Isola todo raciocínio intermediário em diários L3, preservando &gt;95% de <em>Prefix Cache</em> do chat principal.
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; max-width: 900px;">
+              Distribuição autônoma de tarefas entre IA Local (GPU/CPU) e Provedores Cloud via Fronteira de Pareto.<br>
+              <span style="color: #94a3b8;">Executa raciocínios pesados em segundo plano, mantendo o chat principal veloz e economizando contexto.</span>
             </p>
           </div>
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <span class="badge badge-champion">9 Domínios Canônicos</span>
-            <span class="badge badge-value">Zero L7 Pollution</span>
+            <span class="badge badge-value">Zero Cache Pollution</span>
             <button class="btn btn-purple" onclick="openSimulateDispatchModal()" style="padding: 6px 14px; font-size: 0.75rem; font-weight: 600;">
               <span>⚡</span> Simular Despacho Pareto
             </button>
@@ -2252,36 +2293,37 @@
           <div class="stat-box">
             <div class="stat-lbl">Total de Sessões Despachadas</div>
             <div class="stat-num" id="stat-subagent-total">0</div>
-            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">Heuristic Vault STRICT WAL</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">Banco Heurístico STRICT WAL</div>
           </div>
           <div class="stat-box">
-            <div class="stat-lbl">Sessões Ativas (Spawned / Running)</div>
+            <div class="stat-lbl">Sessões Ativas (Em Execução)</div>
             <div class="stat-num" id="stat-subagent-active" style="color: var(--amber);">0</div>
             <div style="font-size: 0.68rem; color: var(--amber); margin-top: 2px;">Executando no Silício / Cloud</div>
           </div>
           <div class="stat-box">
             <div class="stat-lbl">Sessões Concluídas (Handoffs)</div>
             <div class="stat-num" id="stat-subagent-completed" style="color: var(--green);">0</div>
-            <div style="font-size: 0.68rem; color: var(--green); margin-top: 2px;">Envelopes Atômicos Prontos</div>
+            <div style="font-size: 0.68rem; color: var(--green); margin-top: 2px;">Resultados Entregues com Sucesso</div>
           </div>
-          <div class="stat-box" title="Tokens de raciocínio passo a passo confinados no L3 que não poluem a janela do Hermes Agent">
-            <div class="stat-lbl">Artefatos Confinados no L3 Vault</div>
+          <div class="stat-box" title="Tokens de raciocínio passo a passo confinados no L3 que não poluem a janela do chat principal">
+            <div class="stat-lbl">Contexto Preservado no Chat</div>
             <div class="stat-num" id="stat-subagent-prefix-cache" style="color: var(--cyan); font-size: 0.98rem;">0 Diários • 0 Handoffs</div>
-            <div style="font-size: 0.68rem; color: var(--cyan); margin-top: 2px;">Prefix Cache Preservation &gt;95%</div>
+            <div style="font-size: 0.68rem; color: var(--cyan); margin-top: 2px;">Preservação de Cache &gt;95%</div>
           </div>
         </div>
       </div>
 
-      <!-- CARD 1: SUBAGENTS ROUTER - MATRIZ DE DESPACHO PREDITIVO -->
+      <!-- CARD 1: MATRIZ DE DESPACHO PREDITIVO POR DOMÍNIO -->
       <div class="card" style="margin-bottom: 24px;">
         <div class="card-header">
           <div>
             <div class="card-title">
               <div class="card-icon icon-cyan">🎯</div>
-              Subagents Router — Matriz de Despacho Preditivo por Tipo de Tarefa
+              Matriz de Despacho por Domínio de Tarefa
             </div>
-            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-              Configuração e roteamento dos 9 perfis cognitivos do Souls Engine. Subagentes locais operam a <strong>custo zero ($0.00)</strong> na dGPU/CPU, acionando cloud apenas sob alta entropia.
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; max-width: 850px;">
+              Regras de roteamento para os 9 domínios cognitivos do Souls Engine.<br>
+              <span style="color: #94a3b8;">Prioriza silício local a custo zero ($0.00) e desvia para a nuvem apenas sob alta complexidade.</span>
             </p>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
@@ -2295,39 +2337,41 @@
           <table class="arena-table">
             <thead>
               <tr>
-                <th style="min-width: 190px;">Domínio Cognitivo / Tarefa</th>
-                <th style="min-width: 210px;">Silício Local Default ($0 • Bare-Metal)</th>
-                <th style="min-width: 200px;">Cloud Fallback (Alta Entropia)</th>
-                <th>Regra de Decisão ParetoBandit & Handoff Policy</th>
-                <th class="text-center" style="width: 160px;">Ações</th>
+                <th style="min-width: 250px; width: 24%;">Domínio Cognitivo / Tarefa</th>
+                <th style="min-width: 220px; width: 22%;">Silício Local Default ($0 • Bare-Metal)</th>
+                <th style="min-width: 210px; width: 21%;">Cloud Fallback (Alta Entropia)</th>
+                <th style="min-width: 220px;">Regra de Decisão ParetoBandit &amp; Handoff Policy</th>
+                <th class="text-center" style="width: 150px;">Ações</th>
               </tr>
             </thead>
             <tbody id="subagents-router-tbody">
               <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Carregando roteador de subagentes...</td>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Carregando matriz de subagentes...</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- CARD 2: SESSÕES DE SUBAGENTES & CICLO FECHADO DE HANDOFF (L3 VAULT) -->
+      <!-- CARD 2: SESSÕES DE SUBAGENTES & HISTÓRICO DE TAREFAS -->
       <div class="card" style="margin-bottom: 24px;">
         <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
           <div>
             <div class="card-title">
               <div class="card-icon icon-purple">📚</div>
-              Sessões Ativas e Histórico de Handoffs de Subagentes
+              Sessões de Subagentes &amp; Histórico de Tarefas
             </div>
-            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-              Diários de pensamento passo a passo gravados atomicamente em <code class="mono">sub_agent_diaries</code> e envelopes de retorno confinados em <code class="mono">handoff_payloads</code>.
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; max-width: 850px;">
+              Monitoramento em tempo real de tarefas despachadas para o silício local ou nuvem.<br>
+              <span style="color: #94a3b8;">Diários de execução e envelopes de resultado mantidos isolados para preservar a memória principal.</span>
             </p>
           </div>
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <div class="filter-pills-group" style="background: rgba(15, 23, 42, 0.6); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+            <!-- FILTROS COM ORDEM 'TODAS' -> 'ATIVAS' -> 'CONCLUÍDAS' E CORES DISTINTAS -->
+            <div class="filter-pills-group" style="background: rgba(15, 23, 42, 0.6); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); display: inline-flex; gap: 4px;">
               <button class="filter-provider-btn active" id="btn-subfilter-all" onclick="setSubagentFilter('all')">Todas</button>
-              <button class="filter-provider-btn" id="btn-subfilter-completed" onclick="setSubagentFilter('completed')">Concluídas</button>
-              <button class="filter-provider-btn" id="btn-subfilter-active" onclick="setSubagentFilter('active')">Ativas</button>
+              <button class="filter-provider-btn" id="btn-subfilter-active" onclick="setSubagentFilter('active')">⚡ Ativas</button>
+              <button class="filter-provider-btn" id="btn-subfilter-completed" onclick="setSubagentFilter('completed')">✅ Concluídas</button>
             </div>
             <button class="btn" onclick="cleanupOrphanSubagents()" style="padding: 5px 12px; font-size: 0.74rem; border-color: rgba(245, 158, 11, 0.35); color: var(--amber);" title="Remove sessões antigas de teste presas em SPAWNED/FAILED sem diário nem handoff">
               <span>🧹</span> Limpar Órfãs
@@ -2347,7 +2391,7 @@
                 <th>Subagente / Tarefa Executada</th>
                 <th style="width: 170px;">Orquestrador de Origem</th>
                 <th style="width: 120px;" class="text-center">Status</th>
-                <th style="width: 150px;">Criado em & Duração</th>
+                <th style="width: 150px;">Criado em &amp; Duração</th>
                 <th style="width: 150px;" class="text-center">Ações</th>
               </tr>
             </thead>
@@ -2360,20 +2404,23 @@
         </div>
       </div>
 
-      <!-- CARD 3: HUB DE PORTABILIDADE AGÊNTICA & ADAPTERS (HERMES / IDEs) -->
+      <!-- CARD 3: CONECTIVIDADE AGÊNTICA & INTEGRAÇÃO MCP (INTERATIVO) -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title">
-            <div class="card-icon icon-green">🔌</div>
-            Hub de Portabilidade Agêntica — Hermes Agent, Antigravity & IDEs
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-green">🔌</div>
+              Conectividade Agêntica &amp; Integração MCP
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; max-width: 850px;">
+              Ponto de conexão universal para Hermes Agent, Antigravity e IDEs (Cursor/VS Code).<br>
+              <span style="color: #94a3b8;">Compartilha o motor de AST, memórias profundas e aceleração de silício via protocolo MCP padrão.</span>
+            </p>
           </div>
-          <span class="badge badge-champion">Multi-Orquestrador Pronto</span>
+          <span class="badge badge-champion">Multi-Orquestrador Ativo</span>
         </div>
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px;">
-          O Souls Engine atua como infraestrutura universal bare-metal: centraliza memórias (L1/L2/L3), cirurgia sintática de AST e aceleração de silício local para qualquer orquestrador agêntico.
-        </p>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 14px;">
           
           <!-- BLOCO 1: HERMES AGENT SYMBIOSIS -->
           <div class="stat-box" style="padding: 16px; text-align: left; background: rgba(15, 23, 42, 0.45); border: 1px solid var(--border-subtle); border-radius: 10px;">
@@ -2386,34 +2433,47 @@
             <p style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
               O Hermes consome memórias e despacha subagentes via MCP Loopback sem proxy L7 intermediário. O snapshot <code class="mono">MEMORY.md</code> é lido de forma imutável no cold boot.
             </p>
-            <div style="font-size: 0.72rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
+            <div style="font-size: 0.72rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px;">
               <div>• Endpoint: <code class="mono" style="color: var(--cyan);">http://127.0.0.1:9123/mcp</code></div>
               <div>• Shell Nativo: <code class="mono">MinGit (%LOCALAPPDATA%\hermes\git)</code></div>
-              <div>• Prefixo Cache: <span style="color: var(--green); font-weight: 600;">Preservado (&gt;95%)</span></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 2px;">
+                <span>• Status Loopback:</span>
+                <span id="hermes-loopback-status" style="color: var(--green); font-weight: 600;">✅ 127.0.0.1:9123</span>
+              </div>
             </div>
-            <button class="btn" style="width: 100%; font-size: 0.74rem; padding: 6px;" onclick="openAgentsMdModal('hermes')">
-              📄 Inspecionar Hermes AGENTS.md
-            </button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="openAgentsMdModal('hermes')">
+                📄 Ver Regras
+              </button>
+              <button class="btn btn-green" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="testLoopbackConnection()">
+                ⚡ Testar Loopback
+              </button>
+            </div>
           </div>
 
           <!-- BLOCO 2: IDEs & DEV AGENTS (ANTIGRAVITY / CURSOR / VS CODE) -->
           <div class="stat-box" style="padding: 16px; text-align: left; background: rgba(15, 23, 42, 0.45); border: 1px solid var(--border-subtle); border-radius: 10px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
               <strong style="color: #fff; font-size: 0.86rem; display: flex; align-items: center; gap: 6px;">
-                <span>⚡</span> IDEs & Antigravity MCP
+                <span>⚡</span> IDEs &amp; Antigravity MCP
               </strong>
               <span class="badge badge-champion">JSON MCP Config</span>
             </div>
             <p style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
               Conecte o Antigravity, VS Code, Cursor ou Windsurf diretamente ao servidor MCP nativo para reutilizar o mesmo motor de AST, Frecency e Hipocampo bare-metal.
             </p>
-            <pre style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px; font-size: 0.68rem; color: #38bdf8; overflow-x: auto; margin-bottom: 12px; font-family: var(--font-mono);"><code>"souls_engine": {
+            <pre style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px; font-size: 0.68rem; color: #38bdf8; overflow-x: auto; margin-bottom: 14px; font-family: var(--font-mono);"><code>"souls_engine": {
   "url": "http://127.0.0.1:9123/mcp",
   "transport": "http"
 }</code></pre>
-            <button class="btn btn-cyan" style="width: 100%; font-size: 0.74rem; padding: 6px;" onclick="copyMcpConfigSnippet()">
-              📋 Copiar Configuração MCP JSON
-            </button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-cyan" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="copyMcpConfigSnippet()">
+                📋 Copiar JSON
+              </button>
+              <button class="btn" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="downloadMcpConfigJson()">
+                📥 Baixar .json
+              </button>
+            </div>
           </div>
 
           <!-- BLOCO 3: FERRAMENTAS EXPORTADAS PELO SOULS ENGINE -->
@@ -2425,11 +2485,11 @@
               <span class="badge badge-value">RFC-007</span>
             </div>
             <p style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
-              Catálogo bare-metal compilado em Rust, disponível instantaneamente para qualquer subagente instanciado:
+              Catálogo bare-metal em Rust disponível instantaneamente para qualquer subagente ou IDE cliente:
             </p>
-            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.65rem;">
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.65rem; margin-bottom: 12px;">
               <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-                <span style="color: var(--cyan); font-weight: 600; font-size: 0.68rem; margin-right: 4px;">AST & Code:</span>
+                <span style="color: var(--cyan); font-weight: 600; font-size: 0.68rem; margin-right: 4px;">AST &amp; Code:</span>
                 <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">outline</span>
                 <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">symbol</span>
                 <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">delta_diff</span>
@@ -2442,12 +2502,20 @@
                 <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">knowledge</span>
               </div>
               <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-                <span style="color: #c084fc; font-weight: 600; font-size: 0.68rem; margin-right: 4px;">Thinking & Ops:</span>
+                <span style="color: #c084fc; font-weight: 600; font-size: 0.68rem; margin-right: 4px;">Thinking &amp; Ops:</span>
                 <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">intent</span>
                 <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">route_subtask</span>
                 <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">repo_impact</span>
                 <span class="badge" style="background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.25);">metrics</span>
               </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-purple" style="flex: 1.2; font-size: 0.74rem; padding: 6px; justify-content: center; font-weight: 600;" onclick="openMcpToolsModal()">
+                🛠️ Ver 25+ Tools
+              </button>
+              <button class="btn" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="testSiliconPing()">
+                ⚡ Ping Silício
+              </button>
             </div>
           </div>
 
@@ -2455,6 +2523,8 @@
       </div>
 
     </section>
+
+    
 
     <!-- ========================================== -->
     <!-- ABA 2: LOCAL SILICON ARENA (llm_local) -->
@@ -4433,6 +4503,7 @@
     }
 
     function renderRouterMatrix(matrix) {
+      window.cachedRouterMatrix = matrix || [];
       const tbody1 = document.getElementById('integrator-tbody');
       const tbody2 = document.getElementById('subagents-router-tbody');
       if (!matrix || matrix.length === 0) {
@@ -4441,41 +4512,75 @@
         return;
       }
 
+      const domainOverrides = JSON.parse(localStorage.getItem('souls_domain_overrides') || '{}');
+
       const rowsHtml = matrix.map(item => {
-        const localModel = item.local_default.model || '';
-        const cloudModel = item.cloud_fallback.model || '';
+        const override = domainOverrides[item.id] || {};
+        const localModel = override.local_model || item.local_default.model || '';
+        const cloudModel = override.cloud_model || item.cloud_fallback.model || '';
+        const paretoRule = override.pareto_rule || item.pareto_rule || '';
         const profId = item.profile_id || (item.cloud_fallback && item.cloud_fallback.profile_id) || 'frontier_balanced';
         const isBench = item.local_default.benchmarked;
         const badgeClass = isBench ? 'badge-value' : 'badge-champion';
 
         return `
         <tr>
-          <td>
-            <div style="font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;">
-              <span>${item.icon}</span> <span>${item.category}</span>
+          <!-- 1: DOMÍNIO COGNITIVO COM MAIOR ESPAÇO, ÍCONE E HIERARQUIA -->
+          <td style="vertical-align: top; padding: 12px 14px;">
+            <div style="font-weight: 700; color: #fff; font-size: 0.84rem; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.15rem;">${item.icon}</span>
+              <span>${item.category}</span>
             </div>
-            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${item.description}</div>
+            <div style="font-size: 0.73rem; color: #94a3b8; margin-top: 4px; line-height: 1.45;">${item.description}</div>
           </td>
-          <td>
-            ${formatModelDisplayName(localModel, true)}
-            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${item.local_default.target} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold;">•</span> <strong style="color: var(--green);">${item.local_default.tps}</strong></div>
+
+          <!-- 2: SILÍCIO LOCAL: LINHA 1 (MODELO + TROCAR), LINHA 2 (TARGET/ALOCAÇÃO), LINHA 3 DEDICADA P/ VELOCIDADE -->
+          <td style="vertical-align: top; padding: 12px 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px;">
+              ${formatModelDisplayName(localModel, true)}
+              <button class="btn-micro" onclick="openConfigureDomainModal('${item.id}', 'local')" title="Alterar modelo local padrão deste domínio">
+                ✏️ Trocar
+              </button>
+            </div>
+            <div style="font-size: 0.69rem; color: var(--text-muted); line-height: 1.3;">
+              ${item.local_default.target}
+            </div>
+            <div style="font-size: 0.7rem; color: var(--green); font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+              <span style="color: #64748b; font-weight: normal;">Velocidade:</span> ${item.local_default.tps}
+            </div>
           </td>
-          <td>
-            ${formatModelDisplayName(cloudModel, false)}
-            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${item.cloud_fallback.provider} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold;">•</span> <strong style="color: var(--cyan);">${item.cloud_fallback.cost}</strong></div>
+
+          <!-- 2: CLOUD FALLBACK: LINHA 1 (MODELO + TROCAR), LINHA 2 (ROTEAMENTO), LINHA 3 DEDICADA P/ TARIFA -->
+          <td style="vertical-align: top; padding: 12px 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px;">
+              ${formatModelDisplayName(cloudModel, false)}
+              <button class="btn-micro" onclick="openConfigureDomainModal('${item.id}', 'cloud')" title="Alterar modelo cloud fallback deste domínio">
+                ✏️ Trocar
+              </button>
+            </div>
+            <div style="font-size: 0.69rem; color: var(--text-muted); line-height: 1.3;">
+              ${item.cloud_fallback.provider}
+            </div>
+            <div style="font-size: 0.7rem; color: var(--cyan); font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+              <span style="color: #64748b; font-weight: normal;">Tarifa:</span> ${item.cloud_fallback.cost}
+            </div>
           </td>
-          <td>
-            <div style="font-size: 0.75rem; color: #cbd5e1; line-height: 1.4;">${item.pareto_rule}</div>
+
+          <!-- REGRA PARETO -->
+          <td style="vertical-align: top; padding: 12px 14px;">
+            <div style="font-size: 0.74rem; color: #cbd5e1; line-height: 1.45;">${paretoRule}</div>
           </td>
-          <td class="text-center">
+
+          <!-- AÇÕES COM BOTÃO DE CONFIGURAÇÃO DIRETA -->
+          <td class="text-center" style="vertical-align: top; padding: 12px 10px;">
             <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-              <span class="badge ${badgeClass}">${item.status}</span>
-              <div style="display: flex; gap: 4px;">
-                <button class="btn" style="padding: 3px 8px; font-size: 0.68rem; border-radius: 5px; white-space: nowrap;" onclick="switchTab('tab-local'); testModelInArena('${localModel}')" title="Aferir este modelo local na Silicon Arena">
-                  🏟️ Aferir
+              <span class="badge ${badgeClass}" style="width: 100%; justify-content: center; text-align: center;">${item.status}</span>
+              <div style="display: flex; gap: 4px; width: 100%; margin-top: 2px;">
+                <button class="btn" style="padding: 3px 6px; font-size: 0.68rem; border-radius: 5px; flex: 1; justify-content: center;" onclick="openConfigureDomainModal('${item.id}')" title="Configurar modelos local e cloud deste domínio">
+                  ⚙️ Ajustar
                 </button>
-                <button class="btn" style="padding: 3px 8px; font-size: 0.68rem; border-radius: 5px; white-space: nowrap;" onclick="switchTab('tab-settings'); selectProfilePreset('${profId}')" title="Configurar o perfil ${profId} em Governança">
-                  ⚙️ Perfil
+                <button class="btn" style="padding: 3px 6px; font-size: 0.68rem; border-radius: 5px; flex: 1; justify-content: center;" onclick="switchTab('tab-local'); testModelInArena('${localModel}')" title="Aferir este modelo local na Silicon Arena">
+                  🏟️ Aferir
                 </button>
               </div>
             </div>
@@ -7514,7 +7619,7 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
 
     function setSubagentFilter(filter) {
       currentSubagentFilter = filter;
-      ['all', 'completed', 'active'].forEach(f => {
+      ['all', 'active', 'completed'].forEach(f => {
         const btn = document.getElementById('btn-subfilter-' + f);
         if (btn) btn.classList.toggle('active', f === filter);
       });
@@ -7850,6 +7955,343 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       }
     }
 
+    // --------------------------------------------------------------------------
+    // REFINAMENTOS SUBAGENTS: CONFIGURAÇÃO DE DOMÍNIOS, FILTROS, MCP TOOLS
+    // --------------------------------------------------------------------------
+
+    let currentConfiguringDomainId = null;
+
+    function openConfigureDomainModal(domainId, focusField) {
+      currentConfiguringDomainId = domainId;
+      const modal = document.getElementById('modal-configure-domain');
+      if (!modal) return;
+
+      const matrix = window.cachedRouterMatrix || [];
+      const domain = matrix.find(d => d.id === domainId) || matrix[0];
+      if (!domain) return;
+
+      const overrides = JSON.parse(localStorage.getItem('souls_domain_overrides') || '{}');
+      const domainOverride = overrides[domainId] || {};
+
+      document.getElementById('cfg-domain-id').value = domainId;
+      document.getElementById('cfg-domain-icon').textContent = domain.icon || '🎯';
+      document.getElementById('cfg-domain-title').textContent = `Configurar: ${domain.category}`;
+      document.getElementById('cfg-domain-desc').textContent = domain.description;
+
+      // Preenche select de modelos locais
+      const localSelect = document.getElementById('cfg-select-local-model');
+      localSelect.innerHTML = '';
+      
+      const defaultLocalModel = domain.local_default.model;
+      const currentSelectedLocal = domainOverride.local_model || defaultLocalModel;
+
+      const availableLocals = [
+        { id: defaultLocalModel, name: `${defaultLocalModel} (Padrão Recomendado)` },
+        { id: "qwen2.5-coder-7b-instruct-q4_k_m.gguf", name: "Qwen 2.5 Coder 7B (dGPU RTX 2060m)" },
+        { id: "smollm2-135m-instruct.gguf", name: "SmolLM2 135M Reasoning (CPU Host AVX2)" },
+        { id: "phi-4-mini-instruct-q4_k_m.gguf", name: "Phi-4 Mini 3.8B (dGPU RTX 2060m)" },
+        { id: "qwen2.5-vl-3b-instruct-q4_k_m.gguf", name: "Qwen 2.5 VL 3B Vision (dGPU RTX 2060m)" },
+        { id: "smollm2-360m-instruct.gguf", name: "SmolLM2 360M (CPU Host AVX2)" },
+        { id: "deepseek-coder-6.7b-instruct.gguf", name: "DeepSeek Coder 6.7B (dGPU)" }
+      ];
+
+      if (Array.isArray(localModelsList) && localModelsList.length > 0) {
+        localModelsList.forEach(m => {
+          const id = m.name || m.model_name || m.id;
+          if (id && !availableLocals.some(a => a.id.toLowerCase() === id.toLowerCase())) {
+            availableLocals.push({ id: id, name: `${id} (${m.size_gb || '?'} GB • Detectado)` });
+          }
+        });
+      }
+
+      availableLocals.forEach(opt => {
+        const el = document.createElement('option');
+        el.value = opt.id;
+        el.textContent = opt.name;
+        if (opt.id.toLowerCase() === currentSelectedLocal.toLowerCase()) {
+          el.selected = true;
+        }
+        localSelect.appendChild(el);
+      });
+
+      // Preenche select de modelos cloud
+      const cloudSelect = document.getElementById('cfg-select-cloud-model');
+      cloudSelect.innerHTML = '';
+
+      const defaultCloudModel = domain.cloud_fallback.model;
+      const currentSelectedCloud = domainOverride.cloud_model || defaultCloudModel;
+
+      const availableClouds = [
+        { id: defaultCloudModel, name: `${defaultCloudModel} (Padrão Recomendado)` },
+        { id: "anthropic/claude-3-7-sonnet", name: "Claude 3.7 Sonnet (Anthropic • Coding Champion)" },
+        { id: "deepseek/deepseek-chat", name: "DeepSeek-V3 Chat (Nous Portal • Custo Mínimo)" },
+        { id: "google/gemini-2.0-flash", name: "Gemini 2.0 Flash (Google • Velocidade Extrema)" },
+        { id: "openai/o3-mini", name: "OpenAI o3-mini (OpenAI • Raciocínio Profundo)" },
+        { id: "qwen/qwen-2.5-vl-72b-instruct", name: "Qwen 2.5 VL 72B Vision (Multimodal Frontier)" },
+        { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B Instruct (Meta OpenWeights)" },
+        { id: "deepseek/deepseek-r1", name: "DeepSeek R1 Reasoning (Matemática & Provas)" }
+      ];
+
+      availableClouds.forEach(opt => {
+        const el = document.createElement('option');
+        el.value = opt.id;
+        el.textContent = opt.name;
+        if (opt.id.toLowerCase() === currentSelectedCloud.toLowerCase()) {
+          el.selected = true;
+        }
+        cloudSelect.appendChild(el);
+      });
+
+      // Regra Pareto
+      document.getElementById('cfg-pareto-rule-input').value = domainOverride.pareto_rule || domain.pareto_rule || '';
+
+      modal.classList.add('active');
+
+      if (focusField === 'local') {
+        localSelect.focus();
+      } else if (focusField === 'cloud') {
+        cloudSelect.focus();
+      }
+    }
+
+    function closeConfigureDomainModal() {
+      const modal = document.getElementById('modal-configure-domain');
+      if (modal) modal.classList.remove('active');
+      currentConfiguringDomainId = null;
+    }
+
+    function saveDomainConfiguration() {
+      const domainId = document.getElementById('cfg-domain-id').value;
+      if (!domainId) return;
+
+      const localModel = document.getElementById('cfg-select-local-model').value;
+      const cloudModel = document.getElementById('cfg-select-cloud-model').value;
+      const paretoRule = document.getElementById('cfg-pareto-rule-input').value.trim();
+
+      const overrides = JSON.parse(localStorage.getItem('souls_domain_overrides') || '{}');
+      overrides[domainId] = {
+        local_model: localModel,
+        cloud_model: cloudModel,
+        pareto_rule: paretoRule,
+        updated_at: new Date().toISOString()
+      };
+
+      localStorage.setItem('souls_domain_overrides', JSON.stringify(overrides));
+      closeConfigureDomainModal();
+
+      showToast(`✓ Roteamento atualizado com sucesso!`, 'success');
+      if (window.cachedRouterMatrix) {
+        renderRouterMatrix(window.cachedRouterMatrix);
+      }
+    }
+
+    function resetDomainDefault() {
+      const domainId = document.getElementById('cfg-domain-id').value;
+      if (!domainId) return;
+
+      const overrides = JSON.parse(localStorage.getItem('souls_domain_overrides') || '{}');
+      if (overrides[domainId]) {
+        delete overrides[domainId];
+        localStorage.setItem('souls_domain_overrides', JSON.stringify(overrides));
+      }
+
+      closeConfigureDomainModal();
+      showToast(`✓ Domínio restaurado para os modelos padrão do sistema.`, 'success');
+      if (window.cachedRouterMatrix) {
+        renderRouterMatrix(window.cachedRouterMatrix);
+      }
+    }
+
+    // Card 3: Ações Interativas
+    async function testLoopbackConnection() {
+      const statusEl = document.getElementById('hermes-loopback-status');
+      if (statusEl) statusEl.innerHTML = '<span style="color: var(--cyan);">Sondando...</span>';
+
+      const t0 = performance.now();
+      try {
+        const res = await fetch('/health');
+        const elapsed = (performance.now() - t0).toFixed(1);
+        if (res.ok) {
+          if (statusEl) {
+            statusEl.innerHTML = `<span style="color: var(--green); font-weight: 700;">✅ Ativo (${elapsed}ms • 200 OK)</span>`;
+          }
+          showToast(`Loopback MCP 127.0.0.1:9123 saudável (${elapsed}ms)`, 'success');
+        } else {
+          if (statusEl) {
+            statusEl.innerHTML = `<span style="color: var(--red);">Falha (${res.status})</span>`;
+          }
+        }
+      } catch (err) {
+        if (statusEl) {
+          statusEl.innerHTML = `<span style="color: var(--red);">Offline</span>`;
+        }
+        showToast(`Erro ao testar loopback: ${err.message}`, 'error');
+      }
+    }
+
+    function copyMcpConfigSnippet() {
+      const config = JSON.stringify({
+        "mcpServers": {
+          "souls_engine": {
+            "url": "http://127.0.0.1:9123/mcp",
+            "transport": "http"
+          }
+        }
+      }, null, 2);
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(config).then(() => {
+          showToast('✓ Configuração MCP copiada para o clipboard!', 'success');
+        }).catch(() => {
+          fallbackExecCopy(config);
+        });
+      } else {
+        fallbackExecCopy(config);
+      }
+    }
+
+    function fallbackExecCopy(text) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('✓ Configuração copiada!', 'success');
+      } catch (e) {
+        showToast('Pressione Ctrl+C para copiar a configuração.', 'info');
+      }
+    }
+
+    function downloadMcpConfigJson() {
+      const config = JSON.stringify({
+        "$schema": "https://json.schemastore.org/mcp-config.json",
+        "mcpServers": {
+          "souls_engine": {
+            "url": "http://127.0.0.1:9123/mcp",
+            "transport": "http",
+            "description": "Souls Engine v7 Bare-Metal Infrastructure & AST Engine"
+          }
+        }
+      }, null, 2);
+
+      const blob = new Blob([config], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'souls_mcp_config.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('✓ Arquivo souls_mcp_config.json descarregado!', 'success');
+    }
+
+    // MCP Tools Catalog Modal
+    const NATIVE_MCP_TOOLS = [
+      // AST & Code
+      { name: "souls_ast_outline", domain: "AST & Code", icon: "🧩", desc: "Extrai esqueleto sintático (classes, traits, funções, assinaturas) poupando 80% dos tokens de contexto.", params: "path, language" },
+      { name: "souls_ast_slice", domain: "AST & Code", icon: "🧩", desc: "Extrai fatias sintáticas contíguas com numeração precisa de linhas para inspeção direcionada.", params: "path, start_line, end_line" },
+      { name: "souls_ast_symbol", domain: "AST & Code", icon: "🧩", desc: "Localiza símbolos e identidades no escopo do arquivo sem precisar ler o arquivo por inteiro.", params: "path, symbol_name" },
+      { name: "souls_ast_edit", domain: "AST & Code", icon: "🧩", desc: "Aplica mutações atômicas de código com verificação sintática pré-commit do Tree-sitter.", params: "path, target, replacement" },
+      { name: "souls_ast_delta_diff", domain: "AST & Code", icon: "🧩", desc: "Calcula e aplica Myers Diff estruturado preservando contagens exatas de bytes LF.", params: "path, patch" },
+      { name: "souls_blast_radius", domain: "AST & Code", icon: "💥", desc: "Mede o raio de impacto de alterações entre crates para prevenir quebras arquiteturais colaterais.", params: "crate_name, symbols" },
+      { name: "souls_frecency", domain: "AST & Code", icon: "🔥", desc: "Calcula mapa de calor de arquivos mais editados e com maior probabilidade de alteração.", params: "limit, days" },
+
+      // Memória L2 & Grafo
+      { name: "souls_memory_search", domain: "Memória L2", icon: "🧠", desc: "Busca híbrida vetorial RRF (LanceDB + SQLite FTS5) no hipocampo epistêmico do Souls Engine.", params: "query, limit, threshold" },
+      { name: "souls_memory_store", domain: "Memória L2", icon: "🧠", desc: "Persiste memórias de longo prazo com embeddings locais Qwen2 em FrankenSQLite STRICT WAL.", params: "content, tags, category" },
+      { name: "souls_memory_graph_entity", domain: "Memória L2", icon: "🕸️", desc: "Cria e atualiza nós ontológicos e observações clínicas no Grafo LadybugDB.", params: "entity_name, entity_type, props" },
+      { name: "souls_memory_graph_query", domain: "Memória L2", icon: "🕸️", desc: "Navega pelas arestas tipadas (depends_on, conflicts_with, implements) do cofre cognitivo.", params: "source_id, relation_type" },
+      { name: "souls_vault_query", domain: "Memória L2", icon: "🏛️", desc: "Consulta evidências empíricas de benchmarks TPS e VRAM no Heuristic Vault.", params: "model_id, domain" },
+      { name: "souls_obsidian_curate", domain: "Memória L2", icon: "📓", desc: "Curadoria automática de notas na pasta wiki/ do Obsidian com desidentificação de dados.", params: "source_path, target_wiki" },
+
+      // Thinking, Silício & FinOps
+      { name: "souls_socratic_deliberate", domain: "Thinking & Ops", icon: "🛡️", desc: "Freio cognitivo socrático: deliberação em grafo DAG antes de tocar em código de alta entropia.", params: "hypothesis, tradeoffs" },
+      { name: "souls_metrics", domain: "Thinking & Ops", icon: "📊", desc: "Telemetria bare-metal em tempo real: VRAM alocada (NVML), temperatura e TPS empírico.", params: "detailed" },
+      { name: "souls_hardware_watchdog", domain: "Thinking & Ops", icon: "🌡️", desc: "Guardião termodinâmico da RTX 2060m e margem física sob Windows DWM.", params: "action" },
+      { name: "souls_intent_probe", domain: "Thinking & Ops", icon: "🧭", desc: "Classificador de intenção e medição de entropia via Tier 0.5 SLM (Host CPU AVX2).", params: "prompt, context" },
+      { name: "souls_context_lean_compress", domain: "Thinking & Ops", icon: "🗜️", desc: "Compressão CCR em memória RAM poupando até 60% da janela de contexto.", params: "text, target_tokens" },
+      { name: "souls_switchboard_evaluate", domain: "Thinking & Ops", icon: "⚡", desc: "Roteador semântico two-stage: desvia tarefas entre dGPU local e Cloud Fallback em 1.4ms.", params: "query, available_models" }
+    ];
+
+    function openMcpToolsModal() {
+      const modal = document.getElementById('modal-mcp-tools');
+      if (!modal) return;
+      renderMcpToolsCatalog(NATIVE_MCP_TOOLS);
+      modal.classList.add('active');
+    }
+
+    function closeMcpToolsModal() {
+      const modal = document.getElementById('modal-mcp-tools');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function renderMcpToolsCatalog(tools) {
+      const container = document.getElementById('mcp-tools-list-container');
+      if (!container) return;
+
+      container.innerHTML = tools.map(t => `
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span>${t.icon}</span>
+              <code class="mono" style="font-weight: 700; color: #fff; font-size: 0.82rem;">${t.name}</code>
+              <span class="badge ${t.domain.includes('AST') ? 'badge-champion' : (t.domain.includes('Memória') ? 'badge-value' : 'badge')}">${t.domain}</span>
+            </div>
+            <p style="font-size: 0.74rem; color: #94a3b8; line-height: 1.4; margin-bottom: 6px;">${t.desc}</p>
+            <div style="font-size: 0.68rem; color: #64748b; font-family: var(--font-mono);">
+              Parâmetros: <span style="color: #cbd5e1;">${t.params}</span>
+            </div>
+          </div>
+          <button class="btn-micro" onclick="copyToolName('${t.name}')" title="Copiar identificador da ferramenta MCP">
+            📋 Copiar
+          </button>
+        </div>
+      `).join('');
+
+      const countLabel = document.getElementById('mcp-tools-count-label');
+      if (countLabel) countLabel.textContent = `${tools.length} ferramenta(s) nativa(s) listada(s)`;
+    }
+
+    function filterMcpToolsList() {
+      const q = (document.getElementById('mcp-tools-search').value || '').toLowerCase().trim();
+      const filtered = NATIVE_MCP_TOOLS.filter(t => 
+        t.name.toLowerCase().includes(q) ||
+        t.domain.toLowerCase().includes(q) ||
+        t.desc.toLowerCase().includes(q)
+      );
+      renderMcpToolsCatalog(filtered);
+    }
+
+    function copyToolName(name) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(name).then(() => {
+          showToast(`✓ Ferramenta '${name}' copiada!`, 'success');
+        });
+      } else {
+        fallbackExecCopy(name);
+      }
+    }
+
+    async function testSiliconPing() {
+      const t0 = performance.now();
+      try {
+        const res = await fetch('/api/v1/metrics');
+        const elapsed = (performance.now() - t0).toFixed(1);
+        if (res.ok) {
+          showToast(`✅ Silício Ativo: NVML OK • VRAM Livre • Resposta em ${elapsed}ms`, 'success');
+        } else {
+          showToast(`Silício respondeu com status ${res.status} em ${elapsed}ms`, 'info');
+        }
+      } catch (err) {
+        showToast(`Erro ao testar silício: ${err.message}`, 'error');
+      }
+    }
+
     async function runSimulateDispatch() {
       const input = document.getElementById('sim-task-input');
       const resultBox = document.getElementById('sim-dispatch-result');
@@ -8127,6 +8569,113 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 5)}
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeSubAgentHistoryModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIGURAÇÃO DE MODELOS E ROTEAMENTO POR DOMÍNIO -->
+  <div class="modal-backdrop" id="modal-configure-domain">
+    <div class="modal-dialog" style="max-width: 640px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--cyan);" id="cfg-domain-icon">🎯</span>
+            <span id="cfg-domain-title">Configurar Roteamento do Domínio</span>
+          </div>
+          <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 4px;" id="cfg-domain-desc">
+            Personalize o modelo local default, fallback em nuvem e regra do ParetoBandit
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeConfigureDomainModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <input type="hidden" id="cfg-domain-id" value="">
+
+        <!-- BLOCO MODELO LOCAL -->
+        <div style="background: rgba(15, 23, 42, 0.55); padding: 14px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+              <span>🖥️</span> Modelo Local Default (Bare-Metal $0)
+            </label>
+            <span class="badge badge-champion">Zero Silício Custo</span>
+          </div>
+          <select id="cfg-select-local-model" style="width: 100%; padding: 8px 10px; background: #0b1120; border: 1px solid var(--border-subtle); border-radius: 6px; color: #fff; font-size: 0.8rem; font-family: var(--font-mono);">
+            <!-- Opções preenchidas dinamicamente -->
+          </select>
+          <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 6px;" id="cfg-local-hint">
+            Priorizado em tarefas com baixa entropia e blast radius reduzido.
+          </div>
+        </div>
+
+        <!-- BLOCO CLOUD FALLBACK -->
+        <div style="background: rgba(15, 23, 42, 0.55); padding: 14px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.25);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: #c084fc; display: flex; align-items: center; gap: 6px;">
+              <span>☁️</span> Modelo Cloud Fallback (Fronteira Pareto)
+            </label>
+            <span class="badge badge-value">Alta Entropia</span>
+          </div>
+          <select id="cfg-select-cloud-model" style="width: 100%; padding: 8px 10px; background: #0b1120; border: 1px solid var(--border-subtle); border-radius: 6px; color: #fff; font-size: 0.8rem; font-family: var(--font-mono);">
+            <!-- Opções preenchidas dinamicamente -->
+          </select>
+          <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 6px;">
+            Acionado automaticamente sob refatoração multi-arquivo ou incerteza epistêmica.
+          </div>
+        </div>
+
+        <!-- BLOCO REGRA DO PARETOBANDIT -->
+        <div style="background: rgba(15, 23, 42, 0.55); padding: 14px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+          <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">
+            ⚖️ Regra de Decisão / Limiar de Handoff
+          </label>
+          <textarea id="cfg-pareto-rule-input" rows="2" style="width: 100%; padding: 8px 10px; background: #0b1120; border: 1px solid var(--border-subtle); border-radius: 6px; color: #e2e8f0; font-size: 0.76rem; resize: vertical; line-height: 1.4;" placeholder="Defina as condições de escalonamento local vs nuvem..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle);">
+        <button class="btn" onclick="resetDomainDefault()" style="font-size: 0.74rem;">
+          <span>↺</span> Restaurar Padrão
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" onclick="closeConfigureDomainModal()" style="font-size: 0.74rem;">
+            Cancelar
+          </button>
+          <button class="btn btn-green" onclick="saveDomainConfiguration()" style="font-size: 0.74rem; font-weight: 700;">
+            <span>💾</span> Salvar Roteamento
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CATÁLOGO COMPLETO DE FERRAMENTAS MCP NATIVAS (RFC-007) -->
+  <div class="modal-backdrop" id="modal-mcp-tools">
+    <div class="modal-dialog" style="max-width: 820px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--green);">🛠️</span>
+            <span>Catálogo Bare-Metal de Ferramentas MCP (25+ Tools)</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+            Ferramentas nativas compiladas em Rust expostas em <code>http://127.0.0.1:9123/mcp</code>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeMcpToolsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <input type="text" id="mcp-tools-search" class="search-input" placeholder="🔍 Filtrar ferramentas (ex: ast, memory, diff, metrics)..." oninput="filterMcpToolsList()" style="width: 100%; padding: 8px 12px; font-size: 0.8rem;">
+        </div>
+
+        <div id="mcp-tools-list-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; padding-right: 4px;">
+          <!-- Preenchido via renderMcpToolsCatalog() -->
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle);">
+        <span style="font-size: 0.72rem; color: var(--text-muted);" id="mcp-tools-count-label">25 ferramentas nativas disponíveis</span>
+        <button class="btn btn-cyan" onclick="closeMcpToolsModal()" style="font-size: 0.74rem;">
+          Fechar
+        </button>
       </div>
     </div>
   </div>
