@@ -2860,16 +2860,16 @@
           </div>
         </div>
 
-        <!-- CARD 3: TRÍADE CANÔNICA RECOMENDADA -->
+        <!-- CARD 3: O TRIO RECOMENDADO -->
         <div class="card" style="margin-bottom: 20px;">
           <div class="card-header">
             <div>
               <div class="card-title">
                 <div class="card-icon icon-cyan">⚡</div>
-                Seleção Canônica do Silício (Tríade de Alta Performance)
+                O Trio Recomendado
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Os 3 modelos que extraem o teto máximo de velocidade e inteligência da NVIDIA RTX 2060m (5.2 GB VRAM útil).
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Os 3 modelos essenciais para velocidade, raciocínio e código — calibrados para rodar com folga nos 6 GB da sua placa de vídeo.
               </p>
             </div>
           </div>
@@ -2878,30 +2878,48 @@
           </div>
         </div>
 
-        <!-- CARD 4: MODELOS HOMOLOGADOS POR ESPECIALIDADE -->
+        <!-- CARD 4: MELHORES ESCOLHAS POR FUNÇÃO -->
         <div class="card" style="margin-bottom: 20px;">
-          <div class="card-header">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
             <div>
               <div class="card-title">
                 <div class="card-icon icon-purple">🎯</div>
-                Modelos Homologados por Especialidade
+                Melhores Escolhas por Função
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Modelos calibrados por domínio cognitivo para máxima eficiência no silício local. Escolha a quantização ideal e baixe em 1 clique.
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Modelos testados para o seu computador, organizados pelo que você precisa: Programação, Raciocínio Lógico, Visão ou Automação.
               </p>
             </div>
-            <button class="btn btn-purple" onclick="fetchHardwareAndRecommendations()">
-              <span>✨</span> Sincronizar Catálogo
-            </button>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <span id="catalog-last-sync-badge" class="badge" style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.68rem; padding: 3px 8px; font-weight: 600; display: none;">
+                ✓ Sincronizado
+              </span>
+              <button id="btn-sync-catalog" class="btn btn-purple" onclick="syncCuratedCatalogLive()">
+                <span id="btn-sync-catalog-icon">✨</span> Sincronizar Catálogo
+              </button>
+            </div>
           </div>
-          <div class="profile-selector" id="curated-profile-filters">
-            <button class="profile-pill active" onclick="filterCuratedProfile('all')">Todos os Perfis</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('coding')">💻 Coding Specialist</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('reasoning')">🧠 Deep Reasoning (R1 CoT)</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('agentic')">🤖 Agentic & Tool Calling</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('design')">🎨 UI/UX & Frontend Design</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('vision')">👁️ Vision Multimodal (VLM)</button>
-            <button class="profile-pill" onclick="filterCuratedProfile('fast')">⚡ Fast Reflex & Triage</button>
+
+          <!-- CONTROLE DE VISUALIZAÇÃO & FILTROS HARMONIZADOS -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+            <div class="segmented-control" id="curated-view-mode" style="display: inline-flex; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 3px; gap: 4px;">
+              <button class="segmented-btn active" id="btn-curated-mode-trusted" onclick="setCuratedViewMode('trusted')" style="padding: 5px 12px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; font-weight: 600; display: flex; align-items: center; gap: 6px; background: var(--purple); color: #fff;">
+                <span>⭐</span> Mais Confiáveis
+              </button>
+              <button class="segmented-btn" id="btn-curated-mode-trending" onclick="setCuratedViewMode('trending')" style="padding: 5px 12px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 6px; background: transparent; color: var(--text-muted);">
+                <span>🔥</span> Novidades em Alta
+              </button>
+            </div>
+
+            <div class="profile-selector" id="curated-profile-filters" style="margin-bottom: 0;">
+              <button class="profile-pill active" onclick="filterCuratedProfile('all')">Todos os Perfis</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('coding')">💻 Programação</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('reasoning')">🧠 Raciocínio (R1)</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('agentic')">🤖 Agêntico / MCP</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('design')">🎨 UI / Frontend</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('vision')">👁️ Visão (VLM)</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('fast')">⚡ Triagem Rápida</button>
+            </div>
           </div>
           <div class="curated-grid" id="curated-models-grid">
             <!-- Preenchido dinamicamente via JS -->
@@ -2913,11 +2931,11 @@
           <div class="card-header">
             <div>
               <div class="card-title">
-                <div class="card-icon icon-cyan">🤗</div>
-                Explorador Hugging Face Hub (GGUF)
+                <div class="card-icon icon-cyan">🌐</div>
+                Explorar Qualquer Modelo (Hugging Face)
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Pesquise qualquer repositório GGUF com estimativa preditiva de compatibilidade para a RTX 2060m.
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Pesquise qualquer novidade no catálogo global com estimativa automática se cabe ou não na sua máquina.
               </p>
             </div>
           </div>
@@ -5912,6 +5930,136 @@
       }).join('');
     }
 
+    let currentCuratedViewMode = 'trusted';
+    let trendingCatalogData = [];
+
+    function setCuratedViewMode(mode) {
+      currentCuratedViewMode = mode;
+      const btnTrusted = document.getElementById('btn-curated-mode-trusted');
+      const btnTrending = document.getElementById('btn-curated-mode-trending');
+      if (btnTrusted && btnTrending) {
+        if (mode === 'trusted') {
+          btnTrusted.style.background = 'var(--purple)';
+          btnTrusted.style.color = '#fff';
+          btnTrusted.style.fontWeight = '600';
+          btnTrending.style.background = 'transparent';
+          btnTrending.style.color = 'var(--text-muted)';
+          btnTrending.style.fontWeight = '500';
+        } else {
+          btnTrending.style.background = 'var(--purple)';
+          btnTrending.style.color = '#fff';
+          btnTrending.style.fontWeight = '600';
+          btnTrusted.style.background = 'transparent';
+          btnTrusted.style.color = 'var(--text-muted)';
+          btnTrusted.style.fontWeight = '500';
+        }
+      }
+
+      if (mode === 'trending' && (!trendingCatalogData || trendingCatalogData.length === 0)) {
+        loadTrendingCatalog();
+      } else {
+        renderCuratedCatalog(curatedCatalogData, hubHardwareData);
+      }
+    }
+
+    async function loadTrendingCatalog() {
+      const container = document.getElementById('curated-models-grid');
+      if (container) {
+        container.innerHTML = '<div style="color: var(--cyan); text-align: center; grid-column: 1 / -1; padding: 30px;"><span style="display:inline-block; animation:spin 1s linear infinite; margin-right:8px;">⏳</span> Buscando novidades em alta no Hugging Face Hub para a sua máquina...</div>';
+      }
+      try {
+        const res = await fetch('/api/v1/inventory/search?query=gguf&limit=25');
+        if (res.ok) {
+          const data = await res.json();
+          const repos = data.results || [];
+          trendingCatalogData = repos.map(r => {
+            const details = parseRepoModelDetails(r.id, r.tags || []);
+            const paramSize = details.activeParams || details.totalParams || 3.0;
+            const fit = calculateFitFromParamEstimate(paramSize);
+            const isSweet = paramSize <= 4.0;
+            const repoSimple = r.id.split('/').pop() || r.id;
+            return {
+              model_name: repoSimple,
+              repo_id: r.id,
+              author: r.author || r.id.split('/')[0] || 'Comunidade',
+              cognitive_profile: details.specialty === 'coding' ? 'coding' : details.specialty === 'reasoning' ? 'reasoning' : details.specialty === 'vision' ? 'vision' : 'all',
+              category_role: isSweet ? 'SweetSpot' : 'Heavyweight',
+              why_recommended: `Novidade em alta na comunidade com ${Number(r.downloads || 0).toLocaleString()} downloads e ${r.likes || 0} curtidas.`,
+              downloads: r.downloads,
+              likes: r.likes,
+              paramSize: paramSize,
+              is_trending: true,
+              variants: [
+                {
+                  quant_tag: 'Q4_K_M',
+                  size_bytes: Math.round(paramSize * 0.65 * 1024 * 1024 * 1024),
+                  hardware_fit: fit,
+                  is_recommended_fit: true,
+                  download_url: `https://huggingface.co/${r.id}/resolve/main/${repoSimple}-Q4_K_M.gguf`,
+                  file_name: `${repoSimple}-Q4_K_M.gguf`
+                }
+              ]
+            };
+          }).filter(m => m.paramSize <= 14.0);
+          renderCuratedCatalog(trendingCatalogData, hubHardwareData);
+        } else {
+          if (container) container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Não foi possível buscar as novidades da nuvem agora.</div>';
+        }
+      } catch (err) {
+        if (container) container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Falha de conexão ao buscar novidades da nuvem.</div>';
+      }
+    }
+
+    async function syncCuratedCatalogLive() {
+      const btn = document.getElementById('btn-sync-catalog');
+      const syncBadge = document.getElementById('catalog-last-sync-badge');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:4px;">⏳</span> Sincronizando...';
+      }
+      try {
+        const [recRes, arenaRes] = await Promise.all([
+          fetch('/api/v1/inventory/recommendations'),
+          fetch('/api/v1/arena/models')
+        ]);
+
+        if (recRes.ok) {
+          const data = await recRes.json();
+          curatedCatalogData = data.catalog || [];
+          hubHardwareData = data.hardware;
+          hubRecommendationsData = data.triad;
+        }
+
+        if (arenaRes.ok) {
+          const dataArena = await arenaRes.json();
+          arenaModelsData = dataArena.models || [];
+        }
+
+        if (currentCuratedViewMode === 'trending') {
+          await loadTrendingCatalog();
+        } else {
+          renderCuratedCatalog(curatedCatalogData, hubHardwareData);
+        }
+        renderRecommendedTriad(hubRecommendationsData);
+
+        if (syncBadge) {
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          syncBadge.innerText = `✓ Sincronizado às ${timeStr}`;
+          syncBadge.style.display = 'inline-flex';
+        }
+        showToast('✨ Catálogo e benchmarks empíricos sincronizados com sucesso!', 'success');
+      } catch (err) {
+        console.error('Falha ao sincronizar catálogo:', err);
+        showToast('Catálogo mantido no baseline seguro.', 'warning');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span id="btn-sync-catalog-icon">✨</span> Sincronizar Catálogo';
+        }
+      }
+    }
+
     function filterCuratedProfile(profile) {
       currentCuratedProfileFilter = profile;
       document.querySelectorAll('#curated-profile-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
@@ -5920,7 +6068,7 @@
         return b.getAttribute('onclick') && b.getAttribute('onclick').includes(`'${profile}'`);
       });
       if (activeBtn) activeBtn.classList.add('active');
-      renderCuratedCatalog(curatedCatalogData, hubHardwareData);
+      renderCuratedCatalog(currentCuratedViewMode === 'trending' ? trendingCatalogData : curatedCatalogData, hubHardwareData);
     }
 
     let filteredCuratedModels = [];
@@ -5929,21 +6077,23 @@
       const container = document.getElementById('curated-models-grid');
       if (!container) return;
 
-      filteredCuratedModels = (catalog || []).filter(m => {
+      const sourceList = (catalog && catalog.length > 0) ? catalog : (currentCuratedViewMode === 'trending' ? trendingCatalogData : curatedCatalogData);
+
+      filteredCuratedModels = (sourceList || []).filter(m => {
         if (currentCuratedProfileFilter === 'all') return true;
         const prof = (m.cognitive_profile || '').toLowerCase();
         return prof === currentCuratedProfileFilter.toLowerCase();
       });
 
       if (filteredCuratedModels.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Nenhum modelo curado para este perfil.</div>';
+        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Nenhum modelo encontrado para este filtro.</div>';
         return;
       }
 
       container.innerHTML = filteredCuratedModels.map((m, idx) => {
         const variants = m.variants || [];
         const recommendedVariant = variants.find(v => v.is_recommended_fit) || variants[0] || {};
-        
+
         // Verificação inteligente com base no inventário real local
         const matched = findInstalledModelMatch(recommendedVariant.file_name, m.repo_id, m.model_name);
         const isDown = Boolean(m.is_downloaded || matched);
@@ -5958,11 +6108,28 @@
         const fitBadge = getFitBadgeHtml(recommendedVariant.hardware_fit);
         const isSweet = m.category_role === 'SweetSpot';
 
+        // Procura se o modelo tem benchmark real medido na Silicon Arena deste PC
+        const arenaMatch = (arenaModelsData || []).find(am =>
+          (am.file_name && (am.file_name === recommendedVariant.file_name || activeFile.includes(am.file_name))) ||
+          (am.name && m.model_name && (am.name.toLowerCase().includes(m.model_name.toLowerCase()) || m.model_name.toLowerCase().includes(am.name.toLowerCase())))
+        );
+
+        const hasRealBench = Boolean(arenaMatch && arenaMatch.latest_tps);
+
         return `
           <div class="curated-card ${isDown ? 'is-installed-card' : ''}" id="curated-card-${idx}">
             <div>
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  ${m.is_trending ? `
+                    <span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); font-size: 0.65rem; padding: 2px 7px; font-weight: 700;">
+                      🔥 Novidade em Alta
+                    </span>
+                  ` : `
+                    <span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem; padding: 2px 7px; font-weight: 700;">
+                      ⭐ Mais Confiável
+                    </span>
+                  `}
                   <span class="badge" style="background: ${isSweet ? 'rgba(16, 185, 129, 0.15)' : 'rgba(168, 85, 247, 0.15)'}; color: ${isSweet ? '#34d399' : 'var(--purple-light)'};">
                     ${isSweet ? '⚡ Sweet Spot (45+ tps)' : '💎 Heavyweight (Teto)'}
                   </span>
@@ -5978,7 +6145,7 @@
               <div style="font-size: 1.02rem; font-weight: 700; color: #fff; font-family: var(--font-mono); margin-top: 4px;">
                 ${m.model_name}
               </div>
-              
+
               <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; font-family: var(--font-mono); margin-top: 6px; background: rgba(15, 23, 42, 0.35); padding: 7px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
                 <div>👤 <span style="color: var(--text-muted);">Autor:</span> <strong style="color: #fff;">${m.author || '--'}</strong></div>
                 <div>📦 <span style="color: var(--text-muted);">Repo:</span> <span style="color: var(--cyan);">${m.repo_id}</span></div>
@@ -5996,10 +6163,23 @@
               </div>
 
               <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: rgba(15,23,42,0.4); padding: 8px; border-radius: var(--radius-sm); font-size: 0.7rem; font-family: var(--font-mono);">
-                <div>Coding: <strong style="color: var(--cyan);">${m.benchmark_scores && m.benchmark_scores.coding_score ? m.benchmark_scores.coding_score.toFixed(1) : '--'}</strong></div>
-                <div>MMLU: <strong style="color: #fff;">${m.benchmark_scores && m.benchmark_scores.mmlu_score ? m.benchmark_scores.mmlu_score.toFixed(1) : '--'}</strong></div>
-                <div>IFEval: <strong style="color: #fff;">${m.benchmark_scores && m.benchmark_scores.ifeval_score ? m.benchmark_scores.ifeval_score.toFixed(1) : '--'}</strong></div>
-                <div>Speed: <strong style="color: #34d399;">~${m.benchmark_scores && m.benchmark_scores.speed_tokens_sec_estimate ? m.benchmark_scores.speed_tokens_sec_estimate.toFixed(0) : '--'} tps</strong></div>
+                ${m.is_trending ? `
+                  <div>Downloads: <strong style="color: var(--cyan);">${m.downloads ? Number(m.downloads).toLocaleString() : '--'}</strong></div>
+                  <div>Likes: <strong style="color: #facc15;">${m.likes || 0}</strong></div>
+                  <div>Parâmetros: <strong style="color: #fff;">~${(m.paramSize || 3).toFixed(1)}B</strong></div>
+                  <div>Silício: <strong style="color: #34d399;">${isSweet ? '100% VRAM' : 'VRAM + RAM'}</strong></div>
+                ` : `
+                  <div>Coding: <strong style="color: var(--cyan);">${m.benchmark_scores && m.benchmark_scores.coding_score ? m.benchmark_scores.coding_score.toFixed(1) : '--'}</strong></div>
+                  <div>MMLU: <strong style="color: #fff;">${m.benchmark_scores && m.benchmark_scores.mmlu_score ? m.benchmark_scores.mmlu_score.toFixed(1) : '--'}</strong></div>
+                  <div>IFEval: <strong style="color: #fff;">${m.benchmark_scores && m.benchmark_scores.ifeval_score ? m.benchmark_scores.ifeval_score.toFixed(1) : '--'}</strong></div>
+                  <div>Speed: <strong style="color: #34d399;">~${m.benchmark_scores && m.benchmark_scores.speed_tokens_sec_estimate ? m.benchmark_scores.speed_tokens_sec_estimate.toFixed(0) : '--'} tps</strong></div>
+                `}
+                ${hasRealBench ? `
+                  <div style="grid-column: 1 / -1; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 4px; padding: 4px 8px; color: var(--emerald); font-weight: 700; margin-top: 3px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>🏅 Silício Local Medido:</span>
+                    <span>${arenaMatch.latest_tps.toFixed(1)} tok/s</span>
+                  </div>
+                ` : ''}
               </div>
             </div>
 
