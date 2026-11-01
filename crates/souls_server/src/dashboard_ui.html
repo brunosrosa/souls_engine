@@ -2798,10 +2798,10 @@
                 Diagnóstico & Limites do seu Hardware
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Capacidade física de silício identificada para garantir inferência rápida e sem quedas de performance.
+                Métricas físicas de silício em tempo real para inferência estável, isolamento térmico e zero spillover PCIe.
               </p>
             </div>
-            <button class="btn btn-cyan" onclick="fetchHardwareAndRecommendations()">
+            <button class="btn btn-cyan" id="btn-recalibrate-hw" onclick="fetchHardwareAndRecommendations()">
               <span>🔄</span> Recalibrar Hardware
             </button>
           </div>
@@ -2843,10 +2843,10 @@
             <div>
               <div class="card-title">
                 <div class="card-icon icon-cyan">📥</div>
-                Gerenciador Sequencial de Downloads Resiliente
+                Gerenciador Sequencial de Downloads
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Download atômico sequencial com suporte a pause/resume via HTTP Range e validação SHA-256 incremental.
+                Fila sequencial com suporte a download atômico, pausa/retomada HTTP Range e validação SHA-256 incremental.
               </p>
             </div>
             <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
@@ -2869,7 +2869,7 @@
                 Seleção Canônica do Silício (Tríade de Alta Performance)
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Os 3 modelos que extraem o limite máximo de velocidade e inteligência da sua máquina (5.17 GB VRAM útil + CPU i9 AVX2), sem travar nem estourar memória.
+                Os 3 modelos que extraem o teto máximo de velocidade e inteligência da NVIDIA RTX 2060m (5.2 GB VRAM útil).
               </p>
             </div>
           </div>
@@ -2884,10 +2884,10 @@
             <div>
               <div class="card-title">
                 <div class="card-icon icon-purple">🎯</div>
-                Modelos Homologados por Especialidade (Catálogo Inteligente)
+                Modelos Homologados por Especialidade
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Modelos de referência calibrados por perfil cognitivo (Código, Raciocínio, Ferramentas, Visão). Clique na quantização ideal calculada para seu hardware e baixe direto.
+                Modelos calibrados por domínio cognitivo para máxima eficiência no silício local. Escolha a quantização ideal e baixe em 1 clique.
               </p>
             </div>
             <button class="btn btn-purple" onclick="fetchHardwareAndRecommendations()">
@@ -2914,10 +2914,10 @@
             <div>
               <div class="card-title">
                 <div class="card-icon icon-cyan">🤗</div>
-                Explorador Hugging Face Hub (GGUF & 1-Click)
+                Explorador Hugging Face Hub (GGUF)
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Pesquise e filtre modelos na nuvem Hugging Face por faixa de parâmetros e perfil com estimativa de compatibilidade de silício.
+                Pesquise qualquer repositório GGUF com estimativa preditiva de compatibilidade para a RTX 2060m.
               </p>
             </div>
           </div>
@@ -5231,6 +5231,15 @@
         fetchHardwareAndRecommendations();
         fetchInventoryDownloads();
         connectDownloadsSSE();
+        // Carrega automaticamente modelos recomendados no explorador HF se estiver vazio
+        setTimeout(() => {
+          const hfInput = document.getElementById('hf-search-input');
+          const hfRes = document.getElementById('hf-search-results');
+          if (hfInput && (!hfInput.value || hfInput.value.trim() === '') && hfRes && !hfRes.querySelector('.hf-repo-item')) {
+            hfInput.value = 'Qwen2.5-Coder GGUF';
+            searchHuggingFaceHub();
+          }
+        }, 300);
       } else if (subtab === 'switchboard') {
         if (panelInstalled) panelInstalled.style.display = 'none';
         if (panelHub) panelHub.style.display = 'none';
@@ -5677,6 +5686,8 @@
     }
 
     async function fetchHardwareAndRecommendations() {
+      const btn = document.getElementById('btn-recalibrate-hw');
+      if (btn) btn.innerHTML = '<span>⏳</span> Recalibrando...';
       try {
         const res = await fetch('/api/v1/inventory/recommendations');
         if (res.ok) {
@@ -5692,6 +5703,8 @@
       } catch (e) {
         console.error('Erro ao buscar recomendações de hardware:', e);
         showToast('Falha ao obter diagnóstico de hardware.', 'error');
+      } finally {
+        if (btn) btn.innerHTML = '<span>🔄</span> Recalibrar Hardware';
       }
     }
 
@@ -5731,7 +5744,11 @@
       }
 
       if (elCpu) {
-        elCpu.innerText = hw.cpu_instructions_extended || (hw.has_avx2 ? 'AVX2 • FMA • BMI2 • SSE4.2 • AES-NI' : 'x86_64 Padrão');
+        const rawCpu = hw.cpu_instructions_extended || (hw.has_avx2 ? 'AVX2 • FMA • BMI2 • SSE4.2 • AES-NI' : 'x86_64');
+        const instList = rawCpu.split('•').map(s => s.trim()).filter(Boolean);
+        elCpu.innerHTML = `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px;">` +
+          instList.map(inst => `<span class="badge" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.28); font-size: 0.64rem; padding: 1px 5px; font-weight: 700; white-space: nowrap;">${inst}</span>`).join('') +
+          `</div>`;
       }
       const cpuSub = document.getElementById('hw-cpu-sub');
       if (cpuSub) {
@@ -5841,46 +5858,52 @@
         const activeFile = (matched && matched.realFileName) ? matched.realFileName : (model.local_file_path || variant.file_name);
 
         return `
-          <div class="triad-card ${isDown ? 'is-installed-card' : ''}">
-            <span class="installed-badge-anchor">${isDown ? '<span class="installed-corner-badge">✓ Instalado</span>' : ''}</span>
+          <div class="triad-card ${isDown ? 'is-installed-card' : ''}" style="border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; ${isDown ? 'padding-right: 95px;' : ''}">
-                <span style="font-size: 0.72rem; font-weight: 700; color: ${item.tierColor}; font-family: var(--font-mono); text-transform: uppercase;">
-                  ${item.tierLabel}
-                </span>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: ${item.tierColor}; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.03em;">
+                    ${item.tierLabel}
+                  </span>
+                  ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.65rem; padding: 1px 7px; font-weight: 700;">✓ Instalado</span>' : ''}
+                </div>
                 <div>
                   ${getFitBadgeHtml(variant.hardware_fit)}
                 </div>
               </div>
-              <div style="font-size: 1.02rem; font-weight: 700; color: #fff; font-family: var(--font-mono); word-break: break-word;">
+
+              <div style="font-size: 1.05rem; font-weight: 700; color: #fff; font-family: var(--font-mono); word-break: break-word; line-height: 1.3;">
                 ${model.model_name}
               </div>
-              <p style="font-size: 0.74rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">
+
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
                 ${item.role}
               </p>
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; background: rgba(15, 23, 42, 0.4); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: 0.72rem;">
-                <div><span style="color: var(--text-muted);">Quant:</span> <strong style="color: var(--cyan);">${variant.quant_tag}</strong></div>
+
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: 0.72rem;">
+                <div><span style="color: var(--text-muted);">Quantização:</span> <strong style="color: var(--cyan);">${variant.quant_tag}</strong></div>
                 <div><span style="color: var(--text-muted);">Tamanho:</span> <strong style="color: #fff;">${sizeGb} GB</strong></div>
                 <div><span style="color: var(--text-muted);">Throughput:</span> <strong style="color: #34d399;">~${estTps}</strong></div>
-                <div><span style="color: var(--text-muted);">Silício:</span> <strong style="color: #fff;">${variant.hardware_fit === 'OptimalVram' ? 'dGPU' : 'CPU Host'}</strong></div>
+                <div><span style="color: var(--text-muted);">Silício:</span> <strong style="color: #fff;">${variant.hardware_fit === 'OptimalVram' ? 'dGPU RTX' : 'CPU Host'}</strong></div>
               </div>
             </div>
-            <div style="margin-top: 14px;">
+
+            <div style="margin-top: 16px; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
               ${isDown ? `
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                  <button class="btn btn-green" style="flex: 1; min-width: 120px; justify-content: center; font-size: 0.76rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button class="btn btn-green" style="flex: 2; height: 30px; font-size: 0.75rem; justify-content: center; font-weight: 600;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir como cérebro no Hermes Agent">
                     <span>⚡</span> Usar no Hermes
                   </button>
-                  <button class="btn btn-cyan" style="padding: 6px 10px; font-size: 0.74rem;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
+                  <button class="btn btn-cyan" style="flex: 1; height: 30px; font-size: 0.74rem; justify-content: center;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
                     <span>🏟️</span> Arena
                   </button>
-                  <button class="btn" style="padding: 6px 10px; font-size: 0.74rem;" title="Baixar novamente" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
+                  <button class="btn" style="width: 36px; height: 30px; padding: 0; justify-content: center; font-size: 0.8rem;" title="Baixar novamente" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
                     <span>🔄</span>
                   </button>
                 </div>
               ` : `
-                <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
-                  <span>⬇️</span> 1-Click Download
+                <button class="btn btn-cyan" style="width: 100%; height: 30px; justify-content: center; font-size: 0.78rem; font-weight: 600;" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
+                  <span>⬇️</span> 1-Click Download (${sizeGb} GB)
                 </button>
               `}
             </div>
@@ -6078,6 +6101,15 @@
 
       requestModelDownload(url, filename, sizeBytes, sha256, repoIdOverride, projFile, projUrl);
     }
+
+    // Global alias to ensure single-click activation in Hermes
+    window.applyModelToHermes = function(fileName) {
+      if (typeof openQuickApplyModal === 'function') {
+        openQuickApplyModal(fileName, 'local_silicon', true);
+      } else if (typeof setHermesMasterModel === 'function') {
+        setHermesMasterModel(fileName, 'local_silicon', 'local_sovereign');
+      }
+    };
 
     async function requestModelDownload(url, filename, sizeBytes, sha256, repoId = null, projFile = '', projUrl = '') {
       try {
@@ -6899,7 +6931,7 @@
     }
 
     function renderTriadCards() {
-      const grid = document.getElementById('governance-triad-cards-grid') || document.getElementById('triad-cards-grid');
+      const grid = document.getElementById('governance-triad-cards-grid');
       if (!grid) return;
 
       const currentProfile = profilesData.find(p => p.id === activePreset);
