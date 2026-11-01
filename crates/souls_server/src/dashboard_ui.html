@@ -5960,22 +5960,21 @@
 
         return `
           <div class="curated-card ${isDown ? 'is-installed-card' : ''}" id="curated-card-${idx}">
-            <span id="curated-badge-installed-${idx}" class="installed-badge-anchor">
-              ${isDown ? '<span class="installed-corner-badge">✓ Instalado</span>' : ''}
-            </span>
             <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 4px; ${isDown ? 'padding-right: 95px;' : ''}">
-                <div style="display: flex; gap: 4px; align-items: center;">
-                  <span class="badge" style="background: ${isSweet ? 'rgba(16, 185, 129, 0.15)' : 'rgba(168, 85, 247, 0.15)'}; color: ${isSweet ? '#34d399' : '#c084fc'}; font-weight: 700; border: 1px solid ${isSweet ? 'rgba(16, 185, 129, 0.35)' : 'rgba(168, 85, 247, 0.35)'}; font-size: 0.68rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  <span class="badge" style="background: ${isSweet ? 'rgba(16, 185, 129, 0.15)' : 'rgba(168, 85, 247, 0.15)'}; color: ${isSweet ? '#34d399' : 'var(--purple-light)'};">
                     ${isSweet ? '⚡ Sweet Spot (45+ tps)' : '💎 Heavyweight (Teto)'}
                   </span>
-                  ${m.is_multimodal_vlm ? '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-weight: 700; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 0.65rem;">👁️ Bundle VLM</span>' : ''}
+                  ${m.is_multimodal_vlm ? '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">👁️ VLM Visão</span>' : ''}
                 </div>
-                <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
                   <span id="curated-fit-${idx}">${fitBadge}</span>
+                  <span id="curated-badge-installed-${idx}">
+                    ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.65rem; padding: 2px 8px; font-weight: 700; border-radius: 9999px;">✓ Instalado</span>' : ''}
+                  </span>
                 </div>
               </div>
-
               <div style="font-size: 1.02rem; font-weight: 700; color: #fff; font-family: var(--font-mono); margin-top: 4px;">
                 ${m.model_name}
               </div>
@@ -6060,7 +6059,7 @@
       const actionContainer = document.getElementById(`curated-actions-${idx}`);
 
       if (badgeContainer) {
-        badgeContainer.innerHTML = isDown ? '<span class="installed-corner-badge">✓ Instalado</span>' : '';
+        badgeContainer.innerHTML = isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.65rem; padding: 2px 8px; font-weight: 700; border-radius: 9999px;">✓ Instalado</span>' : '';
       }
 
       if (actionContainer) {
