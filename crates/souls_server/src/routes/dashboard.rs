@@ -791,8 +791,38 @@ pub fn read_hermes_master_brain() -> Value {
 /// Returns the predictive selection matrix for tasks (Pareto Local Default vs Cloud Fallback)
 /// hydrated with real empirical benchmarks from `souls_heuristic_vault.db` (`model_registry`)
 /// and active cloud profiles from `souls_config.toml` / Cloud Arena.
+/// Dynamically detects the highest vector SIMD instruction set supported by the host CPU.
+#[inline]
+pub fn detect_cpu_simd_extension() -> &'static str {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx512f") {
+            "AVX-512"
+        } else if is_x86_feature_detected!("avx2") {
+            "AVX2"
+        } else if is_x86_feature_detected!("avx") {
+            "AVX"
+        } else if is_x86_feature_detected!("sse4.2") {
+            "SSE4.2"
+        } else {
+            "x86_64"
+        }
+    }
+    #[cfg(target_arch = "aarch64")]
+    {
+        "NEON"
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    {
+        "CPU"
+    }
+}
+
 pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value> {
     let _guard = state.acquire_connection();
+
+    let cpu_simd = detect_cpu_simd_extension();
+    let cpu_host_label = format!("CPU Host {}", cpu_simd);
 
     let vault = query_vault_empirical_summary().await;
     let profiles = crate::profiles::get_available_profiles(&state).await;
@@ -831,14 +861,14 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
             let tps_str = format!("{:.1} tok/s • {:.0}ms TTFT", tps, ttft_ms);
             let status_str = if is_benchmarked {
                 if is_cpu || vram_mb <= 10.0 {
-                    "✅ Homologado (CPU Host AVX2)"
+                    format!("✅ Homologado (CPU Host {})", cpu_simd)
                 } else {
-                    "✅ Homologado (dGPU)"
+                    "✅ Homologado (dGPU)".to_string()
                 }
             } else if is_cpu || vram_mb <= 10.0 {
-                "Pronto (CPU Host AVX2)"
+                format!("Pronto (CPU Host {})", cpu_simd)
             } else {
-                "Pronto (dGPU)"
+                "Pronto (dGPU)".to_string()
             };
 
             (
@@ -851,9 +881,10 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
                     "vram_peak_mb": vram_mb,
                     "e3_score": e3,
                     "benchmarked": is_benchmarked,
-                    "cost": "$0.00 (Zero Silício)"
+                    "cost": "$0.00 (Zero Silício)",
+                    "cpu_simd": cpu_simd
                 }),
-                status_str.to_string(),
+                status_str,
             )
         };
 
@@ -924,7 +955,7 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
     );
     let (fast_local, fast_status) = format_local_cell(
         "smollm2-135m-reasoning-5k-q4-k-m",
-        "CPU Host AVX2",
+        &cpu_host_label,
         110.0,
         0.0,
     );
@@ -942,19 +973,19 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
     );
     let (context_local, context_status) = format_local_cell(
         "tiktoken-ccr-fast",
-        "CPU Host AVX2",
+        &cpu_host_label,
         1250.0,
         0.0,
     );
     let (blast_local, blast_status) = format_local_cell(
         "gitoxide-frecency-native",
-        "CPU Host AVX2",
+        &cpu_host_label,
         950.0,
         0.0,
     );
     let (obsidian_local, obsidian_status) = format_local_cell(
         "ladybug-ontological-graph",
-        "CPU Host AVX2",
+        &cpu_host_label,
         480.0,
         0.0,
     );
@@ -1126,6 +1157,7 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
         "total_categories": matrix.len(),
         "benchmarked_count": vault.benchmarked_count,
         "total_arena_runs": vault.total_arena_runs,
+        "cpu_simd": cpu_simd,
         "matrix": matrix
     }))
 }
