@@ -2982,22 +2982,24 @@
           <div style="margin-bottom: 12px;">
             <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
               <span>📏 Faixa de Parâmetros:</span>
-              <span style="font-size: 0.65rem; color: #34d399; font-weight: normal;">(🟢 Cabem na dGPU RTX 2060m)</span>
+              <span id="hf-vram-fit-legend" style="font-size: 0.65rem; color: #34d399; font-weight: normal;">(🟢 Cabem na dGPU)</span>
             </div>
             <div class="profile-selector" id="hf-param-filters" style="margin-bottom: 0;">
               <button class="profile-pill active" id="btn-hf-param-all" onclick="setHfParamFilter('all')">Todos</button>
-              <button class="profile-pill" id="btn-hf-param-sub1b" onclick="setHfParamFilter('sub1b')">⚡ &lt;1B (Ultra-Leve)</button>
-              <button class="profile-pill" id="btn-hf-param-1b_4b" onclick="setHfParamFilter('1b_4b')" style="border-color: rgba(16, 185, 129, 0.4); color: #34d399;">🟢 1B ~ 4B (Sweet Spot dGPU)</button>
+              <button class="profile-pill" id="btn-hf-param-sub1b" onclick="setHfParamFilter('sub1b')">&lt;1B</button>
+              <button class="profile-pill" id="btn-hf-param-1b" onclick="setHfParamFilter('1b')">1B</button>
+              <button class="profile-pill" id="btn-hf-param-2b" onclick="setHfParamFilter('2b')">2B</button>
+              <button class="profile-pill" id="btn-hf-param-3b" onclick="setHfParamFilter('3b')">3B</button>
+              <button class="profile-pill" id="btn-hf-param-4b" onclick="setHfParamFilter('4b')">4B</button>
               <button class="profile-pill" id="btn-hf-param-5b" onclick="setHfParamFilter('5b')">5B</button>
               <button class="profile-pill" id="btn-hf-param-6b" onclick="setHfParamFilter('6b')">6B</button>
-              <button class="profile-pill" id="btn-hf-param-7b" onclick="setHfParamFilter('7b')" style="border-color: rgba(6, 182, 212, 0.4); color: var(--cyan);">🟢 7B (Teto Q4 dGPU)</button>
-              <button class="profile-pill" id="btn-hf-param-8b" onclick="setHfParamFilter('8b')" style="border-color: rgba(6, 182, 212, 0.4); color: var(--cyan);">🟢 8B (Teto Q4 dGPU)</button>
+              <button class="profile-pill" id="btn-hf-param-7b" onclick="setHfParamFilter('7b')">7B</button>
+              <button class="profile-pill" id="btn-hf-param-8b" onclick="setHfParamFilter('8b')">8B</button>
               <button class="profile-pill" id="btn-hf-param-9b" onclick="setHfParamFilter('9b')">9B</button>
               <button class="profile-pill" id="btn-hf-param-10b_12b" onclick="setHfParamFilter('10b_12b')">10B ~ 12B</button>
-              <button class="profile-pill" id="btn-hf-param-12b_32b" onclick="setHfParamFilter('12b_32b')">12B ~ 32B (CPU Host AVX2)</button>
-              <button class="profile-pill" id="btn-hf-param-32b_64b" onclick="setHfParamFilter('32b_64b')">32B ~ 64B</button>
-              <button class="profile-pill" id="btn-hf-param-64b_128b" onclick="setHfParamFilter('64b_128b')">64B ~ 128B</button>
-              <button class="profile-pill" id="btn-hf-param-128b_plus" onclick="setHfParamFilter('128b_plus')">128B+</button>
+              <button class="profile-pill" id="btn-hf-param-14b" onclick="setHfParamFilter('14b')">14B</button>
+              <button class="profile-pill" id="btn-hf-param-32b" onclick="setHfParamFilter('32b')">32B</button>
+              <button class="profile-pill" id="btn-hf-param-70b_plus" onclick="setHfParamFilter('70b_plus')">70B+</button>
             </div>
           </div>
 
@@ -3007,13 +3009,12 @@
               🎯 Tipo de Tarefa / Perfil Agêntico:
             </div>
             <div class="profile-selector" id="hf-task-filters" style="margin-bottom: 0;">
-              <button class="profile-pill active" id="btn-hf-task-all" onclick="setHfTaskFilter('all')">Todas as Tarefas</button>
-              <button class="profile-pill" id="btn-hf-task-coding" onclick="setHfTaskFilter('coding')">💻 Código & AST</button>
-              <button class="profile-pill" id="btn-hf-task-reasoning" onclick="setHfTaskFilter('reasoning')">🧠 Deep Reasoning (R1 CoT)</button>
-              <button class="profile-pill" id="btn-hf-task-agentic" onclick="setHfTaskFilter('agentic')">🤖 Ferramentas & MCP (Function Calling)</button>
-              <button class="profile-pill" id="btn-hf-task-vision" onclick="setHfTaskFilter('vision')">👁️ Visão Multimodal (VLM)</button>
-              <button class="profile-pill" id="btn-hf-task-fast" onclick="setHfTaskFilter('fast')">⚡ Triagem Rápida & Guardrails</button>
-              <button class="profile-pill" id="btn-hf-task-general" onclick="setHfTaskFilter('general')">🌐 Conversação Geral</button>
+              <button class="profile-pill" id="btn-hf-task-coding" onclick="setHfTaskFilter('coding')">💻 Programação</button>
+              <button class="profile-pill" id="btn-hf-task-reasoning" onclick="setHfTaskFilter('reasoning')">🧠 Raciocínio (R1)</button>
+              <button class="profile-pill" id="btn-hf-task-agentic" onclick="setHfTaskFilter('agentic')">🤖 Ferramentas & MCP</button>
+              <button class="profile-pill" id="btn-hf-task-vision" onclick="setHfTaskFilter('vision')">👁️ Visão (VLM)</button>
+              <button class="profile-pill" id="btn-hf-task-fast" onclick="setHfTaskFilter('fast')">⚡ Triagem Rápida</button>
+              <button class="profile-pill" id="btn-hf-task-general" onclick="setHfTaskFilter('general')">🌐 Conversação</button>
             </div>
           </div>
 
@@ -5287,15 +5288,6 @@
         fetchHardwareAndRecommendations();
         fetchInventoryDownloads();
         connectDownloadsSSE();
-        // Carrega automaticamente modelos recomendados no explorador HF se estiver vazio
-        setTimeout(() => {
-          const hfInput = document.getElementById('hf-search-input');
-          const hfRes = document.getElementById('hf-search-results');
-          if (hfInput && (!hfInput.value || hfInput.value.trim() === '') && hfRes && !hfRes.querySelector('.hf-repo-item')) {
-            hfInput.value = 'Qwen2.5-Coder GGUF';
-            searchHuggingFaceHub();
-          }
-        }, 300);
       } else if (subtab === 'switchboard') {
         if (panelInstalled) panelInstalled.style.display = 'none';
         if (panelHub) panelHub.style.display = 'none';
@@ -6048,6 +6040,7 @@
       if (ctxSub) {
         ctxSub.innerText = hw.context_formula_subtitle || 'Com base nos 5.17 GB VRAM (16k em 7B FP16; 32k em 3B ou c/ KV Q4_0)';
       }
+      updateDynamicParamFitPills(hw);
     }
 
     function renderProfileTagBadge(profile) {
@@ -6230,6 +6223,23 @@
       }
     }
 
+    function calculateFitFromParamEstimate(paramSize, isMoe = false) {
+      const safeVramGb = hubHardwareData && hubHardwareData.vram_safe_usable_mb ? (hubHardwareData.vram_safe_usable_mb / 1024) : 5.17;
+      const estVramGb = paramSize * 0.65;
+      if (isMoe) {
+        return paramSize <= 35 ? 'PartialCpuOffload' : 'Incompatible';
+      }
+      if (estVramGb + 0.8 <= safeVramGb * 0.75) {
+        return 'OptimalVram';
+      } else if (estVramGb + 0.5 <= safeVramGb) {
+        return 'TightVram';
+      } else if (paramSize <= 35) {
+        return 'PartialCpuOffload';
+      } else {
+        return 'Incompatible';
+      }
+    }
+
     async function loadTrendingCatalog() {
       const container = document.getElementById('curated-models-grid');
       if (container) {
@@ -6241,16 +6251,23 @@
           const data = await res.json();
           const repos = data.results || [];
           trendingCatalogData = repos.map(r => {
-            const details = parseRepoModelDetails(r.id, r.tags || []);
-            const paramSize = details.activeParams || details.totalParams || 3.0;
-            const fit = calculateFitFromParamEstimate(paramSize);
-            const isSweet = paramSize <= 4.0;
-            const repoSimple = r.id.split('/').pop() || r.id;
+            const repoId = r.repo_id || r.id || '';
+            const details = parseRepoModelDetails(repoId, r.tags || []);
+            const paramSize = details.total_b || details.active_b || 3.0;
+            const fit = calculateFitFromParamEstimate(paramSize, details.is_moe);
+            const isSweet = paramSize <= 4.0 && !details.is_moe;
+            const repoSimple = repoId.split('/').pop() || repoId;
+            const author = r.author || (repoId.includes('/') ? repoId.split('/')[0] : 'Comunidade');
+            const profile = (details.specialties && details.specialties.length > 0) ? (
+              details.specialties[0].label.toLowerCase().includes('coding') ? 'coding' :
+              details.specialties[0].label.toLowerCase().includes('reasoning') ? 'reasoning' :
+              details.specialties[0].label.toLowerCase().includes('vision') ? 'vision' : 'all'
+            ) : 'all';
             return {
               model_name: repoSimple,
-              repo_id: r.id,
-              author: r.author || r.id.split('/')[0] || 'Comunidade',
-              cognitive_profile: details.specialty === 'coding' ? 'coding' : details.specialty === 'reasoning' ? 'reasoning' : details.specialty === 'vision' ? 'vision' : 'all',
+              repo_id: repoId,
+              author: author,
+              cognitive_profile: profile,
               category_role: isSweet ? 'SweetSpot' : 'Heavyweight',
               why_recommended: `Novidade em alta na comunidade com ${Number(r.downloads || 0).toLocaleString()} downloads e ${r.likes || 0} curtidas.`,
               downloads: r.downloads,
@@ -6263,7 +6280,7 @@
                   size_bytes: Math.round(paramSize * 0.65 * 1024 * 1024 * 1024),
                   hardware_fit: fit,
                   is_recommended_fit: true,
-                  download_url: `https://huggingface.co/${r.id}/resolve/main/${repoSimple}-Q4_K_M.gguf`,
+                  download_url: `https://huggingface.co/${repoId}/resolve/main/${repoSimple}-Q4_K_M.gguf`,
                   file_name: `${repoSimple}-Q4_K_M.gguf`
                 }
               ]
@@ -6274,6 +6291,7 @@
           if (container) container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Não foi possível buscar as novidades da nuvem agora.</div>';
         }
       } catch (err) {
+        console.error('Erro ao carregar novidades:', err);
         if (container) container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Falha de conexão ao buscar novidades da nuvem.</div>';
       }
     }
@@ -6760,9 +6778,13 @@
     let currentRawHfResults = [];
 
     function setHfParamFilter(param) {
-      currentHfParamFilter = param;
+      if (currentHfParamFilter === param && param !== 'all') {
+        currentHfParamFilter = 'all';
+      } else {
+        currentHfParamFilter = param;
+      }
       document.querySelectorAll('#hf-param-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
-      const activeBtn = document.getElementById(`btn-hf-param-${param}`);
+      const activeBtn = document.getElementById(`btn-hf-param-${currentHfParamFilter}`);
       if (activeBtn) activeBtn.classList.add('active');
 
       if (currentRawHfResults && currentRawHfResults.length > 0) {
@@ -6773,10 +6795,16 @@
     }
 
     function setHfTaskFilter(task) {
-      currentHfTaskFilter = task;
+      if (currentHfTaskFilter === task) {
+        currentHfTaskFilter = 'all';
+      } else {
+        currentHfTaskFilter = task;
+      }
       document.querySelectorAll('#hf-task-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
-      const activeBtn = document.getElementById(`btn-hf-task-${task}`);
-      if (activeBtn) activeBtn.classList.add('active');
+      if (currentHfTaskFilter !== 'all') {
+        const activeBtn = document.getElementById(`btn-hf-task-${currentHfTaskFilter}`);
+        if (activeBtn) activeBtn.classList.add('active');
+      }
 
       if (currentRawHfResults && currentRawHfResults.length > 0) {
         renderHfSearchResults(currentRawHfResults);
@@ -6785,29 +6813,81 @@
       }
     }
 
+    function updateDynamicParamFitPills(hw) {
+      const safeVramGb = hw && hw.vram_safe_usable_mb ? (hw.vram_safe_usable_mb / 1024) : 5.17;
+      const gpuName = hw && hw.gpu_name ? hw.gpu_name : 'dGPU';
+      const legend = document.getElementById('hf-vram-fit-legend');
+      if (legend) {
+        legend.innerText = `(🟢 Cabem na ${gpuName.includes('RTX') ? gpuName : 'GPU ' + gpuName})`;
+      }
+
+      const paramPillSizes = [
+        { id: 'btn-hf-param-sub1b', size: 0.5 },
+        { id: 'btn-hf-param-1b', size: 1.5 },
+        { id: 'btn-hf-param-2b', size: 2.5 },
+        { id: 'btn-hf-param-3b', size: 3.5 },
+        { id: 'btn-hf-param-4b', size: 4.5 },
+        { id: 'btn-hf-param-5b', size: 5.5 },
+        { id: 'btn-hf-param-6b', size: 6.5 },
+        { id: 'btn-hf-param-7b', size: 7.5 },
+        { id: 'btn-hf-param-8b', size: 8.5 },
+        { id: 'btn-hf-param-9b', size: 9.5 },
+        { id: 'btn-hf-param-10b_12b', size: 11.0 },
+        { id: 'btn-hf-param-14b', size: 14.0 },
+        { id: 'btn-hf-param-32b', size: 32.0 },
+        { id: 'btn-hf-param-70b_plus', size: 70.0 }
+      ];
+
+      paramPillSizes.forEach(item => {
+        const btn = document.getElementById(item.id);
+        if (!btn) return;
+        const estVram = item.size * 0.65;
+        if (estVram + 0.8 <= safeVramGb * 0.75) {
+          btn.style.borderColor = 'rgba(16, 185, 129, 0.45)';
+          btn.style.color = '#34d399';
+          btn.title = `Cabe com 100% de folga na VRAM da ${gpuName} (~${estVram.toFixed(1)} GB VRAM)`;
+        } else if (estVram + 0.5 <= safeVramGb) {
+          btn.style.borderColor = 'rgba(6, 182, 212, 0.45)';
+          btn.style.color = 'var(--cyan)';
+          btn.title = `Cabe no teto da VRAM da ${gpuName} (~${estVram.toFixed(1)} GB VRAM)`;
+        } else {
+          btn.style.borderColor = 'var(--border-subtle)';
+          btn.style.color = 'var(--text-muted)';
+          btn.title = `Demanda CPU Host RAM (~${estVram.toFixed(1)} GB de pesos Q4; excede ${safeVramGb.toFixed(1)} GB de VRAM útil)`;
+        }
+      });
+    }
+
     function triggerSmartHfSearch() {
       const input = document.getElementById('hf-search-input');
       if (!input) return;
 
       const userText = input.value.trim();
-      if (userText && userText !== 'Qwen2.5-Coder GGUF') {
+      if (userText) {
         searchHuggingFaceHub();
+        return;
+      }
+
+      if (currentHfParamFilter === 'all' && currentHfTaskFilter === 'all') {
         return;
       }
 
       let queryParts = [];
       const taskTerms = {
-        'all': 'qwen coder',
-        'coding': 'qwen coder',
-        'reasoning': 'deepseek r1 distill',
-        'agentic': 'function calling hermes',
-        'vision': 'qwen vl',
-        'fast': 'smollm instruct',
+        'all': '',
+        'coding': 'coder',
+        'reasoning': 'reasoning',
+        'agentic': 'function calling',
+        'vision': 'vision',
+        'fast': 'smollm',
         'general': 'instruct'
       };
 
-      const baseTerm = taskTerms[currentHfTaskFilter] || 'qwen coder';
-      queryParts.push(baseTerm);
+      const baseTerm = taskTerms[currentHfTaskFilter] || '';
+      if (baseTerm) queryParts.push(baseTerm);
+      if (currentHfParamFilter !== 'all') {
+        queryParts.push(currentHfParamFilter.replace('_', ' '));
+      }
       queryParts.push('GGUF');
 
       input.value = queryParts.join(' ').trim();
@@ -6925,19 +7005,20 @@
           return false;
         }
         switch(currentHfParamFilter) {
-          case 'sub1b': if (t >= 1.0) return false; break;
-          // Sweet spot dGPU: 1B a 4.5B exclusivo para modelos densos (exclui MoE 30B/35B que demandam RAM de host)
-          case '1b_4b': if (t < 1.0 || t > 4.5 || details.is_moe) return false; break;
-          case '5b': if (t <= 4.5 || t > 5.5) return false; break;
-          case '6b': if (t <= 5.5 || t > 6.5) return false; break;
-          case '7b': if (t <= 6.5 || t > 7.5) return false; break;
-          case '8b': if (t <= 7.5 || t > 8.5) return false; break;
-          case '9b': if (t <= 8.5 || t > 9.5) return false; break;
-          case '10b_12b': if (t <= 9.5 || t > 12.5) return false; break;
-          case '12b_32b': if (t <= 12.5 || t > 32.5) return false; break;
-          case '32b_64b': if (t <= 32.5 || t > 64.5) return false; break;
-          case '64b_128b': if (t <= 64.5 || t > 128.5) return false; break;
-          case '128b_plus': if (t <= 128.5) return false; break;
+          case 'sub1b': if (t >= 1.0 || details.is_moe) return false; break;
+          case '1b': if (t < 1.0 || t >= 2.0 || details.is_moe) return false; break;
+          case '2b': if (t < 2.0 || t >= 3.0 || details.is_moe) return false; break;
+          case '3b': if (t < 3.0 || t >= 4.0 || details.is_moe) return false; break;
+          case '4b': if (t < 4.0 || t >= 5.0 || details.is_moe) return false; break;
+          case '5b': if (t < 5.0 || t >= 6.0) return false; break;
+          case '6b': if (t < 6.0 || t >= 7.0) return false; break;
+          case '7b': if (t < 7.0 || t >= 8.0) return false; break;
+          case '8b': if (t < 8.0 || t >= 9.0) return false; break;
+          case '9b': if (t < 9.0 || t >= 10.0) return false; break;
+          case '10b_12b': if (t < 10.0 || t > 12.5) return false; break;
+          case '14b': if (t <= 12.5 || t > 16.0) return false; break;
+          case '32b': if (t <= 16.0 || t > 45.0) return false; break;
+          case '70b_plus': if (t <= 45.0) return false; break;
         }
       }
 
@@ -6945,12 +7026,14 @@
       if (currentHfTaskFilter !== 'all') {
         const specLabels = (details.specialties || []).map(s => s.label.toLowerCase()).join(' ');
         const r = (repoId || '').toLowerCase();
+        const tagsStr = (Array.isArray(tags) ? tags.join(' ') : '').toLowerCase();
         switch(currentHfTaskFilter) {
-          case 'coding': if (!specLabels.includes('coding') && !r.includes('code') && !r.includes('coder')) return false; break;
-          case 'reasoning': if (!specLabels.includes('reasoning') && !r.includes('r1') && !r.includes('reasoning') && !r.includes('cot')) return false; break;
-          case 'agentic': if (!specLabels.includes('agentic') && !r.includes('agent') && !r.includes('tool') && !r.includes('hermes')) return false; break;
-          case 'vision': if (!specLabels.includes('vision') && !r.includes('vision') && !r.includes('vlm')) return false; break;
+          case 'coding': if (!specLabels.includes('coding') && !r.includes('code') && !r.includes('coder') && !tagsStr.includes('code') && !tagsStr.includes('coder')) return false; break;
+          case 'reasoning': if (!specLabels.includes('reasoning') && !r.includes('r1') && !r.includes('reasoning') && !r.includes('cot') && !tagsStr.includes('reasoning')) return false; break;
+          case 'agentic': if (!specLabels.includes('agentic') && !r.includes('agent') && !r.includes('tool') && !r.includes('hermes') && !tagsStr.includes('function-calling') && !tagsStr.includes('tool')) return false; break;
+          case 'vision': if (!specLabels.includes('vision') && !r.includes('vision') && !r.includes('vlm') && !tagsStr.includes('vision') && !tagsStr.includes('image-text-to-text')) return false; break;
           case 'fast': if ((details.total_b !== null && details.total_b >= 1.0) && !r.includes('fast') && !r.includes('smol')) return false; break;
+          case 'general': if (!r.includes('instruct') && !r.includes('chat') && !tagsStr.includes('conversational')) return false; break;
         }
       }
 
@@ -7003,16 +7086,18 @@
 
       if (filtered.length === 0) {
         const paramPill = document.querySelector('#hf-param-filters .profile-pill.active')?.innerText || currentHfParamFilter;
+        const taskPill = document.querySelector('#hf-task-filters .profile-pill.active')?.innerText;
+        const filterDesc = taskPill ? `${paramPill} • ${taskPill}` : paramPill;
         container.innerHTML = `
           <div style="text-align: center; color: var(--text-muted); padding: 28px 16px; background: rgba(15, 23, 42, 0.4); border: 1px dashed var(--border-subtle); border-radius: 10px;">
             <div style="font-size: 1.3rem; margin-bottom: 6px;">🔍</div>
-            <div style="font-size: 0.88rem; color: #cbd5e1; font-weight: 600;">Nenhum modelo encontrado para o filtro "${paramPill}".</div>
+            <div style="font-size: 0.88rem; color: #cbd5e1; font-weight: 600;">Nenhum modelo encontrado para o filtro "${filterDesc}".</div>
             <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-              Foram retornados ${repos.length} repositórios para a busca, mas nenhum pertence a esta faixa de parâmetros.
+              Foram retornados ${repos.length} repositórios para a busca, mas nenhum atende aos filtros combinados.
             </div>
-            <div style="margin-top: 12px;">
-              <button class="btn btn-cyan" style="font-size: 0.74rem; padding: 5px 14px;" onclick="setHfParamFilter('all')">
-                Ver todos os ${repos.length} modelos retornados
+            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
+              <button class="btn btn-cyan" style="font-size: 0.74rem; padding: 5px 14px;" onclick="setHfParamFilter('all'); setHfTaskFilter('all');">
+                Limpar Filtros e Ver Todos (${repos.length})
               </button>
             </div>
           </div>
