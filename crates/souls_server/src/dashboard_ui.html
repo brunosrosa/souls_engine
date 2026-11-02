@@ -867,6 +867,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      white-space: nowrap;
       transition: all 0.2s ease;
     }
 
@@ -3109,11 +3110,12 @@
                 <div class="card-icon icon-purple">⚡</div>
                 Two-Stage Semantic Switchboard & Projeção Dinâmica MCP
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Mecanismo bare-metal de economia de contexto na CPU Host (AVX2, 0 MB VRAM). Injeta cirurgicamente as ferramentas ideais para a intenção do turno, poupando até 85% de tokens de contexto e preservando o cache de prefixo.
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5;">
+                Mecanismo bare-metal de economia de contexto na CPU Host (AVX2, 0 MB VRAM).<br>
+                Injeta cirurgicamente as ferramentas ideais para a intenção do turno, poupando até 85% de tokens de contexto e preservando o cache de prefixo.
               </p>
             </div>
-            <button class="btn btn-purple" id="btn-refresh-skills" onclick="fetchSwitchboardSkills()">
+            <button class="btn btn-purple" id="btn-refresh-skills" onclick="fetchSwitchboardSkills()" style="white-space: nowrap; flex-shrink: 0;">
               <span>🔄</span> Recarregar Skills
             </button>
           </div>
