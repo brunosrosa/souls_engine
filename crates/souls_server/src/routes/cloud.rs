@@ -166,8 +166,15 @@ pub async fn cloud_ranked_models_handler(
                 cm.context_window,
                 (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%') as has_nous,
                 (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%') as has_openrouter,
-                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' LIMIT 1) as nous_prompt_price,
-                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' LIMIT 1) as nous_completion_price,
+                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC LIMIT 1) as nous_prompt_price,
+                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC LIMIT 1) as nous_completion_price,
+                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC LIMIT 1) as or_prompt_price,
+                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC LIMIT 1) as or_completion_price,
+                MAX(CASE WHEN de.profile_task = 'coding' THEN de.composite_score END) as eval_coding,
+                MAX(CASE WHEN de.profile_task = 'agentic' THEN de.composite_score END) as eval_agentic,
+                MAX(CASE WHEN de.profile_task = 'reasoning' THEN de.composite_score END) as eval_reasoning,
+                MAX(CASE WHEN de.profile_task = 'fast' THEN de.composite_score END) as eval_fast,
+                MAX(CASE WHEN de.profile_task = 'design' THEN de.composite_score END) as eval_design,
                 bs.general_elo,
                 bs.coding_elo,
                 bs.bfcl_score,
@@ -207,8 +214,15 @@ pub async fn cloud_ranked_models_handler(
                 cm.context_window,
                 (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%') as has_nous,
                 (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%') as has_openrouter,
-                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' LIMIT 1) as nous_prompt_price,
-                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' LIMIT 1) as nous_completion_price,
+                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC LIMIT 1) as nous_prompt_price,
+                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC LIMIT 1) as nous_completion_price,
+                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC LIMIT 1) as or_prompt_price,
+                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC LIMIT 1) as or_completion_price,
+                MAX(CASE WHEN de.profile_task = 'coding' THEN de.composite_score END) as eval_coding,
+                MAX(CASE WHEN de.profile_task = 'agentic' THEN de.composite_score END) as eval_agentic,
+                MAX(CASE WHEN de.profile_task = 'reasoning' THEN de.composite_score END) as eval_reasoning,
+                MAX(CASE WHEN de.profile_task = 'fast' THEN de.composite_score END) as eval_fast,
+                MAX(CASE WHEN de.profile_task = 'design' THEN de.composite_score END) as eval_design,
                 bs.general_elo,
                 bs.coding_elo,
                 bs.bfcl_score,
@@ -265,6 +279,13 @@ pub async fn cloud_ranked_models_handler(
         let has_openrouter: i64 = r.try_get("has_openrouter").unwrap_or(0);
         let nous_prompt_price: Option<f64> = r.try_get("nous_prompt_price").ok();
         let nous_completion_price: Option<f64> = r.try_get("nous_completion_price").ok();
+        let or_prompt_price: Option<f64> = r.try_get("or_prompt_price").ok();
+        let or_completion_price: Option<f64> = r.try_get("or_completion_price").ok();
+        let eval_coding: Option<f64> = r.try_get("eval_coding").ok();
+        let eval_agentic: Option<f64> = r.try_get("eval_agentic").ok();
+        let eval_reasoning: Option<f64> = r.try_get("eval_reasoning").ok();
+        let eval_fast: Option<f64> = r.try_get("eval_fast").ok();
+        let eval_design: Option<f64> = r.try_get("eval_design").ok();
         let general_elo: Option<f64> = r.try_get("general_elo").ok();
         let coding_elo: Option<f64> = r.try_get("coding_elo").ok();
         let bfcl_score: Option<f64> = r.try_get("bfcl_score").ok();
@@ -272,6 +293,15 @@ pub async fn cloud_ranked_models_handler(
         let gpqa_score: Option<f64> = r.try_get("gpqa_score").ok();
         let hard_prompts_elo: Option<f64> = r.try_get("hard_prompts_elo").ok();
         let tps: Option<f64> = r.try_get("tps").ok();
+
+        let nous_blended = match (nous_prompt_price, nous_completion_price) {
+            (Some(p), Some(c)) => Some(0.25 * p + 0.75 * c),
+            _ => None,
+        };
+        let or_blended = match (or_prompt_price, or_completion_price) {
+            (Some(p), Some(c)) => Some(0.25 * p + 0.75 * c),
+            _ => None,
+        };
 
         let primary_provider = if has_nous > 0 { "nous_portal" } else { "openrouter_market" };
 
@@ -289,6 +319,15 @@ pub async fn cloud_ranked_models_handler(
             "has_openrouter": has_openrouter > 0,
             "nous_prompt_price": nous_prompt_price,
             "nous_completion_price": nous_completion_price,
+            "nous_blended": nous_blended,
+            "or_prompt_price": or_prompt_price,
+            "or_completion_price": or_completion_price,
+            "or_blended": or_blended,
+            "eval_coding": eval_coding,
+            "eval_agentic": eval_agentic,
+            "eval_reasoning": eval_reasoning,
+            "eval_fast": eval_fast,
+            "eval_design": eval_design,
             "general_elo": general_elo,
             "coding_elo": coding_elo,
             "bfcl_score": bfcl_score,
