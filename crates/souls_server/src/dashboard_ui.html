@@ -850,6 +850,248 @@
       color: var(--cyan);
     }
 
+    /* CLOUD ARENA ENHANCEMENTS */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .badge-alternative {
+      background: rgba(148, 163, 184, 0.10);
+      color: #94a3b8;
+      border-color: rgba(148, 163, 184, 0.22);
+    }
+    #tab-cloud .model-name-text {
+      max-width: 340px;
+      font-size: 0.82rem;
+    }
+    .cloud-podium-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1100px) {
+      .cloud-podium-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .cloud-champion-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    }
+    .cloud-champion-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    }
+    .cloud-champion-card.quality {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.07) 0%, rgba(15, 23, 42, 0.75) 100%), var(--bg-card);
+    }
+    .cloud-champion-card.quality:hover {
+      border-color: rgba(245, 158, 11, 0.7);
+      box-shadow: 0 10px 28px rgba(245, 158, 11, 0.15);
+    }
+    .cloud-champion-card.value {
+      border-color: rgba(6, 182, 212, 0.4);
+      background: linear-gradient(180deg, rgba(6, 182, 212, 0.07) 0%, rgba(15, 23, 42, 0.75) 100%), var(--bg-card);
+    }
+    .cloud-champion-card.value:hover {
+      border-color: rgba(6, 182, 212, 0.7);
+      box-shadow: 0 10px 28px rgba(6, 182, 212, 0.15);
+    }
+    .cloud-champion-card.lowcost {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.07) 0%, rgba(15, 23, 42, 0.75) 100%), var(--bg-card);
+    }
+    .cloud-champion-card.lowcost:hover {
+      border-color: rgba(16, 185, 129, 0.7);
+      box-shadow: 0 10px 28px rgba(16, 185, 129, 0.15);
+    }
+    .champion-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+    .champion-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .champion-badge.quality {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.45);
+    }
+    .champion-badge.value {
+      background: rgba(6, 182, 212, 0.18);
+      color: #22d3ee;
+      border: 1px solid rgba(6, 182, 212, 0.45);
+    }
+    .champion-badge.lowcost {
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.45);
+    }
+    .champion-role-tag {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .champion-card-model {
+      margin-bottom: 12px;
+    }
+    .champion-model-brand-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .champion-provider-pill {
+      font-size: 0.65rem;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+    .champion-model-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .champion-model-id-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.70rem;
+      color: var(--text-muted);
+    }
+    .champion-desc {
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      line-height: 1.45;
+      margin-bottom: 14px;
+      min-height: 38px;
+    }
+    .champion-metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 14px;
+    }
+    .champion-metric-box {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .champion-metric-box .metric-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .champion-metric-box .metric-value {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .champion-metric-box .metric-sub {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+    .champion-metric-box .metric-hint {
+      font-size: 0.64rem;
+      color: #94a3b8;
+    }
+    .champion-metric-box .metric-progress-bg {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+    .champion-metric-box .metric-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      border-radius: 2px;
+    }
+    .cloud-champion-card.quality .metric-progress-bar {
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+    .champion-card-footer {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn-apply-champion {
+      width: 100%;
+      justify-content: center;
+      background: rgba(6, 182, 212, 0.16);
+      color: var(--cyan);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      padding: 7px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn-apply-champion:hover {
+      background: rgba(6, 182, 212, 0.32);
+      border-color: var(--cyan);
+      transform: translateY(-1px);
+    }
+    .cloud-champion-card.quality .btn-apply-champion {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .cloud-champion-card.quality .btn-apply-champion:hover {
+      background: rgba(245, 158, 11, 0.32);
+      border-color: #fbbf24;
+    }
+    .cloud-champion-card.lowcost .btn-apply-champion {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .cloud-champion-card.lowcost .btn-apply-champion:hover {
+      background: rgba(16, 185, 129, 0.32);
+      border-color: #34d399;
+    }
+
     .mono {
       font-family: var(--font-mono);
     }
@@ -3295,24 +3537,24 @@
           <div>
             <div class="card-title">
               <div class="card-icon icon-purple">🌐</div>
-              Cloud Arena — Fronteira de Pareto nos 5 Perfis Cognitivos
+              Cloud Arena — Melhores Modelos de IA em Nuvem
             </div>
             <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-              Sincronização analítica com Nous Research Portal & OpenRouter sob a regra de custo-benefício multiobjetivo.
+              Monitoramento diário de inteligência, tarifas ($/1M) e velocidade dos modelos líderes de mercado.
             </p>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-purple" onclick="switchTab('tab-settings'); switchSettingsSubtab('subtab-brain');">
               <span>⚙️</span> Configurar / Trocar no Hermes
             </button>
-            <button class="btn btn-cyan" onclick="syncCloudArena()">
+            <button class="btn btn-cyan" id="btn-sync-cloud-arena" onclick="syncCloudArena()">
               <span>⚡</span> Sincronizar Tarifas na Nuvem
             </button>
           </div>
         </div>
 
         <!-- BARRA DE CONTROLE: 5 PERFIS COGNITIVOS + FILTRO DE PROVEDOR -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
           <div class="profile-selector" id="profile-pill-container" style="margin-bottom: 0;">
             <button class="profile-pill active" onclick="selectProfile('coding')">💻 Coding / SWE</button>
             <button class="profile-pill" onclick="selectProfile('agentic')">🤖 Agentic / Tools</button>
@@ -3332,44 +3574,47 @@
           </div>
         </div>
 
-        <!-- SEÇÃO 1: OS 3 CAMPEÕES DE PARETO -->
-        <div style="margin-top: 10px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-          <h4 style="font-size: 0.85rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-            <span style="color: var(--amber);">👑</span> Tríade de Líderes de Pareto (Perfil Selecionado)
-          </h4>
-          <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-triad-sublabel">Recomendações canônicas de qualidade, ROI e economia</span>
+        <!-- SUBTEXTO DINÂMICO DO PERFIL ATIVO -->
+        <div id="cloud-profile-description-bar" style="margin-bottom: 14px; font-size: 0.74rem; color: #94a3b8; background: rgba(255, 255, 255, 0.02); padding: 6px 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--cyan);">
+          💻 <strong>Coding / SWE:</strong> Otimizado para engenharia de software, refatoração de código bare-metal, testes automatizados e resolução de problemas complexos.
         </div>
 
-        <div class="table-container" style="margin-bottom: 24px;">
-          <table class="arena-table">
-            <thead>
-              <tr>
-                <th class="text-center" style="width: 150px;">Status Pareto</th>
-                <th style="min-width: 240px;">Modelo</th>
-                <th class="text-center" style="width: 140px;">Provedor</th>
-                <th class="text-center" style="width: 130px;">Custo ($/1M)</th>
-                <th class="text-center" style="width: 110px;">Score</th>
-                <th class="text-center" style="width: 110px;">Índice ROI</th>
-                <th class="text-center" style="width: 120px;">Throughput</th>
-                <th class="text-center" style="width: 120px;">Janela Ctx</th>
-                <th class="text-center" style="width: 100px;">Ação</th>
-              </tr>
-            </thead>
-            <tbody id="cloud-arena-tbody">
-              <!-- Renderizado dinamicamente via JS -->
-              <tr>
-                <td colspan="9" style="text-align: center; color: var(--text-muted);">Consultando banco da Cloud Arena...</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- SEÇÃO 1: OS 3 CAMPEÕES DE PARETO (PÓDIO EM CARDS) -->
+        <div style="margin-top: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+          <h4 style="font-size: 0.86rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
+            <span style="color: var(--amber);">👑</span> Pódio dos Campeões (Fronteira de Pareto)
+          </h4>
+          <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-triad-sublabel">Recomendações canônicas de qualidade máxima, melhor ROI e menor custo</span>
         </div>
 
-        <!-- SEÇÃO 2: RANKING EXPANDIDO (TOP 50) -->
-        <div style="margin-top: 14px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-          <h4 style="font-size: 0.85rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-            <span style="color: var(--cyan);">📊</span> Ranking Expandido da Fronteira de Pareto & Mercado (Top 50 Modelos)
-          </h4>
-          <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-ranked-count">Carregando catálogo...</span>
+        <div class="cloud-podium-grid" id="cloud-podium-cards">
+          <!-- Renderizado dinamicamente via renderCloudTable() -->
+          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">
+            Carregando campeões da Cloud Arena...
+          </div>
+        </div>
+
+        <!-- SEÇÃO 2: RANKING GERAL DE MERCADO (TOP 50) -->
+        <div style="margin-top: 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h4 style="font-size: 0.86rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
+              <span style="color: var(--cyan);">📊</span> Ranking Geral de Mercado (Top 50 Modelos)
+            </h4>
+            <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-ranked-count">Carregando catálogo...</span>
+          </div>
+
+          <!-- BARRA DE PESQUISA E ORDENAÇÃO RÁPIDA -->
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div style="position: relative;">
+              <input type="text" id="cloud-search-input" placeholder="🔍 Filtrar modelo ou fabricante..." oninput="handleCloudSearch(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #fff; border-radius: var(--radius-sm); padding: 5px 10px; font-size: 0.76rem; width: 230px;" />
+            </div>
+            <select id="cloud-sort-select" onchange="handleCloudSort(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #cbd5e1; border-radius: var(--radius-sm); padding: 5px 8px; font-size: 0.76rem;">
+              <option value="score_desc">🏆 Maior Score (Qualidade)</option>
+              <option value="roi_desc">💎 Maior Custo-Benefício (ROI)</option>
+              <option value="cost_asc">💵 Menor Tarifa ($/1M)</option>
+              <option value="tps_desc">⚡ Maior Throughput (TPS)</option>
+            </select>
+          </div>
         </div>
 
         <div class="table-container">
@@ -3377,8 +3622,8 @@
             <thead>
               <tr>
                 <th class="text-center" style="width: 50px;">#</th>
-                <th class="text-center" style="width: 110px;">Status</th>
-                <th style="min-width: 240px;">Modelo / Identificador</th>
+                <th class="text-center" style="width: 120px;">Status</th>
+                <th style="min-width: 250px;">Modelo / Identificador</th>
                 <th class="text-center" style="width: 140px;">Provedor</th>
                 <th class="text-center" style="width: 120px;">Tarifa ($/1M)</th>
                 <th class="text-center" style="width: 90px;">Score</th>
@@ -4827,12 +5072,26 @@
       if (lower.includes('gitoxide')) return 'Gitoxide Frecency & AST';
       if (lower.includes('ladybug')) return 'LadybugDB Ontological Graph';
       if (lower.includes('nvml-barrier') || lower.includes('nvml-watchdog')) return 'NVML Physical Watchdog';
+      if (lower.includes('claude-opus-5.5') || lower.includes('claude-5.5-opus')) return 'Claude Opus 5.5';
       if (lower.includes('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
+      if (lower.includes('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
       if (lower.includes('claude-3-5-haiku')) return 'Claude 3.5 Haiku';
+      if (lower.includes('gpt-6.1-sol')) return 'GPT-6.1 Sol';
+      if (lower.includes('gpt-6-astra') || lower.includes('gpt-astra')) return 'GPT-6 Astra';
+      if (lower.includes('qwen3.7-flash') || lower.includes('qwen3-7-flash')) return 'Qwen 3.7 Flash';
+      if (lower.includes('deepseek-v4')) return 'DeepSeek-V4 Flash';
       if (lower.includes('deepseek-chat')) return 'DeepSeek-V3 Chat';
+      if (lower.includes('deepseek-r1')) return 'DeepSeek-R1 Reasoning';
       if (lower.includes('deepseek-coder')) return 'DeepSeek Coder';
       if (lower.includes('gemini-2.0-flash')) return 'Gemini 2.0 Flash';
       if (lower.includes('o3-mini')) return 'OpenAI o3-mini';
+      if (lower.includes('o1-mini')) return 'OpenAI o1-mini';
+      
+      // Fallback amigável caso seja do formato "provedor/nome-do-modelo"
+      if (id.includes('/')) {
+        const raw = id.split('/')[1] || id;
+        return raw.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
       return id;
     }
 
@@ -7672,9 +7931,58 @@
     }
 
     // 4. FETCH CLOUD ARENA (llm_cloud)
+    let cloudSearchQuery = '';
+    let cloudSortOrder = 'score_desc';
+
+    function formatContextTokens(tokens) {
+      if (!tokens || tokens <= 0) return '--';
+      if (tokens >= 1000000) {
+        const m = (tokens / 1000000).toFixed(1);
+        return (m.endsWith('.0') ? m.slice(0, -2) : m) + 'M tokens';
+      }
+      if (tokens >= 1000) {
+        return Math.round(tokens / 1000) + 'k tokens';
+      }
+      return tokens.toLocaleString() + ' tokens';
+    }
+
+    function humanizeProviderName(p) {
+      if (!p) return 'Cloud';
+      const low = p.toLowerCase();
+      if (low.includes('nous')) return 'Nous Portal';
+      if (low.includes('openrouter')) return 'OpenRouter';
+      if (low.includes('local')) return 'Silício Local';
+      return p;
+    }
+
+    function copyCloudModelId(id) {
+      if (!id) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(id).then(() => {
+          showToast(`ID copiado: ${id}`, 'success');
+        }).catch(() => {
+          showToast(`ID: ${id}`, 'info');
+        });
+      } else {
+        showToast(`ID: ${id}`, 'info');
+      }
+    }
+
+    function handleCloudSearch(val) {
+      cloudSearchQuery = (val || '').trim().toLowerCase();
+      renderCloudRankedTable();
+    }
+
+    function handleCloudSort(val) {
+      cloudSortOrder = val || 'score_desc';
+      renderCloudRankedTable();
+    }
+
     async function fetchCloudChampions() {
-      const tbody = document.getElementById('cloud-arena-tbody');
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Carregando campeões da Cloud Arena...</td></tr>';
+      const container = document.getElementById('cloud-podium-cards');
+      if (container) {
+        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">Carregando campeões da Cloud Arena...</div>';
+      }
 
       try {
         const res = await fetch('/api/v1/cloud/champions');
@@ -7685,7 +7993,9 @@
           fetchCloudRankedModels(currentProfile);
         }
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--red);">Erro ao carregar Cloud Arena.</td></tr>';
+        if (container) {
+          container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--red); padding: 24px;">Erro ao carregar Cloud Arena.</div>';
+        }
       }
     }
 
@@ -7694,6 +8004,19 @@
       document.querySelectorAll('.profile-pill').forEach(btn => btn.classList.remove('active'));
       const activeBtn = Array.from(document.querySelectorAll('.profile-pill')).find(b => b.innerText.toLowerCase().includes(currentProfile));
       if (activeBtn) activeBtn.classList.add('active');
+
+      const descBar = document.getElementById('cloud-profile-description-bar');
+      if (descBar) {
+        const descMap = {
+          coding: '💻 <strong>Coding / SWE:</strong> Otimizado para engenharia de software, refatoração de código bare-metal, testes automatizados e resolução de problemas complexos.',
+          agentic: '🤖 <strong>Agentic / Tools:</strong> Otimizado para chamada de ferramentas (MCP/Tool Calling), planejamento autônomo e orquestração de subagentes.',
+          reasoning: '🧠 <strong>Reasoning / Math:</strong> Otimizado para raciocínio analítico profundo, lógica formal, matemática avançada e auditoria minuciosa.',
+          fast: '⚡ <strong>Fast / Triage:</strong> Otimizado para altíssima velocidade (TPS), triagem de intenções em milissegundos e processamento em lote com custo irrisório.',
+          design: '🎨 <strong>Design / Frontend:</strong> Otimizado para interfaces modernas, arquitetura de componentes frontend, CSS sofisticado e compreensão multimodal.'
+        };
+        descBar.innerHTML = descMap[currentProfile] || `Perfil cognitivo selecionado: <strong>${currentProfile}</strong>`;
+      }
+
       renderCloudTable();
       fetchCloudRankedModels(currentProfile);
     }
@@ -7706,108 +8029,198 @@
 
       const sublabel = document.getElementById('cloud-triad-sublabel');
       if (sublabel) {
-        const provLabel = currentCloudProviderFilter === 'nous' ? 'Nous Portal (Foco)' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter (Foco)' : 'Todos os Provedores';
-        sublabel.innerText = `Recomendações canônicas de qualidade, ROI e economia • Provedor: ${provLabel}`;
+        const provLabel = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : 'Todos os Provedores';
+        sublabel.innerText = `Recomendações canônicas de qualidade máxima, melhor ROI e menor custo • Provedor: ${provLabel}`;
       }
 
       renderCloudTable();
-      if (cachedCloudRankedModels && cachedCloudRankedModels.length > 0) {
-        renderCloudRankedTable(cachedCloudRankedModels);
-      }
+      renderCloudRankedTable();
     }
 
     function renderCloudTable() {
-      const tbody = document.getElementById('cloud-arena-tbody');
-      if (!tbody) return;
+      const container = document.getElementById('cloud-podium-cards');
+      if (!container) return;
       const profileReport = cloudChampionsData.find(c => c.profile.toLowerCase() === currentProfile);
 
       if (!profileReport && (!cachedCloudRankedModels || cachedCloudRankedModels.length === 0)) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum dado encontrado para o perfil ' + currentProfile + '.</td></tr>';
+        container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">Nenhum dado encontrado para o perfil ${currentProfile}.</div>`;
         return;
       }
 
-      let rows = [];
+      let cards = [];
 
       if (currentCloudProviderFilter === 'all') {
         if (profileReport) {
           if (profileReport.quality_leader) {
-            rows.push({ tag: '🏆 Quality Leader', badgeClass: 'badge-champion', data: profileReport.quality_leader });
+            cards.push({
+              roleType: 'quality',
+              badgeText: '🏆 Máxima Inteligência',
+              badgeIcon: '🏆',
+              roleSubtitle: 'Líder Absoluto',
+              data: profileReport.quality_leader,
+              defaultDesc: 'Melhor pontuação absoluta no perfil selecionado. Recomendado para raciocínio complexo, arquitetura e refatorações críticas sem limites de orçamento.'
+            });
           }
           if (profileReport.best_value) {
-            rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: profileReport.best_value });
+            cards.push({
+              roleType: 'value',
+              badgeText: '💎 Melhor Custo-Benefício',
+              badgeIcon: '💎',
+              roleSubtitle: 'Ponto Ótimo de ROI',
+              data: profileReport.best_value,
+              defaultDesc: 'Máximo retorno de inteligência por cada dólar investido. Ideal para o fluxo contínuo do agente e equilíbrio orçamentário diário.'
+            });
           }
           if (profileReport.ultra_low_cost) {
-            rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: profileReport.ultra_low_cost });
+            cards.push({
+              roleType: 'lowcost',
+              badgeText: '⚡ Ultra Econômico',
+              badgeIcon: '⚡',
+              roleSubtitle: 'Velocidade & Volume',
+              data: profileReport.ultra_low_cost,
+              defaultDesc: 'Tarifa mínima com alta taxa de geração (TPS). Perfeito para subagentes em lote, resumos em tempo real e triagem de intenções.'
+            });
           }
         }
       } else {
         // Filtragem dedicada por provedor específico
         const provModels = (cachedCloudRankedModels || []).filter(m => (m.provider || '').toLowerCase().includes(currentCloudProviderFilter));
         if (provModels.length > 0) {
-          // 1. Quality Leader do provedor (maior composite_score)
           const sortedByQuality = [...provModels].sort((a, b) => (b.composite_score || 0) - (a.composite_score || 0));
-          rows.push({ tag: '🏆 Quality Leader', badgeClass: 'badge-champion', data: sortedByQuality[0] });
+          cards.push({
+            roleType: 'quality',
+            badgeText: '🏆 Máxima Inteligência',
+            badgeIcon: '🏆',
+            roleSubtitle: 'Líder do Provedor',
+            data: sortedByQuality[0],
+            defaultDesc: 'Modelo de mais alto desempenho técnico homologado no provedor selecionado.'
+          });
 
-          // 2. Best Value do provedor (maior roi_index)
           const sortedByRoi = [...provModels].sort((a, b) => (b.roi_index || 0) - (a.roi_index || 0));
           const bestRoi = sortedByRoi[0];
-          if (bestRoi && bestRoi.canonical_id !== sortedByQuality[0].canonical_id) {
-            rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: bestRoi });
-          } else if (sortedByRoi.length > 1) {
-            rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: sortedByRoi[1] });
+          const bestRoiCandidate = (bestRoi && bestRoi.canonical_id !== sortedByQuality[0].canonical_id) ? bestRoi : (sortedByRoi[1] || bestRoi);
+          if (bestRoiCandidate) {
+            cards.push({
+              roleType: 'value',
+              badgeText: '💎 Melhor Custo-Benefício',
+              badgeIcon: '💎',
+              roleSubtitle: 'Maior ROI no Provedor',
+              data: bestRoiCandidate,
+              defaultDesc: 'A melhor relação entre capacidade cognitiva e custo no provedor selecionado.'
+            });
           }
 
-          // 3. Ultra Low Cost do provedor (menor blended_cost)
           const sortedByCost = [...provModels].sort((a, b) => (a.blended_cost || 0) - (b.blended_cost || 0));
-          const lowestCost = sortedByCost[0];
-          if (lowestCost && !rows.some(r => r.data.canonical_id === lowestCost.canonical_id)) {
-            rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: lowestCost });
-          } else if (sortedByCost.length > 1 && !rows.some(r => r.data.canonical_id === sortedByCost[1].canonical_id)) {
-            rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: sortedByCost[1] });
+          const lowestCost = sortedByCost.find(m => !cards.some(c => c.data.canonical_id === m.canonical_id)) || sortedByCost[0];
+          if (lowestCost) {
+            cards.push({
+              roleType: 'lowcost',
+              badgeText: '⚡ Ultra Econômico',
+              badgeIcon: '⚡',
+              roleSubtitle: 'Menor Tarifa no Provedor',
+              data: lowestCost,
+              defaultDesc: 'A opção mais barata e veloz para chamadas em larga escala no provedor.'
+            });
           }
         } else if (profileReport) {
-          // Fallback para os campeões já carregados se bater com o provedor
           if (profileReport.quality_leader && (profileReport.quality_leader.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
-            rows.push({ tag: '🏆 Quality Leader', badgeClass: 'badge-champion', data: profileReport.quality_leader });
+            cards.push({ roleType: 'quality', badgeText: '🏆 Máxima Inteligência', badgeIcon: '🏆', roleSubtitle: 'Líder', data: profileReport.quality_leader, defaultDesc: 'Líder técnico absoluto.' });
           }
           if (profileReport.best_value && (profileReport.best_value.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
-            rows.push({ tag: '💎 Best Value', badgeClass: 'badge-value', data: profileReport.best_value });
+            cards.push({ roleType: 'value', badgeText: '💎 Melhor Custo-Benefício', badgeIcon: '💎', roleSubtitle: 'Melhor ROI', data: profileReport.best_value, defaultDesc: 'Ótimo custo-benefício.' });
           }
           if (profileReport.ultra_low_cost && (profileReport.ultra_low_cost.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
-            rows.push({ tag: '⚡ Ultra Low Cost', badgeClass: 'badge-lowcost', data: profileReport.ultra_low_cost });
+            cards.push({ roleType: 'lowcost', badgeText: '⚡ Ultra Econômico', badgeIcon: '⚡', roleSubtitle: 'Menor Custo', data: profileReport.ultra_low_cost, defaultDesc: 'Econômico e veloz.' });
           }
         }
       }
 
-      if (rows.length === 0) {
+      if (cards.length === 0) {
         const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : currentCloudProviderFilter;
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhum modelo da Tríade de Líderes encontrado especificamente para <strong>${provName}</strong> neste perfil.</td></tr>`;
+        container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">Nenhum campeão encontrado especificamente para <strong>${provName}</strong> neste perfil.</div>`;
         return;
       }
 
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td class="text-center"><span class="badge ${r.badgeClass}">${r.tag}</span></td>
-          <td>${formatModelDisplayName(r.data.canonical_id || r.data.display_name, false)}</td>
-          <td class="text-center"><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${r.data.provider}</span></td>
-          <td class="mono text-center" style="color: #cbd5e1;">$${(r.data.blended_cost || 0).toFixed(4)}</td>
-          <td class="mono text-center" style="font-weight: 700; color: var(--cyan);">${(r.data.composite_score || 0).toFixed(1)}</td>
-          <td class="mono text-center" style="color: var(--green); font-weight: 600;">${(r.data.roi_index || 0).toFixed(1)}</td>
-          <td class="mono text-center">${r.data.throughput_tps ? r.data.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
-          <td class="mono text-center">${(r.data.context_window || 0).toLocaleString()}</td>
-          <td class="text-center">
-            <button class="btn-apply-model" onclick="openQuickApplyModal('${r.data.canonical_id}', '${r.data.provider}', false)" title="Aplicar este campeão no Hermes">
-              <span>⚡</span> Usar
-            </button>
-          </td>
-        </tr>
-      `).join('');
+      container.innerHTML = cards.map(c => {
+        const m = c.data;
+        const cid = m.canonical_id || m.display_name || '--';
+        const friendlyName = humanizeModelName(cid);
+        const slashIdx = cid.indexOf('/');
+        const brand = slashIdx !== -1 ? cid.substring(0, slashIdx).toUpperCase() : 'CLOUD';
+        const provClean = humanizeProviderName(m.provider);
+        const score = m.composite_score || 0;
+        const cost = m.blended_cost || 0;
+        const costStr = cost === 0 ? '0.00' : (cost < 0.01 ? cost.toFixed(4) : cost.toFixed(2));
+        const costHint = cost === 0 ? 'Grátis / Local' : (cost < 0.10 ? 'Ultra Baixo Custo' : (cost < 1.00 ? 'Econômico' : (cost < 5.00 ? 'Equilibrado' : 'Fronteira Premium')));
+        const roi = m.roi_index || 0;
+        const tpsStr = m.throughput_tps ? m.throughput_tps.toFixed(0) + ' TPS' : '-- TPS';
+        const ctxStr = formatContextTokens(m.context_window);
+
+        return `
+          <div class="cloud-champion-card ${c.roleType}">
+            <div>
+              <div class="champion-card-top">
+                <span class="champion-badge ${c.roleType}">${c.badgeText}</span>
+                <span class="champion-role-tag">${c.roleSubtitle}</span>
+              </div>
+
+              <div class="champion-card-model">
+                <div class="champion-model-brand-row">
+                  <span class="model-brand-pill">${brand}</span>
+                  <span class="champion-provider-pill">${provClean}</span>
+                </div>
+                <div class="champion-model-name" title="${cid}">${friendlyName}</div>
+                <div class="champion-model-id-row">
+                  <code class="mono" style="word-break: break-all;">${cid}</code>
+                  <button class="btn" onclick="copyCloudModelId('${cid}')" title="Copiar ID do Modelo" style="padding: 1px 5px; font-size: 0.65rem; background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: var(--text-muted); cursor: pointer;">
+                    📋
+                  </button>
+                </div>
+              </div>
+
+              <div class="champion-desc">${c.defaultDesc}</div>
+
+              <div class="champion-metrics-grid">
+                <div class="champion-metric-box">
+                  <div class="metric-label">Pontuação (Score)</div>
+                  <div class="metric-value" style="color: ${c.roleType === 'quality' ? '#fbbf24' : (c.roleType === 'value' ? 'var(--cyan)' : 'var(--green)')};">
+                    ${score.toFixed(1)} <span class="metric-sub">/100</span>
+                  </div>
+                  <div class="metric-progress-bg">
+                    <div class="metric-progress-bar" style="width: ${Math.min(score, 100)}%;"></div>
+                  </div>
+                </div>
+                <div class="champion-metric-box">
+                  <div class="metric-label">Tarifa Blended</div>
+                  <div class="metric-value">$${costStr} <span class="metric-sub">/1M</span></div>
+                  <div class="metric-hint">${costHint}</div>
+                </div>
+                <div class="champion-metric-box">
+                  <div class="metric-label">Custo-Benefício (ROI)</div>
+                  <div class="metric-value" style="color: var(--green);">${roi.toFixed(1)}x</div>
+                  <div class="metric-hint">Retorno Multiobjetivo</div>
+                </div>
+                <div class="champion-metric-box">
+                  <div class="metric-label">Velocidade & Janela</div>
+                  <div class="metric-value">${tpsStr}</div>
+                  <div class="metric-hint">${ctxStr}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="champion-card-footer">
+              <button class="btn-apply-champion" onclick="openQuickApplyModal('${cid}', '${m.provider}', false)">
+                <span>⚡</span> Usar no Hermes Agent
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     // 4.1 FETCH RANKING EXPANDIDO DA CLOUD ARENA (TOP 50)
     async function fetchCloudRankedModels(profile) {
       const tbody = document.getElementById('cloud-ranked-tbody');
-      const countEl = document.getElementById('cloud-ranked-count');
       if (!tbody) return;
 
       tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">Consultando os 50 melhores modelos da arena...</td></tr>';
@@ -7831,44 +8244,82 @@
       const tbody = document.getElementById('cloud-ranked-tbody');
       if (!tbody) return;
 
-      let list = models || cachedCloudRankedModels || [];
-      cachedCloudRankedModels = list;
+      if (models) {
+        cachedCloudRankedModels = models;
+      }
+      let list = cachedCloudRankedModels || [];
 
+      // 1. Filtrar por Provedor
       if (currentCloudProviderFilter && currentCloudProviderFilter !== 'all') {
         list = list.filter(m => (m.provider || '').toLowerCase().includes(currentCloudProviderFilter));
       }
 
+      // 2. Filtrar por Termo de Busca
+      if (cloudSearchQuery) {
+        list = list.filter(m => {
+          const idMatch = (m.canonical_id || '').toLowerCase().includes(cloudSearchQuery);
+          const nameMatch = (m.display_name || '').toLowerCase().includes(cloudSearchQuery);
+          const provMatch = (m.provider || '').toLowerCase().includes(cloudSearchQuery);
+          return idMatch || nameMatch || provMatch;
+        });
+      }
+
+      // 3. Ordenar conforme cloudSortOrder
+      list = [...list].sort((a, b) => {
+        if (cloudSortOrder === 'score_desc') {
+          return (b.composite_score || 0) - (a.composite_score || 0);
+        } else if (cloudSortOrder === 'roi_desc') {
+          return (b.roi_index || 0) - (a.roi_index || 0);
+        } else if (cloudSortOrder === 'cost_asc') {
+          return (a.blended_cost || 0) - (b.blended_cost || 0);
+        } else if (cloudSortOrder === 'tps_desc') {
+          return (b.throughput_tps || 0) - (a.throughput_tps || 0);
+        }
+        return 0;
+      });
+
       const countEl = document.getElementById('cloud-ranked-count');
       if (countEl) {
         const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : 'Todos os Provedores';
-        countEl.innerText = `${list.length} modelos classificados (${provName})`;
+        const totalCount = (cachedCloudRankedModels || []).length;
+        countEl.innerText = `Exibindo ${list.length} de ${totalCount} modelos homologados (${provName})`;
       }
 
       if (list.length === 0) {
-        const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : currentCloudProviderFilter;
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum modelo avaliado encontrado para o provedor selecionado (${provName}).</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo avaliado encontrado correspondente aos filtros.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = list.map((m, idx) => {
         const isTop3 = idx < 3;
-        const tagClass = m.pareto_tag === 'Leader' ? 'badge-champion' : m.pareto_tag === 'BestValue' ? 'badge-value' : 'badge-dominated';
-        const tagLabel = m.pareto_tag === 'Leader' ? '👑 Leader' : m.pareto_tag === 'BestValue' ? '💎 Best' : 'Dominated';
-        const costStr = m.blended_cost === 0 ? '$0.00' : '$' + m.blended_cost.toFixed(4);
+        const tagClass = m.pareto_tag === 'Leader' ? 'badge-champion' : m.pareto_tag === 'BestValue' ? 'badge-value' : 'badge-alternative';
+        const tagLabel = m.pareto_tag === 'Leader' ? '👑 Líder Pareto' : m.pareto_tag === 'BestValue' ? '💎 Melhor ROI' : '🔹 Alternativa';
+        const costStr = m.blended_cost === 0 ? '$0.00 (Grátis)' : (m.blended_cost < 0.01 ? '$' + m.blended_cost.toFixed(4) : '$' + m.blended_cost.toFixed(2));
+        const ctxStr = formatContextTokens(m.context_window);
+        const provClean = humanizeProviderName(m.provider);
 
         return `
           <tr>
-            <td class="rank-cell ${isTop3 ? 'top3' : ''} text-center">#${m.rank || (idx + 1)}</td>
-            <td class="text-center"><span class="badge ${tagClass}">${tagLabel}</span></td>
-            <td>${formatModelDisplayName(m.canonical_id, false)}</td>
-            <td class="text-center"><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${m.provider}</span></td>
+            <td class="rank-cell ${isTop3 ? 'top3' : ''} text-center" style="${idx === 0 ? 'color: #fbbf24; font-weight: 800;' : (idx === 1 ? 'color: #cbd5e1; font-weight: 800;' : (idx === 2 ? 'color: #f59e0b; font-weight: 800;' : ''))}">#${m.rank || (idx + 1)}</td>
+            <td class="text-center"><span class="badge ${tagClass}" style="white-space: nowrap;">${tagLabel}</span></td>
+            <td>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="min-width: 0;">
+                  ${formatModelDisplayName(m.canonical_id, false)}
+                </div>
+                <button class="btn" onclick="copyCloudModelId('${m.canonical_id}')" title="Copiar ID do Modelo" style="padding: 2px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: var(--text-muted); cursor: pointer;">
+                  📋
+                </button>
+              </div>
+            </td>
+            <td class="text-center"><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${provClean}</span></td>
             <td class="mono text-center" style="color: #cbd5e1;">${costStr}</td>
             <td class="mono text-center" style="font-weight: 700; color: var(--cyan);">${(m.composite_score || 0).toFixed(1)}</td>
-            <td class="mono text-center" style="color: var(--green); font-weight: 600;">${(m.roi_index || 0).toFixed(1)}</td>
+            <td class="mono text-center" style="color: var(--green); font-weight: 600;">${(m.roi_index || 0).toFixed(1)}x</td>
             <td class="mono text-center">${m.throughput_tps ? m.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
-            <td class="mono text-center">${(m.context_window || 0).toLocaleString()}</td>
+            <td class="mono text-center">${ctxStr}</td>
             <td class="text-center">
-              <button class="btn-apply-model" onclick="openQuickApplyModal('${m.canonical_id}', '${m.provider}', false)" title="Aplicar este modelo no Hermes">
+              <button class="btn-apply-model" onclick="openQuickApplyModal('${m.canonical_id}', '${m.provider}', false)" title="Aplicar este modelo no Hermes Agent">
                 <span>⚡</span> Usar
               </button>
             </td>
@@ -7879,18 +8330,32 @@
 
     // 5. SINCRONIZAR TARIFAS DA NUVEM
     async function syncCloudArena() {
-      showToast("Sincronizando Nous Portal e OpenRouter na nuvem...", "warning");
+      const btn = document.getElementById('btn-sync-cloud-arena');
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span style="display: inline-block; animation: spin 1s linear infinite; margin-right: 4px;">🔄</span> Sincronizando...';
+      }
+
+      showToast("Sincronizando tarifas do Nous Portal e OpenRouter na nuvem...", "warning");
       try {
         const res = await fetch('/api/v1/cloud/sync?force=true', { method: 'POST' });
         if (res.ok) {
           showToast("Cloud Arena atualizada com sucesso! Tarifas e scores recalculados.", "success");
           await fetchCloudChampions();
-          renderTriadCards();
+          if (typeof renderTriadCards === 'function') renderTriadCards();
         } else {
           showToast("Sincronização concluída (modo simulado).", "success");
+          await fetchCloudChampions();
         }
       } catch (e) {
-        showToast("Sincronização concluída (modo offline).", "success");
+        showToast("Sincronização concluída (modo offline).", "info");
+        await fetchCloudChampions();
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml || '<span>⚡</span> Sincronizar Tarifas na Nuvem';
+        }
       }
     }
 
