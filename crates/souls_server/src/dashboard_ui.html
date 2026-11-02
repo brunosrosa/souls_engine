@@ -2659,18 +2659,28 @@
           </div>
 
           <!-- CONTROLE DE DISPARO DE PROVA -->
-          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px;">
-            <div style="display: grid; grid-template-columns: 2fr 2fr 1.5fr auto; gap: 14px; align-items: end;">
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px; display: flex; flex-direction: column; gap: 14px;">
+            <!-- LINHA 1: MODELO LOCAL (AMPLO) + BOTÃO INICIAR TESTE -->
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: end;">
               <div>
                 <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">MODELO LOCAL PARA TESTE</label>
-                <select id="arena-runner-model-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                <select id="arena-runner-model-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
                   <option value="">Carregando modelos instalados...</option>
                 </select>
               </div>
 
               <div>
+                <button class="btn btn-emerald" id="btn-run-arena-benchmark" onclick="executeSelectedArenaBenchmark()" style="height: 40px; padding: 0 24px; white-space: nowrap; font-weight: 600; font-size: 0.82rem;">
+                  <span>⚡</span> Iniciar Teste
+                </button>
+              </div>
+            </div>
+
+            <!-- LINHA 2: TIPO DE TESTE / PROVA (ESPAÇOSO) + ACELERADOR DE SILÍCIO -->
+            <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; align-items: end;">
+              <div>
                 <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TIPO DE TESTE / PROVA</label>
-                <select id="arena-runner-type-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                <select id="arena-runner-type-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
                   <option value="1">⚡ Velocidade & Memória (Throughput tok/s, VRAM e TTFT)</option>
                   <option value="2">🧠 Avaliação Cognitiva (Raciocínio CoT & Parsing Rust AST)</option>
                   <option value="3">👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj)</option>
@@ -2681,23 +2691,17 @@
 
               <div>
                 <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">ACELERADOR DE SILÍCIO</label>
-                <select id="arena-runner-engine-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                <select id="arena-runner-engine-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
                   <option value="">Auto (CUDA na GPU / AVX2 na CPU)</option>
                   <option value="llama-cuda">NVIDIA CUDA (Placa de Vídeo RTX 2060m)</option>
                   <option value="llama-cpu">CPU Intel AVX2 (Memória RAM do Computador)</option>
                   <option value="onnx-cpu">ONNX Runtime CPU (Zero Consumo de VRAM)</option>
                 </select>
               </div>
-
-              <div>
-                <button class="btn btn-emerald" id="btn-run-arena-benchmark" onclick="executeSelectedArenaBenchmark()" style="height: 38px; padding: 0 20px; white-space: nowrap; font-weight: 600;">
-                  <span>⚡</span> Iniciar Teste no Silício
-                </button>
-              </div>
             </div>
 
             <!-- RESULTADO EM TEMPO REAL DO TESTE -->
-            <div id="arena-live-feedback" style="display: none; margin-top: 16px; padding: 14px; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
+            <div id="arena-live-feedback" style="display: none; margin-top: 10px; padding: 14px; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                 <div style="font-size: 0.84rem; font-weight: 600; color: #fff;" id="arena-live-title">
                   Resultado do Benchmark
@@ -2730,8 +2734,10 @@
               <button class="profile-pill active" id="btn-arena-filter-all" onclick="filterArenaModels('all')">Todos os Modelos</button>
               <button class="profile-pill" id="btn-arena-filter-benchmarked" onclick="filterArenaModels('benchmarked')">✅ Homologados</button>
               <button class="profile-pill" id="btn-arena-filter-pending" onclick="filterArenaModels('pending')">⏳ Pendentes</button>
-              <button class="profile-pill" id="btn-arena-filter-tier0" onclick="filterArenaModels('tier0')">⚡ Tier 0 / 0.5 (Triagem)</button>
-              <button class="profile-pill" id="btn-arena-filter-tier1" onclick="filterArenaModels('tier1')">💻 Tier 1 (Programação)</button>
+              <button class="profile-pill" id="btn-arena-filter-tier0" onclick="filterArenaModels('tier0')">Tier 0</button>
+              <button class="profile-pill" id="btn-arena-filter-tier0_5" onclick="filterArenaModels('tier0_5')">Tier 0.5</button>
+              <button class="profile-pill" id="btn-arena-filter-tier1" onclick="filterArenaModels('tier1')">Tier 1</button>
+              <button class="profile-pill" id="btn-arena-filter-tier2" onclick="filterArenaModels('tier2')">Tier 2</button>
             </div>
 
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2743,14 +2749,30 @@
             <table class="arena-table">
               <thead>
                 <tr>
-                  <th style="width: 80px;" class="text-center">Tier</th>
-                  <th>Modelo & Identificador</th>
-                  <th style="width: 100px;">Quantização</th>
-                  <th style="width: 120px;" class="text-center">Throughput (TPS)</th>
-                  <th style="width: 100px;" class="text-center">TTFT Prefill</th>
-                  <th style="width: 120px;" class="text-center">VRAM Pico (NVML)</th>
-                  <th style="width: 90px;" class="text-center" title="Eficiência E³: Throughput / (VRAM × TTFT)">E³ Score</th>
-                  <th style="width: 130px;" class="text-center">Status</th>
+                  <th style="width: 80px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tier')" title="Clique para ordenar por Tier">
+                    Tier <span id="sort-ind-tier" style="font-size: 0.65rem; color: var(--cyan);">▲</span>
+                  </th>
+                  <th style="cursor: pointer; user-select: none;" onclick="sortArenaTable('name')" title="Clique para ordenar por Modelo">
+                    Modelo & Identificador <span id="sort-ind-name" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('quant')" title="Clique para ordenar por Quantização">
+                    Quantização <span id="sort-ind-quant" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 130px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tps')" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token. Clique para ordenar.">
+                    Throughput (TPS) <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token.">ⓘ</span> <span id="sort-ind-tps" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 110px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('ttft')" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial. Clique para ordenar.">
+                    TTFT Prefill <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial.">ⓘ</span> <span id="sort-ind-ttft" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 120px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('vram')" title="VRAM Pico: Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução. Clique para ordenar.">
+                    VRAM Pico <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução.">ⓘ</span> <span id="sort-ind-vram" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('e3')" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente! Clique para ordenar.">
+                    E³ Score <span style="cursor: help; color: #c084fc; font-size: 0.75rem; margin-left: 2px; font-weight: bold;" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente!">ⓘ</span> <span id="sort-ind-e3" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 130px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('status')" title="Clique para ordenar por Status de Homologação">
+                    Status <span id="sort-ind-status" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
                   <th style="width: 160px;" class="text-center">Ações</th>
                 </tr>
               </thead>
@@ -5290,6 +5312,8 @@
     let arenaTelemetryData = [];
     let currentArenaModelsFilter = 'all';
     let currentArenaSearchQuery = '';
+    let currentArenaSortKey = 'tier';
+    let currentArenaSortAsc = true;
 
     async function fetchLocalArenaData() {
       try {
@@ -5345,7 +5369,7 @@
     function filterArenaModels(filter) {
       currentArenaModelsFilter = filter;
       document.querySelectorAll('#arena-filter-pills .profile-pill').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById('btn-arena-filter-' + filter);
+      const activeBtn = document.getElementById('btn-arena-filter-' + filter.replace('.', '_'));
       if (activeBtn) activeBtn.classList.add('active');
       renderArenaModelsTable(arenaModelsData);
     }
@@ -5356,6 +5380,32 @@
       renderArenaModelsTable(arenaModelsData);
     }
 
+    function sortArenaTable(key) {
+      if (currentArenaSortKey === key) {
+        currentArenaSortAsc = !currentArenaSortAsc;
+      } else {
+        currentArenaSortKey = key;
+        currentArenaSortAsc = true;
+      }
+      updateArenaSortIndicators();
+      renderArenaModelsTable(arenaModelsData);
+    }
+
+    function updateArenaSortIndicators() {
+      const keys = ['tier', 'name', 'quant', 'tps', 'ttft', 'vram', 'e3', 'status'];
+      keys.forEach(k => {
+        const el = document.getElementById('sort-ind-' + k);
+        if (el) {
+          if (k === currentArenaSortKey) {
+            el.innerText = currentArenaSortAsc ? '▲' : '▼';
+            el.style.color = 'var(--cyan)';
+          } else {
+            el.innerText = '';
+          }
+        }
+      });
+    }
+
     function renderArenaModelsTable(models) {
       const tbody = document.getElementById('arena-models-tbody');
       if (!tbody) return;
@@ -5363,8 +5413,13 @@
       const filtered = (models || []).filter(m => {
         if (currentArenaModelsFilter === 'benchmarked' && m.status !== 'BENCHMARKED') return false;
         if (currentArenaModelsFilter === 'pending' && m.status === 'BENCHMARKED') return false;
-        if (currentArenaModelsFilter === 'tier0' && !((m.tier || '').includes('0'))) return false;
-        if (currentArenaModelsFilter === 'tier1' && !((m.tier || '').includes('1'))) return false;
+        
+        const tierLower = (m.tier || '').toLowerCase();
+        if (currentArenaModelsFilter === 'tier0' && !(tierLower === 'tier 0' || (tierLower.includes('tier 0') && !tierLower.includes('0.5')))) return false;
+        if (currentArenaModelsFilter === 'tier0_5' && !(tierLower.includes('tier 0.5') || tierLower.includes('tier 05'))) return false;
+        if (currentArenaModelsFilter === 'tier1' && !(tierLower.includes('tier 1'))) return false;
+        if (currentArenaModelsFilter === 'tier2' && !(tierLower.includes('tier 2'))) return false;
+
         if (currentArenaSearchQuery) {
           const q = currentArenaSearchQuery;
           const nameMatch = (m.name || '').toLowerCase().includes(q);
@@ -5373,6 +5428,30 @@
           if (!nameMatch && !idMatch && !quantMatch) return false;
         }
         return true;
+      });
+
+      // Ordenação dinâmica
+      filtered.sort((a, b) => {
+        let cmp = 0;
+        if (currentArenaSortKey === 'tier') {
+          cmp = getTierRank(a.tier) - getTierRank(b.tier);
+          if (cmp === 0) cmp = (a.name || a.model_id || '').localeCompare(b.name || b.model_id || '');
+        } else if (currentArenaSortKey === 'name') {
+          cmp = (a.name || a.model_id || '').localeCompare(b.name || b.model_id || '');
+        } else if (currentArenaSortKey === 'quant') {
+          cmp = (a.quantization || '').localeCompare(b.quantization || '');
+        } else if (currentArenaSortKey === 'tps') {
+          cmp = (a.latest_tps || 0) - (b.latest_tps || 0);
+        } else if (currentArenaSortKey === 'ttft') {
+          cmp = (a.latest_ttft_ms || 99999) - (b.latest_ttft_ms || 99999);
+        } else if (currentArenaSortKey === 'vram') {
+          cmp = (a.latest_vram_peak_mb || 0) - (b.latest_vram_peak_mb || 0);
+        } else if (currentArenaSortKey === 'e3') {
+          cmp = (a.e3_score || 0) - (b.e3_score || 0);
+        } else if (currentArenaSortKey === 'status') {
+          cmp = (a.status || '').localeCompare(b.status || '');
+        }
+        return currentArenaSortAsc ? cmp : -cmp;
       });
 
       if (filtered.length === 0) {
@@ -5399,19 +5478,21 @@
           : `<div style="line-height: 1.2;"><span class="mono" style="color: var(--text-muted); font-size: 0.75rem;">${m.size_mb ? (m.size_mb + 36).toFixed(0) : '--'}</span><div style="font-size: 0.65rem; color: var(--text-muted);">MB (est)</div></div>`;
 
         const e3Html = m.e3_score
-          ? `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.72rem; font-weight: 700;" title="Eficiência E³: Throughput / (VRAM × Latência TTFT)">${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)}</span>`
-          : '<span style="color: var(--text-muted);">--</span>';
+          ? `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.72rem; font-weight: 700;" title="Eficiência Empírica E³: ${m.e3_score.toFixed(1)} (Throughput / [VRAM × Latência])">${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)}</span>`
+          : '<span style="color: var(--text-muted); font-size: 0.75rem;" title="Score não calculado ainda. Execute o teste Type 1 para aferir Throughput, TTFT e VRAM.">--</span>';
 
         const activeFile = m.file_path || m.model_id;
 
         return `
           <tr>
-            <td class="text-center"><span class="badge badge-champion" style="font-size: 0.68rem;">${m.tier}</span></td>
+            <td class="text-center" style="vertical-align: middle;">
+              ${renderTierBadge(m.tier)}
+            </td>
             <td>
               <div style="font-weight: 600; color: #fff; font-size: 0.82rem;">${m.name}</div>
               <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">${m.model_id}</div>
             </td>
-            <td class="mono" style="font-size: 0.78rem;">${m.quantization || 'GGUF'}</td>
+            <td class="text-center mono" style="font-size: 0.78rem;">${m.quantization || 'GGUF'}</td>
             <td class="text-center">${tpsHtml}</td>
             <td class="text-center">${ttftHtml}</td>
             <td class="text-center">${vramHtml}</td>
@@ -5457,17 +5538,20 @@
           statusBadge = '<span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 0.65rem;">FALHA</span>';
         }
 
-        let typeBadge = `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.68rem;">${h.benchmark_type}</span>`;
-        if (h.benchmark_type === 'HardwareProfile') {
+        const bt = (h.benchmark_type || '').toLowerCase();
+        let typeBadge = '';
+        if (bt.includes('hardeval') || bt.includes('hardware') || bt.includes('profile')) {
           typeBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.68rem;">⚡ Velocidade & VRAM</span>';
-        } else if (h.benchmark_type === 'CognitiveEval') {
+        } else if (bt.includes('cognitive') || bt.includes('eval') || bt.includes('cot')) {
           typeBadge = '<span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 0.68rem;">🧠 Avaliação Cognitiva</span>';
-        } else if (h.benchmark_type === 'MultimodalVision') {
+        } else if (bt.includes('vision') || bt.includes('multimodal') || bt.includes('vlm')) {
           typeBadge = '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-size: 0.68rem;">👁️ Visão Multimodal</span>';
-        } else if (h.benchmark_type === 'SpeculativeDraft') {
+        } else if (bt.includes('speculative') || bt.includes('draft')) {
           typeBadge = '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.68rem;">🚀 Especulativa</span>';
-        } else if (h.benchmark_type === 'ContextPressure') {
+        } else if (bt.includes('context') || bt.includes('pressure') || bt.includes('needle')) {
           typeBadge = '<span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #fb7185; font-size: 0.68rem;">📦 Pressão Contexto</span>';
+        } else {
+          typeBadge = `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.68rem;">🔬 ${h.benchmark_type || 'Geral'}</span>`;
         }
 
         return `
@@ -5510,7 +5594,7 @@
 
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:6px;">⏳</span> Executando Prova no Silício...';
+        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:6px;">⏳</span> Executando Prova...';
       }
 
       if (feedback) {
@@ -5682,7 +5766,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<span>⚡</span> Iniciar Teste no Silício';
+          btn.innerHTML = '<span>⚡</span> Iniciar Teste';
         }
       }
     }
