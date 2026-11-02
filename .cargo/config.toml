@@ -1,7 +1,13 @@
 [build]
 # Otimizado para toolchain MSVC nativa no Windows 11
 target = "x86_64-pc-windows-msvc"
+rustc-wrapper = "C:\\Users\\rosas\\.cargo\\bin\\sccache.exe"
+
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
 
 [env]
 # Garante que traces assíncronos mostrem linha de código em debug
 RUST_BACKTRACE = "1"
+SCCACHE_DIR = "Z:\\souls_engine\\.souls_data\\sccache"
+SCCACHE_CACHE_SIZE = "15G"

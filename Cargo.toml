@@ -39,3 +39,16 @@ tower-http = { version = "0.5", features = ["cors", "trace"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 chrono = { version = "0.4", features = ["serde"] }
 comfy-table = "7.1"
+
+[profile.dev]
+incremental = false
+debug = 1
+
+[profile.test]
+incremental = false
+debug = 1
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
