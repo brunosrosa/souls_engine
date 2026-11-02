@@ -679,6 +679,72 @@
       color: #38bdf8;
     }
 
+    .sb-preset-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 0.73rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+    .sb-preset-btn:hover {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      transform: translateY(-1px);
+    }
+
+    .sb-skill-test-btn {
+      width: 100%;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #38bdf8;
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+    }
+    .sb-skill-test-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: rgba(56, 189, 248, 0.6);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+
+    .sb-action-btn {
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      color: #c084fc;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.18s ease;
+    }
+    .sb-action-btn:hover {
+      background: rgba(168, 85, 247, 0.28);
+      border-color: rgba(168, 85, 247, 0.6);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+    }
+
     .model-id-box {
       display: flex;
       flex-direction: column;
@@ -2560,7 +2626,7 @@
           <span class="tab-count-badge" id="badge-subtab-arena-benchmarks" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); display: none;">0</span>
         </button>
         <button class="subtab-btn" id="btn-subtab-switchboard" onclick="switchLocalSubtab('switchboard')">
-          <span>⚡ Switchboard MCP (<1.7ms)</span>
+          <span>⚡ Switchboard MCP</span>
           <span class="tab-count-badge" id="badge-switchboard-tools-count" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">55</span>
         </button>
       </div>
@@ -3041,20 +3107,20 @@
             <div>
               <div class="card-title">
                 <div class="card-icon icon-purple">⚡</div>
-                Two-Stage Semantic Switchboard & Projeção Dinâmica MCP (<1.7ms)
+                Two-Stage Semantic Switchboard & Projeção Dinâmica MCP
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Mecanismo bare-metal de economia de contexto na CPU Host (AVX2, 0 MB VRAM). Injeta seletivamente de 3 a 8 ferramentas ideais no turno, poupando 4.000 a 6.000 tokens e preservando prefix caching >95%.
+                Mecanismo bare-metal de economia de contexto na CPU Host (AVX2, 0 MB VRAM). Injeta cirurgicamente as ferramentas ideais para a intenção do turno, poupando até 85% de tokens de contexto e preservando o cache de prefixo.
               </p>
             </div>
-            <button class="btn btn-purple" onclick="fetchSwitchboardSkills()">
+            <button class="btn btn-purple" id="btn-refresh-skills" onclick="fetchSwitchboardSkills()">
               <span>🔄</span> Recarregar Skills
             </button>
           </div>
 
           <!-- CONTROLE DE ENTRADA DO SWITCHBOARD -->
           <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px;">
-            <div style="display: grid; grid-template-columns: 3fr 1.5fr 1fr auto; gap: 14px; align-items: end;">
+            <div style="display: grid; grid-template-columns: 2.8fr 1.6fr 1fr auto; gap: 14px; align-items: end;">
               <div>
                 <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">INTENÇÃO OU PROMPT DO TURNO</label>
                 <input type="text" id="switchboard-query-input" class="setting-input" style="width: 100%; font-size: 0.82rem;" placeholder="Ex: refatorar funcao com myers diff na ast, salvar memoria l2, medir vram rtx 2060m..." onkeydown="if(event.key==='Enter') executeSwitchboardEvaluation()">
@@ -3062,12 +3128,14 @@
               <div>
                 <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">FILTRAR NAMESPACE (OPCIONAL)</label>
                 <select id="switchboard-ns-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
-                  <option value="">Todos os Namespaces</option>
-                  <option value="code">code (Cirurgia AST & Myers Diff)</option>
-                  <option value="memory">memory (L2 & Grafo Ladybug)</option>
-                  <option value="think">think (Freio Socrático DAG)</option>
-                  <option value="ops">ops (Sandbox & Terminal)</option>
-                  <option value="sys">sys (NVML Watchdog & Hardware)</option>
+                  <option value="">🌐 Todos os Namespaces</option>
+                  <option value="code">💻 code (Cirurgia AST, Myers Diff, Sintaxe)</option>
+                  <option value="memory">🧠 memory (FrankenSQLite L2 & LadybugDB)</option>
+                  <option value="think">🤔 think (Freio Socrático DAG & Hipóteses)</option>
+                  <option value="ops">🛡️ ops (JobObject Sandbox & Subagentes)</option>
+                  <option value="sys">🌡️ sys (NVML Hardware Watchdog & Telemetria)</option>
+                  <option value="context">🗜️ context (Compressão CCR & Headroom)</option>
+                  <option value="core">⚙️ core (Descoberta & Metadados MCP)</option>
                 </select>
               </div>
               <div>
@@ -3076,6 +3144,7 @@
                   <option value="3">Top-3</option>
                   <option value="5" selected>Top-5</option>
                   <option value="8">Top-8</option>
+                  <option value="10">Top-10</option>
                 </select>
               </div>
               <div>
@@ -3086,43 +3155,51 @@
             </div>
 
             <!-- PRESETS DE TESTE RÁPIDO -->
-            <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center;">
-              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">PRESETS RÁPIDOS:</span>
-              <button class="btn-micro" onclick="setSwitchboardPreset('extrair outline de funcao rust via ast')">🔧 Código / AST</button>
-              <button class="btn-micro" onclick="setSwitchboardPreset('salvar fato epistemico no sqlite l2 e ladybug')">🧠 Memória L2</button>
-              <button class="btn-micro" onclick="setSwitchboardPreset('analisar hipotese em grafo dag socratico')">🤔 Pensamento Socrático</button>
-              <button class="btn-micro" onclick="setSwitchboardPreset('medir telemetria termica e vram rtx 2060m')">🌡️ Hardware NVML</button>
-              <button class="btn-micro" onclick="setSwitchboardPreset('consultar precos e campeoes cloud arena pareto')">🌐 Cloud FinOps</button>
-              <button class="btn-micro" onclick="setSwitchboardPreset('executar comando shell em sandbox seguro')">🛡️ Safe Sandbox</button>
+            <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center;">
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Presets Rápidos:</span>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('extrair outline e substituir symbol na ast de rust')">🔧 Código / AST</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('salvar fato epistemico no sqlite l2 e ladybug')">🧠 Memória L2</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('deliberar hipoteses em grafo dag socratico')">🤔 Pensamento Socrático</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('telemetria nvml vram temperatura rtx 2060m')">🌡️ Hardware NVML</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('comprimir tokens e deduplicar contexto em ram')">🗜️ Context Lean CCR</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('consultar precos e campeoes cloud arena pareto')">🌐 Cloud FinOps</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('executar comando shell em sandbox seguro')">🛡️ Safe Sandbox</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('criar entidades e relacoes tipadas no grafo ladybugdb')">🕸️ Grafo Ontológico</button>
             </div>
           </div>
 
           <!-- LIVE DECISION RESULT BANNER -->
           <div id="switchboard-result-container" style="display: none; margin-top: 20px;">
             <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 18px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <span id="sb-stage-badge" class="badge" style="background: rgba(168, 85, 247, 0.25); color: var(--purple); font-size: 0.8rem; padding: 4px 10px;">⚡ Fast-Path RAM Cosine</span>
-                  <span style="font-size: 0.82rem; color: var(--text-muted);" id="sb-summary-text">5 ferramentas projetadas para o contexto</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <span id="sb-stage-badge" class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); font-size: 0.8rem; padding: 4px 10px; font-weight: 700;">⚡ Fast-Path RAM Cosine</span>
+                  <span style="font-size: 0.82rem; color: #cbd5e1;" id="sb-summary-text">5 ferramentas projetadas para o contexto</span>
                 </div>
-                <div style="display: flex; gap: 16px; font-family: var(--font-mono); font-size: 0.78rem;">
+                <div style="display: flex; gap: 16px; font-family: var(--font-mono); font-size: 0.78rem; flex-wrap: wrap;">
                   <div>Latência: <strong id="sb-latency" style="color: var(--cyan);">0.0 ms</strong></div>
                   <div>Confiança: <strong id="sb-confidence" style="color: var(--emerald);">0%</strong></div>
                   <div>Entropia: <strong id="sb-entropy" style="color: var(--amber);">0.00</strong></div>
+                  <div>Economia Est.: <strong id="sb-tokens-saved" style="color: #34d399;">~5.500 tokens (91%)</strong></div>
                 </div>
               </div>
 
               <!-- SKILL RECOMENDADA -->
               <div id="sb-skill-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 1.1rem;">🎯</span>
+                    <span id="sb-skill-icon" style="font-size: 1.1rem;">🎯</span>
                     <strong id="sb-skill-name" style="color: var(--purple); font-size: 0.92rem;">souls-code-surgeon</strong>
                     <span id="sb-skill-score-badge" class="badge" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">Score: 0.95</span>
                   </div>
-                  <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Skill Operacional Canônica</span>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Skill Operacional Canônica</span>
+                    <button class="sb-action-btn" onclick="highlightSkillInCatalog()">
+                      <span>🔍</span> Localizar no Catálogo
+                    </button>
+                  </div>
                 </div>
-                <p id="sb-skill-desc" style="font-size: 0.78rem; color: var(--text-muted); margin: 6px 0 10px 0;">Descrição da skill recomendada.</p>
+                <p id="sb-skill-desc" style="font-size: 0.78rem; color: #cbd5e1; margin: 6px 0 10px 0;">Descrição da skill recomendada.</p>
                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                   <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Ferramentas Primárias da Skill:</span>
                   <div id="sb-skill-primary-tools" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
@@ -3136,10 +3213,10 @@
                   <table class="arena-table">
                     <thead>
                       <tr>
-                        <th style="width: 140px;">Ferramenta</th>
-                        <th style="width: 100px;" class="text-center">Namespace</th>
-                        <th style="width: 80px;" class="text-center">Score</th>
-                        <th>Descrição da Ferramenta</th>
+                        <th style="width: 170px;">Ferramenta</th>
+                        <th style="width: 110px;" class="text-center">Namespace</th>
+                        <th style="width: 140px;" class="text-center">Afinidade / Score</th>
+                        <th>Descrição & Parâmetros do Contrato MCP</th>
                       </tr>
                     </thead>
                     <tbody id="sb-projected-tools-tbody">
@@ -3160,13 +3237,28 @@
                 Catálogo Operacional de Skills Canônicas (.agents/skills/)
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Matriz de 15 competências comportamentais e seus vínculos com as 55 ferramentas MCP.
+                Matriz de competências comportamentais bare-metal com injeção cirúrgica de ferramentas MCP.
               </p>
             </div>
-            <span class="badge badge-lowcost">15 Skills &bull; 55 Tools</span>
+            <span id="sb-catalog-stats-badge" class="badge badge-lowcost">15 Skills &bull; 55 Ferramentas MCP</span>
           </div>
 
-          <div id="sb-skills-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 14px;">
+          <!-- BARRA DE PESQUISA E FILTROS DE CATEGORIA DE SKILLS -->
+          <div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <div style="flex: 1; min-width: 260px;">
+              <input type="text" id="sb-skill-search-input" class="setting-input" style="width: 100%; font-size: 0.8rem;" placeholder="🔍 Filtrar skills por nome, palavra-chave (#ast, #memória) ou ferramenta..." oninput="filterSwitchboardSkills()">
+            </div>
+            <div class="profile-selector" id="sb-skill-category-filters" style="margin-bottom: 0;">
+              <button class="profile-pill active" id="btn-sb-cat-all" onclick="setSwitchboardSkillCategory('all')">Todas (15)</button>
+              <button class="profile-pill" id="btn-sb-cat-coding" onclick="setSwitchboardSkillCategory('coding')">💻 Código</button>
+              <button class="profile-pill" id="btn-sb-cat-memory" onclick="setSwitchboardSkillCategory('memory')">🧠 Memória</button>
+              <button class="profile-pill" id="btn-sb-cat-hardware" onclick="setSwitchboardSkillCategory('hardware')">⚙️ Silício</button>
+              <button class="profile-pill" id="btn-sb-cat-security" onclick="setSwitchboardSkillCategory('security')">🛡️ Segurança</button>
+              <button class="profile-pill" id="btn-sb-cat-reasoning" onclick="setSwitchboardSkillCategory('reasoning')">🤔 Raciocínio</button>
+            </div>
+          </div>
+
+          <div id="sb-skills-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 8px;">
             <div style="text-align: center; color: var(--text-muted); padding: 20px;">Carregando catálogo de skills...</div>
           </div>
         </div>
@@ -5792,64 +5884,313 @@
 
 
     // ==========================================
-    // 3.3 TWO-STAGE SEMANTIC SWITCHBOARD (<1.7ms)
+    // 3.3 TWO-STAGE SEMANTIC SWITCHBOARD
     // ==========================================
     let switchboardSkillsData = [];
+    let switchboardHealthData = null;
+    let currentSbSkillCategory = 'all';
+
+    const SKILL_METADATA_MAP = {
+      'souls-code-surgeon': {
+        icon: '💻',
+        category: 'coding',
+        categoryLabel: 'Código & AST',
+        badgeBg: 'rgba(168, 85, 247, 0.15)',
+        badgeColor: '#c084fc',
+        samplePrompt: 'extrair outline e substituir symbol na ast de rust'
+      },
+      'souls-blast-radius': {
+        icon: '💥',
+        category: 'coding',
+        categoryLabel: 'Código & Impacto',
+        badgeBg: 'rgba(168, 85, 247, 0.15)',
+        badgeColor: '#c084fc',
+        samplePrompt: 'medir frecency gitoxide e blast radius de arquivos modificados'
+      },
+      'souls-memory-triad': {
+        icon: '🧠',
+        category: 'memory',
+        categoryLabel: 'Memória L2',
+        badgeBg: 'rgba(6, 182, 212, 0.15)',
+        badgeColor: 'var(--cyan)',
+        samplePrompt: 'busca hibrida rrf no lancedb e sqlite strict wal'
+      },
+      'souls-ontology-graph': {
+        icon: '🕸️',
+        category: 'memory',
+        categoryLabel: 'Grafo Ontológico',
+        badgeBg: 'rgba(6, 182, 212, 0.15)',
+        badgeColor: 'var(--cyan)',
+        samplePrompt: 'criar entidades e relacoes tipadas no grafo ladybugdb'
+      },
+      'obsidian-vault-curator': {
+        icon: '📚',
+        category: 'memory',
+        categoryLabel: 'Obsidian Wiki',
+        badgeBg: 'rgba(6, 182, 212, 0.15)',
+        badgeColor: 'var(--cyan)',
+        samplePrompt: 'curadoria de notas no cofre obsidian raw para wiki'
+      },
+      'souls-hardware-watchdog': {
+        icon: '🌡️',
+        category: 'hardware',
+        categoryLabel: 'Hardware NVML',
+        badgeBg: 'rgba(244, 63, 94, 0.15)',
+        badgeColor: '#fb7185',
+        samplePrompt: 'telemetria nvml vram temperatura rtx 2060m'
+      },
+      'souls-context-lean': {
+        icon: '🗜️',
+        category: 'hardware',
+        categoryLabel: 'Context Lean CCR',
+        badgeBg: 'rgba(56, 189, 248, 0.15)',
+        badgeColor: '#38bdf8',
+        samplePrompt: 'comprimir tokens e deduplicar contexto em ram'
+      },
+      'souls-subagent-dispatch': {
+        icon: '🤖',
+        category: 'hardware',
+        categoryLabel: 'Despacho Subagentes',
+        badgeBg: 'rgba(56, 189, 248, 0.15)',
+        badgeColor: '#38bdf8',
+        samplePrompt: 'despachar subagente via paretobandit e handoff'
+      },
+      'souls-intent-probing': {
+        icon: '🎯',
+        category: 'hardware',
+        categoryLabel: 'Intenção Socrática',
+        badgeBg: 'rgba(56, 189, 248, 0.15)',
+        badgeColor: '#38bdf8',
+        samplePrompt: 'classificar intencao e medir entropia shannon tier 0'
+      },
+      'souls-safe-sandbox': {
+        icon: '🛡️',
+        category: 'security',
+        categoryLabel: 'Sandbox NT',
+        badgeBg: 'rgba(16, 185, 129, 0.15)',
+        badgeColor: '#34d399',
+        samplePrompt: 'executar comando shell em jobobject restrito seguro'
+      },
+      'obsidian-privacy-shield': {
+        icon: '🔒',
+        category: 'security',
+        categoryLabel: 'Privacidade PII',
+        badgeBg: 'rgba(16, 185, 129, 0.15)',
+        badgeColor: '#34d399',
+        samplePrompt: 'higienizar dados confidenciais pii de saude e financas'
+      },
+      'souls-web-intelligence': {
+        icon: '🌍',
+        category: 'security',
+        categoryLabel: 'Web Intelligence',
+        badgeBg: 'rgba(16, 185, 129, 0.15)',
+        badgeColor: '#34d399',
+        samplePrompt: 'pesquisar documentacao na web e converter markdown'
+      },
+      'souls-socratic-thinking': {
+        icon: '🤔',
+        category: 'reasoning',
+        categoryLabel: 'Grafo DAG Socrático',
+        badgeBg: 'rgba(245, 158, 11, 0.15)',
+        badgeColor: '#fbbf24',
+        samplePrompt: 'deliberar hipoteses em grafo dag socratico'
+      },
+      'souls-cloud-arena-advisor': {
+        icon: '👑',
+        category: 'reasoning',
+        categoryLabel: 'Fronteira Pareto',
+        badgeBg: 'rgba(245, 158, 11, 0.15)',
+        badgeColor: '#fbbf24',
+        samplePrompt: 'consultar precos e campeoes cloud arena pareto'
+      },
+      'agent-self-learning-loop': {
+        icon: '🔄',
+        category: 'reasoning',
+        categoryLabel: 'Auto-Aprendizado',
+        badgeBg: 'rgba(245, 158, 11, 0.15)',
+        badgeColor: '#fbbf24',
+        samplePrompt: 'ciclo learn de auto aprendizado e correcao permanente'
+      }
+    };
+
+    function getSkillMeta(name) {
+      return SKILL_METADATA_MAP[name] || {
+        icon: '⚡',
+        category: 'reasoning',
+        categoryLabel: 'Skill Geral',
+        badgeBg: 'rgba(148, 163, 184, 0.15)',
+        badgeColor: '#94a3b8',
+        samplePrompt: `executar acoes da skill ${name}`
+      };
+    }
+
+    function getNamespaceBadge(ns) {
+      const map = {
+        'code': { label: 'code', bg: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: 'rgba(168, 85, 247, 0.3)' },
+        'memory': { label: 'memory', bg: 'rgba(6, 182, 212, 0.15)', color: 'var(--cyan)', border: 'rgba(6, 182, 212, 0.3)' },
+        'think': { label: 'think', bg: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: 'rgba(245, 158, 11, 0.3)' },
+        'ops': { label: 'ops', bg: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: 'rgba(16, 185, 129, 0.3)' },
+        'sys': { label: 'sys', bg: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', border: 'rgba(244, 63, 94, 0.3)' },
+        'context': { label: 'context', bg: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: 'rgba(56, 189, 248, 0.3)' },
+        'core': { label: 'core', bg: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8', border: 'rgba(148, 163, 184, 0.3)' }
+      };
+      const item = map[ns] || { label: ns, bg: 'rgba(255,255,255,0.08)', color: '#fff', border: 'rgba(255,255,255,0.15)' };
+      return `<span class="badge" style="background:${item.bg}; color:${item.color}; border:1px solid ${item.border}; font-size:0.68rem; padding:2px 7px;">${item.label}</span>`;
+    }
 
     async function fetchSwitchboardSkills() {
+      const btn = document.getElementById('btn-refresh-skills');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:4px;">⏳</span> Recarregando...';
+      }
       try {
-        const res = await fetch('/api/v1/switchboard/skills');
-        if (res.ok) {
-          const data = await res.json();
+        const [resSkills, resHealth] = await Promise.all([
+          fetch('/api/v1/switchboard/skills'),
+          fetch('/api/v1/switchboard/health')
+        ]);
+
+        if (resHealth.ok) {
+          switchboardHealthData = await resHealth.json();
+          const tabBadge = document.getElementById('badge-switchboard-tools-count');
+          if (tabBadge) tabBadge.textContent = switchboardHealthData.total_tools || 55;
+          const catBadge = document.getElementById('sb-catalog-stats-badge');
+          if (catBadge) catBadge.innerHTML = `${switchboardHealthData.total_skills || 15} Skills &bull; ${switchboardHealthData.total_tools || 55} Ferramentas MCP`;
+        }
+
+        if (resSkills.ok) {
+          const data = await resSkills.json();
           switchboardSkillsData = data.skills || [];
-          renderSwitchboardSkillsGrid(switchboardSkillsData);
+          filterSwitchboardSkills();
         }
       } catch (err) {
         console.error('Erro ao buscar skills do switchboard:', err);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🔄</span> Recarregar Skills';
+        }
       }
+    }
+
+    function setSwitchboardSkillCategory(cat) {
+      currentSbSkillCategory = cat;
+      document.querySelectorAll('#sb-skill-category-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`btn-sb-cat-${cat}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      filterSwitchboardSkills();
+    }
+
+    function filterSwitchboardSkills() {
+      const searchInput = document.getElementById('sb-skill-search-input');
+      const term = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+      const filtered = (switchboardSkillsData || []).filter(s => {
+        const meta = getSkillMeta(s.name);
+        if (currentSbSkillCategory !== 'all' && meta.category !== currentSbSkillCategory) {
+          return false;
+        }
+        if (term) {
+          const matchName = s.name.toLowerCase().includes(term);
+          const matchDesc = s.description.toLowerCase().includes(term);
+          const matchKeywords = (s.keywords || []).some(k => k.toLowerCase().includes(term));
+          const matchTools = (s.primary_tools || []).some(t => t.toLowerCase().includes(term));
+          if (!matchName && !matchDesc && !matchKeywords && !matchTools) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      renderSwitchboardSkillsGrid(filtered);
     }
 
     function renderSwitchboardSkillsGrid(skills) {
       const grid = document.getElementById('sb-skills-grid');
       if (!grid) return;
       if (!skills || skills.length === 0) {
-        grid.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhuma skill encontrada.</div>';
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 32px 16px; background: rgba(15, 23, 42, 0.4); border: 1px dashed var(--border-subtle); border-radius: 10px;">
+            <div style="font-size: 1.3rem; margin-bottom: 6px;">🔍</div>
+            <div style="font-size: 0.88rem; color: #cbd5e1; font-weight: 600;">Nenhuma skill encontrada para o filtro atual.</div>
+            <div style="margin-top: 10px;">
+              <button class="btn btn-cyan" style="font-size: 0.74rem; padding: 5px 14px;" onclick="setSwitchboardSkillCategory('all'); const inp = document.getElementById('sb-skill-search-input'); if(inp) inp.value=''; filterSwitchboardSkills();">
+                Limpar Filtros e Ver Todas
+              </button>
+            </div>
+          </div>
+        `;
         return;
       }
 
-      grid.innerHTML = skills.map(s => `
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
-              <strong style="color: var(--purple); font-size: 0.88rem;">${s.name}</strong>
-              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--purple); font-size: 0.7rem;">Skill</span>
-            </div>
-            <p style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">${s.description}</p>
-          </div>
-          <div>
-            <div style="margin-bottom: 8px;">
-              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px;">FERRAMENTAS PRIMÁRIAS:</span>
-              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                ${s.primary_tools.map(t => `<span class="badge badge-lowcost" style="font-size: 0.66rem; padding: 2px 6px;">${t}</span>`).join('')}
+      grid.innerHTML = skills.map(s => {
+        const meta = getSkillMeta(s.name);
+        return `
+          <div class="skill-card-item" id="skill-card-${s.name}" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; transition: border-color 0.2s ease, box-shadow 0.2s ease;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 7px;">
+                  <span style="font-size: 1.15rem;">${meta.icon}</span>
+                  <strong style="color: #fff; font-size: 0.88rem; font-family: var(--font-mono);">${s.name}</strong>
+                </div>
+                <span class="badge" style="background: ${meta.badgeBg}; color: ${meta.badgeColor}; font-size: 0.65rem; padding: 2px 7px; border: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+                  ${meta.categoryLabel}
+                </span>
               </div>
+              <p style="font-size: 0.76rem; color: #cbd5e1; line-height: 1.45; margin-bottom: 12px;">${s.description}</p>
             </div>
             <div>
-              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px;">KEYWORDS:</span>
-              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                ${s.keywords.slice(0, 5).map(k => `<span style="font-size: 0.65rem; color: var(--text-muted); background: rgba(255,255,255,0.05); border-radius: 4px; padding: 1px 5px;">#${k}</span>`).join('')}
+              <div style="margin-bottom: 8px;">
+                <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px; text-transform: uppercase;">Ferramentas Primárias:</span>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                  ${(s.primary_tools || []).map(t => `<span class="badge badge-lowcost" style="font-size: 0.66rem; padding: 2px 6px;">${t}</span>`).join('')}
+                </div>
               </div>
+              <div style="margin-bottom: 10px;">
+                <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px; text-transform: uppercase;">Palavras-Chave:</span>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                  ${(s.keywords || []).slice(0, 5).map(k => `<span style="font-size: 0.65rem; color: var(--text-muted); background: rgba(255,255,255,0.05); border-radius: 4px; padding: 1px 5px;">#${k}</span>`).join('')}
+                </div>
+              </div>
+              <button class="sb-skill-test-btn" onclick="setSwitchboardPreset('${meta.samplePrompt}')">
+                <span>⚡</span> Testar no Switchboard
+              </button>
             </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function setSwitchboardPreset(query) {
       const input = document.getElementById('switchboard-query-input');
       if (input) {
         input.value = query;
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        input.focus();
         executeSwitchboardEvaluation();
       }
+    }
+
+    function highlightSkillInCatalog() {
+      const name = document.getElementById('sb-skill-name')?.textContent;
+      if (!name) return;
+      setSwitchboardSkillCategory('all');
+      const searchInput = document.getElementById('sb-skill-search-input');
+      if (searchInput) searchInput.value = '';
+      filterSwitchboardSkills();
+
+      setTimeout(() => {
+        const card = document.getElementById(`skill-card-${name}`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.style.borderColor = 'var(--cyan)';
+          card.style.boxShadow = '0 0 16px rgba(6, 182, 212, 0.4)';
+          setTimeout(() => {
+            card.style.borderColor = 'rgba(255,255,255,0.08)';
+            card.style.boxShadow = 'none';
+          }, 2500);
+        }
+      }, 100);
     }
 
     async function executeSwitchboardEvaluation() {
@@ -5871,7 +6212,7 @@
       try {
         if (btn) {
           btn.disabled = true;
-          btn.innerHTML = '<span>⏳</span> Avaliando...';
+          btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:4px;">⏳</span> Avaliando...';
         }
 
         const res = await fetch('/api/v1/switchboard/evaluate', {
@@ -5915,14 +6256,28 @@
           const summaryElem = document.getElementById('sb-summary-text');
           if (summaryElem) summaryElem.textContent = `${d.matched_count} ferramentas projetadas para o contexto`;
 
+          // Economia estimada de tokens
+          const totalTools = (switchboardHealthData && switchboardHealthData.total_tools) || 55;
+          const count = d.matched_count || (d.tools ? d.tools.length : 5);
+          const savedCount = Math.max(0, totalTools - count);
+          const tokensSaved = savedCount * 110;
+          const pctSaved = Math.round((savedCount / totalTools) * 100);
+          const tokensSavedElem = document.getElementById('sb-tokens-saved');
+          if (tokensSavedElem) {
+            tokensSavedElem.textContent = `~${tokensSaved.toLocaleString()} tokens (${pctSaved}%)`;
+          }
+
           // Skill recomendada
           const skillCard = document.getElementById('sb-skill-card');
           if (d.recommended_skill) {
             if (skillCard) skillCard.style.display = 'block';
+            const meta = getSkillMeta(d.recommended_skill.name);
+            const iconElem = document.getElementById('sb-skill-icon');
+            if (iconElem) iconElem.textContent = meta.icon;
             const skName = document.getElementById('sb-skill-name');
             if (skName) skName.textContent = d.recommended_skill.name;
             const skScore = document.getElementById('sb-skill-score-badge');
-            if (skScore) skScore.textContent = `Score: ${(d.recommended_skill.score * 100).toFixed(0)}%`;
+            if (skScore) skScore.textContent = `Afinidade: ${(d.recommended_skill.score * 100).toFixed(0)}%`;
             const skDesc = document.getElementById('sb-skill-desc');
             if (skDesc) skDesc.textContent = d.recommended_skill.description;
             const skTools = document.getElementById('sb-skill-primary-tools');
@@ -5937,16 +6292,52 @@
           const tbody = document.getElementById('sb-projected-tools-tbody');
           if (tbody) {
             if (!d.tools || d.tools.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma ferramenta projetada.</td></tr>';
+              tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">Nenhuma ferramenta projetada para o filtro selecionado.</td></tr>';
             } else {
-              tbody.innerHTML = d.tools.map(t => `
-                <tr>
-                  <td><strong class="mono" style="color: var(--cyan);">${t.name}</strong></td>
-                  <td class="text-center"><span class="badge badge-lowcost" style="font-size: 0.68rem;">${t.namespace}</span></td>
-                  <td class="text-center mono" style="color: var(--emerald); font-weight: 600;">${(t.score * 100).toFixed(0)}%</td>
-                  <td style="font-size: 0.78rem; color: var(--text-muted);">${t.description}</td>
-                </tr>
-              `).join('');
+              tbody.innerHTML = d.tools.map(t => {
+                const pct = Math.round(t.score * 100);
+                const barColor = pct >= 80 ? 'var(--emerald)' : pct >= 50 ? 'var(--cyan)' : 'var(--amber)';
+                
+                let schemaParamsHtml = '';
+                if (t.schema && t.schema.properties && Object.keys(t.schema.properties).length > 0) {
+                  const props = Object.keys(t.schema.properties);
+                  const req = Array.isArray(t.schema.required) ? t.schema.required : (typeof t.schema.required === 'string' ? t.schema.required.split(' ') : []);
+                  const propList = props.map(p => {
+                    const isReq = req.includes(p);
+                    const propType = (t.schema.properties[p] && t.schema.properties[p].type) || 'string';
+                    return `<span style="display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:1px 6px; border-radius:4px; font-size:0.68rem; font-family:var(--font-mono);"><strong style="color:#fff;">${p}</strong>: <span style="color:var(--cyan);">${propType}</span>${isReq ? ' <span style="color:#f87171; font-weight:700;" title="Obrigatório">*</span>' : ''}</span>`;
+                  }).join(' ');
+                  schemaParamsHtml = `
+                    <div style="margin-top: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                      <span style="font-size: 0.66rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Parâmetros:</span>
+                      ${propList}
+                    </div>
+                  `;
+                }
+
+                return `
+                  <tr>
+                    <td>
+                      <strong class="mono" style="color: var(--cyan); font-size: 0.85rem;">${t.name}</strong>
+                    </td>
+                    <td class="text-center">
+                      ${getNamespaceBadge(t.namespace)}
+                    </td>
+                    <td class="text-center">
+                      <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <div style="width: 50px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 9999px; overflow: hidden;">
+                          <div style="width: ${pct}%; height: 100%; background: ${barColor}; border-radius: 9999px;"></div>
+                        </div>
+                        <span class="mono" style="color: ${barColor}; font-weight: 700; font-size: 0.8rem; min-width: 32px;">${pct}%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.78rem; color: #cbd5e1; line-height: 1.4;">${t.description}</div>
+                      ${schemaParamsHtml}
+                    </td>
+                  </tr>
+                `;
+              }).join('');
             }
           }
         } else {
