@@ -860,6 +860,58 @@
       color: #94a3b8;
       border-color: rgba(148, 163, 184, 0.22);
     }
+    table.arena-table th.sortable-th {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, color 0.15s ease;
+      position: relative;
+    }
+    table.arena-table th.sortable-th:hover {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--cyan);
+    }
+    .sort-icon {
+      font-size: 0.62rem;
+      margin-left: 3px;
+      opacity: 0.5;
+    }
+    .sortable-th.active-sort .sort-icon {
+      opacity: 1;
+      color: var(--cyan);
+      font-weight: 800;
+    }
+    .badge-nous {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      font-size: 0.65rem;
+      padding: 1px 6px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-openrouter {
+      background: rgba(59, 130, 246, 0.12);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      font-size: 0.65rem;
+      padding: 1px 6px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-active-hermes {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      font-weight: 700;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
+      white-space: nowrap;
+      font-size: 0.68rem;
+    }
+    tr.active-hermes-row td {
+      background: rgba(16, 185, 129, 0.06) !important;
+      border-top: 1px solid rgba(16, 185, 129, 0.25) !important;
+      border-bottom: 1px solid rgba(16, 185, 129, 0.25) !important;
+    }
     #tab-cloud .model-name-text {
       max-width: 340px;
       font-size: 0.82rem;
@@ -3553,30 +3605,60 @@
           </div>
         </div>
 
-        <!-- BARRA DE CONTROLE: 5 PERFIS COGNITIVOS + FILTRO DE PROVEDOR -->
+        <!-- CARD DE DESTAQUE: MODELO ATIVO NO HERMES (MASTER BRAIN) -->
+        <div id="active-hermes-brain-banner" style="margin-bottom: 16px; background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+              🎯
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="badge badge-active-hermes">
+                  🟢 Cérebro Mestre Ativo no Hermes
+                </span>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-family: var(--font-mono);" id="active-hermes-preset-tag">Preset: Frontier Balanced</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap;">
+                <span style="font-size: 1.08rem; font-weight: 700; color: #fff; font-family: var(--font-mono);" id="active-hermes-model-name">deepseek/deepseek-chat</span>
+                <span class="badge badge-nous" id="active-hermes-provider-tag">🧠 Nous Portal (Crédito Ativo)</span>
+              </div>
+              <div style="font-size: 0.72rem; color: #cbd5e1; margin-top: 2px;" id="active-hermes-meta-line">
+                Tarifa: $0.14 / 1M tokens • Janela: 64k tokens • Provedor Padrão: Nous Portal API
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn btn-purple" onclick="openQuickApplyModal(window.currentHermesMasterModel || 'deepseek/deepseek-chat', 'nous', false)" style="padding: 7px 14px; font-size: 0.76rem; font-weight: 600;">
+              <span>⚙️</span> Trocar Cérebro no Hermes
+            </button>
+          </div>
+        </div>
+
+        <!-- BARRA DE CONTROLE: PERFIS COGNITIVOS + FILTRO DE PROVEDOR -->
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
           <div class="profile-selector" id="profile-pill-container" style="margin-bottom: 0;">
-            <button class="profile-pill active" onclick="selectProfile('coding')">💻 Coding / SWE</button>
+            <button class="profile-pill active" onclick="selectProfile('orchestrator')">👑 Maestro / Brain</button>
+            <button class="profile-pill" onclick="selectProfile('coding')">💻 Coding / SWE</button>
             <button class="profile-pill" onclick="selectProfile('agentic')">🤖 Agentic / Tools</button>
             <button class="profile-pill" onclick="selectProfile('reasoning')">🧠 Reasoning / Math</button>
             <button class="profile-pill" onclick="selectProfile('fast')">⚡ Fast / Triage</button>
             <button class="profile-pill" onclick="selectProfile('design')">🎨 Design / Frontend</button>
           </div>
 
-          <!-- FILTRO DINÂMICO DE PROVEDOR CLOUD -->
+          <!-- FILTRO DINÂMICO DE PROVEDOR CLOUD COM FOCO NO NOUS -->
           <div style="display: flex; align-items: center; gap: 6px; background: rgba(15, 23, 42, 0.7); padding: 4px 8px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-            <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; padding-left: 4px;">Provedor:</span>
+            <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; padding-left: 4px;">Foco Provedor:</span>
             <div class="filter-pills-group" id="cloud-provider-filter-pills">
-              <button class="filter-provider-btn active" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')">🌐 Todos</button>
-              <button class="filter-provider-btn" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')">🧠 Nous Portal</button>
-              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')">🔀 OpenRouter</button>
+              <button class="filter-provider-btn active" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')">🌐 Todos (Mercado)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')">🧠 Nous Portal (Crédito Hermes)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')">🔀 OpenRouter (Referência)</button>
             </div>
           </div>
         </div>
 
         <!-- SUBTEXTO DINÂMICO DO PERFIL ATIVO -->
         <div id="cloud-profile-description-bar" style="margin-bottom: 14px; font-size: 0.74rem; color: #94a3b8; background: rgba(255, 255, 255, 0.02); padding: 6px 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--cyan);">
-          💻 <strong>Coding / SWE:</strong> Otimizado para engenharia de software, refatoração de código bare-metal, testes automatizados e resolução de problemas complexos.
+          👑 <strong>Master Brain / Maestro:</strong> O modelo de fronteira all-around que orquestra o diálogo mestre, planeja cadeias agênticas e toma decisões executivas com raciocínio balanceado.
         </div>
 
         <!-- SEÇÃO 1: OS 3 CAMPEÕES DE PARETO (PÓDIO EM CARDS) -->
@@ -3594,11 +3676,11 @@
           </div>
         </div>
 
-        <!-- SEÇÃO 2: RANKING GERAL DE MERCADO (TOP 50) -->
-        <div style="margin-top: 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <!-- SEÇÃO 2: RANKING COMPARATIVO DE MERCADO -->
+        <div style="margin-top: 18px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
           <div>
-            <h4 style="font-size: 0.86rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
-              <span style="color: var(--cyan);">📊</span> Ranking Geral de Mercado (Top 50 Modelos)
+            <h4 style="font-size: 0.88rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
+              <span style="color: var(--cyan);">📊</span> Ranking Comparativo de Modelos (Benchmarks & Custos)
             </h4>
             <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-ranked-count">Carregando catálogo...</span>
           </div>
@@ -3606,13 +3688,17 @@
           <!-- BARRA DE PESQUISA E ORDENAÇÃO RÁPIDA -->
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <div style="position: relative;">
-              <input type="text" id="cloud-search-input" placeholder="🔍 Filtrar modelo ou fabricante..." oninput="handleCloudSearch(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #fff; border-radius: var(--radius-sm); padding: 5px 10px; font-size: 0.76rem; width: 230px;" />
+              <input type="text" id="cloud-search-input" placeholder="🔍 Filtrar modelo, fabricante ou id..." oninput="handleCloudSearch(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #fff; border-radius: var(--radius-sm); padding: 5px 10px; font-size: 0.76rem; width: 230px;" />
             </div>
             <select id="cloud-sort-select" onchange="handleCloudSort(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #cbd5e1; border-radius: var(--radius-sm); padding: 5px 8px; font-size: 0.76rem;">
-              <option value="score_desc">🏆 Maior Score (Qualidade)</option>
+              <option value="score_desc">🏆 Maior Score Geral</option>
+              <option value="coding_desc">💻 Maior Score Coding (SWE)</option>
+              <option value="bfcl_desc">🤖 Maior Score Tool Calling (BFCL)</option>
+              <option value="reasoning_desc">🧠 Maior Score Reasoning (Hard/Math)</option>
               <option value="roi_desc">💎 Maior Custo-Benefício (ROI)</option>
               <option value="cost_asc">💵 Menor Tarifa ($/1M)</option>
               <option value="tps_desc">⚡ Maior Throughput (TPS)</option>
+              <option value="ctx_desc">📚 Maior Janela de Contexto</option>
             </select>
           </div>
         </div>
@@ -3621,22 +3707,25 @@
           <table class="arena-table">
             <thead>
               <tr>
-                <th class="text-center" style="width: 50px;">#</th>
-                <th class="text-center" style="width: 120px;">Status</th>
-                <th style="min-width: 250px;">Modelo / Identificador</th>
-                <th class="text-center" style="width: 140px;">Provedor</th>
-                <th class="text-center" style="width: 120px;">Tarifa ($/1M)</th>
-                <th class="text-center" style="width: 90px;">Score</th>
-                <th class="text-center" style="width: 100px;">ROI Index</th>
-                <th class="text-center" style="width: 100px;">TPS</th>
-                <th class="text-center" style="width: 120px;">Janela Ctx</th>
-                <th class="text-center" style="width: 90px;">Ação</th>
+                <th class="text-center sortable-th" style="width: 45px;" onclick="setTableSort('rank')"># <span class="sort-icon" id="sort-icon-rank">↕</span></th>
+                <th class="text-center" style="width: 125px;">Status</th>
+                <th class="sortable-th" style="min-width: 230px;" onclick="setTableSort('name')">Modelo / Identificador <span class="sort-icon" id="sort-icon-name">↕</span></th>
+                <th class="text-center" style="width: 130px;">Disponibilidade</th>
+                <th class="text-center sortable-th" style="width: 110px;" onclick="setTableSort('cost')" title="Tarifa por 1M de tokens combinados">Tarifa ($/1M) <span class="sort-icon" id="sort-icon-cost">↕</span></th>
+                <th class="text-center sortable-th active-sort" style="width: 90px;" onclick="setTableSort('score')" title="Score ponderado de inteligência multiobjetivo">Score Geral <span class="sort-icon" id="sort-icon-score">▼</span></th>
+                <th class="text-center sortable-th" style="width: 85px;" onclick="setTableSort('coding')" title="Capacidade em Engenharia de Software e Programação">Coding <span class="sort-icon" id="sort-icon-coding">↕</span></th>
+                <th class="text-center sortable-th" style="width: 85px;" onclick="setTableSort('bfcl')" title="Berkeley Function Calling: precisão em chamar ferramentas MCP">Tools (BFCL) <span class="sort-icon" id="sort-icon-bfcl">↕</span></th>
+                <th class="text-center sortable-th" style="width: 90px;" onclick="setTableSort('reasoning')" title="Raciocínio complexo, problemas difíceis e matemática">Reasoning <span class="sort-icon" id="sort-icon-reasoning">↕</span></th>
+                <th class="text-center sortable-th" style="width: 85px;" onclick="setTableSort('roi')" title="Relação entre capacidade cognitiva e custo financeiro">ROI Index <span class="sort-icon" id="sort-icon-roi">↕</span></th>
+                <th class="text-center sortable-th" style="width: 80px;" onclick="setTableSort('tps')" title="Velocidade média em tokens por segundo">TPS <span class="sort-icon" id="sort-icon-tps">↕</span></th>
+                <th class="text-center sortable-th" style="width: 95px;" onclick="setTableSort('ctx')" title="Janela de contexto máximo suportada">Janela Ctx <span class="sort-icon" id="sort-icon-ctx">↕</span></th>
+                <th class="text-center" style="width: 80px;">Ação</th>
               </tr>
             </thead>
             <tbody id="cloud-ranked-tbody">
               <!-- Renderizado dinamicamente via fetchCloudRankedModels() -->
               <tr>
-                <td colspan="10" style="text-align: center; color: var(--text-muted);">Buscando ranking dos 50 melhores modelos no SQLite da Cloud Arena...</td>
+                <td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Buscando modelos da Cloud Arena com sub-scores de benchmarks...</td>
               </tr>
             </tbody>
           </table>
@@ -4590,10 +4679,11 @@
   <script>
     // ESTADO GLOBAL DA APLICAÇÃO
     let activePreset = 'balanced';
-    let currentProfile = 'coding';
+    let currentProfile = 'orchestrator';
     let cloudChampionsData = [];
     let currentCloudProviderFilter = 'all';
     let cachedCloudRankedModels = [];
+    window.currentHermesMasterModel = 'deepseek/deepseek-chat';
 
     // NAVEGAÇÃO ENTRE ABAS
     function switchTab(tabId) {
@@ -7933,17 +8023,46 @@
     // 4. FETCH CLOUD ARENA (llm_cloud)
     let cloudSearchQuery = '';
     let cloudSortOrder = 'score_desc';
+    let currentSortCol = 'score';
+    let currentSortAsc = false;
+
+    async function updateActiveHermesBanner() {
+      try {
+        const res = await fetch('/api/v1/telemetry');
+        if (res.ok) {
+          const data = await res.json();
+          const mb = data.master_brain;
+          if (mb) {
+            window.currentHermesMasterModel = mb.model || 'deepseek/deepseek-chat';
+            const nameEl = document.getElementById('active-hermes-model-name');
+            const presetEl = document.getElementById('active-hermes-preset-tag');
+            const provEl = document.getElementById('active-hermes-provider-tag');
+            const metaEl = document.getElementById('active-hermes-meta-line');
+            if (nameEl) nameEl.innerText = mb.model || 'deepseek/deepseek-chat';
+            if (presetEl) presetEl.innerText = `Preset: ${mb.active_profile_name || 'Frontier Balanced'}`;
+            if (provEl) {
+              const p = (mb.provider || 'nous').toLowerCase();
+              provEl.innerHTML = p.includes('nous') ? '🧠 Nous Portal (Crédito Ativo)' : '🔀 OpenRouter';
+            }
+            if (metaEl) {
+              const ctx = mb.context_window ? formatContextTokens(mb.context_window) : '64k tokens';
+              metaEl.innerText = `Status: ${mb.status || 'Online'} • Contexto: ${ctx} • Alvo: ${mb.target_type || 'Cloud API'}`;
+            }
+          }
+        }
+      } catch(e) {}
+    }
 
     function formatContextTokens(tokens) {
       if (!tokens || tokens <= 0) return '--';
       if (tokens >= 1000000) {
         const m = (tokens / 1000000).toFixed(1);
-        return (m.endsWith('.0') ? m.slice(0, -2) : m) + 'M tokens';
+        return (m.endsWith('.0') ? m.slice(0, -2) : m) + 'M';
       }
       if (tokens >= 1000) {
-        return Math.round(tokens / 1000) + 'k tokens';
+        return Math.round(tokens / 1000) + 'k';
       }
-      return tokens.toLocaleString() + ' tokens';
+      return tokens.toLocaleString();
     }
 
     function humanizeProviderName(p) {
@@ -7975,7 +8094,44 @@
 
     function handleCloudSort(val) {
       cloudSortOrder = val || 'score_desc';
+      if (val === 'score_desc') { currentSortCol = 'score'; currentSortAsc = false; }
+      else if (val === 'coding_desc') { currentSortCol = 'coding'; currentSortAsc = false; }
+      else if (val === 'bfcl_desc') { currentSortCol = 'bfcl'; currentSortAsc = false; }
+      else if (val === 'reasoning_desc') { currentSortCol = 'reasoning'; currentSortAsc = false; }
+      else if (val === 'roi_desc') { currentSortCol = 'roi'; currentSortAsc = false; }
+      else if (val === 'cost_asc') { currentSortCol = 'cost'; currentSortAsc = true; }
+      else if (val === 'tps_desc') { currentSortCol = 'tps'; currentSortAsc = false; }
+      else if (val === 'ctx_desc') { currentSortCol = 'ctx'; currentSortAsc = false; }
+      updateHeaderSortIcons();
       renderCloudRankedTable();
+    }
+
+    function setTableSort(col) {
+      if (currentSortCol === col) {
+        currentSortAsc = !currentSortAsc;
+      } else {
+        currentSortCol = col;
+        currentSortAsc = (col === 'cost' || col === 'name' || col === 'rank');
+      }
+      updateHeaderSortIcons();
+      renderCloudRankedTable();
+    }
+
+    function updateHeaderSortIcons() {
+      const cols = ['rank', 'name', 'cost', 'score', 'coding', 'bfcl', 'reasoning', 'roi', 'tps', 'ctx'];
+      cols.forEach(c => {
+        const icon = document.getElementById(`sort-icon-${c}`);
+        const th = icon ? icon.closest('th') : null;
+        if (icon) {
+          if (c === currentSortCol) {
+            icon.innerText = currentSortAsc ? '▲' : '▼';
+            if (th) th.classList.add('active-sort');
+          } else {
+            icon.innerText = '↕';
+            if (th) th.classList.remove('active-sort');
+          }
+        }
+      });
     }
 
     async function fetchCloudChampions() {
@@ -7983,6 +8139,8 @@
       if (container) {
         container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">Carregando campeões da Cloud Arena...</div>';
       }
+
+      await updateActiveHermesBanner();
 
       try {
         const res = await fetch('/api/v1/cloud/champions');
@@ -8002,12 +8160,13 @@
     function selectProfile(profile) {
       currentProfile = profile.toLowerCase();
       document.querySelectorAll('.profile-pill').forEach(btn => btn.classList.remove('active'));
-      const activeBtn = Array.from(document.querySelectorAll('.profile-pill')).find(b => b.innerText.toLowerCase().includes(currentProfile));
+      const activeBtn = Array.from(document.querySelectorAll('.profile-pill')).find(b => b.innerText.toLowerCase().includes(currentProfile === 'orchestrator' ? 'maestro' : currentProfile));
       if (activeBtn) activeBtn.classList.add('active');
 
       const descBar = document.getElementById('cloud-profile-description-bar');
       if (descBar) {
         const descMap = {
+          orchestrator: '👑 <strong>Master Brain / Maestro:</strong> O modelo de fronteira all-around que orquestra o diálogo mestre, planeja cadeias agênticas e toma decisões executivas com raciocínio balanceado.',
           coding: '💻 <strong>Coding / SWE:</strong> Otimizado para engenharia de software, refatoração de código bare-metal, testes automatizados e resolução de problemas complexos.',
           agentic: '🤖 <strong>Agentic / Tools:</strong> Otimizado para chamada de ferramentas (MCP/Tool Calling), planejamento autônomo e orquestração de subagentes.',
           reasoning: '🧠 <strong>Reasoning / Math:</strong> Otimizado para raciocínio analítico profundo, lógica formal, matemática avançada e auditoria minuciosa.',
@@ -8029,7 +8188,7 @@
 
       const sublabel = document.getElementById('cloud-triad-sublabel');
       if (sublabel) {
-        const provLabel = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : 'Todos os Provedores';
+        const provLabel = currentCloudProviderFilter === 'nous' ? 'Nous Portal (Foco Principal Hermes)' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter (Referência)' : 'Todos os Provedores';
         sublabel.innerText = `Recomendações canônicas de qualidade máxima, melhor ROI e menor custo • Provedor: ${provLabel}`;
       }
 
@@ -8056,9 +8215,11 @@
               roleType: 'quality',
               badgeText: '🏆 Máxima Inteligência',
               badgeIcon: '🏆',
-              roleSubtitle: 'Líder Absoluto',
+              roleSubtitle: currentProfile === 'orchestrator' ? 'Maestro Supremo' : 'Líder Absoluto',
               data: profileReport.quality_leader,
-              defaultDesc: 'Melhor pontuação absoluta no perfil selecionado. Recomendado para raciocínio complexo, arquitetura e refatorações críticas sem limites de orçamento.'
+              defaultDesc: currentProfile === 'orchestrator' 
+                ? 'Melhor capacidade de orquestração geral e discernimento executivo sem limites de orçamento.'
+                : 'Melhor pontuação absoluta no perfil selecionado. Recomendado para tarefas críticas e sem limite financeiro.'
             });
           }
           if (profileReport.best_value) {
@@ -8068,7 +8229,9 @@
               badgeIcon: '💎',
               roleSubtitle: 'Ponto Ótimo de ROI',
               data: profileReport.best_value,
-              defaultDesc: 'Máximo retorno de inteligência por cada dólar investido. Ideal para o fluxo contínuo do agente e equilíbrio orçamentário diário.'
+              defaultDesc: currentProfile === 'orchestrator'
+                ? 'Equilíbrio ideal entre inteligência de ponta e economia contínua de créditos no Nous Portal.'
+                : 'Máximo retorno de inteligência por cada dólar investido. Ideal para fluxos operacionais contínuos.'
             });
           }
           if (profileReport.ultra_low_cost) {
@@ -8078,13 +8241,18 @@
               badgeIcon: '⚡',
               roleSubtitle: 'Velocidade & Volume',
               data: profileReport.ultra_low_cost,
-              defaultDesc: 'Tarifa mínima com alta taxa de geração (TPS). Perfeito para subagentes em lote, resumos em tempo real e triagem de intenções.'
+              defaultDesc: 'Tarifa mínima com alta taxa de geração (TPS). Perfeito para subagentes em lote, resumos e triagem.'
             });
           }
         }
       } else {
         // Filtragem dedicada por provedor específico
-        const provModels = (cachedCloudRankedModels || []).filter(m => (m.provider || '').toLowerCase().includes(currentCloudProviderFilter));
+        const provModels = (cachedCloudRankedModels || []).filter(m => {
+          if (currentCloudProviderFilter === 'nous') return m.has_nous || (m.provider || '').toLowerCase().includes('nous');
+          if (currentCloudProviderFilter === 'openrouter') return m.has_openrouter || (m.provider || '').toLowerCase().includes('openrouter');
+          return (m.provider || '').toLowerCase().includes(currentCloudProviderFilter);
+        });
+
         if (provModels.length > 0) {
           const sortedByQuality = [...provModels].sort((a, b) => (b.composite_score || 0) - (a.composite_score || 0));
           cards.push({
@@ -8123,13 +8291,13 @@
             });
           }
         } else if (profileReport) {
-          if (profileReport.quality_leader && (profileReport.quality_leader.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
+          if (profileReport.quality_leader) {
             cards.push({ roleType: 'quality', badgeText: '🏆 Máxima Inteligência', badgeIcon: '🏆', roleSubtitle: 'Líder', data: profileReport.quality_leader, defaultDesc: 'Líder técnico absoluto.' });
           }
-          if (profileReport.best_value && (profileReport.best_value.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
+          if (profileReport.best_value) {
             cards.push({ roleType: 'value', badgeText: '💎 Melhor Custo-Benefício', badgeIcon: '💎', roleSubtitle: 'Melhor ROI', data: profileReport.best_value, defaultDesc: 'Ótimo custo-benefício.' });
           }
-          if (profileReport.ultra_low_cost && (profileReport.ultra_low_cost.provider || '').toLowerCase().includes(currentCloudProviderFilter)) {
+          if (profileReport.ultra_low_cost) {
             cards.push({ roleType: 'lowcost', badgeText: '⚡ Ultra Econômico', badgeIcon: '⚡', roleSubtitle: 'Menor Custo', data: profileReport.ultra_low_cost, defaultDesc: 'Econômico e veloz.' });
           }
         }
@@ -8156,12 +8324,17 @@
         const tpsStr = m.throughput_tps ? m.throughput_tps.toFixed(0) + ' TPS' : '-- TPS';
         const ctxStr = formatContextTokens(m.context_window);
 
+        const isActive = (window.currentHermesMasterModel && (cid === window.currentHermesMasterModel || window.currentHermesMasterModel.includes(cid)));
+
         return `
-          <div class="cloud-champion-card ${c.roleType}">
+          <div class="cloud-champion-card ${c.roleType} ${isActive ? 'active-hermes-card' : ''}">
             <div>
               <div class="champion-card-top">
                 <span class="champion-badge ${c.roleType}">${c.badgeText}</span>
-                <span class="champion-role-tag">${c.roleSubtitle}</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  ${isActive ? '<span class="badge badge-active-hermes">🟢 Ativo no Hermes</span>' : ''}
+                  <span class="champion-role-tag">${c.roleSubtitle}</span>
+                </div>
               </div>
 
               <div class="champion-card-model">
@@ -8203,14 +8376,14 @@
                 <div class="champion-metric-box">
                   <div class="metric-label">Velocidade & Janela</div>
                   <div class="metric-value">${tpsStr}</div>
-                  <div class="metric-hint">${ctxStr}</div>
+                  <div class="metric-hint">${ctxStr} tokens</div>
                 </div>
               </div>
             </div>
 
             <div class="champion-card-footer">
               <button class="btn-apply-champion" onclick="openQuickApplyModal('${cid}', '${m.provider}', false)">
-                <span>⚡</span> Usar no Hermes Agent
+                <span>⚡</span> ${isActive ? 'Reconfigurar no Hermes' : 'Usar este Modelo no Hermes'}
               </button>
             </div>
           </div>
@@ -8218,25 +8391,25 @@
       }).join('');
     }
 
-    // 4.1 FETCH RANKING EXPANDIDO DA CLOUD ARENA (TOP 50)
+    // 4.1 FETCH RANKING EXPANDIDO DA CLOUD ARENA (TOP 100)
     async function fetchCloudRankedModels(profile) {
       const tbody = document.getElementById('cloud-ranked-tbody');
       if (!tbody) return;
 
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">Consultando os 50 melhores modelos da arena...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Consultando modelos da arena com benchmarks e tarifas no SQLite...</td></tr>';
 
       try {
-        const res = await fetch(`/api/v1/cloud/models?profile=${profile || currentProfile}&limit=50`);
+        const res = await fetch(`/api/v1/cloud/models?profile=${profile || currentProfile}&limit=100`);
         if (res.ok) {
           const data = await res.json();
           cachedCloudRankedModels = data.models || [];
           renderCloudRankedTable(cachedCloudRankedModels);
-          renderCloudTable(); // Re-renderiza Tríade para se beneficiar da lista em cache se houver filtro
+          renderCloudTable();
         } else {
-          tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: var(--red);">Falha ao carregar ranking da Cloud Arena.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--red); padding: 20px;">Falha ao carregar ranking da Cloud Arena.</td></tr>';
         }
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--red);">Erro de rede: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; color: var(--red); padding: 20px;">Erro de rede: ${e.message}</td></tr>`;
       }
     }
 
@@ -8249,9 +8422,15 @@
       }
       let list = cachedCloudRankedModels || [];
 
-      // 1. Filtrar por Provedor
+      // 1. Filtrar por Provedor (Foco Nous Portal prioritário)
       if (currentCloudProviderFilter && currentCloudProviderFilter !== 'all') {
-        list = list.filter(m => (m.provider || '').toLowerCase().includes(currentCloudProviderFilter));
+        if (currentCloudProviderFilter === 'nous') {
+          list = list.filter(m => m.has_nous || (m.provider || '').toLowerCase().includes('nous'));
+        } else if (currentCloudProviderFilter === 'openrouter') {
+          list = list.filter(m => m.has_openrouter || (m.provider || '').toLowerCase().includes('openrouter'));
+        } else {
+          list = list.filter(m => (m.provider || '').toLowerCase().includes(currentCloudProviderFilter));
+        }
       }
 
       // 2. Filtrar por Termo de Busca
@@ -8264,44 +8443,93 @@
         });
       }
 
-      // 3. Ordenar conforme cloudSortOrder
+      // 3. Ordenar dinamicamente por coluna clicada
       list = [...list].sort((a, b) => {
-        if (cloudSortOrder === 'score_desc') {
-          return (b.composite_score || 0) - (a.composite_score || 0);
-        } else if (cloudSortOrder === 'roi_desc') {
-          return (b.roi_index || 0) - (a.roi_index || 0);
-        } else if (cloudSortOrder === 'cost_asc') {
-          return (a.blended_cost || 0) - (b.blended_cost || 0);
-        } else if (cloudSortOrder === 'tps_desc') {
-          return (b.throughput_tps || 0) - (a.throughput_tps || 0);
+        let valA, valB;
+        if (currentSortCol === 'rank') {
+          valA = a.rank || 0; valB = b.rank || 0;
+        } else if (currentSortCol === 'name') {
+          valA = (a.canonical_id || '').toLowerCase();
+          valB = (b.canonical_id || '').toLowerCase();
+          return currentSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        } else if (currentSortCol === 'cost') {
+          valA = a.blended_cost || 0; valB = b.blended_cost || 0;
+        } else if (currentSortCol === 'score') {
+          valA = a.composite_score || 0; valB = b.composite_score || 0;
+        } else if (currentSortCol === 'coding') {
+          valA = a.coding_elo || 0; valB = b.coding_elo || 0;
+        } else if (currentSortCol === 'bfcl') {
+          valA = a.bfcl_score || 0; valB = b.bfcl_score || 0;
+        } else if (currentSortCol === 'reasoning') {
+          valA = a.hard_prompts_elo || a.gpqa_score || 0;
+          valB = b.hard_prompts_elo || b.gpqa_score || 0;
+        } else if (currentSortCol === 'ifeval') {
+          valA = a.ifeval_score || 0; valB = b.ifeval_score || 0;
+        } else if (currentSortCol === 'roi') {
+          valA = a.roi_index || 0; valB = b.roi_index || 0;
+        } else if (currentSortCol === 'tps') {
+          valA = a.throughput_tps || 0; valB = b.throughput_tps || 0;
+        } else if (currentSortCol === 'ctx') {
+          valA = a.context_window || 0; valB = b.context_window || 0;
+        } else {
+          valA = a.composite_score || 0; valB = b.composite_score || 0;
         }
-        return 0;
+
+        return currentSortAsc ? (valA - valB) : (valB - valA);
       });
 
       const countEl = document.getElementById('cloud-ranked-count');
       if (countEl) {
-        const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter' : 'Todos os Provedores';
+        const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal (Foco Hermes)' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter (Referência)' : 'Todos os Provedores';
         const totalCount = (cachedCloudRankedModels || []).length;
         countEl.innerText = `Exibindo ${list.length} de ${totalCount} modelos homologados (${provName})`;
       }
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo avaliado encontrado correspondente aos filtros.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo avaliado encontrado correspondente aos filtros.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = list.map((m, idx) => {
         const isTop3 = idx < 3;
-        const tagClass = m.pareto_tag === 'Leader' ? 'badge-champion' : m.pareto_tag === 'BestValue' ? 'badge-value' : 'badge-alternative';
-        const tagLabel = m.pareto_tag === 'Leader' ? '👑 Líder Pareto' : m.pareto_tag === 'BestValue' ? '💎 Melhor ROI' : '🔹 Alternativa';
+        const isActive = (window.currentHermesMasterModel && (m.canonical_id === window.currentHermesMasterModel || window.currentHermesMasterModel.includes(m.canonical_id)));
+
+        let statusBadge = '';
+        if (isActive) {
+          statusBadge = '<span class="badge badge-active-hermes">🟢 Ativo no Hermes</span>';
+        } else if (m.pareto_tag === 'Leader') {
+          statusBadge = '<span class="badge badge-champion">👑 Líder Pareto</span>';
+        } else if (m.pareto_tag === 'BestValue') {
+          statusBadge = '<span class="badge badge-value">💎 Melhor ROI</span>';
+        } else {
+          statusBadge = '<span class="badge badge-alternative">🔹 Alternativa</span>';
+        }
+
         const costStr = m.blended_cost === 0 ? '$0.00 (Grátis)' : (m.blended_cost < 0.01 ? '$' + m.blended_cost.toFixed(4) : '$' + m.blended_cost.toFixed(2));
         const ctxStr = formatContextTokens(m.context_window);
-        const provClean = humanizeProviderName(m.provider);
+
+        // Sub-scores formatados
+        const codingScoreStr = m.coding_elo ? `<span style="color: #38bdf8; font-weight: 600;">${m.coding_elo.toFixed(1)}</span>` : '<span style="color: var(--text-muted); font-size: 0.68rem;">--</span>';
+        const bfclScoreStr = m.bfcl_score ? `<span style="color: #a78bfa; font-weight: 600;">${m.bfcl_score.toFixed(1)}</span>` : '<span style="color: var(--text-muted); font-size: 0.68rem;">--</span>';
+        const reasoningScoreStr = (m.hard_prompts_elo || m.gpqa_score) ? `<span style="color: #f472b6; font-weight: 600;">${(m.hard_prompts_elo || m.gpqa_score).toFixed(1)}</span>` : '<span style="color: var(--text-muted); font-size: 0.68rem;">--</span>';
+        const ifevalScoreStr = m.ifeval_score ? `<span style="color: #34d399; font-weight: 600;">${m.ifeval_score.toFixed(1)}</span>` : '<span style="color: var(--text-muted); font-size: 0.68rem;">--</span>';
+
+        // Badges de disponibilidade de provedores
+        let provBadges = [];
+        if (m.has_nous) {
+          provBadges.push('<span class="badge badge-nous" title="Disponível na API do Nous Portal (Crédito Hermes)">🧠 Nous</span>');
+        }
+        if (m.has_openrouter) {
+          provBadges.push('<span class="badge badge-openrouter" title="Disponível no catálogo OpenRouter">🔀 OR</span>');
+        }
+        if (provBadges.length === 0) {
+          provBadges.push(`<span class="badge" style="background: rgba(255,255,255,0.06);">${humanizeProviderName(m.provider)}</span>`);
+        }
 
         return `
-          <tr>
-            <td class="rank-cell ${isTop3 ? 'top3' : ''} text-center" style="${idx === 0 ? 'color: #fbbf24; font-weight: 800;' : (idx === 1 ? 'color: #cbd5e1; font-weight: 800;' : (idx === 2 ? 'color: #f59e0b; font-weight: 800;' : ''))}">#${m.rank || (idx + 1)}</td>
-            <td class="text-center"><span class="badge ${tagClass}" style="white-space: nowrap;">${tagLabel}</span></td>
+          <tr class="${isActive ? 'active-hermes-row' : ''}">
+            <td class="rank-cell ${isTop3 ? 'top3' : ''} text-center" style="${idx === 0 ? 'color: #fbbf24; font-weight: 800;' : (idx === 1 ? 'color: #cbd5e1; font-weight: 800;' : (idx === 2 ? 'color: #f59e0b; font-weight: 800;' : ''))}">#${idx + 1}</td>
+            <td class="text-center">${statusBadge}</td>
             <td>
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                 <div style="min-width: 0;">
@@ -8312,14 +8540,21 @@
                 </button>
               </div>
             </td>
-            <td class="text-center"><span class="badge" style="background: rgba(255,255,255,0.06); color: #e2e8f0;">${provClean}</span></td>
+            <td class="text-center">
+              <div style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">
+                ${provBadges.join('')}
+              </div>
+            </td>
             <td class="mono text-center" style="color: #cbd5e1;">${costStr}</td>
-            <td class="mono text-center" style="font-weight: 700; color: var(--cyan);">${(m.composite_score || 0).toFixed(1)}</td>
+            <td class="mono text-center" style="font-weight: 800; color: var(--cyan); font-size: 0.84rem;">${(m.composite_score || 0).toFixed(1)}</td>
+            <td class="mono text-center">${codingScoreStr}</td>
+            <td class="mono text-center">${bfclScoreStr}</td>
+            <td class="mono text-center">${reasoningScoreStr}</td>
             <td class="mono text-center" style="color: var(--green); font-weight: 600;">${(m.roi_index || 0).toFixed(1)}x</td>
             <td class="mono text-center">${m.throughput_tps ? m.throughput_tps.toFixed(0) + ' tps' : '--'}</td>
             <td class="mono text-center">${ctxStr}</td>
             <td class="text-center">
-              <button class="btn-apply-model" onclick="openQuickApplyModal('${m.canonical_id}', '${m.provider}', false)" title="Aplicar este modelo no Hermes Agent">
+              <button class="btn-apply-model" onclick="openQuickApplyModal('${m.canonical_id}', '${m.has_nous ? 'nous' : 'openrouter'}', false)" title="Aplicar este modelo no Hermes Agent">
                 <span>⚡</span> Usar
               </button>
             </td>

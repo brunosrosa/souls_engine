@@ -1216,7 +1216,7 @@ impl FixtureService {
         let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(val["status"], "success");
-        assert_eq!(val["profiles_count"], 5);
+        assert_eq!(val["profiles_count"], 6);
 
         // 2. MCP tools/call cloud_champions
         let mcp_payload = serde_json::json!({
