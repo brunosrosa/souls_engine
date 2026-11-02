@@ -2638,22 +2638,22 @@
       <div id="panel-local-arena" style="display: none;">
         <!-- CARD 1: RUNNER DE BENCHMARK INTERATIVO -->
         <div class="card" style="margin-bottom: 20px;">
-          <div class="card-header">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
             <div>
               <div class="card-title">
                 <div class="card-icon icon-emerald">🏟️</div>
-                Local Silicon Arena — Aferição & Provas de Silício Bare-Metal (ADR-007)
+                Arena de Testes de Silício (Benchmarks Locais)
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Execução de baterias de prova diretamente no hardware real (NVIDIA RTX 2060m CUDA & Intel i9 AVX2). Telemetria registrada no FrankenSQLite STRICT.
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Meça a velocidade real (tokens/s), tempo de resposta (TTFT) e consumo de VRAM diretamente na sua placa NVIDIA RTX 2060m e CPU Intel i9.
               </p>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-emerald" onclick="syncLocalArenaHermes()">
-                <span>🔗</span> Sincronizar HardLinks Hermes
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-emerald" onclick="syncLocalArenaHermes()" title="Cria links diretos e atualiza o catálogo do orquestrador Hermes">
+                <span>🔗</span> Sincronizar com Hermes Agent
               </button>
-              <button class="btn btn-cyan" onclick="fetchLocalArenaData()">
-                <span>🔄</span> Atualizar Benchmarks
+              <button class="btn btn-cyan" onclick="fetchLocalArenaData()" title="Recarregar telemetria e dados medidos">
+                <span>🔄</span> Atualizar Dados
               </button>
             </div>
           </div>
@@ -2662,66 +2662,81 @@
           <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px;">
             <div style="display: grid; grid-template-columns: 2fr 2fr 1.5fr auto; gap: 14px; align-items: end;">
               <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">SELECIONAR MODELO LOCAL</label>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">MODELO LOCAL PARA TESTE</label>
                 <select id="arena-runner-model-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
                   <option value="">Carregando modelos instalados...</option>
                 </select>
               </div>
 
               <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">BATERIA DE PROVA CANÔNICA</label>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TIPO DE TESTE / PROVA</label>
                 <select id="arena-runner-type-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
-                  <option value="1">Type 1 — HardwareProfile (Velocidade TPS, VRAM Real, TTFT/TPOT)</option>
-                  <option value="2">Type 2 — CognitiveEval (Rust AST Parsing, CoT Socrático)</option>
-                  <option value="3">Type 3 — MultimodalVision (VLM + mmproj-F16.gguf Pareamento)</option>
-                  <option value="4">Type 4 — SpeculativeDraft (Taxa Alpha & Speedup de Rascunho)</option>
-                  <option value="5">Type 5 — ContextPressure (Needle-in-a-Haystack 4k a 32k)</option>
+                  <option value="1">⚡ Velocidade & Memória (Throughput tok/s, VRAM e TTFT)</option>
+                  <option value="2">🧠 Avaliação Cognitiva (Raciocínio CoT & Parsing Rust AST)</option>
+                  <option value="3">👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj)</option>
+                  <option value="4">🚀 Aceleração Especulativa (Drafting & Ganho de Velocidade)</option>
+                  <option value="5">📦 Pressão de Contexto (Janela Longa de 4k até 32k tokens)</option>
                 </select>
               </div>
 
               <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">MOTOR DE SILÍCIO</label>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">ACELERADOR DE SILÍCIO</label>
                 <select id="arena-runner-engine-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
-                  <option value="">Auto (CUDA para dGPU / AVX2 para CPU)</option>
-                  <option value="llama-cuda">LlamaCpp CUDA (NVIDIA RTX 2060m)</option>
-                  <option value="llama-cpu">LlamaCpp CPU (Intel Core i9 AVX2)</option>
-                  <option value="onnx-cpu">ONNX Runtime CPU (Zero VRAM)</option>
+                  <option value="">Auto (CUDA na GPU / AVX2 na CPU)</option>
+                  <option value="llama-cuda">NVIDIA CUDA (Placa de Vídeo RTX 2060m)</option>
+                  <option value="llama-cpu">CPU Intel AVX2 (Memória RAM do Computador)</option>
+                  <option value="onnx-cpu">ONNX Runtime CPU (Zero Consumo de VRAM)</option>
                 </select>
               </div>
 
               <div>
                 <button class="btn btn-emerald" id="btn-run-arena-benchmark" onclick="executeSelectedArenaBenchmark()" style="height: 38px; padding: 0 20px; white-space: nowrap; font-weight: 600;">
-                  <span>⚡</span> Rodar Prova no Silício
+                  <span>⚡</span> Iniciar Teste no Silício
                 </button>
               </div>
             </div>
 
             <!-- RESULTADO EM TEMPO REAL DO TESTE -->
             <div id="arena-live-feedback" style="display: none; margin-top: 16px; padding: 14px; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 0.82rem; font-weight: 600; color: #fff;" id="arena-live-title">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 0.84rem; font-weight: 600; color: #fff;" id="arena-live-title">
                   Resultado do Benchmark
                 </div>
                 <div id="arena-live-verdict-badge"></div>
               </div>
-              <div id="arena-live-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 10px;"></div>
+              <div id="arena-live-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px;"></div>
             </div>
           </div>
         </div>
 
         <!-- CARD 2: TABELA DE MODELOS & TELEMETRIA REAL NO SILÍCIO -->
         <div class="card" style="margin-bottom: 20px;">
-          <div class="card-header">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
             <div>
               <div class="card-title">
                 <div class="card-icon icon-cyan">📊</div>
-                Inventário Homologado no Silício & Métricas Empíricas
+                Modelos Homologados & Resultados Medidos
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Valores reais obtidos por telemetria NVML e cronometragem bare-metal.
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Velocidade e consumo medidos no seu computador real. Modelos aprovados aqui alimentam automaticamente o Hub e o Roteador de Subagentes.
               </p>
             </div>
             <div id="arena-models-summary-badge" class="badge badge-champion">14 Modelos Mapeados</div>
+          </div>
+
+          <!-- BARRA DE FILTROS & BUSCA RÁPIDA NA ARENA -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+            <div class="profile-selector" id="arena-filter-pills" style="margin-bottom: 0;">
+              <button class="profile-pill active" id="btn-arena-filter-all" onclick="filterArenaModels('all')">Todos os Modelos</button>
+              <button class="profile-pill" id="btn-arena-filter-benchmarked" onclick="filterArenaModels('benchmarked')">✅ Homologados</button>
+              <button class="profile-pill" id="btn-arena-filter-pending" onclick="filterArenaModels('pending')">⏳ Pendentes</button>
+              <button class="profile-pill" id="btn-arena-filter-tier0" onclick="filterArenaModels('tier0')">⚡ Tier 0 / 0.5 (Triagem)</button>
+              <button class="profile-pill" id="btn-arena-filter-tier1" onclick="filterArenaModels('tier1')">💻 Tier 1 (Programação)</button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="text" id="arena-models-search" placeholder="🔍 Filtrar modelo..." class="setting-input" style="padding: 5px 12px; font-size: 0.75rem; width: 200px; border-radius: 6px;" oninput="onArenaModelsSearchInput()">
+            </div>
           </div>
 
           <div class="table-container">
@@ -2734,9 +2749,9 @@
                   <th style="width: 120px;" class="text-center">Throughput (TPS)</th>
                   <th style="width: 100px;" class="text-center">TTFT Prefill</th>
                   <th style="width: 120px;" class="text-center">VRAM Pico (NVML)</th>
-                  <th style="width: 90px;" class="text-center">E³ Score</th>
-                  <th style="width: 140px;" class="text-center">Status de Prova</th>
-                  <th style="width: 130px;" class="text-center">Ação Rápida</th>
+                  <th style="width: 90px;" class="text-center" title="Eficiência E³: Throughput / (VRAM × TTFT)">E³ Score</th>
+                  <th style="width: 130px;" class="text-center">Status</th>
+                  <th style="width: 160px;" class="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody id="arena-models-tbody">
@@ -2750,27 +2765,28 @@
 
         <!-- CARD 3: HISTÓRICO DE AUDITORIA DE TELEMETRIA (arena_telemetry) -->
         <div class="card">
-          <div class="card-header">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
             <div>
               <div class="card-title">
                 <div class="card-icon icon-purple">📜</div>
-                Histórico Recente de Ensaios no Silício (Heuristic Vault)
+                Histórico de Testes Realizados no Silício
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Últimas 50 execuções registradas na tabela STRICT <code class="mono">arena_telemetry</code>.
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Registro detalhado dos testes de desempenho executados na sua máquina com telemetria oficial de hardware.
               </p>
             </div>
+            <div id="arena-telemetry-summary-badge" class="badge badge-lowcost">Histórico de Provas</div>
           </div>
 
           <div class="table-container">
             <table class="arena-table">
               <thead>
                 <tr>
-                  <th style="width: 50px;" class="text-center">ID</th>
+                  <th style="width: 60px;" class="text-center">ID</th>
                   <th>Modelo</th>
-                  <th style="width: 130px;">Bateria</th>
-                  <th style="width: 110px;" class="text-center">Motor</th>
-                  <th style="width: 90px;" class="text-center">TPS</th>
+                  <th style="width: 150px;">Tipo de Prova</th>
+                  <th style="width: 110px;" class="text-center">Acelerador</th>
+                  <th style="width: 100px;" class="text-center">Velocidade</th>
                   <th style="width: 90px;" class="text-center">TTFT</th>
                   <th style="width: 110px;" class="text-center">VRAM Pico</th>
                   <th style="width: 100px;" class="text-center">Status</th>
@@ -5272,6 +5288,8 @@
     // ==========================================
     let arenaModelsData = [];
     let arenaTelemetryData = [];
+    let currentArenaModelsFilter = 'all';
+    let currentArenaSearchQuery = '';
 
     async function fetchLocalArenaData() {
       try {
@@ -5315,40 +5333,76 @@
         select.innerHTML = '<option value="">Nenhum modelo disponível</option>';
         return;
       }
-      select.innerHTML = models.map(m => `
-        <option value="${m.model_id}">${m.name} (${m.tier} • ${m.quantization || 'GGUF'})</option>
-      `).join('');
+      select.innerHTML = models.map(m => {
+        const isBenchmarked = m.status === 'BENCHMARKED';
+        const prefix = isBenchmarked ? '✅' : '⏳';
+        const tpsStr = m.latest_tps ? ` • ${m.latest_tps.toFixed(0)} tok/s` : '';
+        const paramsStr = m.parameters ? ` • ${m.parameters}` : '';
+        return `<option value="${m.model_id}">${prefix} ${m.name} (${m.tier}${paramsStr} • ${m.quantization || 'GGUF'}${tpsStr})</option>`;
+      }).join('');
+    }
+
+    function filterArenaModels(filter) {
+      currentArenaModelsFilter = filter;
+      document.querySelectorAll('#arena-filter-pills .profile-pill').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById('btn-arena-filter-' + filter);
+      if (activeBtn) activeBtn.classList.add('active');
+      renderArenaModelsTable(arenaModelsData);
+    }
+
+    function onArenaModelsSearchInput() {
+      const input = document.getElementById('arena-models-search');
+      currentArenaSearchQuery = input ? input.value.trim().toLowerCase() : '';
+      renderArenaModelsTable(arenaModelsData);
     }
 
     function renderArenaModelsTable(models) {
       const tbody = document.getElementById('arena-models-tbody');
       if (!tbody) return;
-      if (!models || models.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum modelo descoberto no disco.</td></tr>';
+
+      const filtered = (models || []).filter(m => {
+        if (currentArenaModelsFilter === 'benchmarked' && m.status !== 'BENCHMARKED') return false;
+        if (currentArenaModelsFilter === 'pending' && m.status === 'BENCHMARKED') return false;
+        if (currentArenaModelsFilter === 'tier0' && !((m.tier || '').includes('0'))) return false;
+        if (currentArenaModelsFilter === 'tier1' && !((m.tier || '').includes('1'))) return false;
+        if (currentArenaSearchQuery) {
+          const q = currentArenaSearchQuery;
+          const nameMatch = (m.name || '').toLowerCase().includes(q);
+          const idMatch = (m.model_id || '').toLowerCase().includes(q);
+          const quantMatch = (m.quantization || '').toLowerCase().includes(q);
+          if (!nameMatch && !idMatch && !quantMatch) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
         return;
       }
 
-      tbody.innerHTML = models.map(m => {
+      tbody.innerHTML = filtered.map(m => {
         const isBenchmarked = m.status === 'BENCHMARKED';
         const statusBadge = isBenchmarked
           ? '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3);">✅ Homologado</span>'
           : '<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3);">⏳ Pendente</span>';
 
         const tpsHtml = m.latest_tps
-          ? `<strong style="color: var(--emerald); font-size: 0.85rem;">${m.latest_tps.toFixed(1)}</strong> <span style="font-size: 0.7rem; color: var(--text-muted);">tok/s</span>`
+          ? `<div style="line-height: 1.2;"><strong style="color: var(--emerald); font-size: 0.88rem;">${m.latest_tps.toFixed(1)}</strong><div style="font-size: 0.65rem; color: var(--text-muted);">tok/s</div></div>`
           : '<span style="color: var(--text-muted);">--</span>';
 
         const ttftHtml = m.latest_ttft_ms
-          ? `<span class="mono" style="color: var(--cyan);">${m.latest_ttft_ms.toFixed(0)} ms</span>`
+          ? `<div style="line-height: 1.2;"><span class="mono" style="color: var(--cyan); font-size: 0.82rem; font-weight: 600;">${m.latest_ttft_ms.toFixed(0)}</span><div style="font-size: 0.65rem; color: var(--text-muted);">ms</div></div>`
           : '<span style="color: var(--text-muted);">--</span>';
 
         const vramHtml = m.latest_vram_peak_mb
-          ? `<span class="mono" style="color: #f43f5e;">${m.latest_vram_peak_mb.toFixed(0)} MB</span>`
-          : `<span class="mono" style="color: var(--text-muted);">${m.size_mb ? (m.size_mb + 36).toFixed(0) + ' MB (est)' : '--'}</span>`;
+          ? `<div style="line-height: 1.2;"><span class="mono" style="color: #f43f5e; font-size: 0.82rem; font-weight: 600;">${m.latest_vram_peak_mb.toFixed(0)}</span><div style="font-size: 0.65rem; color: var(--text-muted);">MB</div></div>`
+          : `<div style="line-height: 1.2;"><span class="mono" style="color: var(--text-muted); font-size: 0.75rem;">${m.size_mb ? (m.size_mb + 36).toFixed(0) : '--'}</span><div style="font-size: 0.65rem; color: var(--text-muted);">MB (est)</div></div>`;
 
         const e3Html = m.e3_score
-          ? `<span class="mono" style="color: #a855f7;">${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)}</span>`
+          ? `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.72rem; font-weight: 700;" title="Eficiência E³: Throughput / (VRAM × Latência TTFT)">${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)}</span>`
           : '<span style="color: var(--text-muted);">--</span>';
+
+        const activeFile = m.file_path || m.model_id;
 
         return `
           <tr>
@@ -5357,16 +5411,23 @@
               <div style="font-weight: 600; color: #fff; font-size: 0.82rem;">${m.name}</div>
               <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">${m.model_id}</div>
             </td>
-            <td class="mono">${m.quantization || 'GGUF'}</td>
+            <td class="mono" style="font-size: 0.78rem;">${m.quantization || 'GGUF'}</td>
             <td class="text-center">${tpsHtml}</td>
             <td class="text-center">${ttftHtml}</td>
             <td class="text-center">${vramHtml}</td>
             <td class="text-center">${e3Html}</td>
             <td class="text-center">${statusBadge}</td>
             <td class="text-center">
-              <button class="btn btn-emerald" style="padding: 4px 10px; font-size: 0.72rem;" onclick="runSpecificArenaBenchmark('${m.model_id}', 1)" title="Executar Type 1 (Hardware Profile) diretamente neste modelo">
-                <span>⚡</span> Testar
-              </button>
+              <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+                <button class="btn btn-emerald" style="padding: 4px 10px; font-size: 0.72rem; height: 28px;" onclick="runSpecificArenaBenchmark('${m.model_id}', 1)" title="Executar Teste de Silício (Hardware Profile)">
+                  <span>⚡</span> Testar
+                </button>
+                ${isBenchmarked ? `
+                  <button class="btn btn-green" style="padding: 4px 10px; font-size: 0.72rem; height: 28px;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                    <span>⚡</span> Usar
+                  </button>
+                ` : ''}
+              </div>
             </td>
           </tr>
         `;
@@ -5375,27 +5436,56 @@
 
     function renderArenaTelemetryTable(history) {
       const tbody = document.getElementById('arena-telemetry-tbody');
+      const badge = document.getElementById('arena-telemetry-summary-badge');
+      if (badge && history) {
+        badge.innerText = `${history.length} Provas Registradas`;
+      }
       if (!tbody) return;
       if (!history || history.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum ensaio registrado no SQLite Vault.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhum ensaio registrado no SQLite Vault.</td></tr>';
         return;
       }
 
-      tbody.innerHTML = history.slice(0, 20).map(h => `
-        <tr>
-          <td class="text-center mono" style="color: var(--text-muted);">${h.id}</td>
-          <td>
-            <div style="font-weight: 600; color: #fff; font-size: 0.8rem;">${h.model_id}</div>
-          </td>
-          <td><span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">${h.benchmark_type}</span></td>
-          <td class="text-center mono" style="font-size: 0.72rem; color: var(--cyan);">${h.engine}</td>
-          <td class="text-center mono" style="color: var(--emerald); font-weight: 600;">${h.tps > 0 ? h.tps.toFixed(1) : '--'}</td>
-          <td class="text-center mono">${h.ttft_ms > 0 ? h.ttft_ms.toFixed(0) + ' ms' : '--'}</td>
-          <td class="text-center mono">${h.vram_peak_mb > 0 ? h.vram_peak_mb.toFixed(0) + ' MB' : '--'}</td>
-          <td class="text-center"><span class="badge badge-champion" style="font-size: 0.65rem;">${h.status || 'NOMINAL'}</span></td>
-          <td class="mono" style="font-size: 0.7rem; color: var(--text-muted);">${h.created_at || '--'}</td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = history.slice(0, 30).map(h => {
+        let statusBadge = '<span class="badge badge-champion" style="font-size: 0.65rem;">NOMINAL</span>';
+        const st = (h.status || '').toUpperCase();
+        if (st.includes('NOMINAL') || st.includes('SUCCESS') || st.includes('VERIFIED')) {
+          statusBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.65rem;">NOMINAL</span>';
+        } else if (st.includes('WARN') || st.includes('THROTTLE')) {
+          statusBadge = '<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem;">THROTTLED</span>';
+        } else if (st.includes('FAIL') || st.includes('ERR')) {
+          statusBadge = '<span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 0.65rem;">FALHA</span>';
+        }
+
+        let typeBadge = `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.68rem;">${h.benchmark_type}</span>`;
+        if (h.benchmark_type === 'HardwareProfile') {
+          typeBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.68rem;">⚡ Velocidade & VRAM</span>';
+        } else if (h.benchmark_type === 'CognitiveEval') {
+          typeBadge = '<span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 0.68rem;">🧠 Avaliação Cognitiva</span>';
+        } else if (h.benchmark_type === 'MultimodalVision') {
+          typeBadge = '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-size: 0.68rem;">👁️ Visão Multimodal</span>';
+        } else if (h.benchmark_type === 'SpeculativeDraft') {
+          typeBadge = '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.68rem;">🚀 Especulativa</span>';
+        } else if (h.benchmark_type === 'ContextPressure') {
+          typeBadge = '<span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #fb7185; font-size: 0.68rem;">📦 Pressão Contexto</span>';
+        }
+
+        return `
+          <tr>
+            <td class="text-center mono" style="color: var(--text-muted); font-size: 0.72rem;">#${h.id}</td>
+            <td>
+              <div style="font-weight: 600; color: #fff; font-size: 0.8rem;">${h.model_id}</div>
+            </td>
+            <td>${typeBadge}</td>
+            <td class="text-center mono" style="font-size: 0.72rem; color: var(--cyan);">${h.engine}</td>
+            <td class="text-center mono" style="color: var(--emerald); font-weight: 600;">${h.tps > 0 ? h.tps.toFixed(1) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">tps</span>' : '--'}</td>
+            <td class="text-center mono">${h.ttft_ms > 0 ? h.ttft_ms.toFixed(0) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">ms</span>' : '--'}</td>
+            <td class="text-center mono" style="color: #f43f5e;">${h.vram_peak_mb > 0 ? h.vram_peak_mb.toFixed(0) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">MB</span>' : '--'}</td>
+            <td class="text-center">${statusBadge}</td>
+            <td class="mono" style="font-size: 0.7rem; color: var(--text-muted);">${h.created_at || '--'}</td>
+          </tr>
+        `;
+      }).join('');
     }
 
     async function executeSelectedArenaBenchmark() {
@@ -5420,14 +5510,14 @@
 
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span>⏳</span> Executando Prova...';
+        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:6px;">⏳</span> Executando Prova no Silício...';
       }
 
       if (feedback) {
         feedback.style.display = 'block';
         if (titleEl) titleEl.innerText = `Executando Prova no Silício para ${modelId}...`;
         if (verdictEl) verdictEl.innerHTML = '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan);">NVML Watchdog Ativo</span>';
-        if (gridEl) gridEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem;">Mapeando tensores via memmap2 e acionando acelerador...</div>';
+        if (gridEl) gridEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem; grid-column: 1 / -1;"><span style="display:inline-block; animation:spin 1s linear infinite; margin-right:6px;">⚙️</span> Carregando tensores via memmap2 e medindo telemetria bare-metal...</div>';
       }
 
       try {
@@ -5452,6 +5542,7 @@
 
           if (gridEl && data.metrics) {
             let cardsHtml = '';
+            // Type 1: HardwareProfile
             if (data.metrics.tps !== undefined) {
               cardsHtml += `
                 <div class="hw-spec-card">
@@ -5463,7 +5554,7 @@
             if (data.metrics.ttft_ms !== undefined) {
               cardsHtml += `
                 <div class="hw-spec-card">
-                  <div class="hw-spec-label">TTFT (Prefill)</div>
+                  <div class="hw-spec-label">Tempo Resposta (TTFT)</div>
                   <div class="hw-spec-val" style="color: var(--cyan);">${data.metrics.ttft_ms.toFixed(0)} <span style="font-size: 0.7rem;">ms</span></div>
                 </div>
               `;
@@ -5487,11 +5578,93 @@
             if (data.metrics.e3_score !== undefined) {
               cardsHtml += `
                 <div class="hw-spec-card">
-                  <div class="hw-spec-label">E³ Score</div>
+                  <div class="hw-spec-label">Eficiência E³</div>
                   <div class="hw-spec-val" style="color: #a855f7;">${data.metrics.e3_score > 9000 ? '9999' : data.metrics.e3_score.toFixed(1)}</div>
                 </div>
               `;
             }
+
+            // Type 2: CognitiveEval
+            if (data.metrics.accuracy_pct !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Acurácia Sintática</div>
+                  <div class="hw-spec-val" style="color: var(--emerald);">${data.metrics.accuracy_pct.toFixed(1)}%</div>
+                </div>
+              `;
+            }
+            if (data.metrics.avg_tps !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Throughput Médio</div>
+                  <div class="hw-spec-val" style="color: var(--emerald);">${data.metrics.avg_tps.toFixed(1)} <span style="font-size: 0.7rem;">tok/s</span></div>
+                </div>
+              `;
+            }
+
+            // Type 3: MultimodalVision
+            if (data.metrics.multimodal_ttft_ms !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Latência Visão VLM</div>
+                  <div class="hw-spec-val" style="color: var(--cyan);">${data.metrics.multimodal_ttft_ms.toFixed(0)} <span style="font-size: 0.7rem;">ms</span></div>
+                </div>
+              `;
+            }
+            if (data.metrics.projection_latency_ms !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Projeção mmproj</div>
+                  <div class="hw-spec-val" style="color: #a855f7;">${data.metrics.projection_latency_ms.toFixed(0)} <span style="font-size: 0.7rem;">ms</span></div>
+                </div>
+              `;
+            }
+
+            // Type 4: SpeculativeDraft
+            if (data.metrics.speedup_ratio !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Ganho de Velocidade</div>
+                  <div class="hw-spec-val" style="color: var(--emerald);">${data.metrics.speedup_ratio.toFixed(2)}x</div>
+                </div>
+              `;
+            }
+            if (data.metrics.acceptance_rate_alpha !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Taxa Alpha (Aceite)</div>
+                  <div class="hw-spec-val" style="color: var(--cyan);">${(data.metrics.acceptance_rate_alpha * 100).toFixed(1)}%</div>
+                </div>
+              `;
+            }
+
+            // Type 5: ContextPressure
+            if (data.metrics.max_effective_context !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Janela Máxima Efetiva</div>
+                  <div class="hw-spec-val" style="color: var(--cyan);">${Number(data.metrics.max_effective_context).toLocaleString()} <span style="font-size: 0.7rem;">tokens</span></div>
+                </div>
+              `;
+            }
+            if (data.metrics.degradation_detected !== undefined) {
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Degradação</div>
+                  <div class="hw-spec-val" style="color: ${data.metrics.degradation_detected ? '#f43f5e' : 'var(--emerald)'};">${data.metrics.degradation_detected ? 'Detectada ⚠️' : 'Zero Queda ✅'}</div>
+                </div>
+              `;
+            }
+
+            // Ação Direta no Feedback: Usar no Hermes
+            cardsHtml += `
+              <div style="grid-column: 1 / -1; margin-top: 10px; display: flex; justify-content: flex-end; gap: 8px;">
+                <button class="btn btn-green" onclick="openQuickApplyModal('${data.model_id}', 'local_silicon', true)" style="font-size: 0.76rem; font-weight: 600; padding: 6px 14px;">
+                  <span>⚡</span> Usar este Modelo no Hermes Agent
+                </button>
+              </div>
+            `;
+
             gridEl.innerHTML = cardsHtml;
           }
 
@@ -5501,7 +5674,7 @@
           showToast(data.message || 'Falha ao executar prova no silício.', 'error');
           if (titleEl) titleEl.innerText = 'Falha na Prova de Silício';
           if (verdictEl) verdictEl.innerHTML = '<span class="badge" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e;">ERRO</span>';
-          if (gridEl) gridEl.innerHTML = `<div style="color: #f43f5e; font-size: 0.8rem;">${data.message || 'Erro desconhecido'}</div>`;
+          if (gridEl) gridEl.innerHTML = `<div style="color: #f43f5e; font-size: 0.8rem; grid-column: 1 / -1;">${data.message || 'Erro desconhecido'}</div>`;
         }
       } catch (err) {
         console.error('Erro ao executar benchmark:', err);
@@ -5509,27 +5682,38 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<span>⚡</span> Rodar Prova no Silício';
+          btn.innerHTML = '<span>⚡</span> Iniciar Teste no Silício';
         }
       }
     }
 
     async function syncLocalArenaHermes() {
+      const btn = event?.currentTarget;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:4px;">⏳</span> Sincronizando...';
+      }
       try {
-        showToast('Sincronizando Heuristic Vault e links do Hermes...', 'info');
         const res = await fetch('/api/v1/arena/sync', { method: 'POST' });
-        const data = await res.json();
-        if (res.ok && data.status === 'success') {
-          showToast(`Sincronizados ${data.synced_vault_models} modelos no vault. HardLinks Hermes: ${data.hermes_links?.created || 0} criados, ${data.hermes_links?.verified || 0} verificados.`, 'success');
+        if (res.ok) {
+          const data = await res.json();
+          const count = data.synced_vault_models || 0;
+          showToast(`✨ Sincronizado com sucesso! ${count} modelos no Heuristic Vault e links do Hermes ativos.`, 'success');
           await fetchLocalArenaData();
         } else {
-          showToast(data.message || 'Falha na sincronização.', 'error');
+          showToast('Falha ao sincronizar links com o Hermes.', 'error');
         }
       } catch (err) {
-        console.error('Erro ao sincronizar Hermes:', err);
-        showToast('Erro de comunicação ao sincronizar Hermes.', 'error');
+        console.error('Falha na sincronização:', err);
+        showToast('Erro de conexão ao sincronizar com o Hermes.', 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🔗</span> Sincronizar com Hermes Agent';
+        }
       }
     }
+
 
     // ==========================================
     // 3.3 TWO-STAGE SEMANTIC SWITCHBOARD (<1.7ms)
