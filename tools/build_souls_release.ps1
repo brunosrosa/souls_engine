@@ -39,11 +39,8 @@ if ($LASTEXITCODE -eq 0) {
         Write-Host "  - $msvcEngineExe" -ForegroundColor Yellow
         Write-Host "✓ Atualizado binários em: $appDataDir" -ForegroundColor Green
 
-        # Higiene automática do /target para evitar acúmulo de dezenas de GBs
-        Write-Host "=== Higiene pós-build do target/ (expurgo de artefatos temporários de debug) ===" -ForegroundColor Cyan
-        Remove-Item -Recurse -Force -LiteralPath "Z:\souls_engine\target\debug" -ErrorAction SilentlyContinue
-        Remove-Item -Recurse -Force -LiteralPath "Z:\souls_engine\target\x86_64-pc-windows-msvc\debug" -ErrorAction SilentlyContinue
-        Write-Host "✓ Target limpo e enxuto." -ForegroundColor Green
+        # Preserva cache incremental em dev/debug para acelerar turnos de trabalho
+        Write-Host "✓ Cache incremental de dev/test preservado." -ForegroundColor Green
 
         # Exibe estatísticas do sccache
         Write-Host "=== Estatísticas do Cache sccache ===" -ForegroundColor Cyan

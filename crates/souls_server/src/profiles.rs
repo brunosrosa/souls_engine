@@ -80,7 +80,9 @@ pub fn resolve_hermes_config_path() -> PathBuf {
     }
     let local_appdata = std::env::var("LOCALAPPDATA")
         .unwrap_or_else(|_| "C:\\Users\\rosas\\AppData\\Local".to_string());
-    PathBuf::from(local_appdata).join("hermes").join("config.yaml")
+    PathBuf::from(local_appdata)
+        .join("hermes")
+        .join("config.yaml")
 }
 
 /// Reads the currently configured model and provider from Hermes `config.yaml`.
@@ -116,7 +118,8 @@ pub fn read_active_hermes_model(cfg_path: &Path) -> (String, String) {
                         if !val.is_empty() {
                             provider = val.to_string();
                         }
-                    } else if !line.starts_with(' ') && !line.starts_with('\t') && !line.is_empty() {
+                    } else if !line.starts_with(' ') && !line.starts_with('\t') && !line.is_empty()
+                    {
                         inside_top_model = false;
                     }
                 }
@@ -133,7 +136,7 @@ pub fn resolve_triad_for_category(
     reports: &[souls_llm_cloud_arena::ProfileChampionReport],
 ) -> ProfileTriadSummary {
     let cat_lower = category.to_lowercase();
-    
+
     // Se for local bare-metal
     if cat_lower == "local" || cat_lower == "local_sovereign" {
         return ProfileTriadSummary {
@@ -143,7 +146,8 @@ pub fn resolve_triad_for_category(
                 composite_score: 85.0,
                 blended_cost: 0.0,
                 roi_index: 9999.0,
-                desc: "100% no silício da NVIDIA RTX 2060m. Custo $0.00 e zero tráfego externo.".to_string(),
+                desc: "100% no silício da NVIDIA RTX 2060m. Custo $0.00 e zero tráfego externo."
+                    .to_string(),
             }),
             best_value: Some(TriadModelItem {
                 canonical_id: "deepseek-r1-distill-qwen-7b-q4_k_m.gguf".to_string(),
@@ -151,7 +155,8 @@ pub fn resolve_triad_for_category(
                 composite_score: 86.2,
                 blended_cost: 0.0,
                 roi_index: 9999.0,
-                desc: "Pensamento analítico local na GPU física sem sair da partição Dev Drive.".to_string(),
+                desc: "Pensamento analítico local na GPU física sem sair da partição Dev Drive."
+                    .to_string(),
             }),
             ultra_low_cost: Some(TriadModelItem {
                 canonical_id: "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf".to_string(),
@@ -218,7 +223,8 @@ pub fn resolve_triad_for_category(
                 composite_score: 90.8,
                 blended_cost: 0.20,
                 roi_index: 454.0,
-                desc: "Vanguarda em Rust, Python e testes com excelente custo-benefício.".to_string(),
+                desc: "Vanguarda em Rust, Python e testes com excelente custo-benefício."
+                    .to_string(),
             }),
             ultra_low_cost: Some(TriadModelItem {
                 canonical_id: "deepseek/deepseek-chat".to_string(),
@@ -236,7 +242,8 @@ pub fn resolve_triad_for_category(
                 composite_score: 97.4,
                 blended_cost: 4.40,
                 roi_index: 22.1,
-                desc: "Máximo raciocínio formal, provas matemáticas e auditoria de segurança.".to_string(),
+                desc: "Máximo raciocínio formal, provas matemáticas e auditoria de segurança."
+                    .to_string(),
             }),
             best_value: Some(TriadModelItem {
                 canonical_id: "deepseek/deepseek-r1".to_string(),
@@ -244,7 +251,8 @@ pub fn resolve_triad_for_category(
                 composite_score: 95.8,
                 blended_cost: 0.55,
                 roi_index: 174.2,
-                desc: "Raciocínio aberto de fronteira por uma fração do preço comercial.".to_string(),
+                desc: "Raciocínio aberto de fronteira por uma fração do preço comercial."
+                    .to_string(),
             }),
             ultra_low_cost: Some(TriadModelItem {
                 canonical_id: "qwen/qwq-32b-preview".to_string(),
@@ -270,7 +278,8 @@ pub fn resolve_triad_for_category(
                 composite_score: 88.0,
                 blended_cost: 0.10,
                 roi_index: 880.0,
-                desc: "Velocidade impressionante de geração e suporte a contexto longo.".to_string(),
+                desc: "Velocidade impressionante de geração e suporte a contexto longo."
+                    .to_string(),
             }),
             ultra_low_cost: Some(TriadModelItem {
                 canonical_id: "meta-llama/llama-3.2-3b-instruct".to_string(),
@@ -323,15 +332,30 @@ pub fn parse_profiles_from_toml(content: &str) -> Vec<MasterBrainProfile> {
     let mut current_provider = "nous".to_string();
     let mut current_target_type = "Cloud API".to_string();
 
-    let mut flush = |id: &str, name: &str, desc: &str, role: &str, cat: &str, model: &str, provider: &str, target_type: &str| {
+    let mut flush = |id: &str,
+                     name: &str,
+                     desc: &str,
+                     role: &str,
+                     cat: &str,
+                     model: &str,
+                     provider: &str,
+                     target_type: &str| {
         if !id.is_empty() {
             profiles.push(MasterBrainProfile {
                 id: id.to_string(),
-                name: if name.is_empty() { id.to_string() } else { name.to_string() },
+                name: if name.is_empty() {
+                    id.to_string()
+                } else {
+                    name.to_string()
+                },
                 description: desc.to_string(),
                 role: role.to_string(),
                 arena_category: cat.to_string(),
-                target_model: if model.is_empty() { "deepseek/deepseek-chat".to_string() } else { model.to_string() },
+                target_model: if model.is_empty() {
+                    "deepseek/deepseek-chat".to_string()
+                } else {
+                    model.to_string()
+                },
                 provider: provider.to_string(),
                 target_type: target_type.to_string(),
                 is_active: false,
@@ -347,13 +371,23 @@ pub fn parse_profiles_from_toml(content: &str) -> Vec<MasterBrainProfile> {
             let section = trimmed[1..trimmed.len() - 1].trim();
             if section.starts_with("profiles.") {
                 if in_profile_section {
-                    flush(&current_id, &current_name, &current_desc, &current_role, &current_cat, &current_model, &current_provider, &current_target_type);
+                    flush(
+                        &current_id,
+                        &current_name,
+                        &current_desc,
+                        &current_role,
+                        &current_cat,
+                        &current_model,
+                        &current_provider,
+                        &current_target_type,
+                    );
                 }
                 in_profile_section = true;
                 current_id = section.trim_start_matches("profiles.").trim().to_string();
                 current_name = String::new();
                 current_desc = String::new();
-                current_role = if current_id == "orchestrator" || current_id == "frontier_balanced" {
+                current_role = if current_id == "orchestrator" || current_id == "frontier_balanced"
+                {
                     "orchestrator".to_string()
                 } else {
                     "subagent".to_string()
@@ -364,7 +398,16 @@ pub fn parse_profiles_from_toml(content: &str) -> Vec<MasterBrainProfile> {
                 current_target_type = "Cloud API".to_string();
                 continue;
             } else if in_profile_section {
-                flush(&current_id, &current_name, &current_desc, &current_role, &current_cat, &current_model, &current_provider, &current_target_type);
+                flush(
+                    &current_id,
+                    &current_name,
+                    &current_desc,
+                    &current_role,
+                    &current_cat,
+                    &current_model,
+                    &current_provider,
+                    &current_target_type,
+                );
                 in_profile_section = false;
                 current_id = String::new();
             }
@@ -387,7 +430,16 @@ pub fn parse_profiles_from_toml(content: &str) -> Vec<MasterBrainProfile> {
     }
 
     if in_profile_section {
-        flush(&current_id, &current_name, &current_desc, &current_role, &current_cat, &current_model, &current_provider, &current_target_type);
+        flush(
+            &current_id,
+            &current_name,
+            &current_desc,
+            &current_role,
+            &current_cat,
+            &current_model,
+            &current_provider,
+            &current_target_type,
+        );
     }
 
     profiles
@@ -401,7 +453,11 @@ pub async fn get_available_profiles(state: &AppState) -> Vec<MasterBrainProfile>
     let (active_model, active_provider) = read_active_hermes_model(&cfg_path);
 
     // Fetch champions from Cloud Arena
-    let reports = state.cloud_arena.get_all_champions(None).await.unwrap_or_default();
+    let reports = state
+        .cloud_arena
+        .get_all_champions(None)
+        .await
+        .unwrap_or_default();
 
     // 1. Tenta carregar perfis dinâmicos de souls_config.toml
     let toml_path = PathBuf::from(r"Z:\souls_engine\.souls_data\config\souls_config.toml");
@@ -426,7 +482,7 @@ pub async fn get_available_profiles(state: &AppState) -> Vec<MasterBrainProfile>
             name: "Frontier Balanced (Master Brain)".to_string(),
             description: "Orquestrador mestre e diálogo diário com o desenvolvedor. Ponto ótimo da curva de Pareto.".to_string(),
             role: "orchestrator".to_string(),
-            arena_category: "agentic".to_string(),
+            arena_category: "master".to_string(),
             target_model: "deepseek/deepseek-chat".to_string(),
             provider: "nous".to_string(),
             target_type: "Cloud API".to_string(),
@@ -454,7 +510,9 @@ pub async fn get_available_profiles(state: &AppState) -> Vec<MasterBrainProfile>
         configured_profiles.push(MasterBrainProfile {
             id: "deep_reasoning".to_string(),
             name: "Deep Math 🧠".to_string(),
-            description: "Provas formais, raciocínio analítico, lógica matemática e auditoria criptográfica.".to_string(),
+            description:
+                "Provas formais, raciocínio analítico, lógica matemática e auditoria criptográfica."
+                    .to_string(),
             role: "subagent".to_string(),
             arena_category: "reasoning".to_string(),
             target_model: "openai/o3-mini-high".to_string(),
@@ -478,8 +536,60 @@ pub async fn get_available_profiles(state: &AppState) -> Vec<MasterBrainProfile>
             triad: None,
         });
         configured_profiles.push(MasterBrainProfile {
+            id: "ux_designer".to_string(),
+            name: "UX & Frontend 🎨".to_string(),
+            description: "Geração de componentes de interface, design responsivo, protótipos e estilização CSS.".to_string(),
+            role: "subagent".to_string(),
+            arena_category: "design".to_string(),
+            target_model: "anthropic/claude-3-7-sonnet".to_string(),
+            provider: "nous".to_string(),
+            target_type: "Cloud API".to_string(),
+            is_active: false,
+            is_builtin: true,
+            triad: None,
+        });
+        configured_profiles.push(MasterBrainProfile {
+            id: "web_researcher".to_string(),
+            name: "Web Intelligence 🔎".to_string(),
+            description: "Pesquisa autônoma, síntese de fontes web, raspagem limpa na RAM e verificação factual.".to_string(),
+            role: "subagent".to_string(),
+            arena_category: "agentic".to_string(),
+            target_model: "google/gemini-2.0-flash-001".to_string(),
+            provider: "nous".to_string(),
+            target_type: "Cloud API".to_string(),
+            is_active: false,
+            is_builtin: true,
+            triad: None,
+        });
+        configured_profiles.push(MasterBrainProfile {
+            id: "memory_curator".to_string(),
+            name: "Memory & Graph 💾".to_string(),
+            description: "Curadoria epistêmica L2/L3, extração de entidades no LadybugDB e síntese do cofre Obsidian.".to_string(),
+            role: "subagent".to_string(),
+            arena_category: "agentic".to_string(),
+            target_model: "deepseek/deepseek-chat".to_string(),
+            provider: "nous".to_string(),
+            target_type: "Cloud API".to_string(),
+            is_active: false,
+            is_builtin: true,
+            triad: None,
+        });
+        configured_profiles.push(MasterBrainProfile {
+            id: "security_auditor".to_string(),
+            name: "Security & Guardrails 🛡️".to_string(),
+            description: "Auditoria de segurança, sandbox NT no ReFS, higienização PII e blindagem de execução.".to_string(),
+            role: "subagent".to_string(),
+            arena_category: "agentic".to_string(),
+            target_model: "anthropic/claude-3-7-sonnet".to_string(),
+            provider: "nous".to_string(),
+            target_type: "Cloud API".to_string(),
+            is_active: false,
+            is_builtin: true,
+            triad: None,
+        });
+        configured_profiles.push(MasterBrainProfile {
             id: "local_sovereign".to_string(),
-            name: "Local Sovereign 🛡️".to_string(),
+            name: "Local Sovereign 💻".to_string(),
             description: "100% no silício físico da GPU RTX 2060m e CPU AVX2. Soberania absoluta e custo zero ($0.00).".to_string(),
             role: "subagent".to_string(),
             arena_category: "local".to_string(),
@@ -662,8 +772,8 @@ pub fn apply_profile_to_hermes(
         backup_created = true;
     }
 
-    let content = fs::read_to_string(&cfg_path)
-        .map_err(|e| format!("Failed to read hermes config: {e}"))?;
+    let content =
+        fs::read_to_string(&cfg_path).map_err(|e| format!("Failed to read hermes config: {e}"))?;
 
     let mut inside_top_model = false;
     let mut default_replaced = false;
@@ -807,7 +917,10 @@ terminal:
     fn test_dynamic_profiles_toml_lifecycle() {
         let dir = std::env::temp_dir().join(format!(
             "souls_dyn_profile_{}",
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let _ = fs::create_dir_all(&dir);
         let toml_file = dir.join("souls_config.toml");
@@ -822,7 +935,8 @@ terminal:
             "openai/o3-mini-high",
             "nous",
             Some(&toml_file),
-        ).unwrap();
+        )
+        .unwrap();
 
         // 2. Lê e verifica parse
         let content = fs::read_to_string(&toml_file).unwrap();
@@ -852,10 +966,16 @@ terminal:
         assert!(triad_coding.quality_leader.is_some());
         assert!(triad_coding.best_value.is_some());
         assert!(triad_coding.ultra_low_cost.is_some());
-        assert_eq!(triad_coding.quality_leader.unwrap().canonical_id, "anthropic/claude-3-7-sonnet");
+        assert_eq!(
+            triad_coding.quality_leader.unwrap().canonical_id,
+            "anthropic/claude-3-7-sonnet"
+        );
 
         let triad_local = resolve_triad_for_category("local", &[]);
-        assert_eq!(triad_local.quality_leader.unwrap().provider, "local_silicon");
+        assert_eq!(
+            triad_local.quality_leader.unwrap().provider,
+            "local_silicon"
+        );
         assert_eq!(triad_local.best_value.unwrap().blended_cost, 0.0);
     }
 }

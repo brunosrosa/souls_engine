@@ -128,7 +128,7 @@ pub async fn cloud_ranked_models_handler(
     let _guard = state.acquire_connection();
 
     let raw_profile = params.profile.unwrap_or_else(|| "orchestrator".to_string()).to_lowercase();
-    let limit = params.limit.unwrap_or(100).clamp(10, 200);
+    let limit = params.limit.unwrap_or(200).clamp(10, 350);
 
     let vault_path = souls_llm_cloud_arena::resolve_heuristic_vault_path();
     let db_url = format!("sqlite://{}?mode=ro", vault_path.to_string_lossy());
@@ -155,6 +155,11 @@ pub async fn cloud_ranked_models_handler(
             SELECT 
                 de.canonical_id,
                 cm.display_name,
+                cm.developer,
+                cm.is_multimodal,
+                cm.supports_tools,
+                cm.supports_structured_outputs,
+                cm.supports_caching,
                 (
                     0.35 * COALESCE(MAX(CASE WHEN de.profile_task = 'agentic' THEN de.composite_score END), 70.0) +
                     0.35 * COALESCE(MAX(CASE WHEN de.profile_task = 'reasoning' THEN de.composite_score END), 70.0) +
@@ -162,7 +167,7 @@ pub async fn cloud_ranked_models_handler(
                 ) as score,
                 AVG(de.task_blended_cost) as task_blended_cost,
                 AVG(de.roi_index) as roi_index,
-                'Leader' as pareto_tag,
+                MAX(de.pareto_tag) as pareto_tag,
                 cm.context_window,
                 (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%') as has_nous,
                 (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%') as has_openrouter,
@@ -181,11 +186,13 @@ pub async fn cloud_ranked_models_handler(
                 bs.ifeval_score,
                 bs.gpqa_score,
                 bs.hard_prompts_elo,
-                (SELECT throughput_tps FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id ORDER BY pts.recorded_at DESC LIMIT 1) as tps
+                bs.vqa_multimodal_score,
+                (SELECT throughput_tps FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id ORDER BY pts.recorded_at DESC LIMIT 1) as tps,
+                (SELECT ttft_ms FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.ttft_ms > 0 ORDER BY pts.recorded_at DESC LIMIT 1) as ttft_ms
             FROM daily_evaluations de
             JOIN canonical_models cm ON cm.id = de.canonical_id
             LEFT JOIN (
-                SELECT canonical_id, general_elo, coding_elo, bfcl_score, ifeval_score, gpqa_score, hard_prompts_elo
+                SELECT canonical_id, general_elo, coding_elo, bfcl_score, ifeval_score, gpqa_score, hard_prompts_elo, vqa_multimodal_score
                 FROM benchmark_snapshots
                 GROUP BY canonical_id
             ) bs ON bs.canonical_id = de.canonical_id
@@ -207,6 +214,11 @@ pub async fn cloud_ranked_models_handler(
             SELECT 
                 de.canonical_id,
                 cm.display_name,
+                cm.developer,
+                cm.is_multimodal,
+                cm.supports_tools,
+                cm.supports_structured_outputs,
+                cm.supports_caching,
                 MAX(de.composite_score) as score,
                 de.task_blended_cost,
                 de.roi_index,
@@ -229,11 +241,13 @@ pub async fn cloud_ranked_models_handler(
                 bs.ifeval_score,
                 bs.gpqa_score,
                 bs.hard_prompts_elo,
-                (SELECT throughput_tps FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id ORDER BY pts.recorded_at DESC LIMIT 1) as tps
+                bs.vqa_multimodal_score,
+                (SELECT throughput_tps FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id ORDER BY pts.recorded_at DESC LIMIT 1) as tps,
+                (SELECT ttft_ms FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.ttft_ms > 0 ORDER BY pts.recorded_at DESC LIMIT 1) as ttft_ms
             FROM daily_evaluations de
             JOIN canonical_models cm ON cm.id = de.canonical_id
             LEFT JOIN (
-                SELECT canonical_id, general_elo, coding_elo, bfcl_score, ifeval_score, gpqa_score, hard_prompts_elo
+                SELECT canonical_id, general_elo, coding_elo, bfcl_score, ifeval_score, gpqa_score, hard_prompts_elo, vqa_multimodal_score
                 FROM benchmark_snapshots
                 GROUP BY canonical_id
             ) bs ON bs.canonical_id = de.canonical_id
@@ -273,8 +287,13 @@ pub async fn cloud_ranked_models_handler(
         let score: f64 = r.get("score");
         let blended_cost: f64 = r.get("task_blended_cost");
         let roi_index: f64 = r.get("roi_index");
-        let pareto_tag: String = r.get("pareto_tag");
+        let pareto_tag: String = r.try_get("pareto_tag").unwrap_or_else(|_| "Dominated".to_string());
         let context_window: i64 = r.get("context_window");
+        let developer: String = r.try_get("developer").unwrap_or_else(|_| "unknown".to_string());
+        let is_multimodal: i64 = r.try_get("is_multimodal").unwrap_or(0);
+        let supports_tools: i64 = r.try_get("supports_tools").unwrap_or(0);
+        let supports_structured_outputs: i64 = r.try_get("supports_structured_outputs").unwrap_or(0);
+        let supports_caching: i64 = r.try_get("supports_caching").unwrap_or(0);
         let has_nous: i64 = r.try_get("has_nous").unwrap_or(0);
         let has_openrouter: i64 = r.try_get("has_openrouter").unwrap_or(0);
         let nous_prompt_price: Option<f64> = r.try_get("nous_prompt_price").ok();
@@ -292,7 +311,9 @@ pub async fn cloud_ranked_models_handler(
         let ifeval_score: Option<f64> = r.try_get("ifeval_score").ok();
         let gpqa_score: Option<f64> = r.try_get("gpqa_score").ok();
         let hard_prompts_elo: Option<f64> = r.try_get("hard_prompts_elo").ok();
+        let vqa_score: Option<f64> = r.try_get("vqa_multimodal_score").ok();
         let tps: Option<f64> = r.try_get("tps").ok();
+        let ttft_ms: Option<f64> = r.try_get("ttft_ms").ok();
 
         let nous_blended = match (nous_prompt_price, nous_completion_price) {
             (Some(p), Some(c)) => Some(0.25 * p + 0.75 * c),
@@ -309,6 +330,11 @@ pub async fn cloud_ranked_models_handler(
             "rank": idx + 1,
             "canonical_id": canonical_id,
             "display_name": display_name,
+            "developer": developer,
+            "is_multimodal": is_multimodal > 0,
+            "supports_tools": supports_tools > 0,
+            "supports_structured_outputs": supports_structured_outputs > 0,
+            "supports_caching": supports_caching > 0,
             "composite_score": score,
             "blended_cost": blended_cost,
             "roi_index": roi_index,
@@ -334,7 +360,9 @@ pub async fn cloud_ranked_models_handler(
             "ifeval_score": ifeval_score,
             "gpqa_score": gpqa_score,
             "hard_prompts_elo": hard_prompts_elo,
-            "throughput_tps": tps
+            "vqa_multimodal_score": vqa_score,
+            "throughput_tps": tps,
+            "ttft_ms": ttft_ms
         }));
     }
 

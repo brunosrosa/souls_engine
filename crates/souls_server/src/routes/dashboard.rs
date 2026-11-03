@@ -1869,3 +1869,27 @@ pub async fn delete_profile_handler(
         })),
     }
 }
+
+/// Returns the full catalog of all 55 canonical MCP tools registered in `souls_server::mcp::registry`.
+pub async fn tools_catalog_handler() -> Json<Value> {
+    let tools = crate::mcp::registry::get_canonical_tools();
+    let list: Vec<Value> = tools
+        .iter()
+        .map(|t| {
+            json!({
+                "name": t.name,
+                "namespace": t.namespace,
+                "description": t.description,
+                "is_level_0": t.is_level_0,
+                "input_schema": (t.input_schema)()
+            })
+        })
+        .collect();
+
+    Json(json!({
+        "status": "success",
+        "total": list.len(),
+        "tools": list
+    }))
+}
+
