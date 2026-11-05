@@ -52,7 +52,7 @@ flowchart TD
 1. **Zero Desktop UI Local / Systray:** O binário `souls_server.exe` / `souls_engine.exe` é 100% headless. A observabilidade visual pertence ao Web Dashboard SPA servido na porta `9123`.
 2. **Nenhum Proxy L7 para o Chat Mestre:** O Hermes Agent resolve suas APIs de nuvem diretamente, preservando o *prefix caching*.
 3. **Nenhum Chaveamento Intradiálogo:** O ParetoBandit atua exclusivamente em subagentes (`delegate_task`) e tarefas de suporte (`auxiliary.*`).
-4. **Sem Poluição fora do Dev Drive ReFS (`Z:\`):** Toda persistência reside em `Z:\souls_engine\.souls_data\`.
+4. **Sem Poluição fora do Diretório Canônico de Dados:** No ambiente de desenvolvimento, reside em `Z:\souls_engine\.souls_data\`; em ambientes de produção/distribuição universal, resolve de forma agnóstica via `SOULS_DATA_DIR` (`%LOCALAPPDATA%\SoulsEngine\data\` no Windows, `~/.local/share/souls_engine/` no Linux, `~/Library/Application Support/SoulsEngine/` no macOS), sem nunca espalhar arquivos temporários soltos.
 5. **Topologia Controlada:** Workspace estruturado estritamente nas crates canônicas homologadas.
 6. **Zero `unsafe` Arbitrário:** Workspace sob `#![forbid(unsafe_code)]`, exceto delimitações auditadas com `// SAFETY:`.
 
@@ -260,14 +260,38 @@ A consagração do Souls Engine como um produto final robusto, instalável em qu
 #### 2. Zero-Friction Universal Installer (`setup.ps1` & Bootstrapper Nativo)
 * **Requisito Único do Usuário:** Apenas ter o **Hermes Agent Desktop** instalado na máquina.
 * **Automação Completa do Script de Instalação:**
-  1. **Verificação de Ambiente:** Validação do Windows 11, arquitetura x64 e permissões.
-  2. **Estrutura de Armazenamento:** Criação automática do diretório de dados `Z:\souls_engine\.souls_data\` ou `%LOCALAPPDATA%\SoulsEngine\data\` (com suporte a fallback NTFS caso Dev Drive ReFS não esteja configurado).
-  3. **Symlinks & Junctions Transparentes:** Linkagem do catálogo de modelos `%LOCALAPPDATA%\hermes\models` e instalação dos plugins do Hermes (`hermes_dashboard_souls` e `hermes_memory_souls`).
-  4. **Injeção de Configurações no Hermes:** Configuração idempotente do `config.yaml` do Hermes registrando o Souls Engine como servidor MCP SSE na porta `9123`.
-  5. **Auto-Calibração de Primeiro Boot:** Execução do profiler de hardware, cálculo dos limites de silício e geração do `souls_config.toml` personalizado.
-  6. **Launch & Onboarding:** Inicialização limpa do daemon em segundo plano e abertura automática do Web Dashboard na página de boas-vindas com tour guiado.
+  1. **Verificação de Ambiente:** Validação do Windows 11, arquitetura x64 e permissões de administrador (UAC pontual para setup).
+  2. **Estrutura de Armazenamento Agnóstica:** Criação automática do diretório de dados `%LOCALAPPDATA%\SoulsEngine\data\` (ou `Z:\souls_engine\.souls_data\` se ambiente dev em Dev Drive).
+  3. **Imunização Automatizada contra o Windows Defender (Zero I/O Throttling):**
+     - Em máquinas comuns com partição NTFS padrão, o Windows Defender realiza varredura síncrona bloqueante sobre arquivos `.db`, `-wal`, `-shm` e diretórios `.lance/`, provocando lentidão e o erro `database is locked (5)`.
+     - O instalador executa compulsoriamente via PowerShell:
+       ```powershell
+       Add-MpPreference -ExclusionPath "$dataDir"
+       Add-MpPreference -ExclusionProcess "souls_engine.exe"
+       ```
+     - Isso anula o impacto do antivírus sobre o SQLite WAL e o LanceDB, replicando o mesmo benefício do *Defender Performance Mode* presente no Dev Drive ReFS em qualquer partição NTFS comum.
+  4. **Tuning de Alta Performance do SQLite para NTFS Comum:**
+     - `PRAGMA synchronous = NORMAL;` (segurança ACID total em WAL, eliminando 90% dos bloqueios síncronos de flush do kernel NT).
+     - `PRAGMA mmap_size = 268435456;` (256 MB de mapped I/O direto via cache de páginas do NT).
+     - `PRAGMA temp_store = MEMORY;` (evita tocar o disco NTFS em tabelas transitórias).
+     - `PRAGMA busy_timeout = 5000;` (resiliência contra concorrência sob rajadas de escrita).
+  5. **Contorno à Ausência de Block Cloning do ReFS:**
+     - No ReFS, a clonagem de arquivos é instantânea via Copy-on-Write (`FSCTL_DUPLICATE_EXTENTS_TO_FILE`). No NTFS, onde a cópia física é byte a byte, o Souls Engine substitui cópias manuais pelo comando nativo online `VACUUM INTO 'snapshot.db'` ou HardLinks NTFS idempotentes para snapshots atômicos sem travar leitores.
+  6. **Opção de Dev Drive ReFS Dinâmico (Windows 11 Build 22621+):**
+     - Para usuários avançados que desejam o teto máximo de I/O, o instalador pode oferecer a criação opcional de um VHDX ReFS de 10GB a 30GB via PowerShell (`Format-Volume -FileSystem ReFS`), mas o sistema opera com 100% de estabilidade no NTFS comum sem qualquer perda de funcionalidade.
+  7. **Symlinks & Junctions Transparentes:** Linkagem do catálogo de modelos `%LOCALAPPDATA%\hermes\models` e instalação dos plugins do Hermes (`hermes_dashboard_souls` e `hermes_memory_souls`).
+  8. **Injeção de Configurações no Hermes:** Configuração idempotente do `config.yaml` do Hermes registrando o Souls Engine como servidor MCP SSE na porta `9123`.
+  9. **Auto-Calibração de Primeiro Boot:** Execução do profiler de hardware, cálculo dos limites de silício e geração do `souls_config.toml` personalizado.
+  10. **Launch & Onboarding:** Inicialização limpa do daemon em segundo plano e abertura automática do Web Dashboard na página de boas-vindas com tour guiado.
 
-#### 3. Descomissionamento Total do Legado (`_donor/`)
+#### 3. Arquitetura Agnóstica Cross-Platform (Windows 11 ➔ Linux ➔ macOS)
+O Souls Engine nasce no Windows 11 bare-metal, mas sua arquitetura desacopla a camada de sistema de arquivos e serviços para expansão multiplataforma:
+* **Resolução Dinâmica de Dados (`souls_core::paths`):**
+  - **Windows 11:** `%LOCALAPPDATA%\SoulsEngine\data\` (NTFS com exclusões Defender / ReFS opcional).
+  - **Linux (Ubuntu / Fedora / Arch):** `$XDG_DATA_HOME/souls_engine` (padrão `~/.local/share/souls_engine/`). Compatível nativamente com `ext4` e `btrfs` (que possui `reflink` equivalente ao block cloning do ReFS), gerenciado como daemon via `systemd` (`souls-engine.service`) com suporte a `io_uring`.
+  - **macOS (Apple Silicon):** `~/Library/Application Support/SoulsEngine/`. O sistema de arquivos `APFS` possui *Clone Files* nativo com Copy-on-Write (idêntico ao ReFS), gerenciado via `launchd` (`~/Library/LaunchAgents/com.soulsengine.daemon.plist`) com aceleração Metal no `souls_inference_runtime`.
+
+#### 4. Descomissionamento Total do Legado (`_donor/`)
 * **Remoção Definitiva da Pasta `_donor/`:** Todo o código doador legado em quarentena é permanentemente deletado da árvore git, consolidando a independência arquitetural e autoria 100% nativa do Souls Engine v7.
 * **Selo de Estabilidade Bare-Metal de Produção:** Binários assinados, documentação completa em formato de livro digital/wiki e pacote de release GitHub.
 
@@ -288,13 +312,15 @@ A análise dos três estudos de referência revelou padrões arquiteturais inéd
    Reforço da Linha Vermelha 2: nenhuma notificação ou telemetria em tempo real (Gmail, Calendar, Jules, VRAM) altera o system prompt. Toda a dinâmica entra efemeramente no turno do usuário ou via `prefetch()`, assegurando taxa de hit de prefix cache >95%.
 
 ### 5.2 Futuros Estudos de "Deep Research" Mapeados para o Ecossistema
-Para manter o padrão de excelência de especificação técnica, foram identificados três domínios críticos que receberão seus próprios cadernos de pesquisa aprofundada antes da implementação correspondente:
+Para manter o padrão de excelência de especificação técnica, foram identificados quatro domínios críticos que receberão seus próprios cadernos de pesquisa aprofundada antes da implementação correspondente:
 * **Deep Research 1: Voice & Real-Time Multimodal Embodiment (Live Audio/Video Streamable Protocol):**
   Estudo da integração de protocolos de streaming de voz de ultra-baixa latência (WebRTC / OpenAI Realtime API / Gemini Live API vs motores locais bare-metal como Whisper-cpp + Kokoro-82M / Vapi / Twilio) acoplados à máquina de estados afetivos SODA.
 * **Deep Research 2: Autonomous High-Cardinality Graph & Vector Engine (LadybugDB vs KùzuDB vs LanceDB Deep Benchmark):**
   Benchmark empírico no Windows NT sobre ReFS medindo concorrência multithread, tempo de busca em grafos causais com mais de 100.000 nós e consumo de memória sob WDDM.
 * **Deep Research 3: Single-Binary Packaging & Production Daemonization (MSVC Self-Extractor vs Windows Service):**
   Engenharia de empacotamento para gerar um único binário auto-extraível e auto-instalável, com suporte nativo a registro como Windows Service (NT Daemon) resiliente a reinicializações do sistema operacional.
+* **Deep Research 4: Cross-Platform Bare-Metal Storage & File-System Virtualization (NTFS vs ReFS vs APFS vs ext4 & Defender Evasion):**
+  Estudo aprofundado de I/O de baixo nível, tunings de SQLite e LanceDB em sistemas de arquivos comerciais, estratégias de exclusão programática de antivírus sem quebrar a segurança do usuário e orquestração de daemons multiplataforma (`systemd` no Linux e `launchd` no macOS).
 
 ---
 
