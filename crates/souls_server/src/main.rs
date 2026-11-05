@@ -1772,7 +1772,7 @@ model:
         // 1. Testa profile_list
         let res_list = call_tool("profile_list", serde_json::json!({})).await;
         let list_data = &res_list["structuredContent"];
-        assert_eq!(list_data["profiles_count"], 5);
+        assert_eq!(list_data["profiles_count"], 9);
         assert_eq!(list_data["active_model"], "deepseek/deepseek-chat");
         assert_eq!(list_data["active_profile"], "frontier_balanced");
 

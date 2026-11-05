@@ -1,46 +1,61 @@
-import asyncio, json, urllib.request, subprocess, time, websockets
+import asyncio, json, urllib.request, base64, subprocess, os, time
+import websockets
+
+CHROME_PATH = r"C:\Users\rosas\AppData\Local\Google\Chrome\Application\chrome.exe"
+port = 9241
+user_dir = r"Z:\souls_engine\.souls_data\chrome_cdp_tmp_drag_test"
 
 proc = subprocess.Popen([
-    r'C:\Users\rosas\AppData\Local\Google\Chrome\Application\chrome.exe',
-    '--headless=new',
-    '--remote-debugging-port=9223',
-    '--disable-gpu',
-    'http://127.0.0.1:9123'
+    CHROME_PATH,
+    "--headless=new",
+    f"--remote-debugging-port={port}",
+    f"--user-data-dir={user_dir}",
+    "--window-size=1440,1600",
+    "--hide-scrollbars",
+    "--disable-gpu",
+    "http://127.0.0.1:9123/#tab-settings/subtab-router"
 ])
+
 time.sleep(3)
 
-async def test():
+async def main():
     try:
-        resp = urllib.request.urlopen('http://127.0.0.1:9223/json')
+        resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/json")
         tabs = json.loads(resp.read().decode())
-        ws_url = tabs[0]['webSocketDebuggerUrl']
-        async with websockets.connect(ws_url) as ws:
+        ws_url = tabs[0]["webSocketDebuggerUrl"]
+
+        async with websockets.connect(ws_url, max_size=50*1024*1024) as ws:
             msg_id = 0
-            async def cmd(m, p=None):
+            async def send_cmd(method, params=None):
                 nonlocal msg_id
                 msg_id += 1
-                await ws.send(json.dumps({'id': msg_id, 'method': m, 'params': p or {}}))
+                payload = {"id": msg_id, "method": method, "params": params or {}}
+                await ws.send(json.dumps(payload))
                 while True:
-                    r = json.loads(await ws.recv())
-                    if r.get('id') == msg_id: return r
+                    res = json.loads(await ws.recv())
+                    if res.get("id") == msg_id:
+                        return res
 
-            await cmd('Runtime.enable')
-            await cmd('Runtime.evaluate', {'expression': 'switchTab("tab-cloud")'})
+            await send_cmd("Runtime.enable")
             await asyncio.sleep(2)
-            res = await cmd('Runtime.evaluate', {
-                'expression': '''
-                (function() {
-                    const before = [...activeColumnOrder];
-                    moveColumnOrder('intel', 'status');
-                    const after = [...activeColumnOrder];
-                    const theadThs = Array.from(document.querySelectorAll('#cloud-ranked-thead th')).map(th => th.textContent.trim().replace(/\\s+/g, ' '));
-                    return JSON.stringify({ before: before.slice(0, 3), after: after.slice(0, 3), theadFirstCols: theadThs.slice(0, 5) });
-                })()
-                ''',
-                'returnByValue': True
+
+            # Change local-token-limit to 4096 to see tick mark separate from thumb
+            await send_cmd("Runtime.evaluate", {
+                "expression": """
+                const slider = document.getElementById("cfg-local-token-limit");
+                slider.value = 4096;
+                slider.dispatchEvent(new Event("input", { bubbles: true }));
+                """
             })
-            print('Full res:', res)
+            await asyncio.sleep(1)
+
+            res = await send_cmd("Page.captureScreenshot", {"format": "png"})
+            png_data = base64.b64decode(res["result"]["data"])
+            out_path = r"Z:\souls_engine\scratch\test_drag_slider.png"
+            with open(out_path, "wb") as f:
+                f.write(png_data)
+            print(f"Captured moved slider test to {out_path}")
     finally:
         proc.terminate()
 
-asyncio.run(test())
+asyncio.run(main())
