@@ -504,8 +504,8 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
     };
 
     // Real SQLite disk footprint on Z:\
-    let mem_db_bytes = fs::metadata(r"Z:\souls_engine\.souls_data\souls_memory.db")
-        .or_else(|_| fs::metadata(r"Z:\souls_engine\.souls_data\db\souls_memory.db"))
+    let mem_db_bytes = fs::metadata(r"Z:\souls_engine\.souls_data\db\souls_memory.db")
+        .or_else(|_| fs::metadata(r"Z:\souls_engine\.souls_data\souls_memory.db"))
         .map(|m| m.len())
         .unwrap_or(0);
     let vault_db_bytes = fs::metadata(resolve_vault_db_path())

@@ -774,7 +774,7 @@ pub async fn handle_repo_meta(state: &AppState, _args: &serde_json::Map<String, 
             "branch": branch,
             "head_commit": commit,
             "workspace": "Z:/souls_engine",
-            "db_path": "Z:/souls_engine/.souls_data/souls_memory.db",
+            "db_path": "Z:/souls_engine/.souls_data/db/souls_memory.db",
             "vram_limit_mb": hw.vram_free_mb
         },
         "isError": false

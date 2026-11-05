@@ -92,8 +92,25 @@ pub async fn bootstrap_engine(data_dir: &Path) -> Result<AppState, Box<dyn std::
         SoulsMemoryStore::new_in_memory().await?
     } else {
         ensure_dev_drive_mounted(data_dir);
-        std::fs::create_dir_all(data_dir)?;
-        let db_path = data_dir.join("souls_memory.db");
+        let db_dir = data_dir.join("db");
+        std::fs::create_dir_all(&db_dir)?;
+
+        // Seamless migration: promote souls_memory.db from root of data_dir to db/ if present
+        let old_db = data_dir.join("souls_memory.db");
+        let db_path = db_dir.join("souls_memory.db");
+        if old_db.exists() && (!db_path.exists() || std::fs::metadata(&db_path).map(|m| m.len() == 0).unwrap_or(false)) {
+            let _ = std::fs::rename(&old_db, &db_path);
+            let old_wal = data_dir.join("souls_memory.db-wal");
+            let old_shm = data_dir.join("souls_memory.db-shm");
+            if old_wal.exists() {
+                let _ = std::fs::rename(&old_wal, db_dir.join("souls_memory.db-wal"));
+            }
+            if old_shm.exists() {
+                let _ = std::fs::rename(&old_shm, db_dir.join("souls_memory.db-shm"));
+            }
+            info!("Migrated souls_memory.db and WAL files into canonical db/ subfolder.");
+        }
+
         let store = SoulsMemoryStore::new(&db_path, 16).await?;
         let now_epoch = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
