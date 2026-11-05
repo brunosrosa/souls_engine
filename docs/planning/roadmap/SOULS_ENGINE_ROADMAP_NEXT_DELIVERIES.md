@@ -228,8 +228,11 @@ Em vez de reescrever ingenuamente o system prompt a cada falha, o Souls Engine p
 7. **`c7` Subagents:** Orquestração de sub-processos mentais e delegações atômicas.
 8. **`c8` Plugins / Hooks:** Middleware de ciclo de vida montado via microkernel reversível.
 
-#### 2. O Ciclo de Sonho e Consolidação Subconsciente (*The Dreaming Loop*)
-* **Execução Fora do Caminho Crítico:** O ciclo Propose–Probe–Compose (PPC) do Harness² consome múltiplos rollouts e nunca roda durante o chat síncrono ao vivo (o que destruiria a latência conversacional). Ele roda em background durante a ociosidade do host ou sob gatilhos de anomalia afetiva/erro.
+#### 2. O Ciclo de Cochilo e Consolidação Subconsciente (*The Cognitive Catnap Protocol*)
+* **Consolidação em Brechas de Ociosidade (Zero Gargalo Noturno):** Em vez de depender de uma rotina em lote monolítica que exige o computador ligado de madrugada (o que criaria um gargalo imenso e falharia se a máquina estivesse desligada), a consolidação opera em regime de **Micro-Cochilos Cognitivos (*Catnaps*)**.
+* **Detecção Reativa de Inatividade do Host:** Monitora o estado de ociosidade do Windows 11 via Win32 (`GetLastInputInfo`), verificando CPU < 15%, GPU ociosa (<5% e <50°C) e ausência de requisições ativas no Hermes. Ao registrar de 3 a 5 minutos de inatividade, o daemon entra furtivamente em modo de cochilo.
+* **Micro-Lotes Atômicos Fatiados:** O trabalho é decomposto em passos curtos e idempotentes: audita 1 trajetória recente de subagente, higieniza 5 a 10 nós no grafo LadybugDB, aplica Langevin decay em um pequeno lote de memórias efêmeras ou avalia 1 mutação de skill via Propose–Probe–Compose em sandbox.
+* **Preempção Instantânea com Zero-Lag:** No exato milissegundo em que o usuário retoma o teclado/mouse ou um novo prompt chega ao Hermes (`pre_llm_call`), o cochilo é imediatamente interrompido/pausado. O cursor de progresso é salvo no SQLite STRICT e todo o silício é liberado instantaneamente, garantindo zero engasgos (*zero hitching/freeze*) na experiência do operador.
 * **Sondagem em Sombra (*Shadow Probing*):** Reexecuta turnos problemáticos em sandbox isolada, comparando o arnês base contra candidatos para comprovar se uma edição eliminou falhas reais antes de compor a melhoria.
 
 #### 3. Microkernel Reversível de Processos Mentais (DeepSeek Cordis)
@@ -275,8 +278,8 @@ A consagração do Souls Engine como um produto final robusto, instalável em qu
 A análise dos três estudos de referência revelou padrões arquiteturais inéditos que enriquecem a visão de longo prazo do Souls Engine:
 
 ### 5.1 Ideias Emergentes Incorporadas ao Sistema
-1. **The Nightly Consolidation Loop (O Ciclo Noturno de Sonho):**
-   Aproveitar os períodos de ociosidade do computador (madrugada, GPU ociosa a <45°C) para acionar autonomamente o ciclo de consolidação subconsciente do Harness². O motor audita os diários dos subagentes do dia, deduplica e poda arestas no grafo LadybugDB, comprime embeddings no LanceDB e gera patches de melhoria para as 15 skills sem consumir um único segundo da atenção do usuário.
+1. **The Cognitive Catnap Protocol (O Ciclo de Cochilos Cognitivos Ociosos):**
+   Superação do gargalo do modelo clássico de lote noturno (esperar o computador ligado às 4h da manhã geraria um gargalo gigantesco e falhas recorrentes caso o usuário desligue a máquina). A consolidação opera em **Micro-Cochilos Ociosos**: detecta brechas naturais de inatividade do usuário ao longo do dia no Windows 11 (pausa para café, almoço, leitura estática, tela bloqueada) e executa micro-lotes fatiados de consolidação (poda e reconciliação no LadybugDB, expurgo de memórias efêmeras via Langevin Decay e calibração de skills). Se o operador mover o mouse, tocar no teclado ou enviar um prompt no Hermes, o motor interrompe o cochilo instantaneamente (*preempção de zero milissegundos*), salvando o cursor de progresso no SQLite STRICT sem qualquer impacto na fluidez do sistema.
 2. **Repoless Google Jules como Offloader de Build na Nuvem:**
    Utilizar as sessões "Repoless" do Google Jules (com Gemini 3 Pro e máquinas virtuais Linux pré-equipadas com Rust, Node e Python) como um compilador serverless gratuito na nuvem para compilações pesadas ou testes extensos de crates, poupando a dGPU e a CPU física do host contra aquecimento térmico prolongado.
 3. **Fatiamento MinionS na RAM via Dev Drive ReFS (`memmap2`):**
