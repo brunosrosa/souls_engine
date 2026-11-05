@@ -1,0 +1,172 @@
+      <div class="settings-subpane" id="subtab-raw">
+        <!-- HEADER DA SUB-ABA COM AÇÕES -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0 0 4px 0;">
+              <span>📄</span>
+              <span>Configuração Avançada & SSOT (souls_config.toml)</span>
+              <span class="info-icon" style="z-index: 95;">i
+                <span class="tooltip-box">
+                  <strong>Single Source of Truth (SSOT) Bare-Metal</strong>
+                  O arquivo <code>souls_config.toml</code> governa todos os parâmetros físicos do Souls Engine. Mutações aqui gravadas disparam validação sintática estrita no backend, geram backup atômico de segurança (<code>.toml.bak</code>) e aplicam hot-reload instantâneo ao daemon (127.0.0.1:9123).
+                </span>
+              </span>
+            </h2>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
+              Arquivo mestre de configuração em disco. Edição com verificação sintática, backup de segurança e hot-reload no daemon.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="fetchConfigToml()" style="padding: 6px 12px; font-size: 0.75rem;" title="Recarregar versão do disco">
+              <span>🔄</span> Recarregar
+            </button>
+            <button class="btn btn-secondary" onclick="formatTomlBuffer()" style="padding: 6px 12px; font-size: 0.75rem;" title="Harmonizar espaçamento e linhas">
+              <span>✨</span> Formatar
+            </button>
+            <button class="btn btn-cyan" onclick="validateTomlBuffer()" style="padding: 6px 12px; font-size: 0.75rem;" title="Verificar conformidade sintática no backend">
+              <span>🔍</span> Validar Sintaxe
+            </button>
+            <button class="btn btn-purple" onclick="restoreTomlBackup()" style="padding: 6px 12px; font-size: 0.75rem;" title="Restaurar backup íntegro .toml.bak">
+              <span>📑</span> Restaurar Backup
+            </button>
+            <button class="btn btn-green" onclick="saveRawToml()" style="padding: 6px 14px; font-size: 0.75rem;" title="Gravar alterações e aplicar hot-reload (Ctrl+S)">
+              <span>💾</span> Salvar & Aplicar
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 CARDS DE KPI CENTRADOS (Padrão canônico) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 16px;">
+          <!-- CARD 1: ARQUIVO MESTRE (CIANO) -->
+          <div class="card" style="margin-bottom: 0; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.4); background: linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, rgba(13, 19, 36, 0.85) 100%);">
+            <div style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cyan); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>📄</span> <span>ARQUIVO MESTRE</span>
+            </div>
+            <div class="mono" id="kpi-toml-filename" style="font-size: 1.05rem; font-weight: 700; color: var(--cyan); white-space: nowrap;">
+              souls_config.toml
+            </div>
+            <div id="kpi-toml-size" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              ~3.5 KB • SSOT do Daemon
+            </div>
+          </div>
+
+          <!-- CARD 2: SEÇÕES ATIVAS (VERDE) -->
+          <div class="card" style="margin-bottom: 0; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.4); background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 19, 36, 0.85) 100%);">
+            <div style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--green); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>⚙️</span> <span>SEÇÕES ATIVAS</span>
+            </div>
+            <div class="mono" id="kpi-toml-sections" style="font-size: 1.05rem; font-weight: 700; color: var(--green); white-space: nowrap;">
+              9 SEÇÕES CANÔNICAS
+            </div>
+            <div id="kpi-toml-lines" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              84 linhas de configuração
+            </div>
+          </div>
+
+          <!-- CARD 3: VALIDADOR DE SINTAXE (ROXO) -->
+          <div class="card" style="margin-bottom: 0; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(168, 85, 247, 0.4); background: linear-gradient(180deg, rgba(168, 85, 247, 0.08) 0%, rgba(13, 19, 36, 0.85) 100%);">
+            <div style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--purple-light); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>🛡️</span> <span>VALIDAÇÃO SINTÁTICA</span>
+            </div>
+            <div class="mono" id="kpi-toml-validity" style="font-size: 1.05rem; font-weight: 700; color: var(--purple-light); white-space: nowrap;">
+              TOML v1.0 ESTREITO
+            </div>
+            <div id="kpi-toml-backup-status" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              Backup .bak Sincronizado
+            </div>
+          </div>
+
+          <!-- CARD 4: DESTINO DE PERSISTÊNCIA (ÂMBAR) -->
+          <div class="card" style="margin-bottom: 0; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.4); background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(13, 19, 36, 0.85) 100%);">
+            <div style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--amber); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>💾</span> <span>DESTINO EM DISCO</span>
+            </div>
+            <div class="mono" id="kpi-toml-volume" style="font-size: 1.05rem; font-weight: 700; color: var(--amber); white-space: nowrap;">
+              DEV DRIVE ReFS
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              Volume Z:\ Zero-Leak
+            </div>
+          </div>
+        </div>
+
+        <!-- BANNER DE GOVERNANÇA DE CONFIGURAÇÃO -->
+        <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="font-size: 0.74rem; line-height: 1.5; color: #e2e8f0; flex: 1; min-width: 280px; text-wrap: balance;">
+            <strong style="color: var(--cyan);">💡 Governança de Configuração Bare-Metal (AGENTS.md):</strong> Este arquivo é a fonte única da verdade (SSOT) do daemon Souls Engine. Alterações salvas aqui acionam validação sintática estrita no backend e hot-reload no daemon (<code>127.0.0.1:9123</code>). O sistema mantém um backup automático (<code>.toml.bak</code>) antes de cada gravação para garantir recuperação instantânea com 1 clique caso ocorra erro de formatação.
+          </div>
+          <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--cyan); background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); padding: 3px 8px; border-radius: 4px; white-space: nowrap; align-self: center;">
+            • Hot-Reload Atômico Ativo
+          </span>
+        </div>
+
+        <!-- NAVEGADOR RÁPIDO DE SEÇÕES (SECTION JUMP PILLS) -->
+        <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 16px;">
+          <div style="font-size: 0.70rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span>Navegação Rápida por Seções Canônicas:</span>
+            <span style="font-size: 0.66rem; color: #64748b; font-weight: normal;">Clique na seção para pular diretamente no editor</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[core]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>🌐</span> [core]
+            </button>
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[security]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>🛡️</span> [security]
+            </button>
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[memory]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>💾</span> [memory]
+            </button>
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[inference]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>⚡</span> [inference]
+            </button>
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[model_router]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>🔀</span> [model_router]
+            </button>
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[obsidian]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>📓</span> [obsidian]
+            </button>
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[ast]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>🌲</span> [ast]
+            </button>
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[anthropic]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>☁️</span> [anthropic]
+            </button>
+            <button class="btn btn-secondary" onclick="jumpToTomlSection('[arena]')" style="padding: 4px 10px; font-size: 0.72rem; font-family: var(--font-mono);">
+              <span>🏆</span> [arena]
+            </button>
+          </div>
+        </div>
+
+        <!-- CARD DO EDITOR TOML DE ENGENHARIA -->
+        <div class="card" style="margin-bottom: 0; padding: 16px;">
+          <!-- TOOLBAR SUPERIOR DO EDITOR -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="badge" id="badge-toml-status" style="background: rgba(16, 185, 129, 0.12); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.68rem; font-family: var(--font-mono);">
+                ✓ Sintaxe Válida
+              </span>
+              <span id="label-toml-metrics" style="font-size: 0.70rem; color: var(--text-muted); font-family: var(--font-mono);">
+                Carregando arquivo...
+              </span>
+            </div>
+            <div style="font-size: 0.68rem; color: #64748b; font-family: var(--font-mono);">
+              Atalho: <strong style="color: #cbd5e1;">Ctrl+S</strong> para gravar • <strong style="color: #cbd5e1;">Tab</strong> para indentar
+            </div>
+          </div>
+
+          <!-- ÁREA DO EDITOR DE TEXTO COM ESTILO TERMINAL BARE-METAL -->
+          <textarea id="raw-toml-editor" class="setting-input" spellcheck="false" style="height: 460px; font-size: 0.80rem; line-height: 1.55; font-family: 'Consolas', 'Fira Code', 'Cascadia Code', monospace; resize: vertical; background: #070c18; color: #e2e8f0; border-color: rgba(56, 189, 248, 0.2); tab-size: 2;" oninput="onTomlEditorInput()" onkeydown="handleTomlEditorKey(event)"></textarea>
+
+          <!-- STATUS BAR INFERIOR DO EDITOR -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono); flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span>Caminho Físico: </span>
+              <code id="footer-toml-path" style="color: #94a3b8;">Z:\souls_engine\.souls_data\config\souls_config.toml</code>
+            </div>
+            <div id="footer-toml-last-saved">
+              Status: Sincronizado com o daemon
+            </div>
+          </div>
+        </div>
+      </div>
+        

@@ -4,12 +4,13 @@
 > *Exoesqueleto Cognitivo Bare-Metal e Prótese de Função Executiva de Baixo Nível.*
 
 [![Rust](https://img.shields.io/badge/Rust-2021_Edition-orange?logo=rust)](https://www.rust-lang.org/)
+[![Version](https://img.shields.io/badge/Version-v0.5.0--Canônica-blueviolet)](#-sumário-executivo)
 [![Platform](https://img.shields.io/badge/Platform-Windows_11_NT_Bare--Metal-blue?logo=windows)](https://microsoft.com)
 [![Storage](https://img.shields.io/badge/FS-Dev_Drive_ReFS_CoW-darkgreen)](https://learn.microsoft.com/windows/dev-drive/)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel_i9_+_RTX_2060m-76b900?logo=nvidia)](https://nvidia.com)
-[![Architecture](https://img.shields.io/badge/Architecture-9_Canonical_Crates-purple)](#-topologia-canônica-das-9-crates)
+[![Architecture](https://img.shields.io/badge/Architecture-11_Canonical_Crates-purple)](#-topologia-canônica-das-11-crates)
 [![Daemon](https://img.shields.io/badge/Daemon-100%25_Headless_:9123-red)](#-como-ligar-o-souls-engine-hoje)
-[![Tests](https://img.shields.io/badge/Tests-99%2F99_Passing_Green-success)](#-testes-e-verificação)
+[![Tests](https://img.shields.io/badge/Tests-100%25_Passing_Green-success)](#-testes-e-verificação)
 
 ---
 
@@ -17,14 +18,15 @@
 
 1. [Identidade, Missão e Sparring Cognitivo](#-identidade-missão-e-sparring-cognitivo)
 2. [As 6 Linhas Vermelhas Arquiteturais](#-as-6-linhas-vermelhas-arquiteturais-leis-negativas)
-3. [Topologia Canônica das 9 Crates](#-topologia-canônica-das-9-crates)
+3. [Topologia Canônica das 11 Crates](#-topologia-canônica-das-11-crates)
 4. [Governança Físico-Computacional e Silício (RTX 2060m)](#-governança-físico-computacional-e-silício-rtx-2060m)
 5. [Matriz Simbiótica com o Hermes Agent](#-matriz-simbiótica-com-o-hermes-agent)
-6. [Catálogo MCP e Revelação Progressiva (52 Ferramentas)](#-catálogo-mcp-e-revelação-progressiva-52-ferramentas)
-7. [Como Ligar o Souls Engine Hoje](#-como-ligar-o-souls-engine-hoje)
-8. [Como Rodar as Tools via MCP Hoje (Hermes & IDEs)](#-como-rodar-as-tools-via-mcp-hoje-hermes--ides)
-9. [Status Forense da Migração e Esteira Antropofágica (`_donor/`)](#-status-forense-da-migração-e-esteira-antropofágica-_donor)
-10. [Comandos de Verificação e Higiene Bare-Metal](#-comandos-de-verificação-e-higiene-bare-metal)
+6. [Catálogo MCP e Revelação Progressiva (55 Ferramentas)](#-catálogo-mcp-e-revelação-progressiva-55-ferramentas)
+7. [Dashboard Web Headless Modular (ADR-012)](#-dashboard-web-headless-modular-adr-012)
+8. [Como Ligar o Souls Engine Hoje](#-como-ligar-o-souls-engine-hoje)
+9. [Como Rodar as Tools via MCP Hoje (Hermes & IDEs)](#-como-rodar-as-tools-via-mcp-hoje-hermes--ides)
+10. [Status Forense da Migração e Esteira Antropofágica (`_donor/`)](#-status-forense-da-migração-e-esteira-antropofágica-_donor)
+11. [Comandos de Verificação e Higiene Bare-Metal](#-comandos-de-verificação-e-higiene-bare-metal)
 
 ---
 
@@ -64,12 +66,12 @@ Qualquer violação das cláusulas abaixo causa **rejeição sumária de código
 | **2** | **Zero Proxy Interceptor L7 (:3001)** | O Souls Engine **nunca** intercepta nem faz proxy de chamadas de rede do chat principal do Hermes. O Hermes resolve suas APIs de nuvem diretamente; intermediar quebra o *prefix caching* e corrompe streams SSE. |
 | **3** | **Zero Chaveamento Intradiálogo pelo ParetoBandit** | O ParetoBandit atua **exclusivamente** no despacho de subagentes (`delegate_task`) e tarefas auxiliares (`auxiliary.*`). O modelo do chat interativo é imutável durante o diálogo. |
 | **4** | **Zero Poluição fora do Dev Drive ReFS (`Z:\`)** | Proibido gravar dados em `%APPDATA%`, `%LOCALAPPDATA%` ou diretórios temporários arbitrários. Toda a persistência reside estritamente em `Z:\souls_engine\.souls_data\`. |
-| **5** | **Zero Regressão na Topologia de Crates** | O workspace é composto por **exatamente 9 crates canônicas**. É proibido criar crates adicionais ou colapsar as existentes. |
+| **5** | **Zero Regressão na Topologia de Crates** | O workspace é composto por **exatamente 11 crates canônicas** (formalizadas pelo ADR-010). É proibido criar crates adicionais fora da DAG ou colapsar as existentes. |
 | **6** | **Zero Uso Arbitrário de `unsafe`** | `#![forbid(unsafe_code)]` padrão em todo o workspace. Exceções únicas e estritamente delimitadas em `souls_inference_runtime` (`memmap2`, NVML FFI) e `souls_memory` (`mmap` do LanceDB), sempre com `// SAFETY: <racional>`. |
 
 ---
 
-## 🏛️ Topologia Canônica das 9 Crates
+## 🏛️ Topologia Canônica das 11 Crates
 
 O workspace é estruturado como um **Grafo Acíclico Dirigido (DAG)** de dependências estáticas de alta velocidade:
 
@@ -86,9 +88,11 @@ graph TD
     MEM[crates/souls_memory]
     INF[crates/souls_inference_runtime]
     
-    %% Nível 3: Inteligência e Harvesters
+    %% Nível 3: Inteligência, Arenas e Harvesters
     ROUT[crates/souls_model_router]
-    ARENA[crates/souls_llm_local_arena]
+    ARENA_L[crates/souls_llm_local_arena]
+    ARENA_C[crates/souls_llm_cloud_arena]
+    INV[crates/souls_llm_inventory]
     ANTH[crates/souls_anthropophagy]
     
     %% Nível 4: Daemon Executável Raiz
@@ -111,10 +115,16 @@ graph TD
     MEM --> ROUT
     INF --> ROUT
     
-    P --> ARENA
-    C --> ARENA
-    INF --> ARENA
+    P --> ARENA_L
+    C --> ARENA_L
+    INF --> ARENA_L
+
+    P --> ARENA_C
+    C --> ARENA_C
     
+    P --> INV
+    INF --> INV
+
     P --> ANTH
     C --> ANTH
     AST --> ANTH
@@ -126,7 +136,9 @@ graph TD
     MEM --> SRV
     INF --> SRV
     ROUT --> SRV
-    ARENA --> SRV
+    ARENA_L --> SRV
+    ARENA_C --> SRV
+    INV --> SRV
     ANTH --> SRV
 ```
 
@@ -140,9 +152,11 @@ graph TD
 | [`souls_memory`](file:///Z:/souls_engine/crates/souls_memory) | **2** | Hipocampo L3 soberano: FrankenSQLite STRICT WAL, LanceDB vetorial (0 MB VRAM), Grafo Causal LadybugDB, fusão lexical/vetorial RRF e Chyros Daemon (Langevin Decay com imunidade `STABLE`). | `sqlx`, `lancedb`, `petgraph`, `arc-swap` |
 | [`souls_inference_runtime`](file:///Z:/souls_engine/crates/souls_inference_runtime) | **2** | Execução local em silício: ONNX Runtime CPU (Tier 0), logit probing CPU via llama.cpp (Tier 0.5), CUDA dGPU (Tier 1), parser GGUF $\mathcal{O}(1)$ via `memmap2`, NVML Watchdog e JSON Response Healing determinístico. | `ort`, `nvml-wrapper`, `memmap2` |
 | [`souls_model_router`](file:///Z:/souls_engine/crates/souls_model_router) | **3** | Roteador FinOps ParetoBandit multiobjetivo com Thompson Sampling, barreira termodinâmica $\Phi$ e telemetria atômica $\mathcal{O}(1)$ para delegação de subagentes. | `rand`, `rand_distr`, `sqlx` |
-| [`souls_llm_local_arena`](file:///Z:/souls_engine/crates/souls_llm_local_arena) | **3** | Harness de benchmark empírico local, medição de tokens/s reais sob carga e testes de rigidez sintática contra gramáticas JSON com `llguidance`. | `llguidance`, `tokio` |
+| [`souls_llm_local_arena`](file:///Z:/souls_engine/crates/souls_llm_local_arena) | **3** | Harness de benchmark empírico local, medição de tokens/s reais sob carga e testes de rigidez sintática contra gramáticas JSON com `llguidance`. | `llguidance`, `tokio`, `sqlx` |
+| [`souls_llm_cloud_arena`](file:///Z:/souls_engine/crates/souls_llm_cloud_arena) | **3** | Ingestão diária de tarifas de nuvem, cálculo de Fronteira de Pareto e leaderboard cognitivo de 9 perfis para subagentes. | `reqwest`, `chrono`, `sqlx`, `comfy-table` |
+| [`souls_llm_inventory`](file:///Z:/souls_engine/crates/souls_llm_inventory) | **3** | Catálogo curado de modelos físicos locais GGUF, download atômico HTTP Range, validação SHA-256 e profiling de viabilidade VRAM/RAM. | `reqwest`, `sha2`, `tokio` |
 | [`souls_anthropophagy`](file:///Z:/souls_engine/crates/souls_anthropophagy) | **3** | Esteira de engenharia reversa automatizada: dissecação estática de repositórios, firewall de licenças SPDX e catálogo "The Organ Vault". | `spdx-rs`, `petgraph`, `cargo_metadata` |
-| [`souls_server`](file:///Z:/souls_engine/crates/souls_server) | **4** | Daemon bare-metal headless na porta `127.0.0.1:9123`. Serve catálogo MCP via HTTP/SSE, endpoints OpenAI-compatíveis para subagentes, telemetria REST e Graceful Shutdown em 5 fases. | `axum`, `tower-http`, `tokio` |
+| [`souls_server`](file:///Z:/souls_engine/crates/souls_server) | **4** | Daemon bare-metal headless na porta `127.0.0.1:9123`. Serve catálogo MCP via HTTP/SSE, endpoints OpenAI-compatíveis para subagentes, telemetria REST, Graceful Shutdown em 5 fases e Web Dashboard SPA modularizado em 25 componentes zero-copy (ADR-012). | `axum`, `tower-http`, `tokio` |
 
 ---
 
@@ -193,7 +207,7 @@ O ecossistema opera através de uma parceria simbiótica estritamente delimitada
 
 ---
 
-## 🛠️ Catálogo MCP e Revelação Progressiva (52 Ferramentas)
+## 🛠️ Catálogo MCP e Revelação Progressiva (55 Ferramentas)
 
 Para anular o paradoxo do inchaço de contexto (*Context Bloat* — onde esquemas estáticos consomem mais de 15.000 tokens no prompt), o Souls Engine adota a **Revelação Progressiva de Ferramentas (Progressive Tool Disclosure)**:
 
@@ -262,6 +276,29 @@ As **Skills** ensinam a IA a encadear as ferramentas MCP sem desperdício de tok
 3. `souls-memory-triad`: Busca híbrida RRF (`semantic_search`), sanitiza alucinações no LadybugDB (`mem_open_nodes`) e registra fatos (`knowledge`).
 4. `souls-socratic-thinking`: Ativa o freio cognitivo `thinking` em tarefas de alta entropia.
 5. `souls-ops-finops`: Antes de refatorar, calcula o *Blast Radius* com `repo_impact` e o calor com `repo_heatmap`.
+
+---
+
+## 🖥️ Dashboard Web Headless Modular (ADR-012)
+
+O Souls Engine v7 oferece observabilidade visual e governança em tempo real através de um **Web Dashboard SPA Single-Binary** servido diretamente na porta de loopback `http://127.0.0.1:9123`.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   SOULS ENGINE DASHBOARD v0.5.0 (HEADLESS)                  │
+├───────────────┬─────────────────────────────────────────────────────────────┤
+│ 🎯 Overview   │ Telemetria NVML em tempo real, status SQLite, Uptime, Saúde │
+│ 🤖 Subagents  │ Roteamento L3, sessões ativas e histórico de delegações     │
+│ ⚡ Local Hub  │ Model Hub GGUF, downloads com range, arena de silício local │
+│ 🌐 Cloud Hub  │ Tarifas de nuvem diárias, leaderboard de 9 perfis cognitivos│
+│ ⚙️ Settings   │ 9 Submódulos: Brain, Tools, Reasoning, FinOps, Memory, etc. │
+└───────────────┴─────────────────────────────────────────────────────────────┘
+```
+
+### Arquitetura Zero-Copy em Tempo de Compilação
+- **Decomposição em 25 Componentes Atômicos:** O antigo monólito de 15.782 linhas foi substituído por arquivos semânticos modulares sob [`crates/souls_server/src/templates/`](file:///Z:/souls_engine/crates/souls_server/src/templates/) (`styles.css`, `components/`, `tabs/`, `settings/` e `scripts/`).
+- **Zero Disk I/O em Runtime:** Todos os parciais são fundidos estaticamente via macro Rust `concat!(include_str!(...))` em [`templates/mod.rs`](file:///Z:/souls_engine/crates/souls_server/src/templates/mod.rs), residindo diretamente na seção de dados `.rodata` do binário nativo.
+- **Single-Binary Headless:** O executável `souls_engine.exe` / `souls_server.exe` continua 100% independente e portável, sem necessidade de servidores Node.js, Python ou diretórios externos de assets.
 
 ---
 

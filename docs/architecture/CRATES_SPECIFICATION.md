@@ -461,10 +461,17 @@ Atuar como o daemon executável bare-metal **100% headless** (`souls_server.exe`
 #### Estrutura Canônica de Módulos (`crates/souls_server/src/`)
 
 - `main.rs`: Ponto de entrada Win32, inicialização do Tokio Runtime bare-metal e orquestração de shutdown.
-- `routes_mcp.rs`: Transporte Streamable HTTP/SSE servindo o protocolo MCP na rota `/mcp`.
-- `routes_api.rs`: Endpoints REST para o Thin Adapter Python (`/api/v1/memory/*`), telemetria (`/api/v1/telemetry`) e nuvem (`/api/v1/cloud/*`).
-- `routes_openai.rs`: Endpoint de inferência local compatível com a API da OpenAI para subagentes delegados.
+- `routes/`: Submódulos de rotas Axum (`mcp/`, `dashboard.rs`, `inventory.rs`, `models.rs`, `telemetry.rs`, `chat.rs`).
+- `templates/`: Motor de montagem zero-copy do Dashboard SPA via macro Rust `concat!(include_str!(...))` (ADR-012):
+  - `mod.rs`: Ponto de costura estática em tempo de compilação (zero I/O em runtime).
+  - `styles.css`: Estilização pura desacoplada do DOM (~3.000 linhas).
+  - `components/`: Componentes reutilizáveis (`topbar.html`, `navigation.html`, `modals.html`).
+  - `tabs/`: Visões de nível superior (`overview.html`, `subagents.html`, `local_models.html`, `cloud_arena.html`).
+  - `settings/`: 9 submódulos atômicos de governança e configuração (`subtab_brain.html` a `subtab_raw.html`).
+  - `scripts/`: Inteligência e reatividade client-side (`dashboard.js`).
+- `profiles.rs`: Gestão de perfis dinâmicos de subagentes e tríades cognitivas.
 - `shutdown.rs`: Protocolo ordenado de encerramento em 5 fases (Axum -> MPSC -> SQLite WAL -> LanceDB mmap -> CUDA reset).
+- `state.rs`: `AppState` compartilhado com contenção de concorrência RAII.
 
 #### Superfície Pública Canônica
 

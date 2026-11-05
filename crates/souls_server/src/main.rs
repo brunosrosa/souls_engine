@@ -11,6 +11,7 @@ pub mod profiles;
 mod routes;
 mod shutdown;
 mod state;
+pub mod templates;
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};

@@ -1,0 +1,268 @@
+    <section class="tab-pane" id="tab-subagents">
+
+      <!-- HERO BANNER DA ABA SUBAGENTS: TEXTO PRODUTO E HARMONIZADO -->
+      <div class="card card-highlight" style="margin-bottom: 20px;">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-amber">🤖</div>
+              Roteador de Subagentes &amp; Despacho Inteligente
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; max-width: 900px;">
+              Distribuição autônoma de tarefas entre IA Local (GPU/CPU) e Provedores Cloud via Fronteira de Pareto.<br>
+              <span style="color: #94a3b8;">Executa raciocínios pesados em segundo plano, mantendo o chat principal veloz e economizando contexto.</span>
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <span class="badge badge-champion">9 Domínios Canônicos</span>
+            <span class="badge badge-value">Zero Cache Pollution</span>
+            <button class="btn btn-purple" onclick="openSimulateDispatchModal()" style="padding: 6px 14px; font-size: 0.75rem; font-weight: 600;">
+              <span>⚡</span> Simular Despacho Pareto
+            </button>
+            <button class="btn btn-cyan" onclick="fetchSubAgentSessions(); fetchRouterMatrix();" style="padding: 6px 14px; font-size: 0.75rem;">
+              <span>🔄</span> Sincronizar Subagentes
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 STAT BOXES DE SUBAGENTES -->
+        <div class="stat-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 14px;">
+          <div class="stat-box">
+            <div class="stat-lbl">Total de Sessões Despachadas</div>
+            <div class="stat-num" id="stat-subagent-total">0</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">Banco Heurístico STRICT WAL</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-lbl">Sessões Ativas (Em Execução)</div>
+            <div class="stat-num" id="stat-subagent-active" style="color: var(--amber);">0</div>
+            <div style="font-size: 0.68rem; color: var(--amber); margin-top: 2px;">Executando no Silício / Cloud</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-lbl">Sessões Concluídas (Handoffs)</div>
+            <div class="stat-num" id="stat-subagent-completed" style="color: var(--green);">0</div>
+            <div style="font-size: 0.68rem; color: var(--green); margin-top: 2px;">Resultados Entregues com Sucesso</div>
+          </div>
+          <div class="stat-box" title="Tokens de raciocínio passo a passo confinados no L3 que não poluem a janela do chat principal">
+            <div class="stat-lbl">Contexto Preservado no Chat</div>
+            <div class="stat-num" id="stat-subagent-prefix-cache" style="color: var(--cyan); font-size: 0.98rem;">0 Diários • 0 Handoffs</div>
+            <div style="font-size: 0.68rem; color: var(--cyan); margin-top: 2px;">Preservação de Cache &gt;95%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 1: MATRIZ DE DESPACHO PREDITIVO POR DOMÍNIO -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-cyan">🎯</div>
+              Matriz de Despacho por Domínio de Tarefa
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; max-width: 850px;">
+              Regras de roteamento para os 9 domínios cognitivos do Souls Engine.<br>
+              <span style="color: #94a3b8;">Prioriza silício local a custo zero ($0.00) e desvia para a nuvem apenas sob alta complexidade.</span>
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn" onclick="fetchRouterMatrix()" style="padding: 5px 12px; font-size: 0.74rem;">
+              <span>🔄</span> Recarregar Regras
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="arena-table">
+            <thead>
+              <tr>
+                <th style="min-width: 320px; width: 28%;">Domínio Cognitivo / Tarefa</th>
+                <th style="min-width: 250px; width: 23%;">Silício Local Default ($0 • Bare-Metal)</th>
+                <th style="min-width: 220px; width: 20%;">Cloud Fallback (Alta Entropia)</th>
+                <th style="min-width: 200px;">Regra de Decisão ParetoBandit &amp; Handoff Policy</th>
+                <th class="text-center" style="width: 140px; min-width: 130px;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="subagents-router-tbody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Carregando matriz de subagentes...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CARD 2: SESSÕES DE SUBAGENTES & HISTÓRICO DE TAREFAS -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-purple">📚</div>
+              Sessões de Subagentes &amp; Histórico de Tarefas
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; max-width: 850px;">
+              Monitoramento em tempo real de tarefas despachadas para o silício local ou nuvem.<br>
+              <span style="color: #94a3b8;">Diários de execução e envelopes de resultado mantidos isolados para preservar a memória principal.</span>
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <!-- FILTROS COM ORDEM 'TODAS' -> 'ATIVAS' -> 'CONCLUÍDAS' E CORES DISTINTAS -->
+            <div class="filter-pills-group" style="background: rgba(15, 23, 42, 0.6); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); display: inline-flex; gap: 4px;">
+              <button class="filter-provider-btn active" id="btn-subfilter-all" onclick="setSubagentFilter('all')">Todas</button>
+              <button class="filter-provider-btn" id="btn-subfilter-active" onclick="setSubagentFilter('active')">⚡ Ativas</button>
+              <button class="filter-provider-btn" id="btn-subfilter-completed" onclick="setSubagentFilter('completed')">✅ Concluídas</button>
+            </div>
+            <button class="btn" onclick="cleanupOrphanSubagents()" style="padding: 5px 12px; font-size: 0.74rem; border-color: rgba(245, 158, 11, 0.35); color: var(--amber);" title="Remove sessões antigas de teste presas em SPAWNED/FAILED sem diário nem handoff">
+              <span>🧹</span> Limpar Órfãs
+            </button>
+            <button class="btn btn-cyan" onclick="fetchSubAgentSessions()" style="padding: 5px 12px; font-size: 0.74rem;">
+              <span>🔄</span> Atualizar
+            </button>
+            <span class="badge badge-champion" id="subagent-sessions-count-badge">0 Sessões</span>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="arena-table">
+            <thead>
+              <tr>
+                <th style="width: 150px;">Session ID</th>
+                <th>Subagente / Tarefa Executada</th>
+                <th style="width: 170px;">Orquestrador de Origem</th>
+                <th style="width: 120px;" class="text-center">Status</th>
+                <th style="width: 150px;">Criado em &amp; Duração</th>
+                <th style="width: 150px;" class="text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="subagent-sessions-tbody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhuma sessão de subagente registrada ainda.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CARD 3: CONECTIVIDADE AGÊNTICA & INTEGRAÇÃO MCP (INTERATIVO) -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-green">🔌</div>
+              Conectividade Agêntica &amp; Integração MCP
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; max-width: 850px;">
+              Ponto de conexão universal para Hermes Agent, Antigravity e IDEs (Cursor/VS Code).<br>
+              <span style="color: #94a3b8;">Compartilha o motor de AST, memórias profundas e aceleração de silício via protocolo MCP padrão.</span>
+            </p>
+          </div>
+          <span class="badge badge-champion">Multi-Orquestrador Ativo</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 14px;">
+          
+          <!-- BLOCO 1: HERMES AGENT SYMBIOSIS -->
+          <div class="stat-box" style="padding: 16px; text-align: left; background: rgba(15, 23, 42, 0.45); border: 1px solid var(--border-subtle); border-radius: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <strong style="color: #fff; font-size: 0.86rem; display: flex; align-items: center; gap: 6px;">
+                <span>🤖</span> Hermes Agent Symbiosis
+              </strong>
+              <span class="badge badge-value">Python 3.11</span>
+            </div>
+            <p style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
+              O Hermes consome memórias e despacha subagentes via MCP Loopback sem proxy L7 intermediário. O snapshot <code class="mono">MEMORY.md</code> é lido de forma imutável no cold boot.
+            </p>
+            <div style="font-size: 0.72rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px;">
+              <div>• Endpoint: <code class="mono" style="color: var(--cyan);">http://127.0.0.1:9123/mcp</code></div>
+              <div>• Shell Nativo: <code class="mono">MinGit (%LOCALAPPDATA%\hermes\git)</code></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 2px;">
+                <span>• Status Loopback:</span>
+                <span id="hermes-loopback-status" style="color: var(--green); font-weight: 600;">✅ 127.0.0.1:9123</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="openAgentsMdModal('hermes')">
+                📄 Ver Regras
+              </button>
+              <button class="btn btn-green" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="testLoopbackConnection()">
+                ⚡ Testar Loopback
+              </button>
+            </div>
+          </div>
+
+          <!-- BLOCO 2: IDEs & DEV AGENTS (ANTIGRAVITY / CURSOR / VS CODE) -->
+          <div class="stat-box" style="padding: 16px; text-align: left; background: rgba(15, 23, 42, 0.45); border: 1px solid var(--border-subtle); border-radius: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <strong style="color: #fff; font-size: 0.86rem; display: flex; align-items: center; gap: 6px;">
+                <span>⚡</span> IDEs &amp; Antigravity MCP
+              </strong>
+              <span class="badge badge-champion">JSON MCP Config</span>
+            </div>
+            <p style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
+              Conecte o Antigravity, VS Code, Cursor ou Windsurf diretamente ao servidor MCP nativo para reutilizar o mesmo motor de AST, Frecency e Hipocampo bare-metal.
+            </p>
+            <pre style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px; font-size: 0.68rem; color: #38bdf8; overflow-x: auto; margin-bottom: 14px; font-family: var(--font-mono);"><code>"souls_engine": {
+  "url": "http://127.0.0.1:9123/mcp",
+  "transport": "http"
+}</code></pre>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-cyan" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="copyMcpConfigSnippet()">
+                📋 Copiar JSON
+              </button>
+              <button class="btn" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="downloadMcpConfigJson()">
+                📥 Baixar .json
+              </button>
+            </div>
+          </div>
+
+          <!-- BLOCO 3: FERRAMENTAS EXPORTADAS PELO SOULS ENGINE -->
+          <div class="stat-box" style="padding: 16px; text-align: left; background: rgba(15, 23, 42, 0.45); border: 1px solid var(--border-subtle); border-radius: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <strong style="color: #fff; font-size: 0.86rem; display: flex; align-items: center; gap: 6px;">
+                <span>🛠️</span> 25+ Ferramentas MCP Nativas
+              </strong>
+              <span class="badge badge-value">RFC-007</span>
+            </div>
+            <p style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
+              Catálogo bare-metal em Rust disponível instantaneamente para qualquer subagente ou IDE cliente:
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.65rem; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                <span style="color: var(--cyan); font-weight: 600; font-size: 0.68rem; margin-right: 4px;">AST &amp; Code:</span>
+                <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">outline</span>
+                <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">symbol</span>
+                <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">delta_diff</span>
+                <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25);">edit</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                <span style="color: var(--green); font-weight: 600; font-size: 0.68rem; margin-right: 4px;">Memória L2:</span>
+                <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">semantic_search</span>
+                <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">sqlite_query</span>
+                <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.25);">knowledge</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                <span style="color: #c084fc; font-weight: 600; font-size: 0.68rem; margin-right: 4px;">Thinking &amp; Ops:</span>
+                <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">intent</span>
+                <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">route_subtask</span>
+                <span class="badge" style="background: rgba(139,92,246,0.1); color: #c084fc; border: 1px solid rgba(139,92,246,0.25);">repo_impact</span>
+                <span class="badge" style="background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.25);">metrics</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-purple" style="flex: 1.2; font-size: 0.74rem; padding: 6px; justify-content: center; font-weight: 600;" onclick="openMcpToolsModal()">
+                🛠️ Ver 25+ Tools
+              </button>
+              <button class="btn" style="flex: 1; font-size: 0.74rem; padding: 6px; justify-content: center;" onclick="testSiliconPing()">
+                ⚡ Ping Silício
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    
+
+    <!-- ========================================== -->
+    <!-- ABA 2: LOCAL SILICON ARENA (llm_local) -->
+    <!-- ========================================== -->

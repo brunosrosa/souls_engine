@@ -26,8 +26,7 @@ use tracing::{info, warn};
 use souls_llm_local_arena::resolve_vault_db_path;
 
 use crate::state::AppState;
-
-const DASHBOARD_HTML: &str = include_str!("../dashboard_ui.html");
+use crate::templates::DASHBOARD_HTML;
 
 /// Serves the Single Page Application (SPA) dashboard.
 pub async fn dashboard_html_handler() -> Html<&'static str> {

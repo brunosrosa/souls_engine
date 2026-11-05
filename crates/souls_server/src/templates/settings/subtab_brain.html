@@ -1,0 +1,133 @@
+          <div class="settings-subpane active" id="subtab-brain">
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">🎯</div>
+              Perfis Cognitivos & Tríades da Cloud Arena
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Arquitetura Aberta de Perfis Cognitivos</strong>
+                  O <strong>Master Brain</strong> atua como a âncora fixa do diálogo do Hermes. Novos <strong>Perfis de Trabalho (Subagentes)</strong> podem ser criados dinamicamente para delegar tarefas pelo ParetoBandit sem recompilar o motor.
+                  <div class="tooltip-impact">💡 Cada perfil se liga a uma categoria cognitiva da Cloud Arena e resolve a Tríade de Pareto em tempo real.</div>
+                  <div class="tooltip-def">Universal: orchestrator (Master Brain)</div>
+                </span>
+              </span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-purple" onclick="openNewProfileModal()">
+                <span>➕</span> Novo Perfil de Trabalho
+              </button>
+              <button class="btn btn-cyan" onclick="syncCloudArena()">
+                <span>🔄</span> Sincronizar Tarifas da Nuvem
+              </button>
+            </div>
+          </div>
+
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px;">
+            Selecione o perfil desejado para inspecionar e configurar sua <strong>Tríade de Modelos</strong> (Líder de Qualidade, Best Value ROI e Custo Ultrabaixo). Perfis de subagentes direcionam sub-tarefas pelo <code>delegate_task</code>:
+          </p>
+
+          <!-- SELETOR DINÂMICO DE PERFIS (GERADO VIA JS) -->
+          <div class="presets-grid" id="profiles-cards-grid" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <!-- Renderizado dinamicamente por fetchProfiles() -->
+          </div>
+
+          <!-- CONTAINER DA TRÍADE DE NUVEM DO PERFIL ATIVO -->
+          <div id="triad-container" style="margin-top: 14px;">
+            <div class="active-profile-summary-bar">
+              <div class="summary-left">
+                <span class="summary-kicker">Perfil Inspecionado:</span>
+                <span id="active-profile-title" class="summary-title-text">Balanced Daily</span>
+                <span id="active-profile-badge" class="role-badge master">Master Brain</span>
+                <span id="active-category-badge" class="category-tag">agentic</span>
+              </div>
+              <div class="summary-right">
+                <span class="summary-kicker">Modelo Definido:</span>
+                <span id="active-profile-model-code" class="active-profile-model-chip">deepseek/deepseek-chat</span>
+                <span id="active-model-indicator" class="active-hermes-pill">Ativo no Hermes</span>
+              </div>
+            </div>
+
+            <div class="triad-grid" id="governance-triad-cards-grid">
+              <!-- Renderizado dinamicamente via JavaScript -->
+              <div class="triad-card leader">
+                <div>
+                  <span class="triad-badge gold">👑 Quality Leader</span>
+                  <div class="triad-model-name" id="triad-leader-name">Carregando...</div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">Topo absoluto técnico em benchmarks.</div>
+                </div>
+                <div>
+                  <div class="triad-meta">
+                    <span>Benchmark: <strong id="triad-leader-score">--</strong></span>
+                    <span>Custo: <strong id="triad-leader-cost">--</strong></span>
+                  </div>
+                  <button class="btn btn-cyan" style="width: 100%; margin-top: 10px; justify-content: center;" onclick="applyTriadModel('leader')">
+                    Ativar no Hermes
+                  </button>
+                </div>
+              </div>
+
+              <div class="triad-card best-value">
+                <div>
+                  <span class="triad-badge cyan">💎 Best Value ROI ★ Recomendado</span>
+                  <div class="triad-model-name" id="triad-best-name">Carregando...</div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">96% da inteligência prática por uma fração do preço.</div>
+                </div>
+                <div>
+                  <div class="triad-meta">
+                    <span>Benchmark: <strong id="triad-best-score">--</strong></span>
+                    <span>Custo: <strong id="triad-best-cost" style="color: var(--green);">--</strong></span>
+                  </div>
+                  <button class="btn btn-cyan" style="width: 100%; margin-top: 10px; justify-content: center; background: rgba(6, 182, 212, 0.25); border-color: var(--cyan);" onclick="applyTriadModel('best')">
+                    Ativar no Hermes (Recomendado)
+                  </button>
+                </div>
+              </div>
+
+              <div class="triad-card low-cost">
+                <div>
+                  <span class="triad-badge green">⚡ Ultra Low Cost</span>
+                  <div class="triad-model-name" id="triad-low-name">Carregando...</div>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">Velocidade extrema e centavos de custo.</div>
+                </div>
+                <div>
+                  <div class="triad-meta">
+                    <span>Benchmark: <strong id="triad-low-score">--</strong></span>
+                    <span>Custo: <strong id="triad-low-cost">--</strong></span>
+                  </div>
+                  <button class="btn btn-green" style="width: 100%; margin-top: 10px; justify-content: center;" onclick="applyTriadModel('low')">
+                    Ativar no Hermes
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- OVERRIDE MANUAL CUSTOMIZADO -->
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-top: 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); min-width: 130px;">
+                Override Manual:
+                <span class="info-icon">i
+                  <span class="tooltip-box">
+                    <strong>Modelo Customizado Explícito</strong>
+                    Digite qualquer identificador de modelo válido suportado pelo Nous Portal ou OpenRouter (ex: openai/gpt-4o ou qwen/qwen-2.5-72b-instruct).
+                    <div class="tooltip-impact">💡 Atualiza a chave model.default diretamente no config.yaml.</div>
+                  </span>
+                </span>
+              </span>
+              <input type="text" id="input-model-override" class="setting-input" style="flex: 1; min-width: 240px;" placeholder="Ex: deepseek/deepseek-chat ou anthropic/claude-3-7-sonnet">
+              <select id="select-provider-override" class="setting-input" style="width: 120px;">
+                <option value="nous">nous</option>
+                <option value="custom">custom</option>
+                <option value="openrouter">openrouter</option>
+              </select>
+              <button class="btn" onclick="applyCustomModelOverride()">
+                <span>🎯</span> Aplicar Modelo Manual
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA: CATÁLOGO DE FERRAMENTAS & PERMISSÕES MCP (55 TOOLS) -->
+      <!-- ==================================================== -->

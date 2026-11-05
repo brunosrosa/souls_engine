@@ -1,0 +1,508 @@
+      <div class="settings-subpane" id="subtab-finops">
+        <!-- HEADER DA SUB-ABA -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 1.22rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; margin: 0;">
+              <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); align-items: center; justify-content: center; font-size: 1.1rem;">⚡</span>
+              Aceleração Local & Governança de Silício
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>FinOps de Silício & Hardware Watchdog</strong>
+                  Orquestração bare-metal da GPU física (RTX 2060m) e CPU Host (AVX2). Garante que tarefas locais custem $0.00 com proteção contra sobrecarga de VRAM no WDDM e superaquecimento da placa.
+                  <div class="tooltip-impact">⚠️ Prevenção de Spillover: ultrapassar 5.294 MB transfere alocações para PCIe, derrubando a geração de 45 para 1.5 TPS.</div>
+                  <div class="tooltip-def">dGPU: NVIDIA RTX 2060m (6.144 MB) | Host: Intel i9 AVX2 (0 MB VRAM)</div>
+                </span>
+              </span>
+            </h2>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin: 4px 0 0 0;">
+              Controle bare-metal de VRAM física, barreira termodinâmica NVML em tempo real, mitigação de WDDM e FinOps Zero-Cost ($0.00).
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn" onclick="resetHardwareDefaults()" style="padding: 6px 12px; font-size: 0.74rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); color: var(--text-muted);">
+              <span>⚡</span> Defaults de Silício
+            </button>
+            <button class="btn btn-green" onclick="saveSettings()" style="padding: 6px 14px; font-size: 0.74rem;">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI METRIC STRIP -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 16px;">
+          <div class="card" style="padding: 14px 16px; margin-bottom: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--amber); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
+              <span>⚡</span> VRAM Útil (WDDM)
+            </div>
+            <div id="hw-metric-vram" class="mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+              2.43 / 5.17 GB
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              Teto WDDM: 5.294 MB (850 MB SO)
+            </div>
+          </div>
+
+          <div class="card" style="padding: 14px 16px; margin-bottom: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--red); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
+              <span>🌡️</span> Temperatura NVML
+            </div>
+            <div id="hw-metric-temp" class="mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+              65.0 °C
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              Zona Nominal (Φ 72°C / 78°C)
+            </div>
+          </div>
+
+          <div class="card" style="padding: 14px 16px; margin-bottom: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--cyan); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
+              <span>💻</span> CPU Host (AVX2)
+            </div>
+            <div id="hw-metric-cpu" class="mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+              Intel Core i9
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              16 Threads • Tier 0/0.5 (0 MB VRAM)
+            </div>
+          </div>
+
+          <div class="card" style="padding: 14px 16px; margin-bottom: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--green); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
+              <span>💰</span> FinOps Zero-Cost
+            </div>
+            <div id="hw-metric-finops" class="mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+              $0.00 / 1M
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              100% Gratuito no Silício Local
+            </div>
+          </div>
+        </div>
+
+        <!-- BANNER DE GOVERNANÇA BARE-METAL & PROTEÇÃO WDDM -->
+        <div style="background: rgba(245, 158, 11, 0.04); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 12px; font-size: 0.77rem; color: #cbd5e1; line-height: 1.45; flex: 1; min-width: 280px;">
+            <span style="font-size: 1.25rem;">💡</span>
+            <span>
+              <strong style="color: var(--amber);">Governança de Silício & Proteção WDDM:</strong> O Windows 11 reserva compulsoriamente até 850 MB de VRAM da RTX 2060m. O Souls Engine isola um teto útil rígido de <strong>5.294 MB</strong>, impedindo o transbordamento para PCIe que destruiria a taxa de 45 TPS para 1.5 TPS. Tarefas excedentes são desviadas instantaneamente para a CPU com extensões AVX2.
+            </span>
+          </div>
+          <div style="text-align: right; flex-shrink: 0;">
+            <span id="badge-hw-watchdog-state" style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--green); background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 4px; display: inline-block;">● NVML Watchdog Ativo (500ms)</span>
+          </div>
+        </div>
+
+        <!-- GRID PRINCIPAL DE 2 COLUNAS -->
+        <div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 20px; align-items: start;">
+          <!-- COLUNA 1: POLÍTICAS E CONTROLES DE SILÍCIO -->
+          <div style="display: flex; flex-direction: column; gap: 18px;">
+            <!-- CARD 1: TETO DE VRAM & PREVENÇÃO ANTI-SPILLOVER WDDM -->
+            <div class="card card-highlight" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 10px;">
+                <div class="card-title" style="font-size: 0.88rem;">
+                  <div class="card-icon icon-amber" style="width: 24px; height: 24px; font-size: 0.9rem;">⚡</div>
+                  Teto de VRAM & Prevenção Anti-Spillover WDDM
+                </div>
+              </div>
+
+              <div class="setting-list" style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Teto Útil de VRAM (MB)
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Teto Físico de Memória de Vídeo</strong>
+                          Limite rígido para alocações locais na RTX 2060m. O WDDM do Windows 11 consome compulsoriamente até 850 MB.
+                          <div class="tooltip-def">Padrão Recomendado: 5.294 MB</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="range-val-badge" style="background: rgba(245, 158, 11, 0.12); color: var(--amber); border-color: rgba(245, 158, 11, 0.3);">
+                      <span class="val-kicker">Teto:</span>
+                      <span id="val-vram-limit">5294</span>
+                      <span>MB</span>
+                      <span class="default-indicator" style="color: var(--amber);">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-vram-limit" min="2048" max="5294" step="64" value="5294" data-default="5294" data-snap-delta="96" oninput="document.getElementById('val-vram-limit').innerText = this.value; markSettingsUnsaved();">
+                    <div class="slider-default-tick tick-amber at-default" data-slider="cfg-vram-limit" style="left: calc(8px + (100% - 16px) * 1.0);" title="Padrão canônico: 5.294 MB (Teto útil WDDM - Clique ou aproxime para restaurar)"></div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Barreira anti-spillover: se a alocação exceder este teto, a tarefa é roteada diretamente para CPU Host AVX2.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Exclusão Mútua de VRAM (Tier 1 vs Tier 2)
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Lei de Silício AGENTS.md §5</strong>
+                          Tier 1 (Coder na dGPU) e Tier 2 (MoE assíncrono) nunca coexistem na VRAM física simultaneamente.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-vram-mutual">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-vram-mutual" checked onchange="updateSwitchPill('cfg-vram-mutual', 'pill-vram-mutual'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Descarrega o modelo Tier 1 antes do MoE Tier 2, prevenindo o estouro da VRAM física.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Desvio Automático para CPU Host (AVX2)
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Transbordo Seguro Bare-Metal</strong>
+                          Se a dGPU estiver sob carga pesada ou temperatura crítica, desvia a inferência para a CPU Intel i9 com extensões vetoriais AVX2 (0 MB VRAM).
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-cpu-fallback">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-cpu-fallback" checked onchange="updateSwitchPill('cfg-cpu-fallback', 'pill-cpu-fallback'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Garante continuidade de serviço com custo zero sem depender de provedores de nuvem.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Descarregamento por Inatividade
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Liberação de VRAM em Standby</strong>
+                          Tempo sem requisições antes de desalocar pesos da GPU física.
+                        </span>
+                      </span>
+                    </div>
+                    <select id="cfg-idle-unload" class="setting-input" style="width: 260px;" onchange="markSettingsUnsaved()">
+                      <option value="immediate">Imediato (Zero VRAM ociosa)</option>
+                      <option value="5">5 minutos (Recomendado chat)</option>
+                      <option value="15" selected>15 minutos (Padrão Souls)</option>
+                      <option value="never">Manter sempre em VRAM</option>
+                    </select>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Preserva a VRAM liberada para aplicações gráficas do sistema durante períodos ociosos.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 2: BARREIRA TÉRMICA & TELEMETRIA NVML -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 10px;">
+                <div class="card-title" style="font-size: 0.88rem;">
+                  <div class="card-icon icon-red" style="width: 24px; height: 24px; font-size: 0.9rem; background: rgba(239, 68, 68, 0.15); color: var(--red);">🌡️</div>
+                  Barreira Térmica & Telemetria NVML Bare-Metal
+                </div>
+              </div>
+
+              <div class="setting-list" style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Polling do Watchdog NVML
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Frequência de Leitura via FFI</strong>
+                          Taxa de amostragem direta dos sensores NVIDIA para monitoramento térmico e de clock.
+                        </span>
+                      </span>
+                    </div>
+                    <select id="cfg-watchdog-polling" class="setting-input" style="width: 250px;" onchange="markSettingsUnsaved()">
+                      <option value="250">250 ms (Alta Precisão)</option>
+                      <option value="500" selected>500 ms (Padrão Bare-Metal)</option>
+                      <option value="1000">1.000 ms (Econômico)</option>
+                      <option value="2000">2.000 ms (Baixa Carga)</option>
+                    </select>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Taxa de atualização dos sensores de temperatura, clock e alocação de vídeo.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Limiar Preventivo GPU (&Phi;)
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Barreira Preventiva &Phi;</strong>
+                          Temperatura em que o ParetoBandit começa a penalizar despachos para a GPU.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="range-val-badge" style="background: rgba(245, 158, 11, 0.12); color: var(--amber); border-color: rgba(245, 158, 11, 0.3);">
+                      <span class="val-kicker">Alerta:</span>
+                      <span id="val-temp-preventive">72.0</span>
+                      <span>°C</span>
+                      <span class="default-indicator" style="color: var(--amber);">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-temp-preventive" min="65.0" max="75.0" step="0.5" value="72.0" data-default="72.0" data-snap-delta="0.3" oninput="document.getElementById('val-temp-preventive').innerText = Number(this.value).toFixed(1); markSettingsUnsaved();">
+                    <div class="slider-default-tick tick-amber at-default" data-slider="cfg-temp-preventive" style="left: calc(8px + (100% - 16px) * 0.70);" title="Padrão canônico: 72.0 °C (Alerta preventivo - Clique ou aproxime para restaurar)"></div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Inicia desaceleração térmica preventiva com penalização branda no ParetoBandit.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Limiar Crítico de Throttle
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Barreira Térmica Crítica</strong>
+                          Bloqueio de emergência para a GPU física para evitar danos de hardware ou shutdown térmico do SO.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="range-val-badge" style="background: rgba(239, 68, 68, 0.12); color: var(--red); border-color: rgba(239, 68, 68, 0.3);">
+                      <span class="val-kicker">Crítico:</span>
+                      <span id="val-temp-throttle">78.0</span>
+                      <span>°C</span>
+                      <span class="default-indicator" style="color: var(--red);">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-temp-throttle" min="74.0" max="82.0" step="0.5" value="78.0" data-default="78.0" data-snap-delta="0.3" oninput="document.getElementById('val-temp-throttle').innerText = Number(this.value).toFixed(1); markSettingsUnsaved();">
+                    <div class="slider-default-tick tick-red at-default" data-slider="cfg-temp-throttle" style="left: calc(8px + (100% - 16px) * 0.50);" title="Padrão canônico: 78.0 °C (Bloqueio crítico - Clique ou aproxime para restaurar)"></div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Bloqueia novos despachos na GPU física para proteção imediata do silício.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Ação em Caso de Throttle Crítico
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Política de Resgate Térmico</strong>
+                          Define o comportamento imediato quando a temperatura atinge o limiar crítico.
+                        </span>
+                      </span>
+                    </div>
+                    <select id="cfg-throttle-action" class="setting-input" style="width: 280px;" onchange="markSettingsUnsaved()">
+                      <option value="cpu_fallback" selected>Desviar para CPU AVX2 (Recomendado)</option>
+                      <option value="pause_queue">Pausar Fila até Resfriar</option>
+                      <option value="cloud_emergency">Roteamento Cloud de Emergência</option>
+                    </select>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Medida de proteção termodinâmica aplicada de forma autônoma pelo daemon.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUNA 2: TELEMETRIA AO VIVO & SIMULADOR DE SILÍCIO -->
+          <div style="display: flex; flex-direction: column; gap: 18px;">
+            <!-- CARD 3: TELEMETRIA BARE-METAL AO VIVO -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 10px; align-items: flex-start; gap: 12px;">
+                <div class="card-title" style="font-size: 0.88rem; flex: 1; min-width: 0;">
+                  <div class="card-icon icon-cyan" style="width: 24px; height: 24px; font-size: 0.9rem; flex-shrink: 0;">📊</div>
+                  <span>Telemetria Bare-Metal ao Vivo</span>
+                </div>
+                <div style="text-align: right; flex-shrink: 0;">
+                  <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--cyan); background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); padding: 3px 8px; border-radius: 4px; display: inline-block; text-align: right; line-height: 1.35;">NVIDIA NVML<br>FFI v550+</span>
+                </div>
+              </div>
+
+              <!-- GAUGE VRAM AO VIVO -->
+              <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.74rem; font-weight: 600; color: #e2e8f0;">Alocação de Memória de Vídeo</span>
+                  <span id="hw-live-vram-text" class="mono" style="font-size: 0.74rem; color: var(--cyan); font-weight: 700;">2.43 GB / 5.17 GB (46%)</span>
+                </div>
+                <div style="position: relative; width: 100%; height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+                  <div id="hw-live-vram-fill" style="height: 100%; width: 46%; background: linear-gradient(90deg, var(--cyan), var(--amber)); border-radius: 4px; transition: width 0.4s ease;"></div>
+                  <div style="position: absolute; left: 86.2%; top: 0; bottom: 0; width: 2px; background: rgba(239, 68, 68, 0.8);" title="Teto Útil WDDM (5.294 MB)"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.67rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  <span>Usado: <strong id="hw-live-vram-used" style="color: #fff;">2.430 MB</strong></span>
+                  <span>Livre: <strong id="hw-live-vram-free" style="color: var(--green);">3.631 MB</strong></span>
+                  <span>Teto Seguro: <strong style="color: var(--amber);">5.294 MB</strong></span>
+                </div>
+              </div>
+
+              <!-- COMPOSIÇÃO DE CONSUMO DA VRAM (PROCESSOS & WDDM) -->
+              <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <span style="font-size: 0.74rem; font-weight: 600; color: #e2e8f0; display: flex; align-items: center; gap: 6px;">
+                    <span>🔍</span> Composição da VRAM em Uso
+                    <span class="info-icon">i
+                      <span class="tooltip-box">
+                        <strong>Discriminação de Memória de Vídeo (WDDM)</strong>
+                        Identifica o consumo real por categoria no Windows 11. O sistema operacional (DWM) e aplicações com aceleração gráfica (IDEs/browsers) utilizam a VRAM de base; o Souls Engine consome VRAM apenas ao alocar modelos Tier 1 locais na RTX 2060m.
+                      </span>
+                    </span>
+                  </span>
+                  <span class="mono" style="font-size: 0.68rem; color: var(--cyan); background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.25); padding: 2px 7px; border-radius: 4px;">
+                    Ativo: <strong id="vram-breakdown-total">1.360 MB</strong>
+                  </span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.71rem;">
+                  <!-- DWM / Windows 11 -->
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                      <span style="color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                        <span>🪟</span> Windows DWM &amp; Compositor SO
+                      </span>
+                      <span id="vram-val-dwm" class="mono" style="color: #fff; font-weight: 600;">~775 MB</span>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
+                      <div id="vram-bar-dwm" style="width: 57%; height: 100%; background: linear-gradient(90deg, var(--cyan), #38bdf8); border-radius: 3px; transition: width 0.3s ease;"></div>
+                    </div>
+                  </div>
+
+                  <!-- IDE & Navegadores -->
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                      <span style="color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                        <span>🖥️</span> Antigravity IDE &amp; Navegadores (GPU)
+                      </span>
+                      <span id="vram-val-ide" class="mono" style="color: #fff; font-weight: 600;">~422 MB</span>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
+                      <div id="vram-bar-ide" style="width: 31%; height: 100%; background: #a855f7; border-radius: 3px; transition: width 0.3s ease;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Souls Engine Modelos Locais -->
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                      <span style="color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                        <span>🧠</span> Souls Engine (Modelos Locais)
+                      </span>
+                      <span id="vram-val-souls" class="mono" style="color: var(--green); font-weight: 600;">0 MB (Standby CPU)</span>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
+                      <div id="vram-bar-souls" style="width: 0%; height: 100%; background: var(--green); border-radius: 3px; transition: width 0.3s ease;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Drivers & DirectX Buffers -->
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                      <span style="color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+                        <span>⚙️</span> Drivers NVIDIA &amp; DirectX Buffers
+                      </span>
+                      <span id="vram-val-drivers" class="mono" style="color: #94a3b8; font-weight: 600;">~163 MB</span>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
+                      <div id="vram-bar-drivers" style="width: 12%; height: 100%; background: #64748b; border-radius: 3px; transition: width 0.3s ease;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- GAUGE TÉRMICO & POTÊNCIA AO VIVO -->
+              <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.74rem; font-weight: 600; color: #e2e8f0;">Dissipação Térmica & Consumo</span>
+                  <span id="hw-live-status-pill" style="font-size: 0.65rem; font-family: var(--font-mono); color: var(--green); background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 3px;">● Zona Nominal</span>
+                </div>
+                <div style="position: relative; width: 100%; height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+                  <div id="hw-live-temp-fill" style="height: 100%; width: 65%; background: linear-gradient(90deg, var(--green), var(--amber)); border-radius: 4px; transition: width 0.4s ease;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.67rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  <span>Temp: <strong id="hw-live-temp" style="color: #fff;">65.0 °C</strong></span>
+                  <span>Potência: <strong id="hw-live-power" style="color: #cbd5e1;">10.6 W</strong></span>
+                  <span>Ventoinha: <strong id="hw-live-fan" style="color: #cbd5e1;">2.600 RPM</strong></span>
+                </div>
+              </div>
+
+              <!-- HOST CPU AVX2 INFO BOX -->
+              <div style="background: rgba(6, 182, 212, 0.03); border: 1px solid rgba(6, 182, 212, 0.18); border-radius: var(--radius-md); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1rem;">💻</span>
+                  <div>
+                    <div style="font-weight: 600; color: #e2e8f0;">Intel Core i9-9980HK (16 threads)</div>
+                    <div style="font-size: 0.66rem; color: var(--text-muted); font-family: var(--font-mono);">AVX2 / FMA3 Bare-Metal • Latência RAM: &lt; 0.05 ms</div>
+                  </div>
+                </div>
+                <span style="font-size: 0.66rem; font-family: var(--font-mono); color: var(--green); background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); padding: 2px 6px; border-radius: 3px;">0 MB VRAM</span>
+              </div>
+            </div>
+
+            <!-- CARD 4: SIMULADOR DE CARGA & TESTE DE BARREIRA NVML -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 10px; align-items: flex-start; gap: 12px;">
+                <div class="card-title" style="font-size: 0.88rem; flex: 1; min-width: 0;">
+                  <div class="card-icon icon-purple" style="width: 24px; height: 24px; font-size: 0.9rem; flex-shrink: 0;">🧪</div>
+                  <span>Simulador de Carga & Barreira NVML</span>
+                </div>
+                <div style="text-align: right; flex-shrink: 0;">
+                  <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--purple); background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); padding: 3px 8px; border-radius: 4px; display: inline-block; text-align: right; line-height: 1.35;">Previsão Real<br>Anti-Spillover</span>
+                </div>
+              </div>
+
+              <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 12px;">
+                Simule alocações de modelos contra o Watchdog da RTX 2060m para testar os limites de VRAM e as salvaguardas de spillover PCIe.
+              </div>
+
+              <!-- PRESETS RÁPIDOS -->
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+                <button class="sim-preset-btn" onclick="setHardwarePreset(0, 'SmolLM2-135M (CPU Host)')">
+                  <span>⚡</span> Tier 0.5 (CPU 0 MB)
+                </button>
+                <button class="sim-preset-btn" onclick="setHardwarePreset(2450, 'Qwen3.5-Coder-3B (dGPU)')">
+                  <span>🎮</span> Tier 1 (2.450 MB)
+                </button>
+                <button class="sim-preset-btn" onclick="setHardwarePreset(4900, 'MoE Assíncrono (Alerta Spillover)')">
+                  <span>⚠️</span> Risco Spillover (4.900 MB)
+                </button>
+              </div>
+
+              <!-- INPUT DE VRAM REQUERIDA -->
+              <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.74rem; font-weight: 600; color: #cbd5e1;">VRAM Requerida pelo Modelo (MB):</span>
+                  <span id="sim-hw-vram-label" class="mono" style="font-size: 0.74rem; color: var(--cyan); font-weight: 700;">2.450 MB <span class="default-indicator" style="font-size: 0.65rem; color: var(--cyan); font-weight: 600;">(Padrão)</span></span>
+                </div>
+                <div class="range-wrap">
+                  <input type="range" id="sim-hw-vram-input" min="0" max="6144" step="50" value="2450" data-default="2450" data-snap-delta="75" oninput="document.getElementById('sim-hw-vram-label').innerHTML = this.value + ' MB' + (Number(this.value) === 2450 ? ' <span class=\'default-indicator\' style=\'display:inline;font-size:0.65rem;color:var(--cyan);font-weight:600;\'> (Padrão)</span>' : '');">
+                  <div class="slider-default-tick at-default" data-slider="sim-hw-vram-input" style="left: calc(8px + (100% - 16px) * 0.3988);" title="Padrão simulado: 2.450 MB (Qwen3.5-Coder-3B - Clique ou aproxime para restaurar)"></div>
+                </div>
+              </div>
+
+              <!-- BOTÃO DE AÇÃO -->
+              <button class="btn btn-purple" onclick="runHardwareSimulation()" style="width: 100%; justify-content: center; padding: 9px; font-size: 0.80rem; margin-bottom: 12px;">
+                <span>⚡</span> Simular Decisão de Silício & Testar Barreira
+              </button>
+
+              <!-- RESULTADO DA SIMULAÇÃO -->
+              <div id="sim-hw-result" style="background: rgba(10, 16, 28, 0.95); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; font-size: 0.74rem; line-height: 1.5;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <strong style="color: var(--green); display: flex; align-items: center; gap: 6px;">
+                    <span>✅</span> Aprovado na dGPU (Zero-Spillover)
+                  </strong>
+                  <span class="mono" style="font-size: 0.68rem; color: var(--cyan); background: rgba(6,182,212,0.1); padding: 2px 6px; border-radius: 3px;">~45 tokens/s</span>
+                </div>
+                <div style="color: #cbd5e1; font-size: 0.72rem; margin-bottom: 6px;">
+                  Alocação simulada de <strong>2.450 MB</strong> somada ao WDDM atinge <strong>3.981 MB / 5.294 MB</strong> (75% do teto seguro).
+                </div>
+                <div style="display: flex; gap: 12px; font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px;">
+                  <span>Decisão: <strong style="color: #fff;">Manter na RTX 2060m</strong></span>
+                  <span>FinOps: <strong style="color: var(--green);">$0.00 / 1M</strong></span>
+                  <span>Margem Livre: <strong style="color: var(--cyan);">1.313 MB</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 5: PARETOBANDIT & ROTEADOR INTELIGENTE -->
+      <!-- ==================================================== -->

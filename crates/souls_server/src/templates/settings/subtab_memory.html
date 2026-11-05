@@ -1,0 +1,380 @@
+      <div class="settings-subpane" id="subtab-memory">
+        <!-- HEADER DO SUBSISTEMA -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.25rem;">💾</span>
+              <h2 style="font-size: 1.05rem; font-weight: 700; color: #fff; margin: 0;">Hipocampo L2/L3 & Grafo Ontológico LadybugDB</h2>
+              <span class="info-icon" style="z-index: 100;">i
+                <span class="tooltip-box">
+                  <strong>Tríade de Memória Bare-Metal L2/L3</strong>
+                  O hipocampo persistente do Souls Engine opera sem consumir VRAM (0 MB na dGPU), fundindo busca lexical BM25 (SQLite FTS5) com busca vetorial densa LanceDB via Reciprocal Rank Fusion (RRF).
+                  <div class="tooltip-def">Partição: Z:\souls_engine\.souls_data\</div>
+                </span>
+              </span>
+            </div>
+            <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.45; text-wrap: balance;">
+              Busca híbrida RRF a 0 MB de VRAM, metabolismo de esquecimento Langevin, snapshot imutável e grafo de conhecimento relacional.
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button class="btn" onclick="resetMemoryDefaults()" style="padding: 6px 12px; font-size: 0.74rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); color: var(--text-muted);">
+              <span>⚡</span> Defaults do Hipocampo
+            </button>
+            <button class="btn btn-green" onclick="saveSettings()" style="padding: 6px 14px; font-size: 0.76rem;">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 CARDS DE TELEMETRIA BARE-METAL DO HIPOCAMPO (CENTRALIZADOS) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 14px;">
+          <!-- CARD 1: COFRE EPISTÊMICO -->
+          <div class="card" style="margin-bottom: 0; padding: 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--green); margin-bottom: 4px;">
+              🛡️ COFRE EPISTÊMICO L2
+            </div>
+            <div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap;">
+              <span id="metric-memory-stable">15 STABLE</span> • <span id="metric-memory-evolving" style="color: var(--cyan);">4 EVOLVING</span>
+            </div>
+            <div id="metric-memory-total-fatos" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              19 Fatos no FrankenSQLite
+            </div>
+          </div>
+
+          <!-- CARD 2: GRAFO LADYBUGDB -->
+          <div class="card" style="margin-bottom: 0; padding: 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--purple); margin-bottom: 4px;">
+              🕸️ GRAFO LADYBUGDB
+            </div>
+            <div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap;">
+              <span id="metric-ladybug-nodes">4 Nós</span> • <span id="metric-ladybug-edges" style="color: var(--purple);">3 Arestas</span>
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              Ontologia Semântica Ativa
+            </div>
+          </div>
+
+          <!-- CARD 3: ALGORITMO RRF -->
+          <div class="card" style="margin-bottom: 0; padding: 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cyan); margin-bottom: 4px;">
+              ⚡ FUSÃO RRF HÍBRIDA
+            </div>
+            <div id="metric-memory-rrf" class="mono" style="font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap;">
+              RRF (k = 60)
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              FTS5 BM25 + LanceDB (0 MB VRAM)
+            </div>
+          </div>
+
+          <!-- CARD 4: SOBERANIA BARE-METAL -->
+          <div class="card" style="margin-bottom: 0; padding: 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--amber); margin-bottom: 4px;">
+              💽 SOBERANIA BARE-METAL
+            </div>
+            <div class="mono" style="font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap;">
+              Dev Drive ReFS
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              Z:\souls_engine\.souls_data\
+            </div>
+          </div>
+        </div>
+
+        <!-- BANNER DE EXPLICABILIDADE & BARREIRA ONTOLÓGICA -->
+        <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="font-size: 0.74rem; line-height: 1.5; color: #e2e8f0; flex: 1; min-width: 280px; text-wrap: balance;">
+            <strong style="color: var(--green);">💡 Governança de Memória & Barreira Ontológica:</strong> O Souls Engine não confia em contexto efêmero. A Tríade L2/L3 protege fatos ratificados com imunidade ontológica permanente na partição <strong>STABLE</strong>, enquanto hipóteses em evolução na partição <strong>EVOLVING</strong> sofrem decaimento probabilístico de Langevin. Toda a fusão RRF opera estritamente a <strong>0 MB de VRAM</strong> na CPU Host.
+          </div>
+          <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--green); background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 4px; white-space: nowrap; align-self: center;">
+            • Barreira Ontológica Ativa (-32005)
+          </span>
+        </div>
+
+        <!-- GRID PRINCIPAL DE 2 COLUNAS -->
+        <div style="display: grid; grid-template-columns: 1fr 1.15fr; gap: 16px; align-items: start;">
+          <!-- COLUNA 1: POLÍTICAS DE MEMÓRIA & SNAPSHOT HERMES -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- CARD 1: RETENÇÃO & METABOLISMO DE LANGEVIN -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 8px;">
+                <div class="card-title" style="font-size: 0.86rem;">
+                  <div class="card-icon icon-green" style="width: 24px; height: 24px; font-size: 0.88rem;">🧬</div>
+                  Metabolismo Epistêmico & Fusão Híbrida
+                  <span class="info-icon" style="z-index: 95;">i
+                    <span class="tooltip-box">
+                      <strong>Equilíbrio de Esquecimento vs Retenção</strong>
+                      Governa o tempo de vida de memórias dinâmicas na partição EVOLVING e o amortecimento da busca vetorial densa.
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="setting-list" style="display: flex; flex-direction: column; gap: 11px;">
+                <!-- ITEM 1: LANGEVIN DECAY -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Langevin Epistemic Decay
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Metabolismo de Esquecimento</strong>
+                          Aplica decaimento probabilístico a hipóteses dinâmicas não consolidadas. Fatos na partição STABLE possuem imunidade total contra esquecimento.
+                          <div class="tooltip-def">Padrão: Ativo (true)</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-memory-langevin">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-memory-langevin" checked onchange="updateSwitchPill('cfg-memory-langevin', 'pill-memory-langevin'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Atenua progressivamente a pontuação de fatos obsoletos não corroborados na busca RRF.</div>
+                </div>
+
+                <!-- ITEM 2: MEIA-VIDA (HALF-LIFE) SLIDER -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      <span>Meia-Vida do Conhecimento</span>
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Meia-Vida do Conhecimento (Half-Life t½)</strong>
+                          Dias para que uma memória transitória perca 50% de seu peso inicial na busca caso não seja reutilizada pelo agente.
+                          <div class="tooltip-def">Padrão canônico: 30 dias</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="range-val-badge">
+                      <span class="val-kicker">Retenção:</span>
+                      <span id="val-memory-half-life" style="white-space: nowrap;">30 dias</span>
+                      <span class="default-indicator">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-memory-half-life" min="7" max="180" step="1" value="30" data-default="30" data-snap-delta="4" oninput="document.getElementById('val-memory-half-life').innerText = this.value + ' dias'; markSettingsUnsaved();">
+                    <div class="slider-default-tick at-default" data-slider="cfg-memory-half-life" style="left: calc(8px + (100% - 16px) * 0.1329);" title="Padrão canônico: 30 dias (Clique ou aproxime para restaurar)"></div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Taxa de amortecimento temporal aplicada exclusivamente a hipóteses da partição EVOLVING.</div>
+                </div>
+
+                <!-- ITEM 3: CONSTANTE RRF (K) SLIDER -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      <span>Constante k da Fusão RRF</span>
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Constante de Suavização RRF (k)</strong>
+                          Parâmetro de suavização de ranks na fusão BM25 (FTS5) + LanceDB (cosseno denso). Valores baixos dão mais peso ao top-1; valores altos equilibram o recall.
+                          <div class="tooltip-def">Padrão canônico: 60</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="range-val-badge">
+                      <span class="val-kicker">Constante:</span>
+                      <span id="val-memory-rrf-k" style="white-space: nowrap;">k = 60</span>
+                      <span class="default-indicator">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-memory-rrf-k" min="10" max="120" step="5" value="60" data-default="60" data-snap-delta="3" oninput="document.getElementById('val-memory-rrf-k').innerText = 'k = ' + this.value; document.getElementById('metric-memory-rrf').innerText = 'RRF (k = ' + this.value + ')'; markSettingsUnsaved();">
+                    <div class="slider-default-tick at-default" data-slider="cfg-memory-rrf-k" style="left: calc(8px + (100% - 16px) * 0.4545);" title="Padrão canônico: 60 (Clique ou aproxime para restaurar)"></div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Fator de amortecimento da fórmula de fusão recíproca RRF: 1 / (k + rank) entre busca vetorial e textual.</div>
+                </div>
+
+                <!-- ITEM 4: MODO DE RECALL ADAPTATIVO -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Modo de Recall no Diálogo Mestre
+                    </div>
+                    <select id="cfg-memory-recall-mode" class="setting-input" style="min-width: 235px; width: auto;" onchange="markSettingsUnsaved()">
+                      <option value="adaptive" selected>Adaptativo (Terceira Via)</option>
+                      <option value="lean">Lean (Enxuto - Top 4)</option>
+                      <option value="expanded">Expanded (Top 8 + Grafo)</option>
+                    </select>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">A Terceira Via comuta automaticamente entre respostas enxutas para tarefas rápidas e contexto expandido para arquitetura.</div>
+                </div>
+
+                <!-- ITEM 5: PII REDACTOR -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Higienização Local de PII (Redactor)
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Privacy Shield Bare-Metal</strong>
+                          Mascara CPFs, e-mails, tokens e segredos antes de qualquer injeção de bloco de memória para modelos em nuvem.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-memory-pii">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-memory-pii-redactor" checked onchange="updateSwitchPill('cfg-memory-pii-redactor', 'pill-memory-pii'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">Desidentifica dados sensíveis na RAM antes de qualquer envio de blocos de recall ao Hermes.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 2: SNAPSHOT FROZEN HERMES & MANUTENÇÃO WAL -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 8px; justify-content: space-between;">
+                <div class="card-title" style="font-size: 0.86rem;">
+                  <div class="card-icon icon-cyan" style="width: 24px; height: 24px; font-size: 0.88rem;">❄️</div>
+                  Frozen Snapshot Hermes & Soberania SQLite
+                </div>
+                <button class="btn btn-cyan" onclick="flushWalCheckpoint()" style="padding: 4px 10px; font-size: 0.72rem;">
+                  <span>🧹</span> Compactar WAL Agora
+                </button>
+              </div>
+
+              <!-- STATUS DO SNAPSHOT FROZEN -->
+              <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.72rem; line-height: 1.5;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <strong style="color: #fff; display: flex; align-items: center; gap: 6px;">
+                    <span>🛡️</span> Snapshot Ativo: <span class="mono" style="color: var(--cyan);" id="snapshot-id-display">snap_46a06484eb4a76e5</span>
+                  </strong>
+                  <span class="mono" style="font-size: 0.65rem; color: var(--green); background: rgba(16, 185, 129, 0.12); padding: 2px 6px; border-radius: 3px;">✓ Protegido</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; font-size: 0.68rem; font-family: var(--font-mono);">
+                  <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="color: var(--text-muted); font-size: 0.62rem;">SOUL.md</div>
+                    <div style="color: var(--green); font-weight: 700;">4.8 KB • 100% Fiel</div>
+                  </div>
+                  <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="color: var(--text-muted); font-size: 0.62rem;">MEMORY.md</div>
+                    <div style="color: var(--cyan); font-weight: 700;">Mirror STABLE</div>
+                  </div>
+                  <div style="background: rgba(255,255,255,0.03); padding: 6px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="color: var(--text-muted); font-size: 0.62rem;">USER.md</div>
+                    <div style="color: var(--purple); font-weight: 700;">Preferências 2e</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; text-wrap: balance;">
+                O Souls Engine nunca altera diretamente os arquivos Markdown mestre do Hermes. As atualizações transitam via espelhamento transacional bidirecional em <code style="color: var(--cyan);">STABLE</code> com verificação de integridade SHA-256.
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUNA 2: SIMULADOR DE BUSCA HÍBRIDA RRF & GRAFO LADYBUGDB -->
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-header" style="padding-bottom: 8px; align-items: flex-start; gap: 10px;">
+              <div class="card-title" style="font-size: 0.86rem; flex: 1; min-width: 0;">
+                <div class="card-icon icon-green" style="width: 24px; height: 24px; font-size: 0.88rem; flex-shrink: 0;">🧪</div>
+                <span>Simulador de Recall Híbrido RRF & Grafo LadybugDB</span>
+              </div>
+              <div style="text-align: right; flex-shrink: 0;">
+                <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--green); background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 3px 8px; border-radius: 4px; display: inline-block; text-align: right; line-height: 1.35;">0 MB VRAM<br>LanceDB + FTS5</span>
+              </div>
+            </div>
+
+            <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.42; margin-bottom: 10px; text-wrap: balance;">
+              Execute consultas reais contra o hipocampo bare-metal do Souls Engine para inspecionar a pontuação RRF, o modo adaptativo e as conexões do grafo LadybugDB.
+            </div>
+
+            <!-- PRESETS RÁPIDOS DE SIMULAÇÃO -->
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+              <button class="sim-preset-btn" onclick="setMemorySimScenario('Qual a regra de cirurgia sintatica e AST?', 'adaptive')">
+                <span>📜</span> Cirurgia de AST
+              </button>
+              <button class="sim-preset-btn" onclick="setMemorySimScenario('Quem e o Hermes Bruno e seu perfil de co-evolucao?', 'adaptive')">
+                <span>🏛️</span> Identidade Hermes
+              </button>
+              <button class="sim-preset-btn" onclick="setMemorySimScenario('Qual o diagnostico da GPU RTX sob carga mista?', 'adaptive')">
+                <span>⚡</span> Diagnóstico RTX
+              </button>
+              <button class="sim-preset-btn" onclick="setMemorySimScenario('Quais crates compoem o Souls Engine e suas relacoes?', 'expanded')">
+                <span>🕸️</span> Grafo LadybugDB
+              </button>
+            </div>
+
+            <!-- ENTRADA DO PROMPT DE BUSCA -->
+            <div style="margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <span style="font-size: 0.72rem; font-weight: 600; color: #cbd5e1;">Prompt de Consulta ao Hipocampo:</span>
+                <span style="font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">BM25 OR Tokenizer</span>
+              </div>
+              <textarea id="sim-memory-query" rows="2" class="setting-input" style="width: 100%; resize: vertical; font-size: 0.76rem; padding: 7px 10px; line-height: 1.4; border-radius: 6px;">Qual a regra de cirurgia sintatica e AST?</textarea>
+            </div>
+
+            <!-- SELETOR DE MODO & BOTÃO DE AÇÃO -->
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+              <div style="flex: 1;">
+                <select id="sim-memory-mode" class="setting-input" style="width: 100%; font-size: 0.74rem; padding: 7px;">
+                  <option value="adaptive" selected>Adaptativo (Terceira Via)</option>
+                  <option value="lean">Lean (Top 4 / 800 chars)</option>
+                  <option value="expanded">Expanded (Top 8 / 2400 chars)</option>
+                </select>
+              </div>
+              <button class="btn btn-green" id="btn-run-memory-sim" onclick="runMemorySimulator()" style="flex: 1.3; justify-content: center; padding: 8px 12px; font-size: 0.78rem;">
+                <span>⚡</span> Executar Busca RRF
+              </button>
+            </div>
+
+            <!-- PAINEL DE RESULTADOS DA SIMULAÇÃO DE MEMÓRIA -->
+            <div id="sim-memory-result" style="background: rgba(10, 16, 28, 0.95); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; font-size: 0.74rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <strong style="color: var(--green); display: flex; align-items: center; gap: 5px;">
+                    <span>✓</span> <span id="sim-mem-status-badge">Recall Híbrido Concluído</span>
+                  </strong>
+                  <span class="mono" id="sim-mem-mode-used" style="font-size: 0.68rem; color: var(--cyan); background: rgba(6,182,212,0.12); padding: 2px 6px; border-radius: 3px;">modo: lean</span>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center; font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-muted);">
+                  <span id="sim-mem-match-count">1 fato recuperado</span>
+                  <span>•</span>
+                  <span id="sim-mem-pii-count" style="color: var(--green);">0 PII</span>
+                </div>
+              </div>
+
+              <!-- BLOCO XML FORMATADO PARA INJEÇÃO -->
+              <div style="margin-bottom: 10px;">
+                <div style="font-size: 0.66rem; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 4px; text-transform: uppercase;">
+                  Bloco Injetado no Contexto Hermes:
+                </div>
+                <pre id="sim-mem-formatted-block" style="background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 4px; padding: 8px 10px; font-size: 0.70rem; color: #a5f3fc; font-family: var(--font-mono); white-space: pre-wrap; word-break: break-all; margin: 0; max-height: 110px; overflow-y: auto;">Carregando simulação...</pre>
+              </div>
+
+              <!-- LISTA DE FATOS RECUPERADOS COM RRF RANKING -->
+              <div style="font-size: 0.66rem; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 4px; text-transform: uppercase;">
+                Fatos Rankeados no FrankenSQLite (RRF Score):
+              </div>
+              <div id="sim-mem-matches-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto;">
+                <!-- Dinâmico via JavaScript -->
+              </div>
+
+              <!-- GRAFO LADYBUGDB CONEXÕES VIZINHAS -->
+              <div id="sim-mem-ontology-box" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                  <span style="font-size: 0.66rem; color: var(--purple); font-family: var(--font-mono); text-transform: uppercase; font-weight: 700;">
+                    🕸️ Vizinhança no Grafo Ontológico LadybugDB:
+                  </span>
+                  <span id="sim-mem-ontology-count" class="mono" style="font-size: 0.65rem; color: var(--purple);">3 arestas ativas</span>
+                </div>
+                <div id="sim-mem-ontology-list" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  <!-- Dinâmico via JavaScript -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 6: SEGURANÇA, ISOLAMENTO & ESPAÇO DE TRABALHO -->
+      <!-- ==================================================== -->

@@ -1,0 +1,127 @@
+      <div class="settings-subpane" id="subtab-tools">
+        <div class="card" style="margin-bottom: 24px;">
+          <!-- HEADER COM AÇÕES DE GOVERNANÇA -->
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+            <div class="card-title">
+              <div class="card-icon icon-purple">🧰</div>
+              Catálogo de Ferramentas Nativas & Permissões MCP
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>55 Ferramentas Nativas Bare-Metal</strong>
+                  O Souls Engine disponibiliza 55 ferramentas nativas para o Hermes Agent operando em streamable HTTP/SSE na porta 9123. Ferramentas Level 0 são injetadas no handshake inicial; ferramentas estendidas são descobertas dinamicamente via <code>tool_search</code>.
+                  <div class="tooltip-impact">💡 Desidratação de AST, memória vetorial RRF, telemetria térmica NVML e isolamento ReFS.</div>
+                  <div class="tooltip-def">Total: 55 ferramentas em 7 namespaces</div>
+                </span>
+              </span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-sm" onclick="setSafeModeOnly()" title="Pausa temporariamente ferramentas de escrita e execução direta">
+                <span>🛡️</span> Modo Somente Leitura
+              </button>
+              <button class="btn btn-sm" onclick="enableAllTools()" title="Ativa todas as 55 ferramentas nativas">
+                <span>✓</span> Habilitar Todas
+              </button>
+              <button class="btn btn-purple btn-sm" onclick="fetchToolsCatalog(true)" title="Recarregar catálogo do daemon">
+                <span>🔄</span> Sincronizar MCP
+              </button>
+            </div>
+          </div>
+
+          <!-- CARDS DE MÉTRICAS DE GOVERNANÇA MCP -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 18px;">
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+              <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🧰</div>
+              <div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: #fff; font-family: var(--font-mono);"><span id="tools-metric-total">55</span> <span id="tools-metric-active-pct" style="font-size: 0.70rem; color: var(--green); font-weight: 500;">(55 ativas)</span></div>
+                <div style="font-size: 0.70rem; color: var(--text-muted);">Ferramentas Homologadas</div>
+              </div>
+            </div>
+
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+              <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">⚡</div>
+              <div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: #fff; font-family: var(--font-mono);"><span id="tools-metric-level0">8</span> <span style="font-size: 0.70rem; color: var(--cyan); font-weight: 500;">Boot L0</span></div>
+                <div style="font-size: 0.70rem; color: var(--text-muted);">Handshake Inicial Instantâneo</div>
+              </div>
+            </div>
+
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+              <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🔍</div>
+              <div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: #fff; font-family: var(--font-mono);"><span id="tools-metric-dynamic">47</span> <span style="font-size: 0.70rem; color: var(--text-muted); font-weight: 500;">Sob Demanda</span></div>
+                <div style="font-size: 0.70rem; color: var(--text-muted);">Descoberta via tool_search</div>
+              </div>
+            </div>
+
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+              <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🛡️</div>
+              <div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: #fff; font-family: var(--font-mono);">Z:\ ReFS</div>
+                <div style="font-size: 0.70rem; color: var(--text-muted);">Zero-Trust Loopback (127.0.0.1:9123)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BANNER DE GOVERNANÇA BARE-METAL -->
+          <div style="margin-bottom: 16px; padding: 10px 14px; background: linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+              <span style="font-size: 1.1rem; color: var(--cyan); flex-shrink: 0;">💡</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.45;">
+                <strong>Governança de Silício & Confinamento NT:</strong> O Souls Engine expõe as 55 ferramentas no loopback local <code>http://127.0.0.1:9123/mcp</code>. Ferramentas de mutação de código utilizam validação Myers Diff e confinamento estrito no Dev Drive ReFS (Z:\).
+              </span>
+            </div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 9999px; font-size: 0.70rem; font-family: var(--font-mono); color: var(--cyan); white-space: nowrap; flex-shrink: 0;">
+              <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan);"></span>
+              Protocolo MCP 2025 Ativo
+            </div>
+          </div>
+
+          <!-- BARRA DE PESQUISA & CONTADOR DINÂMICO -->
+          <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 260px; position: relative;">
+              <input type="text" id="tools-search-input" class="setting-input" placeholder="🔍 Filtrar ferramenta por nome, descrição, namespace ou parâmetro..." oninput="filterToolsCatalog(this.value)" style="width: 100%; padding-left: 12px; height: 36px; font-size: 0.78rem;">
+            </div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono); background: rgba(255, 255, 255, 0.03); padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); white-space: nowrap;">
+              Exibindo <strong id="tools-showing-count" style="color: var(--cyan);">55</strong> de 55 ferramentas
+            </div>
+          </div>
+
+          <!-- FILTRO 1: POR TIPO / PERMISSÃO -->
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+            <span style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--text-dark); letter-spacing: 0.06em; min-width: 80px;">Permissão:</span>
+            <div class="filter-pills-group" id="tools-permission-filters" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px; display: flex; flex-wrap: wrap;">
+              <button class="filter-provider-btn active" id="btn-perm-all" onclick="setToolsPermissionFilter('all', this)" style="padding: 3px 9px; font-size: 0.70rem;">Todas (55)</button>
+              <button class="filter-provider-btn" id="btn-perm-l0" onclick="setToolsPermissionFilter('l0', this)" style="padding: 3px 9px; font-size: 0.70rem;">⚡ Boot L0 (8)</button>
+              <button class="filter-provider-btn" id="btn-perm-dyn" onclick="setToolsPermissionFilter('dyn', this)" style="padding: 3px 9px; font-size: 0.70rem;">🔍 Sob Demanda (47)</button>
+              <button class="filter-provider-btn" id="btn-perm-read" onclick="setToolsPermissionFilter('read', this)" style="padding: 3px 9px; font-size: 0.70rem;">📖 Leitura Segura</button>
+              <button class="filter-provider-btn" id="btn-perm-write" onclick="setToolsPermissionFilter('write', this)" style="padding: 3px 9px; font-size: 0.70rem;">✏️ Mutações</button>
+              <button class="filter-provider-btn" id="btn-perm-exec" onclick="setToolsPermissionFilter('exec', this)" style="padding: 3px 9px; font-size: 0.70rem;">🛡️ Execução</button>
+              <button class="filter-provider-btn" id="btn-perm-disabled" onclick="setToolsPermissionFilter('disabled', this)" style="padding: 3px 9px; font-size: 0.70rem;">⏸️ Pausadas</button>
+            </div>
+          </div>
+
+          <!-- FILTRO 2: POR NAMESPACE -->
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;">
+            <span style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--text-dark); letter-spacing: 0.06em; min-width: 80px;">Namespace:</span>
+            <div class="filter-pills-group" id="tools-namespace-filters" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px; display: flex; flex-wrap: wrap;">
+              <button class="filter-provider-btn active" id="btn-ns-all" onclick="setToolsNamespaceFilter('all', this)" style="padding: 3px 9px; font-size: 0.70rem;">Todos (55)</button>
+              <button class="filter-provider-btn" id="btn-ns-code" onclick="setToolsNamespaceFilter('code', this)" style="padding: 3px 9px; font-size: 0.70rem;">🧬 code (16)</button>
+              <button class="filter-provider-btn" id="btn-ns-memory" onclick="setToolsNamespaceFilter('memory', this)" style="padding: 3px 9px; font-size: 0.70rem;">💾 memory (12)</button>
+              <button class="filter-provider-btn" id="btn-ns-sys" onclick="setToolsNamespaceFilter('sys', this)" style="padding: 3px 9px; font-size: 0.70rem;">⚡ sys (8)</button>
+              <button class="filter-provider-btn" id="btn-ns-ops" onclick="setToolsNamespaceFilter('ops', this)" style="padding: 3px 9px; font-size: 0.70rem;">🛡️ ops (6)</button>
+              <button class="filter-provider-btn" id="btn-ns-context" onclick="setToolsNamespaceFilter('context', this)" style="padding: 3px 9px; font-size: 0.70rem;">📑 context (6)</button>
+              <button class="filter-provider-btn" id="btn-ns-think" onclick="setToolsNamespaceFilter('think', this)" style="padding: 3px 9px; font-size: 0.70rem;">🧠 think (4)</button>
+              <button class="filter-provider-btn" id="btn-ns-core" onclick="setToolsNamespaceFilter('core', this)" style="padding: 3px 9px; font-size: 0.70rem;">🎯 core (3)</button>
+            </div>
+          </div>
+
+          <!-- GRID DE FERRAMENTAS (CARREGADO VIA JS) -->
+          <div id="tools-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px;">
+            <!-- Renderizado dinamicamente via fetchToolsCatalog() -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 2: REASONING & THINKING BUDGET -->
+      <!-- ==================================================== -->

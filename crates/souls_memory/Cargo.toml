@@ -13,15 +13,15 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+sqlx = { workspace = true }
 petgraph = "0.6"
-dashmap = "6.1"
+dashmap = { workspace = true }
 arc-swap = "1.7"
 lancedb = { version = "0.30.0", default-features = false }
 arrow-array = "58"
 arrow-schema = "58"
 futures-util = "0.3"
-sha2 = "0.10"
+sha2 = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = [
@@ -30,4 +30,4 @@ windows-sys = { version = "0.59", features = [
 ] }
 
 [dev-dependencies]
-tempfile = "3.10"
+tempfile = { workspace = true }

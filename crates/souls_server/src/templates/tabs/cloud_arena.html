@@ -1,0 +1,227 @@
+    <section class="tab-pane" id="tab-cloud">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-purple">🌐</div>
+              Cloud Arena — Melhores Modelos de IA em Nuvem
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+              Monitoramento diário de inteligência, tarifas ($/1M) e velocidade dos modelos líderes de mercado.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-purple" onclick="switchTab('tab-settings'); switchSettingsSubtab('subtab-brain');">
+              <span>⚙️</span> Configurar / Trocar no Hermes
+            </button>
+            <button class="btn btn-cyan" id="btn-sync-cloud-arena" onclick="syncCloudArena()">
+              <span>⚡</span> Sincronizar Tarifas na Nuvem
+            </button>
+          </div>
+        </div>
+
+        <!-- CARD DE DESTAQUE: MODELO ATIVO NO HERMES (MASTER BRAIN) -->
+        <div id="active-hermes-brain-banner" style="margin-bottom: 16px; background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+              🎯
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="badge badge-active-hermes">
+                  🟢 Cérebro Mestre Ativo no Hermes
+                </span>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-family: var(--font-mono);" id="active-hermes-preset-tag">Preset: Frontier Balanced</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap;">
+                <span style="font-size: 1.08rem; font-weight: 700; color: #fff; font-family: var(--font-mono);" id="active-hermes-model-name">deepseek/deepseek-chat</span>
+                <span class="badge badge-nous" id="active-hermes-provider-tag">🧠 Nous Portal (Crédito Ativo)</span>
+              </div>
+              <div style="font-size: 0.72rem; color: #cbd5e1; margin-top: 2px;" id="active-hermes-meta-line">
+                Tarifa: $0.14 / 1M tokens • Janela: 64k tokens • Provedor Padrão: Nous Portal API
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn btn-purple" onclick="openQuickApplyModal(window.currentHermesMasterModel || 'deepseek/deepseek-chat', 'nous', false)" style="padding: 7px 14px; font-size: 0.76rem; font-weight: 600;">
+              <span>⚙️</span> Trocar Cérebro no Hermes
+            </button>
+          </div>
+        </div>
+
+        <!-- BARRA DE CONTROLE: PERFIS COGNITIVOS + FILTRO DE PROVEDOR -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <div class="profile-selector" id="profile-pill-container" style="margin-bottom: 0;">
+            <button class="profile-pill active" onclick="selectProfile('orchestrator')">👑 Maestro / Brain</button>
+            <button class="profile-pill" onclick="selectProfile('coding')">💻 Coding / SWE</button>
+            <button class="profile-pill" onclick="selectProfile('agentic')">🤖 Agentic / Tools</button>
+            <button class="profile-pill" onclick="selectProfile('reasoning')">🧠 Reasoning / Math</button>
+            <button class="profile-pill" onclick="selectProfile('fast')">⚡ Fast / Triage</button>
+            <button class="profile-pill" onclick="selectProfile('design')">🎨 Design / Frontend</button>
+          </div>
+
+          <!-- FILTRO DINÂMICO DE PROVEDOR CLOUD COM FOCO NO NOUS -->
+          <div style="display: flex; align-items: center; gap: 6px; background: rgba(15, 23, 42, 0.7); padding: 4px 8px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; padding-left: 4px;">Foco Provedor:</span>
+            <div class="filter-pills-group" id="cloud-provider-filter-pills">
+              <button class="filter-provider-btn active" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')">🌐 Todos (Mercado)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')">🧠 Nous Portal (Crédito Hermes)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')">🔀 OpenRouter (API)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BARRA DE FILTROS SECUNDÁRIOS: MODALIDADE + FABRICANTE + CÉREBRO HERMES -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; background: rgba(15, 23, 42, 0.55); padding: 5px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <!-- Modalidade -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em;">Modalidade:</span>
+              <div class="filter-pills-group" id="cloud-modality-filter-pills" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <button class="filter-provider-btn active" id="btn-cloud-modal-all" onclick="setCloudModalityFilter('all')">🌐 Todas</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-vision" onclick="setCloudModalityFilter('vision')" title="Apenas modelos multimodais que processam imagens, diagramas e OCR">👁️ Visão & OCR</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-image_gen" onclick="setCloudModalityFilter('image_gen')" title="Modelos que geram imagens e artefatos visuais diretamente (Text-to-Image / Canvas)">🎨 Geração de Imagem</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-audio" onclick="setCloudModalityFilter('audio')" title="Modelos conversacionais de voz nativa e baixa latência (Realtime)">🎙️ Áudio & Voz</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-video" onclick="setCloudModalityFilter('video')" title="Modelos de compreensão temporal e dinâmica de múltiplos frames">🎬 Vídeo & Temporal</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-world" onclick="setCloudModalityFilter('world')" title="Modelos de simulação física, ambientes espaciais e mundos 3D interativos">🌍 World Models</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-decision" onclick="setCloudModalityFilter('decision')" title="Motores de decisão não-autorregressivos e tipagem estrita (estilo Jev / TypeSafe AI)">⚡ Decisão (Jev)</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-text" onclick="setCloudModalityFilter('text')" title="Modelos focados puramente em texto, código e raciocínio simbólico">📝 Texto Puro</button>
+              </div>
+            </div>
+
+            <!-- Fabricantes Multi-Select -->
+            <div style="position: relative;">
+              <button class="btn" id="btn-mfg-toggle" onclick="toggleMfgMenu(event)" style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-subtle); color: #cbd5e1; font-size: 0.74rem; padding: 4px 10px; display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: var(--radius-sm);">
+                <span>🏢</span> Fabricante: <span id="mfg-filter-label" style="color: var(--cyan); font-weight: 600;">Todos</span> ▾
+              </button>
+              <div id="mfg-dropdown-menu" style="display: none; position: absolute; left: 0; top: 100%; margin-top: 5px; background: #0f172a; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; width: 230px; z-index: 120; box-shadow: 0 12px 30px rgba(0,0,0,0.75);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 5px;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">Fabricantes</span>
+                  <div style="display: flex; gap: 6px;">
+                    <button onclick="toggleAllMfgs(true)" style="background: none; border: none; color: var(--cyan); font-size: 0.68rem; cursor: pointer;">Todos</button>
+                    <span style="color: var(--text-muted);">|</span>
+                    <button onclick="toggleAllMfgs(false)" style="background: none; border: none; color: #a78bfa; font-size: 0.68rem; cursor: pointer;">Limpar</button>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 3px; max-height: 220px; overflow-y: auto;" id="mfg-checkboxes-container">
+                  <!-- Gerado dinamicamente via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Indicador Cérebro Hermes Ativo -->
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.72rem;">
+            <span style="color: var(--text-muted);">🤖 Cérebro Hermes Ativo:</span>
+            <code class="mono" id="cloud-quick-active-model" style="color: #34d399; background: rgba(16, 185, 129, 0.12); padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 600;">deepseek/deepseek-chat</code>
+          </div>
+        </div>
+
+        <!-- SUBTEXTO DINÂMICO DO PERFIL ATIVO -->
+        <div id="cloud-profile-description-bar" style="margin-bottom: 14px; font-size: 0.74rem; color: #94a3b8; background: rgba(255, 255, 255, 0.02); padding: 6px 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--cyan);">
+          👑 <strong>Master Brain / Maestro:</strong> O modelo de fronteira all-around que orquestra o diálogo mestre, planeja cadeias agênticas e toma decisões executivas com raciocínio balanceado.
+        </div>
+
+        <!-- SEÇÃO 1: OS 3 CAMPEÕES DE PARETO (PÓDIO EM CARDS) -->
+        <div style="margin-top: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+          <h4 style="font-size: 0.86rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
+            <span style="color: var(--amber);">👑</span> Pódio dos Campeões (Fronteira de Pareto)
+          </h4>
+          <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-triad-sublabel">Recomendações canônicas de qualidade máxima, melhor ROI e menor custo</span>
+        </div>
+
+        <div class="cloud-podium-grid" id="cloud-podium-cards">
+          <!-- Renderizado dinamicamente via renderCloudTable() -->
+          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">
+            Carregando campeões da Cloud Arena...
+          </div>
+        </div>
+
+        <!-- SEÇÃO 2: RANKING COMPARATIVO DE MERCADO -->
+        <div style="margin-top: 18px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h4 style="font-size: 0.88rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
+              <span style="color: var(--cyan);">📊</span> Ranking Comparativo de Modelos (Benchmarks & Custos)
+            </h4>
+            <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-ranked-count">Carregando catálogo...</span>
+          </div>
+
+          <!-- BARRA DE PESQUISA, SELETOR DE COLUNAS E ORDENAÇÃO -->
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div style="position: relative;">
+              <input type="text" id="cloud-search-input" placeholder="🔍 Filtrar modelo, fabricante ou id..." oninput="handleCloudSearch(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #fff; border-radius: var(--radius-sm); padding: 5px 10px; font-size: 0.76rem; width: 210px;" />
+            </div>
+
+            <!-- CONTROLE DE VISIBILIDADE DE COLUNAS (DROPDOWN) -->
+            <div style="position: relative;">
+              <button class="btn" id="btn-col-toggle" onclick="toggleColumnMenu(event)" style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-subtle); color: #cbd5e1; font-size: 0.76rem; padding: 5px 10px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <span>👁️</span> Colunas <span id="col-count-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">12/12</span> ▾
+              </button>
+              <div id="col-dropdown-menu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 5px; background: #0f172a; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; width: 250px; z-index: 100; box-shadow: 0 12px 30px rgba(0,0,0,0.65);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 5px;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">Exibir Colunas</span>
+                  <div style="display: flex; gap: 6px;">
+                    <button onclick="toggleAllColumns(true)" style="background: none; border: none; color: var(--cyan); font-size: 0.68rem; cursor: pointer;">Todas</button>
+                    <span style="color: var(--text-muted);">|</span>
+                    <button onclick="resetDefaultColumns()" style="background: none; border: none; color: #a78bfa; font-size: 0.68rem; cursor: pointer;">Padrão</button>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto;">
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-status" checked onchange="toggleColumn('status', this.checked)"> Status Pareto</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-score" checked onchange="toggleColumn('score', this.checked)"> Score Geral</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-roi" checked onchange="toggleColumn('roi', this.checked)"> ROI Index</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-nous" checked onchange="toggleColumn('nous', this.checked)"> <span style="color: #e879f9;">🟣</span> Tarifa Nous ($/1M)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-or" checked onchange="toggleColumn('or', this.checked)"> <span style="color: #818cf8;">🔀</span> Tarifa OpenRouter ($/1M)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-intel" checked onchange="toggleColumn('intel', this.checked)"> 🧠 Inteligência (Arena ELO)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-coding" checked onchange="toggleColumn('coding', this.checked)"> 💻 Coding (SWE)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-bfcl" checked onchange="toggleColumn('bfcl', this.checked)"> 🤖 Tools (BFCL)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-reasoning" checked onchange="toggleColumn('reasoning', this.checked)"> 🧠 Reasoning (GPQA)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-design" checked onchange="toggleColumn('design', this.checked)"> 🎨 Design UI/UX</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-vision" checked onchange="toggleColumn('vision', this.checked)"> 👁️ Visão (VQA)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ifeval" checked onchange="toggleColumn('ifeval', this.checked)"> 📋 Instrução (IFEval)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ttft" checked onchange="toggleColumn('ttft', this.checked)"> ⏱️ Latência (TTFT)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-tps" checked onchange="toggleColumn('tps', this.checked)"> ⚡ Throughput (TPS)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ctx" checked onchange="toggleColumn('ctx', this.checked)"> 📚 Janela & RULER</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-prov" checked onchange="toggleColumn('prov', this.checked)"> 🌐 Provedores</label>
+                </div>
+              </div>
+            </div>
+
+            <select id="cloud-sort-select" onchange="handleCloudSort(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #cbd5e1; border-radius: var(--radius-sm); padding: 5px 8px; font-size: 0.76rem;">
+              <option value="score_desc">🏆 Maior Score Geral</option>
+              <option value="roi_desc">💎 Maior Custo-Benefício (ROI)</option>
+              <option value="nous_asc">🟣 Menor Tarifa Nous ($/1M)</option>
+              <option value="or_asc">🔀 Menor Tarifa OpenRouter ($/1M)</option>
+              <option value="intel_desc">🧠 Maior Inteligência (Arena ELO)</option>
+              <option value="coding_desc">💻 Maior Score Coding (SWE)</option>
+              <option value="bfcl_desc">🤖 Maior Score Tool Calling (BFCL)</option>
+              <option value="reasoning_desc">🧠 Maior Score Reasoning (Hard/Math)</option>
+              <option value="design_desc">🎨 Maior Score Design / UI/UX</option>
+              <option value="vision_desc">👁️ Maior Score Visão / VQA</option>
+              <option value="ifeval_desc">📋 Maior Score Instrução (IFEval)</option>
+              <option value="ttft_asc">⏱️ Menor Latência (TTFT)</option>
+              <option value="tps_desc">⚡ Maior Throughput (TPS)</option>
+              <option value="ctx_desc">📚 Maior Janela de Contexto</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-container arena-table-sticky-wrapper">
+          <table class="arena-table">
+            <thead id="cloud-ranked-thead">
+              <!-- Renderizado dinamicamente via renderCloudTableHeader() com suporte nativo a Drag & Drop -->
+            </thead>
+            <tbody id="cloud-ranked-tbody">
+              <!-- Renderizado dinamicamente via fetchCloudRankedModels() -->
+              <tr>
+                <td colspan="19" style="text-align: center; color: var(--text-muted); padding: 24px;">Buscando modelos da Cloud Arena com sub-scores de benchmarks e tarifas comparadas...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- ABA 4: SOULS SETTINGS & PRESETS -->
+    <!-- ========================================== -->

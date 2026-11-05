@@ -1,0 +1,81 @@
+        <aside class="settings-sidebar">
+          <div class="settings-sidebar-header">
+            <span class="settings-sidebar-title">Painéis de Controle</span>
+            <span class="settings-sidebar-badge">v7 Bare-Metal</span>
+          </div>
+          <nav class="settings-sidebar-nav">
+            <button class="settings-subtab-btn active" id="btn-subtab-brain" onclick="switchSettingsSubtab('subtab-brain')">
+              <span class="nav-icon">🎯</span>
+              <div class="nav-text">
+                <span class="nav-label">Master Brain & Modelos</span>
+                <span class="nav-desc">Orquestrador & Tríades Pareto</span>
+              </div>
+            </button>
+            <button class="settings-subtab-btn" id="btn-subtab-tools" onclick="switchSettingsSubtab('subtab-tools')">
+              <span class="nav-icon">🧰</span>
+              <div class="nav-text">
+                <span class="nav-label">Ferramentas & Permissões MCP</span>
+                <span class="nav-desc">55 Tools Nativas & Schemas</span>
+              </div>
+            </button>
+            <button class="settings-subtab-btn" id="btn-subtab-reasoning" onclick="switchSettingsSubtab('subtab-reasoning')">
+              <span class="nav-icon">🧠</span>
+              <div class="nav-text">
+                <span class="nav-label">Raciocínio & Modo Socrático</span>
+                <span class="nav-desc">Thinking Budget & Deliberação</span>
+              </div>
+            </button>
+            <button class="settings-subtab-btn" id="btn-subtab-finops" onclick="switchSettingsSubtab('subtab-finops')">
+              <span class="nav-icon">⚡</span>
+              <div class="nav-text">
+                <span class="nav-label">Aceleração Local</span>
+                <span class="nav-desc">FinOps &quot;Zero-Cost&quot;</span>
+              </div>
+            </button>
+            <button class="settings-subtab-btn" id="btn-subtab-router" onclick="switchSettingsSubtab('subtab-router')">
+              <span class="nav-icon">🔀</span>
+              <div class="nav-text">
+                <span class="nav-label">Roteador Inteligente</span>
+                <span class="nav-desc">ParetoBandit & Despacho Dinâmico</span>
+              </div>
+            </button>
+            <button class="settings-subtab-btn" id="btn-subtab-memory" onclick="switchSettingsSubtab('subtab-memory')">
+              <span class="nav-icon">💾</span>
+              <div class="nav-text">
+                <span class="nav-label">Memória de Longo Prazo</span>
+                <span class="nav-desc">Hipocampo L2/L3 & LadybugDB</span>
+              </div>
+            </button>
+            <button class="settings-subtab-btn" id="btn-subtab-sandbox" onclick="switchSettingsSubtab('subtab-sandbox')">
+              <span class="nav-icon">🛡️</span>
+              <div class="nav-text">
+                <span class="nav-label">Segurança & Espaço de Trabalho</span>
+                <span class="nav-desc">Isolamento Local, Sandbox & Guardrails</span>
+              </div>
+            </button>
+            <button class="settings-subtab-btn" id="btn-subtab-obsidian" onclick="switchSettingsSubtab('subtab-obsidian')">
+              <span class="nav-icon">📓</span>
+              <div class="nav-text">
+                <span class="nav-label">Cofre de Conhecimentos</span>
+                <span class="nav-desc">Notas, Wiki Pessoal & Privacidade</span>
+              </div>
+            </button>
+            <button class="settings-subtab-btn" id="btn-subtab-raw" onclick="switchSettingsSubtab('subtab-raw')">
+              <span class="nav-icon">📄</span>
+              <div class="nav-text">
+                <span class="nav-label">Configuração Avançada (TOML)</span>
+                <span class="nav-desc">Editor souls_config.toml</span>
+              </div>
+            </button>
+          </nav>
+          <div class="settings-sidebar-footer">
+            <button class="btn btn-sm" onclick="fetchConfigToml()" title="Recarregar configuração do disco" style="flex: 1; justify-content: center; font-size: 0.72rem; padding: 6px 8px;">
+              <span>🔄</span> Recarregar
+            </button>
+            <button class="btn btn-green btn-sm" onclick="saveSettings()" title="Gravar alterações no disco" style="flex: 1; justify-content: center; font-size: 0.72rem; padding: 6px 8px;">
+              <span>💾</span> Salvar
+            </button>
+          </div>
+        </aside>
+
+        <!-- ÁREA PRINCIPAL DE CONTEÚDO (CONTEÚDO À DIREITA) -->

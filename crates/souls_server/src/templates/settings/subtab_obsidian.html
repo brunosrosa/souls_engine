@@ -1,0 +1,499 @@
+      <div class="settings-subpane" id="subtab-obsidian">
+        <!-- HEADER DA SUB-ABA COM AÇÕES -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0 0 4px 0;">
+              <span>📓</span>
+              <span>Cofre de Conhecimentos & Curadoria Pessoal</span>
+              <span class="info-icon" style="z-index: 95;">i
+                <span class="tooltip-box">
+                  <strong>Curadoria Enciclopédica & Soberania Pessoal</strong>
+                  Processa fontes brutas imutáveis em <code>raw/</code> e destila conceitos e entidades atômicas em <code>wiki/</code> com links bidirecionais <code>[[...]]</code>, aplicando desidentificação local de PII no silício.
+                </span>
+              </span>
+            </h2>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
+              Destilação contínua de anotações brutas (raw/) em conhecimento enciclopédico hiperconectado (wiki/), com blindagem local de dados sensíveis (Privacy Shield).
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-secondary" onclick="resetObsidianDefaults()" style="padding: 6px 12px; font-size: 0.75rem;">
+              <span>⚡</span> Defaults do Cofre
+            </button>
+            <button class="btn btn-green" onclick="saveSettings()" style="padding: 6px 14px; font-size: 0.75rem;">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 CARDS DE KPI CENTRADOS (Padrão canônico — 100% Reativos & Colorizados por Subsistema) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 16px;">
+          <!-- CARD 1: INTEGRAÇÃO DO COFRE (CIANO) -->
+          <div class="card kpi-card-clickable" id="card-kpi-vault-integration" onclick="focusVaultSetting('cfg-obsidian-storage-type')" title="Clique para focar na configuração de integração do cofre" style="margin-bottom: 0; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.4); background: linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, rgba(13, 19, 36, 0.85) 100%);">
+            <div style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cyan); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>📦</span> <span>INTEGRAÇÃO DO COFRE</span>
+            </div>
+            <div class="mono" id="kpi-vault-integration" style="font-size: 1.05rem; font-weight: 700; color: var(--cyan); white-space: nowrap;">
+              ONEDRIVE SYNC
+            </div>
+            <div id="kpi-vault-integration-sub" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              Sincronizado na Nuvem
+            </div>
+            <div style="font-size: 0.60rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 3px;">
+              <span>Ajustar abaixo</span> <span>↓</span>
+            </div>
+          </div>
+
+          <!-- CARD 2: ZONA BRUTA RAW (VERDE) -->
+          <div class="card kpi-card-clickable" id="card-kpi-vault-raw" onclick="focusVaultSetting('cfg-obsidian-raw-ro')" title="Clique para alternar a proteção da zona raw/" style="margin-bottom: 0; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.4); background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(13, 19, 36, 0.85) 100%);">
+            <div style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--green); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>🔒</span> <span>ZONA BRUTA (RAW/)</span>
+            </div>
+            <div class="mono" id="kpi-vault-raw" style="font-size: 1.05rem; font-weight: 700; color: var(--green); white-space: nowrap;">
+              READ-ONLY TOTAL
+            </div>
+            <div id="kpi-vault-raw-sub" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              🔒 Imutável & Sagrado (Lei 1)
+            </div>
+            <div style="font-size: 0.60rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 3px;">
+              <span>Ajustar abaixo</span> <span>↓</span>
+            </div>
+          </div>
+
+          <!-- CARD 3: PRIVACY SHIELD PII (ROXO) -->
+          <div class="card kpi-card-clickable" id="card-kpi-vault-privacy" onclick="focusVaultSetting('cfg-obsidian-privacy-shield')" title="Clique para focar nas regras do Privacy Shield" style="margin-bottom: 0; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(168, 85, 247, 0.4); background: linear-gradient(180deg, rgba(168, 85, 247, 0.08) 0%, rgba(13, 19, 36, 0.85) 100%);">
+            <div style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--purple-light); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>🛡️</span> <span>PRIVACY SHIELD PII</span>
+            </div>
+            <div class="mono" id="kpi-vault-privacy" style="font-size: 1.05rem; font-weight: 700; color: var(--green); white-space: nowrap;">
+              HÍBRIDO (SILÍCIO)
+            </div>
+            <div id="kpi-vault-privacy-sub" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              Desidentificação PII Ativa
+            </div>
+            <div style="font-size: 0.60rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 3px;">
+              <span>Ajustar abaixo</span> <span>↓</span>
+            </div>
+          </div>
+
+          <!-- CARD 4: VAZÃO ESTIMADA THE DRIP (ÂMBAR) -->
+          <div class="card kpi-card-clickable" id="card-kpi-vault-cadence" onclick="focusVaultSetting('cfg-obsidian-batch-size')" title="Clique para ajustar o tamanho do lote e cadência" style="margin-bottom: 0; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.4); background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(13, 19, 36, 0.85) 100%);">
+            <div style="font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--amber); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>⏱️</span> <span>VAZÃO ESTIMADA (THE DRIP)</span>
+            </div>
+            <div class="mono" id="metric-obsidian-cadence" style="font-size: 1.05rem; font-weight: 700; color: var(--amber); white-space: nowrap;">
+              3 NOTAS / 30 MIN
+            </div>
+            <div id="metric-obsidian-cadence-sub" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+              ~144 notas/dia • ~60/turno 10h
+            </div>
+            <div style="font-size: 0.60rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 3px;">
+              <span>Ajustar abaixo</span> <span>↓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- BANNER DE GOVERNANÇA DO COFRE & SOBERANIA DE DADOS -->
+        <div style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="font-size: 0.74rem; line-height: 1.5; color: #e2e8f0; flex: 1; min-width: 280px; text-wrap: balance;">
+            <strong style="color: var(--purple-light);">💡 Soberania do Cofre & Privacidade (AGENTS.md):</strong> As fontes brutas em <code>raw/</code> são sagradas e nunca são modificadas nem deletadas (Lei 1). O pipeline de curadoria destila notas atômicas em <code>wiki/</code> com frontmatter YAML e links bidirecionais <code>[[...]]</code>. Documentos médicos e extratos financeiros passam compulsoriamente por desidentificação local de PII no silício antes de qualquer processamento analítico na nuvem.
+          </div>
+          <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--purple-light); background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.3); padding: 3px 8px; border-radius: 4px; white-space: nowrap; align-self: center;">
+            • Curadoria Contínua Ativa (v7)
+          </span>
+        </div>
+
+        <!-- GRID PRINCIPAL DE 2 COLUNAS -->
+        <div style="display: grid; grid-template-columns: 1fr 1.15fr; gap: 16px; align-items: start;">
+          <!-- COLUNA 1: CONEXÃO DO COFRE & CADÊNCIA OPERACIONAL -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- CARD 1: CONEXÃO & DIRETÓRIO DO COFRE -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                <div class="card-title" style="font-size: 0.86rem; display: flex; align-items: center; gap: 8px; margin: 0;">
+                  <div class="card-icon icon-cyan" style="width: 24px; height: 24px; font-size: 0.88rem; flex-shrink: 0;">📦</div>
+                  <span>Conexão & Diretório Raiz do Cofre</span>
+                  <span class="info-icon" style="z-index: 90; margin-left: 2px; flex-shrink: 0;">i
+                    <span class="tooltip-box">
+                      <strong>Cofre Pessoal de Longo Prazo</strong>
+                      Localização física onde residem as pastas <code>raw/</code> (fontes brutas) e <code>wiki/</code> (conhecimento atômico destilado).
+                    </span>
+                  </span>
+                </div>
+                <span class="badge badge-champion" id="badge-vault-conn" style="font-size: 0.68rem; flex-shrink: 0; white-space: nowrap; margin-left: 12px;">✓ Sincronizado</span>
+              </div>
+
+              <!-- ITEM 1: CAMINHO DO COFRE (Com respiro generoso e nuvemzinha OneDrive) -->
+              <div class="setting-item" style="margin: 12px 0 20px 0; padding: 12px 14px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: var(--radius-sm);">
+                <div class="setting-header" style="margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                  <div class="setting-title" style="gap: 6px; font-size: 0.78rem; font-weight: 600; color: #cbd5e1;">
+                    <span>Diretório do Cofre de Conhecimentos</span>
+                    <span class="info-icon" style="z-index: 90;">i
+                      <span class="tooltip-box">
+                        <strong>Localização Física do Cofre</strong>
+                        Pasta sincronizada via OneDrive ou armazenada no disco local do usuário.
+                      </span>
+                    </span>
+                  </div>
+                  <span class="badge" id="badge-vault-path-type" style="background: rgba(16, 185, 129, 0.12); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.65rem; padding: 2px 8px; font-family: var(--font-mono); font-weight: 600; white-space: nowrap; flex-shrink: 0;">
+                    ☁️ OneDrive Conectado
+                  </span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input type="text" id="cfg-obsidian-path" class="setting-input" value="C:\Users\rosas\OneDrive\Documentos\Obisidian DB" readonly style="color: #fff; font-size: 0.76rem; padding: 7px 12px; flex: 1; min-width: 0;">
+                  <button class="btn btn-secondary" onclick="copyToClipboard(document.getElementById('cfg-obsidian-path').value, 'Caminho do Cofre')" title="Copiar caminho completo" style="padding: 7px 12px; font-size: 0.74rem; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                    <span>📋</span> Copiar
+                  </button>
+                </div>
+              </div>
+
+              <!-- ITEM 2: SELETOR DE MODO DE INTEGRAÇÃO -->
+              <div class="setting-item" style="margin-bottom: 14px;">
+                <div class="setting-header" style="margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                  <div class="setting-title" style="gap: 6px;">
+                    <span>Modo de Integração</span>
+                    <span class="badge" title="Vinculado ao Card 📦 Integração do Cofre (Topo)" style="background: rgba(56, 189, 248, 0.15); color: var(--cyan); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; margin-left: 8px; margin-right: 6px; display: inline-flex; align-items: center; justify-content: center;">📦</span>
+                    <span class="info-icon" style="z-index: 90;">i
+                      <span class="tooltip-box">
+                        <strong>Estratégia de Sincronização</strong>
+                        Define se o cofre é gerenciado através do OneDrive para espelhamento móvel ou reside exclusivamente em diretório local do Windows.
+                      </span>
+                    </span>
+                  </div>
+                  <select id="cfg-obsidian-storage-type" class="setting-input" style="width: 200px; font-size: 0.74rem;" onchange="syncObsidianKpis(); markSettingsUnsaved();">
+                    <option value="onedrive" selected>OneDrive Sincronizado</option>
+                    <option value="local_vault">Cofre Local (Documentos)</option>
+                    <option value="custom">Diretório Customizado</option>
+                  </select>
+                </div>
+                <div class="setting-desc" style="text-wrap: balance; line-height: 1.45; margin-bottom: 0;">
+                  O espelhamento via OneDrive garante que wikis e entidades estejam acessíveis em dispositivos móveis e tablets simultaneamente.
+                </div>
+              </div>
+
+              <!-- BOTÕES DE VALIDAÇÃO E AUDITORIA -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+                <button class="btn btn-green" onclick="validateVaultStructure()" style="justify-content: center; padding: 8px 12px; font-size: 0.76rem; white-space: nowrap;">
+                  <span>🔍</span> Validar Estrutura do Cofre
+                </button>
+                <button class="btn btn-secondary" onclick="showVaultAuditLog()" style="justify-content: center; padding: 8px 12px; font-size: 0.76rem; white-space: nowrap;">
+                  <span>📑</span> Auditoria (wiki/log.md)
+                </button>
+              </div>
+
+              <!-- CHECKLIST DE INTEGRIDADE DAS PASTAS DO COFRE -->
+              <div style="background: rgba(10, 16, 28, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                  <span style="font-size: 0.70rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8;">Estrutura Canônica do Cofre:</span>
+                  <span class="mono" id="checklist-vault-status" style="font-size: 0.68rem; color: var(--green);">6 de 6 Conformidades</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.72rem; font-family: var(--font-mono);">
+                  <div class="folder-check-item" id="chk-vault-raw" style="display: flex; align-items: center; gap: 5px; color: #cbd5e1;">
+                    <span style="color: var(--green);">✓</span> <code>raw/</code> <span style="font-size: 0.62rem; color: var(--text-muted);">(Read-Only)</span>
+                  </div>
+                  <div class="folder-check-item" id="chk-vault-concepts" style="display: flex; align-items: center; gap: 5px; color: #cbd5e1;">
+                    <span style="color: var(--green);">✓</span> <code>wiki/concepts/</code> <span style="font-size: 0.62rem; color: var(--text-muted);">(Conceitos)</span>
+                  </div>
+                  <div class="folder-check-item" id="chk-vault-entities" style="display: flex; align-items: center; gap: 5px; color: #cbd5e1;">
+                    <span style="color: var(--green);">✓</span> <code>wiki/entities/</code> <span style="font-size: 0.62rem; color: var(--text-muted);">(Entidades)</span>
+                  </div>
+                  <div class="folder-check-item" id="chk-vault-summaries" style="display: flex; align-items: center; gap: 5px; color: #cbd5e1;">
+                    <span style="color: var(--green);">✓</span> <code>wiki/summaries/</code> <span style="font-size: 0.62rem; color: var(--text-muted);">(Sínteses)</span>
+                  </div>
+                  <div class="folder-check-item" id="chk-vault-manifest" style="display: flex; align-items: center; gap: 5px; color: #cbd5e1;">
+                    <span style="color: var(--green);">✓</span> <code>raw_manifest.json</code> <span style="font-size: 0.62rem; color: var(--text-muted);">(Status)</span>
+                  </div>
+                  <div class="folder-check-item" id="chk-vault-log" style="display: flex; align-items: center; gap: 5px; color: #cbd5e1;">
+                    <span style="color: var(--green);">✓</span> <code>wiki/log.md</code> <span style="font-size: 0.62rem; color: var(--text-muted);">(Auditoria)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 2: CADÊNCIA DE CURADORIA ("THE 30-MINUTE DRIP") -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 8px;">
+                <div class="card-title" style="font-size: 0.86rem;">
+                  <div class="card-icon icon-amber" style="width: 24px; height: 24px; font-size: 0.88rem;">⏱️</div>
+                  Cadência Operacional & Micro-Lotes ("The 30-Minute Drip")
+                  <span class="info-icon" style="z-index: 90;">i
+                    <span class="tooltip-box">
+                      <strong>The 30-Minute Drip</strong>
+                      Processa 2 a 3 arquivos a cada 30 minutos em micro-lotes via subagente agendado, digerindo ~50 notas por dia útil sem estourar rate-limits ou aquecer o silício.
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="setting-list" style="display: flex; flex-direction: column; gap: 11px;">
+                <!-- ITEM 1: TAMANHO DO LOTE SLIDER -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      <span>Micro-Lotes por Ciclo</span>
+                      <span class="badge" title="Vinculado ao Card ⏱️ Vazão Estimada The Drip (Topo)" style="background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; margin-left: 8px; margin-right: 6px; display: inline-flex; align-items: center; justify-content: center;">⏱️</span>
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Batch Size de Curadoria</strong>
+                          Quantidade de notas brutas destiladas em cada execução do pipeline.
+                          <div class="tooltip-def">Padrão canônico: 3 notas (2 a 3)</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="range-val-badge">
+                      <span class="val-kicker">Lote:</span>
+                      <span id="val-obsidian-batch-size" style="white-space: nowrap;">3 notas</span>
+                      <span class="default-indicator">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-obsidian-batch-size" min="1" max="10" step="1" value="3" data-default="3" data-snap-delta="0.3" oninput="document.getElementById('val-obsidian-batch-size').innerText = this.value + ' notas'; syncObsidianKpis(); markSettingsUnsaved();">
+                    <div class="slider-default-tick at-default" data-slider="cfg-obsidian-batch-size" style="left: calc(8px + (100% - 16px) * 0.2222);" title="Padrão canônico: 3 notas (Clique ou aproxime para restaurar)"></div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">
+                    Micro-lotes pequenos evitam estouro de janela de contexto e garantem máxima fidelidade atômica.
+                  </div>
+                </div>
+
+                <!-- ITEM 2: INTERVALO DA ESTEIRA SLIDER -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title" style="white-space: nowrap;">
+                      <span>Intervalo entre Ciclos</span>
+                      <span class="badge" title="Vinculado ao Card ⏱️ Vazão Estimada The Drip (Topo)" style="background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; margin-left: 8px; margin-right: 6px; display: inline-flex; align-items: center; justify-content: center;">⏱️</span>
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Cadência de Disparo Automático</strong>
+                          Frequência com que o Antigravity CLI ou Hermes aciona o subagente de curadoria em segundo plano.
+                          <div class="tooltip-def">Padrão canônico: 30 minutos</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="range-val-badge">
+                      <span class="val-kicker">A cada:</span>
+                      <span id="val-obsidian-interval" style="white-space: nowrap;">30 min</span>
+                      <span class="default-indicator">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-obsidian-interval-min" min="15" max="120" step="15" value="30" data-default="30" data-snap-delta="4" oninput="document.getElementById('val-obsidian-interval').innerText = this.value + ' min'; syncObsidianKpis(); markSettingsUnsaved();">
+                    <div class="slider-default-tick at-default" data-slider="cfg-obsidian-interval-min" style="left: calc(8px + (100% - 16px) * 0.1428);" title="Padrão canônico: 30 minutos (Clique ou aproxime para restaurar)"></div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">
+                    Intervalo espaçado protege contra throttling térmico da GPU e dissipa consumo ao longo do dia.
+                  </div>
+                </div>
+
+                <!-- ITEM 3: DISPARO MANUAL -->
+                <div class="setting-item" style="border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                      <div style="font-size: 0.78rem; font-weight: 600; color: #fff;">Execução Manual sob Demanda</div>
+                      <div style="font-size: 0.72rem; color: var(--text-muted);">Processa o próximo micro-lote de notas PENDING agora.</div>
+                    </div>
+                    <button class="btn btn-green" onclick="triggerObsidianCurate()" style="padding: 7px 14px; font-size: 0.75rem;">
+                      <span>📚</span> Curar Micro-Lote Agora
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUNA 2: PRIVACY SHIELD & SIMULADOR DE HIGIENIZAÇÃO -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- CARD 3: SOBERANIA & PRIVACY SHIELD -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 8px;">
+                <div class="card-title" style="font-size: 0.86rem;">
+                  <div class="card-icon icon-purple" style="width: 24px; height: 24px; font-size: 0.88rem;">🛡️</div>
+                  Soberania de Dados & Desidentificação PII (Privacy Shield)
+                  <span class="info-icon" style="z-index: 90;">i
+                    <span class="tooltip-box">
+                      <strong>Obsidian Privacy Shield</strong>
+                      Higieniza localmente no silício (Aho-Corasick) dados médicos e financeiros antes do envio para modelos analíticos de fronteira.
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="setting-list" style="display: flex; flex-direction: column; gap: 11px;">
+                <!-- ITEM 1: PRIVACY SHIELD ATIVO -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      <span>Obsidian Privacy Shield</span>
+                      <span class="badge" title="Vinculado ao Card 🛡️ Privacy Shield PII (Topo)" style="background: rgba(168, 85, 247, 0.15); color: var(--purple-light); border: 1px solid rgba(168, 85, 247, 0.4); font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; margin-left: 8px; margin-right: 6px; display: inline-flex; align-items: center; justify-content: center;">🛡️</span>
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Higienização Local Obrigatória</strong>
+                          Substitui nomes de médicos, pacientes, contas bancárias e CPFs por marcadores anônimos antes de qualquer chamada em nuvem.
+                          <div class="tooltip-def">Padrão: Ativo (true)</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-obsidian-privacy-shield">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-obsidian-privacy-shield" checked onchange="updateSwitchPill('cfg-obsidian-privacy-shield', 'pill-obsidian-privacy-shield'); syncObsidianKpis(); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">
+                    Garante soberania e privacidade inviolável para relatórios médicos e extratos de investimentos.
+                  </div>
+                </div>
+
+                <!-- ITEM 2: RAW READ-ONLY -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      <span>Proteção Read-Only (raw/)</span>
+                      <span class="badge" title="Vinculado ao Card 🔒 Zona Bruta (raw/) (Topo)" style="background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; margin-left: 8px; margin-right: 6px; display: inline-flex; align-items: center; justify-content: center;">🔒</span>
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Lei Suprema 1 do Cofre</strong>
+                          Fontes originais brutas nunca são apagadas nem truncadas; preservação aditiva de YAML.
+                          <div class="tooltip-def">Padrão canônico: Ativo (Read-Only)</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-obsidian-raw-ro">LIGADO (IMUTÁVEL)</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-obsidian-raw-ro" checked onchange="toggleRawReadOnly(); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">
+                    Blindagem física contra perda de notas originais, fotos e documentos legados no cofre.
+                  </div>
+                </div>
+
+                <!-- ITEM 3: WIKILINKS & FRONTMATTER -->
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      <span>Links Bidirecionais [[...]] & YAML Frontmatter</span>
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Padrão Enciclopédico Atômico</strong>
+                          Insere compulsoriamente cabeçalhos YAML padronizados (type, tags, sources, last_updated) e referências cruzadas bidirecionais.
+                          <div class="tooltip-def">Padrão: Ativo (true)</div>
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-obsidian-wikilinks">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-obsidian-wikilinks" checked onchange="updateSwitchPill('cfg-obsidian-wikilinks', 'pill-obsidian-wikilinks'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">
+                    Garante hiperconectividade ontológica do grafo do cofre no Obsidian Graph View.
+                  </div>
+                </div>
+
+                <!-- ITEM 4: MODO OPERACIONAL DE PRIVACIDADE -->
+                <div class="setting-item">
+                  <div class="setting-header" style="flex-wrap: wrap; gap: 8px;">
+                    <div class="setting-title" style="gap: 6px;">
+                      <span>Modo do Privacy Shield</span>
+                      <span class="badge" title="Vinculado ao Card 🛡️ Privacy Shield PII (Topo)" style="background: rgba(168, 85, 247, 0.15); color: var(--purple-light); border: 1px solid rgba(168, 85, 247, 0.4); font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; margin-left: 8px; margin-right: 6px; display: inline-flex; align-items: center; justify-content: center;">🛡️</span>
+                      <span class="info-icon" style="z-index: 90;">i
+                        <span class="tooltip-box">
+                          <strong>Estratégia de Processamento</strong>
+                          HYBRID_ANONYMIZED higieniza PII localmente no silício e envia para modelos de fronteira de alto contexto; STRICT_LOCAL retém 100% no silício local (dGPU RTX 2060m).
+                        </span>
+                      </span>
+                    </div>
+                    <select id="cfg-obsidian-privacy-mode" class="setting-input" style="width: 195px; font-size: 0.74rem;" onchange="syncObsidianKpis(); markSettingsUnsaved();">
+                      <option value="hybrid" selected>Híbrido Anonimizado</option>
+                      <option value="strict_local">Estrito no Silício</option>
+                    </select>
+                  </div>
+                  <div class="setting-desc" style="text-wrap: balance;">
+                    O modo híbrido preserva 100% da privacidade sem rebaixar a qualidade médica ou contábil para SLMs fracos.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 4: MOTOR DE SANITIZAÇÃO PII & AUDITORIA NO SILÍCIO (LIVE ENGINE) -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 8px; justify-content: space-between;">
+                <div class="card-title" style="font-size: 0.86rem; display: flex; align-items: center; gap: 8px; margin: 0; flex: 1; min-width: 0;">
+                  <div class="card-icon icon-cyan" style="width: 24px; height: 24px; font-size: 0.88rem; flex-shrink: 0;">🛡️</div>
+                  <span style="font-weight: 700;">Motor de Sanitização PII & Auditoria no Silício (Live Engine)</span>
+                  <span class="info-icon" style="z-index: 90; margin-left: 4px; flex-shrink: 0;">i
+                    <span class="tooltip-box">
+                      <strong>Inspeção Bare-Metal em Tempo Real</strong>
+                      Executa varredura de PII e verificação de Lei 1 diretamente no daemon Rust (127.0.0.1:9123). Redige dados pessoais e protege notas brutas antes de qualquer tráfego para modelos de nuvem.
+                    </span>
+                  </span>
+                </div>
+                <span class="badge" id="badge-vault-engine-status" style="background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.65rem; margin-left: 16px; white-space: nowrap; flex-shrink: 0;">Rust Bare-Metal Ativo</span>
+              </div>
+
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 10px;">
+                Carregue notas reais do seu cofre ou digite qualquer texto para inspecionar a desidentificação e a blindagem da Lei 1:
+              </div>
+
+              <!-- BOTÕES DE CARGA DE AMOSTRAS / NOTAS REAIS DO COFRE -->
+              <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+                <button class="sim-preset-btn" onclick="loadRealVaultSample('saude')" style="font-size: 0.70rem; padding: 4px 9px;">
+                  🩺 Amostra: raw/saude
+                </button>
+                <button class="sim-preset-btn" onclick="loadRealVaultSample('financas')" style="font-size: 0.70rem; padding: 4px 9px;">
+                  💳 Amostra: raw/financas
+                </button>
+                <button class="sim-preset-btn" onclick="loadRealVaultSample('deep_research')" style="font-size: 0.70rem; padding: 4px 9px; border-color: rgba(56, 189, 248, 0.4); color: var(--cyan);">
+                  📑 Nota Real: raw/deep-researchs
+                </button>
+                <button class="sim-preset-btn" onclick="loadRealVaultSample('law1_violation')" style="font-size: 0.70rem; padding: 4px 9px; border-color: rgba(239, 68, 68, 0.4); color: #f87171;">
+                  🚫 Teste Lei 1: Violação raw/
+                </button>
+              </div>
+
+              <!-- CAMPO DE ENTRADA DO MOTOR -->
+              <div style="margin-bottom: 10px;">
+                <textarea id="sim-vault-input" class="setting-input" style="width: 100%; height: 64px; font-size: 0.74rem; font-family: var(--font-mono); resize: vertical; padding: 8px 10px;" placeholder="Insira texto clínico, dados financeiros ou notas para inspecionar no motor bare-metal...">Paciente: Bruno Rosa | CPF: 123.456.789-00 | CRM: 48921-SP | Lab Fleury | Hemoglobina Glicada: 5.4% | Glicemia Jejum: 88 mg/dL</textarea>
+              </div>
+
+              <button class="btn btn-green" id="btn-run-vault-sanitize" onclick="executeRealVaultSanitization()" style="width: 100%; justify-content: center; padding: 8px 14px; font-size: 0.76rem; font-weight: 700; margin-bottom: 12px;">
+                <span>⚡</span> Executar Sanitização Bare-Metal no Silício
+              </button>
+
+              <!-- PAINEL DE RESULTADOS DA SIMULAÇÃO AO VIVO -->
+              <div style="background: rgba(10, 16, 28, 0.85); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                  <span id="sim-vault-verdict" class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.68rem; font-weight: 700;">
+                    ✓ PII HIGIENIZADO NO SILÍCIO
+                  </span>
+                  <span id="sim-vault-latency" style="font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">
+                    Latência Bare-Metal: <strong style="color: var(--cyan);">&lt; 0.02 ms (14 µs)</strong> &bull; Rust Engine
+                  </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <div style="font-size: 0.68rem; color: #94a3b8; font-weight: 600;">Saída Sanitizada para o Modelo de Nuvem:</div>
+                  <div id="sim-vault-tags" style="font-size: 0.64rem; font-family: var(--font-mono); color: var(--green);">4 Entidades Redigidas</div>
+                </div>
+                <div id="sim-vault-preview" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 4px; padding: 7px 9px; font-size: 0.72rem; font-family: var(--font-mono); color: #e2e8f0; line-height: 1.45; max-height: 80px; overflow-y: auto; margin-bottom: 6px;">
+                  Paciente: [USUARIO_ALVO] | CPF: [CPF_PROTEGIDO] | CRM: [MEDICO_CRM_OCULTO] | Lab: [LAB_REFERENCIA] | Hemoglobina Glicada: 5.4% | Glicemia Jejum: 88 mg/dL
+                </div>
+                <div id="sim-vault-rule" style="font-size: 0.68rem; color: var(--green); font-family: var(--font-mono);">
+                  ✓ Obsidian Privacy Shield (§1 & §2 Desidentificação no Silício)
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+
+      <!-- ==================================================== -->
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 8: CONFIGURAÇÃO AVANÇADA & SSOT (TOML)         -->
+      <!-- ==================================================== -->

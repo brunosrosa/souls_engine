@@ -1,0 +1,681 @@
+    <section class="tab-pane" id="tab-local">
+      <!-- SUBTABS DE SILÍCIO LOCAL -->
+      <div class="subtabs-bar">
+        <button class="subtab-btn active" id="btn-subtab-installed" onclick="switchLocalSubtab('installed')">
+          <span>💾 Modelos Locais Instalados</span>
+          <span class="tab-count-badge" id="badge-subtab-installed-count">13</span>
+        </button>
+        <button class="subtab-btn" id="btn-subtab-hub" onclick="switchLocalSubtab('hub')">
+          <span>✨ Model Hub & Downloads</span>
+          <span class="tab-count-badge" id="badge-active-downloads-count" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); display: none;">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-subtab-arena" onclick="switchLocalSubtab('arena')">
+          <span>🏟️ Local Silicon Arena</span>
+          <span class="tab-count-badge" id="badge-subtab-arena-benchmarks" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); display: none;">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-subtab-switchboard" onclick="switchLocalSubtab('switchboard')">
+          <span>⚡ Switchboard MCP</span>
+          <span class="tab-count-badge" id="badge-switchboard-tools-count" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">55</span>
+        </button>
+      </div>
+
+      <!-- PAINEL 1: MODELOS INSTALADOS -->
+      <div id="panel-local-installed">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">⚡</div>
+                Inventário Físico de Modelos
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Diretório Físico: <code class="mono" id="local-root-dir">C:\Users\rosas\llm_local_models</code> <span style="color: var(--cyan); margin: 0 4px; font-weight: bold;">•</span> Total: <strong id="local-total-models" style="color: var(--cyan);">13 modelos físicos</strong> (23.98 GB)
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-purple" onclick="switchTab('tab-settings'); switchSettingsSubtab('subtab-brain');">
+                <span>⚙️</span> Definir Perfil no Hermes
+              </button>
+              <button class="btn btn-cyan" onclick="fetchLocalModels()">
+                <span>🔄</span> Atualizar Inventário Local
+              </button>
+            </div>
+          </div>
+
+          <!-- BARRA DE FILTRO E PESQUISA INSTANTÂNEA -->
+          <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 260px; position: relative;">
+              <input type="text" id="local-models-search-input" class="setting-input" placeholder="🔍 Filtrar modelos por nome, quantização, tags..." oninput="handleLocalModelsSearch(this.value)" style="width: 100%; padding-left: 12px; height: 36px; font-size: 0.78rem;">
+            </div>
+            <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
+              <button class="filter-provider-btn active" id="btn-filter-local-all" onclick="setLocalSiliconFilter('all')" style="padding: 4px 10px; font-size: 0.72rem;">
+                Todos (<span id="count-local-all">13</span>)
+              </button>
+              <button class="filter-provider-btn" id="btn-filter-local-dgpu" onclick="setLocalSiliconFilter('dgpu')" style="padding: 4px 10px; font-size: 0.72rem;">
+                🎮 dGPU (<span id="count-local-dgpu">11</span>)
+              </button>
+              <button class="filter-provider-btn" id="btn-filter-local-cpu" onclick="setLocalSiliconFilter('cpu')" style="padding: 4px 10px; font-size: 0.72rem;">
+                ⚡ CPU (<span id="count-local-cpu">2</span>)
+              </button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="arena-table">
+              <thead>
+                <tr style="cursor: pointer; user-select: none;">
+                  <th style="min-width: 220px; max-width: 270px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
+                  <th class="text-center" style="width: 105px;">Ações</th>
+                  <th class="text-center" style="width: 95px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier(s) ↕</th>
+                  <th style="width: 120px;" onclick="sortLocalModels('profile')" title="Clique para ordenar por Perfil Agêntico">Perfil Agêntico ↕</th>
+                  <th class="text-center" style="width: 105px;" onclick="sortLocalModels('size')" title="Clique para ordenar por Tamanho">Tamanho / Quant ↕</th>
+                  <th class="text-center" style="width: 110px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM e Folga">VRAM & Folga WDDM ↕</th>
+                  <th class="text-center" style="width: 100px;" onclick="sortLocalModels('tps')" title="Clique para ordenar por Velocidade">Velocidade (Arena) ↕</th>
+                  <th class="text-center" style="width: 75px;" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
+                  <th style="min-width: 140px; max-width: 180px;">Tags Especializadas</th>
+                  <th class="text-center" style="width: 85px;" onclick="sortLocalModels('freshness')" title="Clique para ordenar por Data de Adição">Freshness ↕</th>
+                  <th class="text-center" style="width: 135px; white-space: nowrap;">Status & Silício Alvo</th>
+                </tr>
+              </thead>
+              <tbody id="local-arena-tbody">
+                <!-- Renderizado dinamicamente via JS -->
+                <tr>
+                  <td colspan="11" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 3: LOCAL SILICON ARENA (BENCHMARKS BARE-METAL) -->
+      <div id="panel-local-arena" style="display: none;">
+        <!-- CARD 1: RUNNER DE BENCHMARK INTERATIVO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-emerald">🏟️</div>
+                Arena de Testes de Silício (Benchmarks Locais)
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Meça a velocidade real (tokens/s), tempo de resposta (TTFT) e consumo de VRAM diretamente na sua placa NVIDIA RTX 2060m e CPU Intel i9.
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-emerald" onclick="syncLocalArenaHermes()" title="Cria links diretos e atualiza o catálogo do orquestrador Hermes">
+                <span>🔗</span> Sincronizar com Hermes Agent
+              </button>
+              <button class="btn btn-cyan" onclick="fetchLocalArenaData()" title="Recarregar telemetria e dados medidos">
+                <span>🔄</span> Atualizar Dados
+              </button>
+            </div>
+          </div>
+
+          <!-- CONTROLE DE DISPARO DE PROVA -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px; display: flex; flex-direction: column; gap: 14px;">
+            <!-- LINHA 1: MODELO LOCAL (AMPLO) + BOTÃO INICIAR TESTE -->
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: end;">
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">MODELO LOCAL PARA TESTE</label>
+                <select id="arena-runner-model-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
+                  <option value="">Carregando modelos instalados...</option>
+                </select>
+              </div>
+
+              <div>
+                <button class="btn btn-emerald" id="btn-run-arena-benchmark" onclick="executeSelectedArenaBenchmark()" style="height: 40px; padding: 0 24px; white-space: nowrap; font-weight: 600; font-size: 0.82rem;">
+                  <span>⚡</span> Iniciar Teste
+                </button>
+              </div>
+            </div>
+
+            <!-- LINHA 2: TIPO DE TESTE / PROVA (ESPAÇOSO) + ACELERADOR DE SILÍCIO -->
+            <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; align-items: end;">
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TIPO DE TESTE / PROVA</label>
+                <select id="arena-runner-type-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
+                  <option value="1">⚡ Velocidade & Memória (Throughput tok/s, VRAM e TTFT)</option>
+                  <option value="2">🧠 Avaliação Cognitiva (Raciocínio CoT & Parsing Rust AST)</option>
+                  <option value="3">👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj)</option>
+                  <option value="4">🚀 Aceleração Especulativa (Drafting & Ganho de Velocidade)</option>
+                  <option value="5">📦 Pressão de Contexto (Janela Longa de 4k até 32k tokens)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">ACELERADOR DE SILÍCIO</label>
+                <select id="arena-runner-engine-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
+                  <option value="">Auto (CUDA na GPU / AVX2 na CPU)</option>
+                  <option value="llama-cuda">NVIDIA CUDA (Placa de Vídeo RTX 2060m)</option>
+                  <option value="llama-cpu">CPU Intel AVX2 (Memória RAM do Computador)</option>
+                  <option value="onnx-cpu">ONNX Runtime CPU (Zero Consumo de VRAM)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- RESULTADO EM TEMPO REAL DO TESTE -->
+            <div id="arena-live-feedback" style="display: none; margin-top: 10px; padding: 14px; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 0.84rem; font-weight: 600; color: #fff;" id="arena-live-title">
+                  Resultado do Benchmark
+                </div>
+                <div id="arena-live-verdict-badge"></div>
+              </div>
+              <div id="arena-live-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: TABELA DE MODELOS & TELEMETRIA REAL NO SILÍCIO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">📊</div>
+                Modelos Homologados & Resultados Medidos
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Velocidade e consumo medidos no seu computador real. Modelos aprovados aqui alimentam automaticamente o Hub e o Roteador de Subagentes.
+              </p>
+            </div>
+            <div id="arena-models-summary-badge" class="badge badge-champion">14 Modelos Mapeados</div>
+          </div>
+
+          <!-- BARRA DE FILTROS & BUSCA RÁPIDA NA ARENA -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+            <div class="profile-selector" id="arena-filter-pills" style="margin-bottom: 0;">
+              <button class="profile-pill active" id="btn-arena-filter-all" onclick="filterArenaModels('all')">Todos os Modelos</button>
+              <button class="profile-pill" id="btn-arena-filter-benchmarked" onclick="filterArenaModels('benchmarked')">✅ Homologados</button>
+              <button class="profile-pill" id="btn-arena-filter-pending" onclick="filterArenaModels('pending')">⏳ Pendentes</button>
+              <button class="profile-pill" id="btn-arena-filter-tier0" onclick="filterArenaModels('tier0')">Tier 0</button>
+              <button class="profile-pill" id="btn-arena-filter-tier0_5" onclick="filterArenaModels('tier0_5')">Tier 0.5</button>
+              <button class="profile-pill" id="btn-arena-filter-tier1" onclick="filterArenaModels('tier1')">Tier 1</button>
+              <button class="profile-pill" id="btn-arena-filter-tier2" onclick="filterArenaModels('tier2')">Tier 2</button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="text" id="arena-models-search" placeholder="🔍 Filtrar modelo..." class="setting-input" style="padding: 5px 12px; font-size: 0.75rem; width: 200px; border-radius: 6px;" oninput="onArenaModelsSearchInput()">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="arena-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tier')" title="Clique para ordenar por Tier">
+                    Tier <span id="sort-ind-tier" style="font-size: 0.65rem; color: var(--cyan);">▲</span>
+                  </th>
+                  <th style="cursor: pointer; user-select: none;" onclick="sortArenaTable('name')" title="Clique para ordenar por Modelo">
+                    Modelo & Identificador <span id="sort-ind-name" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('quant')" title="Clique para ordenar por Quantização">
+                    Quantização <span id="sort-ind-quant" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 130px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tps')" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token. Clique para ordenar.">
+                    Throughput (TPS) <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token.">ⓘ</span> <span id="sort-ind-tps" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 110px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('ttft')" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial. Clique para ordenar.">
+                    TTFT Prefill <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial.">ⓘ</span> <span id="sort-ind-ttft" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 120px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('vram')" title="VRAM Pico: Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução. Clique para ordenar.">
+                    VRAM Pico <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução.">ⓘ</span> <span id="sort-ind-vram" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('e3')" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente! Clique para ordenar.">
+                    E³ Score <span style="cursor: help; color: #c084fc; font-size: 0.75rem; margin-left: 2px; font-weight: bold;" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente!">ⓘ</span> <span id="sort-ind-e3" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 130px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('status')" title="Clique para ordenar por Status de Homologação">
+                    Status <span id="sort-ind-status" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 160px;" class="text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="arena-models-tbody">
+                <tr>
+                  <td colspan="9" style="text-align: center; color: var(--text-muted);">Carregando modelos da Arena...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CARD 3: HISTÓRICO DE AUDITORIA DE TELEMETRIA (arena_telemetry) -->
+        <div class="card">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-purple">📜</div>
+                Histórico de Testes Realizados no Silício
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Registro detalhado dos testes de desempenho executados na sua máquina com telemetria oficial de hardware.
+              </p>
+            </div>
+            <div id="arena-telemetry-summary-badge" class="badge badge-lowcost">Histórico de Provas</div>
+          </div>
+
+          <div class="table-container">
+            <table class="arena-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;" class="text-center">ID</th>
+                  <th>Modelo</th>
+                  <th style="width: 150px;">Tipo de Prova</th>
+                  <th style="width: 110px;" class="text-center">Acelerador</th>
+                  <th style="width: 100px;" class="text-center">Velocidade</th>
+                  <th style="width: 90px;" class="text-center">TTFT</th>
+                  <th style="width: 110px;" class="text-center">VRAM Pico</th>
+                  <th style="width: 100px;" class="text-center">Status</th>
+                  <th style="width: 140px;">Data / Hora</th>
+                </tr>
+              </thead>
+              <tbody id="arena-telemetry-tbody">
+                <tr>
+                  <td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum histórico registrado no vault ainda.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 2: MODEL HUB & DOWNLOADS -->
+      <div id="panel-local-hub" style="display: none;">
+        <!-- CARD 1: DIAGNÓSTICO DE HARDWARE PROFILER -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">🖥️</div>
+                Diagnóstico & Limites do seu Hardware
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Métricas físicas de silício em tempo real para inferência estável, isolamento térmico e zero spillover PCIe.
+              </p>
+            </div>
+            <button class="btn btn-cyan" id="btn-recalibrate-hw" onclick="fetchHardwareAndRecommendations()">
+              <span>🔄</span> Recalibrar Hardware
+            </button>
+          </div>
+          <div class="hw-spec-grid" id="hw-profiler-specs">
+            <div class="hw-spec-card">
+              <div class="hw-spec-label">GPU Primária</div>
+              <div class="hw-spec-val" id="hw-gpu-name" style="font-size: 0.85rem; word-break: break-word;">Detectando...</div>
+              <div id="hw-gpu-sub" style="font-size: 0.63rem; color: #a78bfa; margin-top: 3px; line-height: 1.3;">Turing TU106 &bull; CC 7.5 &bull; 1.920 CUDA Cores</div>
+            </div>
+            <div class="hw-spec-card">
+              <div class="hw-spec-label">VRAM Útil (Headroom WDDM)</div>
+              <div class="hw-spec-val" id="hw-vram-usable" style="color: var(--cyan); font-size: 0.88rem;">--</div>
+              <div id="hw-vram-sub" style="font-size: 0.63rem; color: #94a3b8; margin-top: 3px; line-height: 1.35;">
+                <div>📦 Teto Pesos: ~3.8 GB (Q4_K_M)</div>
+                <div style="margin-top: 2px;">🧠 Margem KV Cache: ~1.3 GB</div>
+              </div>
+            </div>
+            <div class="hw-spec-card">
+              <div class="hw-spec-label">RAM do Sistema (Host)</div>
+              <div class="hw-spec-val" id="hw-host-ram" style="font-size: 0.88rem;">--</div>
+              <div id="hw-host-ram-sub" style="font-size: 0.63rem; color: var(--green); margin-top: 3px; line-height: 1.3;">⚡ DDR4 Dual Channel</div>
+            </div>
+            <div class="hw-spec-card">
+              <div class="hw-spec-label">Instruções CPU & Silício</div>
+              <div class="hw-spec-val" id="hw-cpu-features" style="font-size: 0.74rem;">--</div>
+              <div id="hw-cpu-sub" style="font-size: 0.63rem; color: #38bdf8; margin-top: 3px; line-height: 1.3;">Intel Core i9-9980HK (8C / 16T)</div>
+            </div>
+            <div class="hw-spec-card">
+              <div class="hw-spec-label">Teto de Contexto dGPU</div>
+              <div id="hw-context-ceiling-container" style="display: flex; flex-direction: column; justify-content: center; min-height: 38px;">
+                <div class="hw-spec-val" id="hw-context-ceiling" style="color: #34d399; font-size: 0.95rem; font-weight: 700; line-height: 1.2;">16.384 tokens</div>
+                <div id="hw-context-ceiling-sub" style="color: #38bdf8; font-size: 0.70rem; font-weight: 600; margin-top: 2px; line-height: 1.2;">(até 32k c/ KV Q4)</div>
+              </div>
+              <div id="hw-context-sub" style="font-size: 0.63rem; color: #94a3b8; margin-top: 5px; line-height: 1.35;">Baseado em 5.17 GB úteis: seguro p/ 3B (16k-32k) e 7B c/ KV Q4 (4k-8k FP16). Sessões curtas evitam spillover PCIe.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: DOWNLOADS ATIVOS E FILA RESILIENTE -->
+        <div class="card" id="card-downloads-hub" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">📥</div>
+                Gerenciador Sequencial de Downloads
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Fila sequencial com suporte a download atômico, pausa/retomada HTTP Range e validação SHA-256 incremental.
+              </p>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
+              Status SSE: <span id="download-sse-status" style="color: #34d399;">● Ativo</span>
+            </div>
+          </div>
+          <div id="downloads-content-area">
+            <div style="text-align: center; color: var(--text-muted); padding: 18px 0; font-size: 0.85rem;">
+              Nenhum download ativo no momento. A fila de silício está ociosa.
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3: O TRIO RECOMENDADO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">⚡</div>
+                O Trio Recomendado
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Os 3 modelos essenciais para velocidade, raciocínio e código — calibrados para rodar com folga nos 6 GB da sua placa de vídeo.
+              </p>
+            </div>
+          </div>
+          <div class="triad-grid" id="triad-cards-grid">
+            <div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Calculando fit ideal dos modelos locais...</div>
+          </div>
+        </div>
+
+        <!-- CARD 4: MELHORES ESCOLHAS POR FUNÇÃO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-purple">🎯</div>
+                Melhores Escolhas por Função
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Modelos testados para o seu computador, organizados pelo que você precisa: Programação, Raciocínio Lógico, Visão ou Automação.
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <span id="catalog-last-sync-badge" class="badge" style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.68rem; padding: 3px 8px; font-weight: 600; display: none;">
+                ✓ Sincronizado
+              </span>
+              <button id="btn-sync-catalog" class="btn btn-purple" onclick="syncCuratedCatalogLive()">
+                <span id="btn-sync-catalog-icon">✨</span> Sincronizar Catálogo
+              </button>
+            </div>
+          </div>
+
+          <!-- CONTROLE DE VISUALIZAÇÃO & FILTROS HARMONIZADOS -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+            <div class="segmented-control" id="curated-view-mode" style="display: inline-flex; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 3px; gap: 4px;">
+              <button class="segmented-btn active" id="btn-curated-mode-trusted" onclick="setCuratedViewMode('trusted')" style="padding: 5px 12px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; font-weight: 600; display: flex; align-items: center; gap: 6px; background: var(--purple); color: #fff;">
+                <span>⭐</span> Mais Confiáveis
+              </button>
+              <button class="segmented-btn" id="btn-curated-mode-trending" onclick="setCuratedViewMode('trending')" style="padding: 5px 12px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 6px; background: transparent; color: var(--text-muted);">
+                <span>🔥</span> Novidades em Alta
+              </button>
+            </div>
+
+            <div class="profile-selector" id="curated-profile-filters" style="margin-bottom: 0;">
+              <button class="profile-pill active" onclick="filterCuratedProfile('all')">Todos os Perfis</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('coding')">💻 Programação</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('reasoning')">🧠 Raciocínio (R1)</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('agentic')">🤖 Agêntico / MCP</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('design')">🎨 UI / Frontend</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('vision')">👁️ Visão (VLM)</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('fast')">⚡ Triagem Rápida</button>
+            </div>
+          </div>
+          <div class="curated-grid" id="curated-models-grid">
+            <!-- Preenchido dinamicamente via JS -->
+          </div>
+        </div>
+
+        <!-- CARD 5: EXPLORADOR HUGGING FACE HUB -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">🌐</div>
+                Explorar Qualquer Modelo (Hugging Face)
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Pesquise qualquer novidade no catálogo global com estimativa automática se cabe ou não na sua máquina.
+              </p>
+            </div>
+          </div>
+
+          <!-- FILTROS POR FAIXA DE PARÂMETROS -->
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <span>📏 Faixa de Parâmetros:</span>
+              <span id="hf-vram-fit-legend" style="font-size: 0.65rem; color: #34d399; font-weight: normal;">(🟢 Cabem na dGPU)</span>
+            </div>
+            <div class="profile-selector" id="hf-param-filters" style="margin-bottom: 0;">
+              <button class="profile-pill active" id="btn-hf-param-all" onclick="setHfParamFilter('all')">Todos</button>
+              <button class="profile-pill" id="btn-hf-param-sub1b" onclick="setHfParamFilter('sub1b')">&lt;1B</button>
+              <button class="profile-pill" id="btn-hf-param-1b" onclick="setHfParamFilter('1b')">1B</button>
+              <button class="profile-pill" id="btn-hf-param-2b" onclick="setHfParamFilter('2b')">2B</button>
+              <button class="profile-pill" id="btn-hf-param-3b" onclick="setHfParamFilter('3b')">3B</button>
+              <button class="profile-pill" id="btn-hf-param-4b" onclick="setHfParamFilter('4b')">4B</button>
+              <button class="profile-pill" id="btn-hf-param-5b" onclick="setHfParamFilter('5b')">5B</button>
+              <button class="profile-pill" id="btn-hf-param-6b" onclick="setHfParamFilter('6b')">6B</button>
+              <button class="profile-pill" id="btn-hf-param-7b" onclick="setHfParamFilter('7b')">7B</button>
+              <button class="profile-pill" id="btn-hf-param-8b" onclick="setHfParamFilter('8b')">8B</button>
+              <button class="profile-pill" id="btn-hf-param-9b" onclick="setHfParamFilter('9b')">9B</button>
+              <button class="profile-pill" id="btn-hf-param-10b_12b" onclick="setHfParamFilter('10b_12b')">10B ~ 12B</button>
+              <button class="profile-pill" id="btn-hf-param-14b" onclick="setHfParamFilter('14b')">14B</button>
+              <button class="profile-pill" id="btn-hf-param-32b" onclick="setHfParamFilter('32b')">32B</button>
+              <button class="profile-pill" id="btn-hf-param-70b_plus" onclick="setHfParamFilter('70b_plus')">70B+</button>
+            </div>
+          </div>
+
+          <!-- FILTROS POR TIPO DE TAREFA / PERFIL -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">
+              🎯 Tipo de Tarefa / Perfil Agêntico:
+            </div>
+            <div class="profile-selector" id="hf-task-filters" style="margin-bottom: 0;">
+              <button class="profile-pill" id="btn-hf-task-coding" onclick="setHfTaskFilter('coding')">💻 Programação</button>
+              <button class="profile-pill" id="btn-hf-task-reasoning" onclick="setHfTaskFilter('reasoning')">🧠 Raciocínio (R1)</button>
+              <button class="profile-pill" id="btn-hf-task-agentic" onclick="setHfTaskFilter('agentic')">🤖 Ferramentas & MCP</button>
+              <button class="profile-pill" id="btn-hf-task-vision" onclick="setHfTaskFilter('vision')">👁️ Visão (VLM)</button>
+              <button class="profile-pill" id="btn-hf-task-fast" onclick="setHfTaskFilter('fast')">⚡ Triagem Rápida</button>
+              <button class="profile-pill" id="btn-hf-task-general" onclick="setHfTaskFilter('general')">🌐 Conversação</button>
+            </div>
+          </div>
+
+          <!-- BARRA DE PESQUISA -->
+          <div class="hf-search-row">
+            <input type="text" id="hf-search-input" class="setting-input" style="flex: 1;" placeholder="Pesquise por autor ou modelo (ex: bartowski, unsloth, Qwen2.5-Coder, DeepSeek-R1, xLAM)..." onkeydown="if(event.key==='Enter') searchHuggingFaceHub()">
+            <button class="btn btn-cyan" onclick="searchHuggingFaceHub()">
+              <span>🔍</span> Pesquisar no HF
+            </button>
+          </div>
+          <div id="hf-search-results" style="margin-top: 16px;">
+            <div style="text-align: center; color: var(--text-muted); padding: 16px; font-size: 0.82rem;">
+              Selecione uma faixa de parâmetros ou tipo de tarefa acima, ou digite um termo para explorar arquivos GGUF na nuvem.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 4: TWO-STAGE SEMANTIC SWITCHBOARD -->
+      <div id="panel-local-switchboard" style="display: none;">
+        <!-- CARD 1: RUNNER DE PROJEÇÃO DINÂMICA INTERATIVO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-purple">⚡</div>
+                Central de Roteamento Inteligente de Ferramentas
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5;">
+                Ativa sob demanda apenas as ferramentas necessárias para cada tarefa, acelerando as respostas do agente.<br>
+                Economiza até 91% dos tokens de contexto e preserva o cache da IA com 0 MB de uso de VRAM.
+              </p>
+            </div>
+            <button class="btn btn-purple" id="btn-refresh-skills" onclick="fetchSwitchboardSkills()" style="white-space: nowrap; flex-shrink: 0;">
+              <span>🔄</span> Recarregar Skills
+            </button>
+          </div>
+
+          <!-- CONTROLE DE ENTRADA DO SWITCHBOARD -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px;">
+            <div style="display: grid; grid-template-columns: 2.8fr 1.6fr 1fr auto; gap: 14px; align-items: end;">
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">O QUE O AGENTE PRECISA FAZER? (INTENÇÃO OU TAREFA)</label>
+                <input type="text" id="switchboard-query-input" class="setting-input" style="width: 100%; font-size: 0.82rem;" placeholder="Ex: refatorar função com myers diff na AST, consultar memória L2, medir temperatura da GPU RTX..." onkeydown="if(event.key==='Enter') executeSwitchboardEvaluation()">
+              </div>
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">FILTRAR NAMESPACE (OPCIONAL)</label>
+                <select id="switchboard-ns-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="">🌐 Todos os Namespaces</option>
+                  <option value="code">💻 code (Cirurgia AST, Myers Diff, Sintaxe)</option>
+                  <option value="memory">🧠 memory (FrankenSQLite L2 & LadybugDB)</option>
+                  <option value="think">🤔 think (Freio Socrático DAG & Hipóteses)</option>
+                  <option value="ops">🛡️ ops (JobObject Sandbox & Subagentes)</option>
+                  <option value="sys">🌡️ sys (NVML Hardware Watchdog & Telemetria)</option>
+                  <option value="context">🗜️ context (Compressão CCR & Headroom)</option>
+                  <option value="core">⚙️ core (Descoberta & Metadados MCP)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TOP-K TOOLS</label>
+                <select id="switchboard-topk-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="3">Top-3</option>
+                  <option value="5" selected>Top-5</option>
+                  <option value="8">Top-8</option>
+                  <option value="10">Top-10</option>
+                </select>
+              </div>
+              <div>
+                <button class="btn btn-cyan" id="btn-run-switchboard" onclick="executeSwitchboardEvaluation()" style="padding: 9px 18px; font-weight: 600;">
+                  <span>⚡</span> Simular Seleção de Ferramentas
+                </button>
+              </div>
+            </div>
+
+            <!-- PRESETS DE TESTE RÁPIDO -->
+            <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center;">
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Presets Rápidos:</span>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('extrair outline e substituir symbol na ast de rust')">🔧 Código / AST</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('salvar fato epistemico no sqlite l2 e ladybug')">🧠 Memória L2</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('deliberar hipoteses em grafo dag socratico')">🤔 Pensamento Socrático</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('telemetria nvml vram temperatura rtx 2060m')">🌡️ Hardware NVML</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('comprimir tokens e deduplicar contexto em ram')">🗜️ Context Lean CCR</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('consultar precos e campeoes cloud arena pareto')">🌐 Cloud FinOps</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('executar comando shell em sandbox seguro')">🛡️ Safe Sandbox</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('criar entidades e relacoes tipadas no grafo ladybugdb')">🕸️ Grafo Ontológico</button>
+            </div>
+          </div>
+
+          <!-- LIVE DECISION RESULT BANNER -->
+          <div id="switchboard-result-container" style="display: none; margin-top: 20px;">
+            <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 18px;">
+              
+              <!-- MINI-CARD DE IMPACTO FINOPS (SEM VS COM SWITCHBOARD) -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 16px;">
+                <div style="display: flex; align-items: center; gap: 10px; border-right: 1px solid rgba(255,255,255,0.08); padding-right: 12px;">
+                  <div style="font-size: 1.15rem;">🔴</div>
+                  <div>
+                    <div style="font-size: 0.72rem; color: #f87171; font-weight: 700; text-transform: uppercase;">Sem Switchboard (Carga Total)</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35;">55 ferramentas injetadas no prompt (~6.050 tokens) • Quebra prefix cache • Risco de alucinação</div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="font-size: 1.15rem;">🟢</div>
+                  <div>
+                    <div style="font-size: 0.72rem; color: #34d399; font-weight: 700; text-transform: uppercase;">Com Switchboard MCP (Injeção Cirúrgica)</div>
+                    <div style="font-size: 0.75rem; color: #cbd5e1; line-height: 1.35;">Apenas ferramentas essenciais (~550 tokens) • <strong style="color: #34d399;">~91% economia de tokens</strong> • Latência &lt; 2ms</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <span id="sb-stage-badge" class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); font-size: 0.8rem; padding: 4px 10px; font-weight: 700;">⚡ Fast-Path RAM Cosine</span>
+                  <span style="font-size: 0.82rem; color: #cbd5e1;" id="sb-summary-text">5 ferramentas projetadas para o contexto</span>
+                </div>
+                <div style="display: flex; gap: 16px; font-family: var(--font-mono); font-size: 0.78rem; flex-wrap: wrap;">
+                  <div>Latência: <strong id="sb-latency" style="color: var(--cyan);">0.0 ms</strong></div>
+                  <div>Confiança: <strong id="sb-confidence" style="color: var(--emerald);">0%</strong></div>
+                  <div>Entropia: <strong id="sb-entropy" style="color: var(--amber);">0.00</strong></div>
+                  <div>Economia Est.: <strong id="sb-tokens-saved" style="color: #34d399;">~5.500 tokens (91%)</strong></div>
+                </div>
+              </div>
+
+              <!-- SKILL RECOMENDADA -->
+              <div id="sb-skill-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="sb-skill-icon" style="font-size: 1.1rem;">🎯</span>
+                    <strong id="sb-skill-name" style="color: var(--purple); font-size: 0.92rem;">souls-code-surgeon</strong>
+                    <span id="sb-skill-score-badge" class="badge" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">Score: 0.95</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Skill Operacional Canônica</span>
+                    <button class="sb-action-btn" onclick="highlightSkillInCatalog()">
+                      <span>🔍</span> Localizar no Catálogo
+                    </button>
+                  </div>
+                </div>
+                <p id="sb-skill-desc" style="font-size: 0.78rem; color: #cbd5e1; margin: 6px 0 10px 0;">Descrição da skill recomendada.</p>
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Ferramentas Primárias da Skill:</span>
+                  <div id="sb-skill-primary-tools" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                </div>
+              </div>
+
+              <!-- FERRAMENTAS SELECIONADAS CIRURGICAMENTE -->
+              <div>
+                <h4 style="font-size: 0.8rem; color: #fff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em;">Ferramentas Selecionadas Cirurgicamente:</h4>
+                <div class="table-container">
+                  <table class="arena-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 200px;">Ferramenta & Habilidade</th>
+                        <th style="width: 110px;" class="text-center">Namespace</th>
+                        <th style="width: 140px;" class="text-center">Afinidade / Score</th>
+                        <th>Descrição & Parâmetros do Contrato MCP</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sb-projected-tools-tbody">
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: CATÁLOGO COMPLETO DAS 15 SKILLS CANÔNICAS -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">📚</div>
+                Competências & Especialidades do Agente (Skills)
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Habilidades especializadas que combinam as ferramentas certas para resolver problemas complexos.
+              </p>
+            </div>
+            <span id="sb-catalog-stats-badge" class="badge badge-lowcost">15 Habilidades Prontas &bull; 55 Ferramentas Ativas</span>
+          </div>
+
+          <!-- BARRA DE PESQUISA E FILTROS DE CATEGORIA DE SKILLS -->
+          <div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <div style="flex: 1; min-width: 260px;">
+              <input type="text" id="sb-skill-search-input" class="setting-input" style="width: 100%; font-size: 0.8rem;" placeholder="🔍 Filtrar skills por nome, palavra-chave (#ast, #memória) ou ferramenta..." oninput="filterSwitchboardSkills()">
+            </div>
+            <div class="profile-selector" id="sb-skill-category-filters" style="margin-bottom: 0;">
+              <button class="profile-pill active" id="btn-sb-cat-all" onclick="setSwitchboardSkillCategory('all')">Todas (15)</button>
+              <button class="profile-pill" id="btn-sb-cat-coding" onclick="setSwitchboardSkillCategory('coding')">💻 Código</button>
+              <button class="profile-pill" id="btn-sb-cat-memory" onclick="setSwitchboardSkillCategory('memory')">🧠 Memória</button>
+              <button class="profile-pill" id="btn-sb-cat-hardware" onclick="setSwitchboardSkillCategory('hardware')">⚙️ Silício</button>
+              <button class="profile-pill" id="btn-sb-cat-security" onclick="setSwitchboardSkillCategory('security')">🛡️ Segurança</button>
+              <button class="profile-pill" id="btn-sb-cat-reasoning" onclick="setSwitchboardSkillCategory('reasoning')">🤔 Raciocínio</button>
+            </div>
+          </div>
+
+          <div id="sb-skills-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 8px;">
+            <div style="text-align: center; color: var(--text-muted); padding: 20px;">Carregando catálogo de skills...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- ABA 3: CLOUD ARENA (llm_cloud) -->
+    <!-- ========================================== -->

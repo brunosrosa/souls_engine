@@ -27,6 +27,7 @@ docs/.archive/
 .souls_data/
 .souls_sandbox/
 .souls_scratchpad/
+scratch/
 
 # Python Cache
 __pycache__/

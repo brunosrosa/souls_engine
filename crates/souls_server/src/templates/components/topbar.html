@@ -1,0 +1,35 @@
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand-group">
+      <div class="brand-mascot" onclick="switchTab('tab-overview')">
+        <img id="mascot-img" src="/dashboard/icon/cyan" alt="Souls Mascot">
+      </div>
+      <div>
+        <div class="brand-title">Souls Engine v7 Bare-Metal</div>
+        <div class="brand-sub">
+          <span class="pulse-dot"></span>
+          <span>127.0.0.1:9123 &bull; ReFS Dev Drive Z:\</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="telemetry-pills">
+      <div class="telemetry-pill" id="pill-brain" title="Master Brain ativo no Hermes Agent">
+        <span>🧠 Brain:</span>
+        <strong id="top-brain-name">Carregando...</strong>
+      </div>
+      <div class="telemetry-pill" title="Temperatura da GPU RTX 2060m">
+        <span>🎮 GPU:</span>
+        <strong id="pill-temp">--°C</strong>
+      </div>
+      <div class="telemetry-pill" title="VRAM Livre sob WDDM">
+        <span>⚡ VRAM:</span>
+        <strong id="pill-vram">-- / 5.2 GB</strong>
+      </div>
+      <div class="telemetry-pill" title="Uptime do servidor">
+        <span>⏱️ Uptime:</span>
+        <strong id="pill-uptime">--m</strong>
+      </div>
+    </div>
+  </header>
+

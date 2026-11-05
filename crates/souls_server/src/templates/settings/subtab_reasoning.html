@@ -1,0 +1,412 @@
+      <div class="settings-subpane" id="subtab-reasoning">
+        <!-- HEADER DA SUB-ABA -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 1.22rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; margin: 0;">
+              <span style="display: inline-flex; width: 32px; height: 32px; border-radius: 8px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); align-items: center; justify-content: center; font-size: 1.1rem;">🧠</span>
+              Dynamic Reasoning Effort & Deliberação Socrática
+              <span class="info-icon">i
+                <span class="tooltip-box">
+                  <strong>Governança de Incerteza e Pensamento</strong>
+                  Mede a entropia de Shannon (H) no silício local (Tier 0.5) antes do envio da tarefa. Se for simples, usa zero tokens; se for complexa, calibra o pensamento invisível e aciona o freio cognitivo socrático.
+                  <div class="tooltip-impact">💡 Economiza até 95% de tokens de pensamento em prompts diretos e previne alucinações arquiteturais.</div>
+                  <div class="tooltip-def">Tier 0.5: Host CPU AVX2 (0 MB VRAM) | Teto: Ultra (32.768 tokens)</div>
+                </span>
+              </span>
+            </h2>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin: 4px 0 0 0;">
+              Calibração matemática de incerteza por prompt via Tier 0.5 (Shannon Entropy), escada gradual de tokens e freio cognitivo em grafo DAG.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn" onclick="resetReasoningDefaults()" style="padding: 6px 12px; font-size: 0.74rem; background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); color: var(--text-muted);">
+              <span>⚡</span> Defaults Socráticos
+            </button>
+            <button class="btn btn-green" onclick="saveSettings()" style="padding: 6px 14px; font-size: 0.74rem;">
+              <span>💾</span> Salvar Configurações
+            </button>
+          </div>
+        </div>
+
+        <!-- FAIXA DE 4 MINI-CARDS DE MÉTRICA/STATUS -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 16px;">
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">⚡</div>
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #fff; font-family: var(--font-mono);">SmolLM2-135M</div>
+              <div style="font-size: 0.70rem; color: var(--purple);">Tier 0.5 CPU AVX2 (0 MB VRAM)</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🪜</div>
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #fff; font-family: var(--font-mono);">0 ➔ 32.768</div>
+              <div style="font-size: 0.70rem; color: var(--cyan);">Escada Gradual de Tokens</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">⚖️</div>
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #fff; font-family: var(--font-mono);"><span id="metric-entropy-display">H ≥ 0.70</span></div>
+              <div style="font-size: 0.70rem; color: var(--amber);">Ponto de Inflexão (Shannon)</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🏛️</div>
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #fff; font-family: var(--font-mono);">Ciclo DAG</div>
+              <div style="font-size: 0.70rem; color: var(--green);">Freio Socrático & /grill-me</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BANNER DE GOVERNANÇA EPISTÊMICA -->
+        <div style="margin-bottom: 18px; padding: 10px 14px; background: linear-gradient(90deg, rgba(168, 85, 247, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+            <span style="font-size: 1.1rem; color: var(--purple); flex-shrink: 0;">💡</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.45;">
+              <strong>Governança de Silício & Redução de Latência:</strong> O Tier 0.5 (SmolLM2-135M) mede a entropia de Shannon (H) do prompt na CPU em menos de 0.05 ms sem tocar na VRAM da GPU. Prompts simples bypassam o thinking (0 tokens), poupando até 95% do custo em nuvem.
+            </span>
+          </div>
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 9999px; font-size: 0.70rem; font-family: var(--font-mono); color: var(--purple); white-space: nowrap; flex-shrink: 0;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 8px var(--purple);"></span>
+            Incerteza Bare-Metal Ativa
+          </div>
+        </div>
+
+        <!-- GRID PRINCIPAL DE 2 COLUNAS: CONFIGS (ESQUERDA) + SIMULADOR (DIREITA) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start;">
+          <!-- COLUNA 1: GOVERNANÇA & PARÂMETROS -->
+          <div style="display: flex; flex-direction: column; gap: 18px;">
+            <!-- CARD 1: CALIBRAÇÃO DE INCERTEZA -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 10px;">
+                <div class="card-title" style="font-size: 0.88rem;">
+                  <div class="card-icon icon-purple" style="width: 24px; height: 24px; font-size: 0.9rem;">🧮</div>
+                  Incerteza de Shannon & Thinking Budget
+                </div>
+              </div>
+
+              <div class="setting-grid" style="grid-template-columns: 1fr; gap: 14px;">
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Dynamic Reasoning Effort Ativo
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Cálculo Dinâmico por Prompt</strong>
+                          Calcula tokens de pensamento baseado na incerteza da tarefa.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-reasoning-dynamic">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-reasoning-dynamic" checked onchange="updateSwitchPill('cfg-reasoning-dynamic', 'pill-reasoning-dynamic'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc">Permite que o Tier 0.5 meça a entropia matemática do prompt e determine o budget de pensamento.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Teto Máximo de Reasoning
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Limite Superior da Escada</strong>
+                          Impede que modelos com thinking excedam o teto estabelecido.
+                        </span>
+                      </span>
+                    </div>
+                    <select id="cfg-reasoning-max-effort" class="setting-input" style="width: 180px;" onchange="markSettingsUnsaved()">
+                      <option value="minimal">Minimal (512)</option>
+                      <option value="low">Low (1.024)</option>
+                      <option value="medium">Medium (4.096)</option>
+                      <option value="high">High (16.384)</option>
+                      <option value="xhigh">XHigh (24.576)</option>
+                      <option value="ultra" selected>Ultra (32.768)</option>
+                    </select>
+                  </div>
+                  <div class="setting-desc">Teto extremo de tokens de pensamento pré-resposta aplicável aos modelos.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Escalonamento Suave em Retries
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Stepwise Escalation</strong>
+                          Avança 1 degrau na escada em falha de teste ou compilação.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-reasoning-stepwise">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-reasoning-stepwise" checked onchange="updateSwitchPill('cfg-reasoning-stepwise', 'pill-reasoning-stepwise'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc">Evita saltos abruptos de custo dando uma chance intermediária antes do teto máximo.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Bypass em Tarefas Simples
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Trivial Task Bypass</strong>
+                          Desliga totalmente o thinking (0 tokens) para JSON simples e formatação.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-reasoning-bypass">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-reasoning-bypass" checked onchange="updateSwitchPill('cfg-reasoning-bypass', 'pill-reasoning-bypass'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc">Poupe 100% dos tokens de pensamento quando nenhuma deliberação for necessária.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Threshold de Alta Entropia (H &ge;)
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Ponto de Inflexão</strong>
+                          Tarefas acima deste limiar recebem reasoning High ou superior.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="range-val-badge">
+                      <span class="val-kicker">Definido:</span>
+                      <span id="val-entropy-threshold">0.70</span>
+                      <span style="color: var(--text-muted);">H</span>
+                      <span class="default-indicator">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-reasoning-threshold" min="0.50" max="0.95" step="0.05" value="0.70" data-default="0.70" data-snap-delta="0.025" oninput="document.getElementById('val-entropy-threshold').innerText = Number(this.value).toFixed(2); document.getElementById('metric-entropy-display').innerText = 'H ≥ ' + Number(this.value).toFixed(2); markSettingsUnsaved();">
+                    <div class="slider-default-tick at-default" data-slider="cfg-reasoning-threshold" style="left: calc(8px + (100% - 16px) * 0.4444);" title="Padrão canônico: 0.70 H (Clique ou aproxime para restaurar)"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 2: MODO SOCRÁTICO & FREIO COGNITIVO -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-header" style="padding-bottom: 10px;">
+                <div class="card-title" style="font-size: 0.88rem;">
+                  <div class="card-icon icon-cyan" style="width: 24px; height: 24px; font-size: 0.9rem;">🏛️</div>
+                  Modo Socrático & Freio Cognitivo (DAG)
+                </div>
+              </div>
+
+              <div class="setting-grid" style="grid-template-columns: 1fr; gap: 14px;">
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Freio Cognitivo Socrático
+                      <span class="info-icon">i
+                        <span class="tooltip-box">
+                          <strong>Deliberação Forçada</strong>
+                          Exige geração de hipóteses antes de alterar contratos e código sensível.
+                        </span>
+                      </span>
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-reasoning-socratic">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-reasoning-socratic" checked onchange="updateSwitchPill('cfg-reasoning-socratic', 'pill-reasoning-socratic'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc">Força deliberação reflexiva em grafo acíclico dirigido (DAG) antes de mutações de alto impacto.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Modo de Deliberação Agêntica
+                    </div>
+                    <select id="cfg-reasoning-socratic-mode" class="setting-input" style="width: 215px;" onchange="markSettingsUnsaved()">
+                      <option value="autonomous" selected>Autônomo com Síntese</option>
+                      <option value="guided">Guiado (/grill-me)</option>
+                      <option value="dag">Árvore de Hipóteses DAG</option>
+                    </select>
+                  </div>
+                  <div class="setting-desc">Determina se o modelo sintetiza pensamentos internamente ou interpela o usuário.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Threshold para Interpelação /grill-me
+                    </div>
+                    <div class="range-val-badge">
+                      <span class="val-kicker">Disparo:</span>
+                      <span id="val-grill-threshold">0.75</span>
+                      <span style="color: var(--text-muted);">H</span>
+                      <span class="default-indicator">(Padrão)</span>
+                    </div>
+                  </div>
+                  <div class="range-wrap">
+                    <input type="range" id="cfg-reasoning-grill-threshold" min="0.50" max="0.95" step="0.05" value="0.75" data-default="0.75" data-snap-delta="0.025" oninput="document.getElementById('val-grill-threshold').innerText = Number(this.value).toFixed(2); markSettingsUnsaved();">
+                    <div class="slider-default-tick at-default" data-slider="cfg-reasoning-grill-threshold" style="left: calc(8px + (100% - 16px) * 0.5556);" title="Padrão canônico: 0.75 H (Clique ou aproxime para restaurar)"></div>
+                  </div>
+                  <div class="setting-desc">Tarefas com ambiguidade maior que este valor forçam perguntas socráticas de alinhamento.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Ciclos Máximos de Deliberação
+                    </div>
+                    <select id="cfg-reasoning-socratic-cycles" class="setting-input" style="width: 140px;" onchange="markSettingsUnsaved()">
+                      <option value="1">1 ciclo (Rápido)</option>
+                      <option value="2">2 ciclos (Enxuto)</option>
+                      <option value="3" selected>3 ciclos (Padrão)</option>
+                      <option value="5">5 ciclos (Exaustivo)</option>
+                    </select>
+                  </div>
+                  <div class="setting-desc">Número de ramificações permitidas antes da convergência da solução.</div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-header">
+                    <div class="setting-title">
+                      Detecção de Contradições (H¹ Cohomology)
+                    </div>
+                    <div class="switch-wrap">
+                      <span class="state-pill on" id="pill-reasoning-contradiction">LIGADO</span>
+                      <label class="switch">
+                        <input type="checkbox" id="cfg-reasoning-contradiction" checked onchange="updateSwitchPill('cfg-reasoning-contradiction', 'pill-reasoning-contradiction'); markSettingsUnsaved();">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="setting-desc">Detecta loops infinitos de reflexão e contradições entre premissas com a ferramenta thinking.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUNA 2: SIMULADOR INTERATIVO EM TEMPO REAL -->
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-header" style="padding-bottom: 10px; align-items: flex-start; gap: 12px;">
+              <div class="card-title" style="font-size: 0.88rem; flex: 1; min-width: 0;">
+                <div class="card-icon icon-purple" style="width: 24px; height: 24px; font-size: 0.9rem; flex-shrink: 0;">🧪</div>
+                <span>Simulador de Entropia & Deliberação em Tempo Real</span>
+              </div>
+              <div style="text-align: right; flex-shrink: 0;">
+                <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--purple); background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); padding: 3px 8px; border-radius: 4px; display: inline-block; text-align: right; line-height: 1.35;">Host CPU<br>AVX2</span>
+              </div>
+            </div>
+
+            <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 12px;">
+              Teste prompts reais contra o motor Tier 0.5 do Souls Engine para visualizar a incerteza de Shannon calculada, o Thinking Budget recomendado e o freio socrático instantâneo.
+            </div>
+
+            <!-- PRESETS RÁPIDOS -->
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+              <button class="sim-preset-btn" onclick="runReasoningSimulator('Formatar objeto JSON com chaves em minúsculo e indentação de 2 espaços')">
+                <span>⚡</span> Formatar JSON (Bypass)
+              </button>
+              <button class="sim-preset-btn" onclick="runReasoningSimulator('Refatorar o parser Tree-sitter em crates/souls_ast garantindo Myers Diff atômico sem vazamentos de memória')">
+                <span>🧬</span> Cirurgia Myers Diff (Ultra)
+              </button>
+              <button class="sim-preset-btn" onclick="runReasoningSimulator('Melhorar a performance geral do Souls Engine sem alterar a topologia de crates')">
+                <span>⚠️</span> Otimização Ampla (/grill-me)
+              </button>
+            </div>
+
+            <!-- TEXTAREA DO PROMPT DE TESTE -->
+            <div style="margin-bottom: 12px;">
+              <textarea id="sim-prompt-input" class="setting-input" rows="3" style="width: 100%; resize: vertical; font-size: 0.76rem; font-family: var(--font-mono); line-height: 1.45; padding: 10px;" placeholder="Digite ou cole uma instrução técnica para testar a incerteza...">Refatorar o parser Tree-sitter em crates/souls_ast garantindo Myers Diff atômico sem vazamentos de memória</textarea>
+            </div>
+
+            <button class="btn btn-primary" id="btn-run-sim" onclick="runReasoningSimulator()" style="width: 100%; justify-content: center; padding: 9px; font-weight: 600; font-size: 0.78rem; margin-bottom: 16px;">
+              <span>⚡</span> Calcular Entropia & Simular Deliberação
+            </button>
+
+            <!-- PAINEL DE RESULTADOS DIAGNÓSTICOS -->
+            <div id="sim-results-pane" style="background: rgba(10, 16, 28, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-dark); letter-spacing: 0.05em;">Entropia de Shannon (H)</span>
+                <span id="sim-entropy-tag" style="font-size: 0.72rem; font-weight: 600; color: var(--purple);">Alta Incerteza</span>
+              </div>
+
+              <!-- BARRA DE PROGRESSO VISUAL -->
+              <div class="entropy-bar-track">
+                <div id="sim-entropy-bar" class="entropy-bar-fill" style="width: 92%;"></div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; font-size: 0.70rem; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 12px;">
+                <span>0.00 (Determinístico)</span>
+                <span id="sim-entropy-score" style="font-weight: 700; color: #fff; font-size: 0.85rem;">0.920 H</span>
+                <span>1.00 (Máxima Incerteza)</span>
+              </div>
+
+              <!-- DECISÕES E BADGES -->
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <span id="sim-intent-badge" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 4px; font-size: 0.68rem; font-family: var(--font-mono); font-weight: 600; background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.3); color: var(--cyan);">
+                    🎯 Intenção: CODE
+                  </span>
+                  <span id="sim-effort-badge" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 4px; font-size: 0.68rem; font-family: var(--font-mono); font-weight: 600; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: var(--purple);">
+                    🪜 Thinking: ULTRA (32.768 tokens)
+                  </span>
+                </div>
+                <div>
+                  <span id="sim-socratic-badge" style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 4px; font-size: 0.68rem; font-family: var(--font-mono); font-weight: 600; border: 1px solid rgba(6, 182, 212, 0.3); background: rgba(6, 182, 212, 0.12); color: var(--cyan);">
+                    🏛️ Deliberação em Grafo DAG
+                  </span>
+                </div>
+              </div>
+
+              <!-- TELEMETRIA BARE-METAL -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.04); font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-muted); margin-bottom: 12px;">
+                <div>⏱️ Latência CPU: <strong id="sim-latency" style="color: #fff;">0.064 ms</strong></div>
+                <div>💾 VRAM: <strong id="sim-vram" style="color: var(--green);">0.0 MB (Zero Spillover)</strong></div>
+                <div style="grid-column: span 2;">⚙️ Motor: <strong id="sim-source" style="color: var(--cyan);">SmolLM2-135M (CPU AVX2)</strong></div>
+              </div>
+
+              <!-- RATIONALE EXPLICATIVO -->
+              <div style="font-size: 0.70rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">
+                <span style="color: var(--text-dark); font-weight: 600;">Racional do Motor:</span> <span id="sim-rationale">Calculated reasoning effort based on intent code and entropy 0.92</span>
+              </div>
+
+              <!-- PAYLOADS DOS PROVEDORES (COMPACTO) -->
+              <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;">
+                <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--text-dark); margin-bottom: 6px;">
+                  Payloads Projetados (Provedores)
+                </div>
+                <pre id="sim-payloads-json" style="margin: 0; padding: 8px 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; font-family: var(--font-mono); font-size: 0.66rem; color: #94a3b8; max-height: 130px; overflow-y: auto;">{
+  "anthropic": { "budget_tokens": 32768, "type": "enabled" },
+  "openai_reasoning_effort": "high",
+  "gemini_thinking_config": { "thinking_budget": 32768 },
+  "openrouter": { "effort": "max", "max_tokens": 32768 }
+}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- SUB-ABA 3: ACELERAÇÃO LOCAL & FINOPS DE SILÍCIO -->
+      <!-- ==================================================== -->

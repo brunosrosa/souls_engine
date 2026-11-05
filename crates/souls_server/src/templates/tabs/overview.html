@@ -1,0 +1,301 @@
+    <section class="tab-pane active" id="tab-overview">
+
+      <!-- BANNER HERO DO MASTER BRAIN GERAL -->
+      <div class="brain-hero">
+        <div class="brain-info">
+          <div class="brain-avatar">🧠</div>
+          <div class="brain-details">
+            <h3>
+              <span>Master Brain Geral:</span>
+              <span id="hero-brain-model" style="color: var(--cyan);">deepseek/deepseek-chat</span>
+              <span class="brain-badge badge-cloud" id="hero-brain-badge">Cloud API</span>
+              <span class="badge badge-champion" id="hero-snapshot-badge" style="font-size: 0.68rem; margin-left: 6px;" title="FrozenMemorySnapshot Imutável (Prefix Cache >95%)">🔒 Snap Ativo</span>
+            </h3>
+            <div class="brain-meta">
+              <span>Provedor: <strong id="hero-brain-provider" style="color: #fff;">nous</strong></span>
+              <span>&bull;</span>
+              <span>Janela: <strong id="hero-brain-ctx" style="color: #fff;">64,000 tokens</strong></span>
+              <span>&bull;</span>
+              <span>Recall L3: <strong style="color: var(--cyan);" id="hero-recall-mode-text">⚡ Adaptativo</strong></span>
+              <span>&bull;</span>
+              <span>Status: <strong style="color: var(--green);" id="hero-brain-status">Conectado / Saudável</strong></span>
+              <span>&bull;</span>
+              <span style="color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
+                Modelo fixo durante o diálogo &bull; Governança:
+                <button class="agents-doc-link" onclick="openAgentsMdModal('hermes')" title="Clique para ler o AGENTS.md do Hermes Agent (Invariantes de Prompt Caching e Arquitetura)">
+                  📄 Hermes AGENTS.md
+                </button>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
+          <button class="btn" style="white-space: nowrap; height: 38px; padding: 0 16px;" onclick="pinOrRefreshSnapshot(true)" title="Recarregar MEMORY.md e USER.md na próxima sessão">
+            <span>📌</span> Atualizar Snapshot
+          </button>
+          <button class="btn btn-cyan" style="white-space: nowrap; height: 38px; padding: 0 16px;" onclick="switchTab('tab-settings')">
+            <span>⚙️</span> Alternar Preset do Brain
+          </button>
+        </div>
+      </div>
+
+      <!-- CARD CENTRAL: INTEGRADOR DE DECISÃO PREDITIVA PARETO -->
+      <div class="card card-highlight" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="card-icon icon-cyan">🎯</div>
+            Integrador de Decisões Preditivas (Pareto Selection Matrix)
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="badge badge-champion" id="matrix-arena-summary-badge">14 Homologados • 50 Provas</span>
+            <span class="badge badge-value">RTX 2060m First</span>
+            <button class="btn" style="padding: 4px 10px; font-size: 0.72rem;" onclick="fetchRouterMatrix()" title="Recarregar matriz empírica do Heuristic Vault">
+              <span>🔄</span> Sincronizar Matriz
+            </button>
+          </div>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px;">
+          Mapeamento real de roteamento alimentado pelo <strong>Heuristic Vault (SQLite STRICT)</strong> e pelos perfis do Hermes: subagentes e tarefas de suporte priorizam o silício local bare-metal a <strong>custo zero ($0.00)</strong>, escalando para o perfil Cloud apenas sob alta entropia ou estouro de raio de impacto.
+        </p>
+
+        <div class="table-container">
+          <table class="arena-table">
+            <thead>
+              <tr>
+                <th style="min-width: 200px;">Capacidade / Perfil Cognitivo</th>
+                <th style="min-width: 210px;">Local Default (Silício $0 • Medido)</th>
+                <th style="min-width: 200px;">Cloud Fallback (Perfil Ativo)</th>
+                <th>Regra de Decisão do ParetoBandit</th>
+                <th class="text-center" style="width: 170px;">Status & Ações</th>
+              </tr>
+            </thead>
+            <tbody id="integrator-tbody">
+              <!-- Preenchido via API /api/v1/router/matrix -->
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">Carregando matriz preditiva...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GRID 2x2 TELEMETRIA & HARDWARE -->
+      <div class="grid-2x2">
+        
+        <!-- CARD 1: HARDWARE LOCAL & WATCHDOG -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">🎮</div>
+              <div>
+                <div>Hardware Local</div>
+                <div class="card-subtitle" id="hw-local-subtitle">NVIDIA GeForce RTX 2060 &bull; Intel Core i9 CPU</div>
+              </div>
+            </div>
+            <span class="badge badge-champion" id="zone-badge">Nominal Zone</span>
+          </div>
+
+          <div class="metric-gauge-group">
+            <div class="gauge-label">
+              <span>Alocação de VRAM sob WDDM (Físico 6.00 GB)</span>
+              <strong id="vram-text">-- GB / 5.17 GB WDDM</strong>
+            </div>
+            <div class="gauge-bar-bg">
+              <div class="gauge-bar-fill" id="vram-bar" style="width: 12%;"></div>
+              <div class="gauge-marker" id="vram-wddm-marker" style="left: 86%;" title="Teto Útil WDDM (5.17 GB / 5294 MB)"></div>
+            </div>
+          </div>
+
+          <div class="metric-gauge-group">
+            <div class="gauge-label">
+              <span>Temperatura da dGPU (NVML Watchdog)</span>
+              <strong id="temp-text">--°C (Limite 78.0°C)</strong>
+            </div>
+            <div class="gauge-bar-bg">
+              <div class="gauge-bar-fill" id="temp-bar" style="width: 50%;"></div>
+              <div class="gauge-marker" id="temp-limit-marker" style="left: 92%;" title="Alerta Térmico 78°C"></div>
+            </div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat-box" title="Leitura física em tempo real do controlador EC (ATKACPI) e NVML">
+              <div class="stat-lbl" id="cooling-lbl">Coolers (CPU / GPU)</div>
+              <div class="stat-num" id="fan-speed" style="font-size: 0.92rem; color: var(--green);">CPU: 2100 RPM</div>
+              <div id="fan-sub" style="font-size: 0.65rem; color: var(--amber); margin-top: 2px;">GPU: 0 RPM (Exaustor)</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-lbl">Power Draw</div>
+              <div class="stat-num" id="power-draw">-- W</div>
+              <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">NVML Live Sensor</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-lbl">Host CPU</div>
+              <div class="stat-num" id="cpu-threads">16T AVX2</div>
+              <div id="cpu-name-sub" style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">Intel Core i9</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: FINOPS & EFICIÊNCIA -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-green">💰</div>
+              <div>
+                <div>FinOps & Eficiência de Silício (E³)</div>
+                <div class="card-subtitle" id="finops-period-subtitle">Métricas reais extraídas do SQLite &bull; Últimos 30 Dias (Mensal)</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                <button class="filter-provider-btn" id="btn-finops-day" onclick="setFinopsPeriod('day')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais das últimas 24 horas">Dia</button>
+                <button class="filter-provider-btn active" id="btn-finops-month" onclick="setFinopsPeriod('month')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais dos últimos 30 dias">Mês</button>
+                <button class="filter-provider-btn" id="btn-finops-year" onclick="setFinopsPeriod('year')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais acumuladas nos últimos 365 dias">Ano</button>
+              </div>
+              <span class="badge badge-value" id="finops-arena-runs-badge">137 Ensaios Locais</span>
+            </div>
+          </div>
+
+          <div class="stat-row" style="margin-top: 0; margin-bottom: 14px;">
+            <div class="stat-box" title="Total real de tokens processados no período selecionado (Arena + Checkpoints L3 + Diários + Telemetria)">
+              <div class="stat-lbl" id="tokens-period-lbl">Tokens (Mês)</div>
+              <div class="stat-num" id="tokens-today">--</div>
+            </div>
+            <div class="stat-box" title="Economia real calculada sobre execuções locais vs tarifa média Cloud Frontier no período">
+              <div class="stat-lbl" id="usd-period-lbl">Economia USD</div>
+              <div class="stat-num" id="usd-saved" style="color: var(--green);">$--</div>
+            </div>
+            <div class="stat-box" title="Média empírica de eficiência E³ dos 14 modelos homologados no Heuristic Vault">
+              <div class="stat-lbl">E³ Score Médio</div>
+              <div class="stat-num" id="e3-score" style="color: var(--cyan);">--</div>
+            </div>
+          </div>
+
+          <div class="metric-gauge-group">
+            <div class="gauge-label">
+              <span>Execuções no Silício Local vs. Nuvem</span>
+              <strong id="local-share-text">--% Local (Silício $0)</strong>
+            </div>
+            <div class="gauge-bar-bg">
+              <div class="gauge-bar-fill" id="local-share-bar" style="width: 85%; background: var(--green);"></div>
+            </div>
+          </div>
+
+          <div class="metric-gauge-group">
+            <div class="gauge-label">
+              <span>Economia de Janela (AST Outlines + Confinamento L3)</span>
+              <strong id="ast-savings-text">--% Tokens Poupados</strong>
+            </div>
+            <div class="gauge-bar-bg">
+              <div class="gauge-bar-fill" id="ast-savings-bar" style="width: 80.5%; background: var(--purple);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3: MEMÓRIA DE LONGO PRAZO & COFRE PESSOAL -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-purple">🧠</div>
+              <div>
+                <div>Memória de Longo Prazo & Cofre Pessoal</div>
+                <div class="card-subtitle">Hipocampo L3 &bull; Ponte Bidirecional Hermes &bull; Partição ReFS</div>
+              </div>
+            </div>
+            <span class="badge badge-champion" id="sqlite-vault-size-badge" title="Tamanho físico real dos bancos SQLite (modo STRICT WAL de alta integridade) gravados no Dev Drive Z:\">💾 Banco Z:\ &bull; 4.75 MB</span>
+          </div>
+
+          <div class="stat-row" style="margin-top: 0; margin-bottom: 12px;">
+            <div class="stat-box" title="Memórias Epistêmicas Imutáveis (STABLE) vs Aprendizados Dinâmicos (EVOLVING)">
+              <div class="stat-lbl">Partições L3</div>
+              <div class="stat-num" id="l3-partitions-stat" style="font-size: 0.95rem; color: var(--cyan);">-- STABLE / -- EVOLV</div>
+            </div>
+            <div class="stat-box" title="Grafo Causal Ontológico LadybugDB em RAM + SQLite">
+              <div class="stat-lbl">Grafo LadybugDB</div>
+              <div class="stat-num" id="ladybug-nodes" style="font-size: 0.95rem;">-- nós • -- arestas</div>
+            </div>
+            <div class="stat-box" title="Notas brutas imutáveis (raw/) e páginas destiladas (wiki/) no Cofre Obsidian">
+              <div class="stat-lbl">Cofre Obsidian</div>
+              <div class="stat-num" id="obsidian-vault-stat" style="font-size: 0.95rem;">-- raw • -- wiki</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 12px; background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 10px;">
+            <div style="font-size: 0.74rem; color: var(--text-muted); font-weight: 500;">
+              Modo de Recall L3:
+            </div>
+            <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
+              <button class="filter-provider-btn active" id="btn-recall-adaptive" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('adaptive')" title="Alterna automaticamente entre Enxuto (800c) e Expandido + Grafo (2400c) conforme o prompt">
+                <span>⚡</span><span>Adaptativo</span>
+              </button>
+              <button class="filter-provider-btn" id="btn-recall-lean" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('lean')" title="Recall Enxuto: top-4 memórias diretas (800 chars)">
+                <span>🎯</span><span>Enxuto</span>
+              </button>
+              <button class="filter-provider-btn" id="btn-recall-expanded" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('expanded')" title="Recall Expandido: top-8 memórias + Grafo Ontológico LadybugDB (2400 chars)">
+                <span>🧠</span><span>Expandido</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="font-size: 0.73rem; color: var(--text-muted); line-height: 1.45; display: flex; justify-content: space-between; align-items: center;">
+            <span id="l3-snapshot-summary-line">&bull; Snapshot Imutável: carregando...</span>
+            <span class="mono" style="color: var(--green);" id="l3-checkpoints-count-label">0 Checkpoints v2</span>
+          </div>
+        </div>
+
+        <!-- CARD 4: ATIVIDADE AGÊNTICA -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="card-icon icon-amber">🤖</div>
+              Atividade Agêntica & Roteamento Real
+            </div>
+            <span class="badge badge-lowcost">MCP Loopback :9123</span>
+          </div>
+
+          <div style="font-size: 0.75rem; color: var(--text-muted);">
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); gap: 10px;">
+              <span>Última Tarefa / Prova Registrada:</span>
+              <strong class="mono" id="act-last-task" style="color: var(--cyan); text-align: right; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Carregando...</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); gap: 10px;">
+              <span>Último Modelo no Silício:</span>
+              <strong class="mono" id="act-last-model" style="color: #fff; text-align: right;">Carregando...</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+              <span>Throughput Médio Empírico (14 GGUFs):</span>
+              <strong class="mono" id="act-avg-tps" style="color: var(--green);">-- tokens/s</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+              <span>Uptime do Daemon & Conexões Ativas:</span>
+              <strong class="mono" id="server-uptime">-- min</strong>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CARD 5: ATALHO DIRETO PARA SUBAGENTS ROUTER -->
+      <div class="card card-highlight" style="margin-top: 24px;">
+        <div class="card-header" style="flex-wrap: wrap; gap: 14px;">
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-amber">🤖</div>
+              Orquestrador de Subagentes, Roteamento Pareto & Handoff (L3 Vault)
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+              Gerencie os 9 domínios cognitivos de subagentes, selecione entre silício local (<strong style="color: var(--cyan);">RTX 2060m Bare-Metal $0</strong>) e Cloud, e inspecione diários de pensamento confinados no L3.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn btn-cyan" onclick="switchTab('tab-subagents')" style="padding: 8px 18px; font-weight: 600;">
+              <span>🤖</span> Abrir Subagents Router ➔
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- ABA NOVA: SUBAGENTS ROUTER & HANDOFF (L3) -->
+    <!-- ========================================== -->
