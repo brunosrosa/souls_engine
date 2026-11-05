@@ -154,7 +154,7 @@ O objetivo desta etapa é transformar o Dashboard em uma central completa de ges
 ### MILESTONE v0.7.0: COGNIÇÃO PROFUNDA, DEEP RESEARCH & GATEWAY UNIVERSAL
 
 > **Documento de Referência Arquitetural SSOT:**  
-> 📄 [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/.souls_scratchpad/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md)
+> 📄 [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/docs/reference/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md)
 
 Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem, operários locais (SLMs) e eliminação de aprisionamento em provedores proprietários.
 
@@ -180,12 +180,14 @@ Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem,
 
 ---
 
-### MILESTONE v0.8.0: CONECTIVIDADE GOOGLE UNIVERSE & CURADORIA CONTÍNUA
+### MILESTONE v0.8.0: CONECTIVIDADE GOOGLE UNIVERSE, VISÃO COGNITIVA O(1) & CURADORIA CONTÍNUA
 
-> **Documento de Referência Arquitetural SSOT:**  
-> 📄 [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/.souls_scratchpad/Arquitetura%20Universal%20Google%20e%20Hermes.md)
+> **Documentos de Referência Arquiteturais SSOT:**  
+> 📄 [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md)  
+> 📄 [Arquitetura Agente Rust Bare-Metal (Navegação e Parsing O(1)).md](file:///Z:/souls_engine/docs/reference/%5BUPDATE%5D%20%5BDEPENDENCIES%5D%20Arquitetura%20Agente%20Rust%20Bare-Metal%20(Navega%C3%A7%C3%A3o%20e%20Parsing%20O(1)).md)  
+> 📄 [Ideação Curadoria de Contexto Souls MC.md](file:///Z:/souls_engine/docs/reference/%5BRefinamento%5D%20Ideação%20Curadoria%20de%20Contexto%20Souls%20MC.md)  
 
-Abertura do ecossistema para a vida pessoal e profissional do operador através da fusão simbiótica com as superfícies do ecossistema Google.
+Abertura do ecossistema para a vida pessoal e profissional do operador através da fusão simbiótica com as superfícies do ecossistema Google, automação tátil de interface e curadoria da base de conhecimento.
 
 #### 1. Google Universe MCP Bridge (`souls_core::google_bridge`)
 * **Estratégia de Dupla Camada Workspace:**
@@ -203,7 +205,24 @@ Abertura do ecossistema para a vida pessoal e profissional do operador através 
 * **Automação Furtiva em Rust via `chaser-oxide`:**
   - Cliente CDP em Rust puro (fork especializado de `chromiumoxide`) consumindo apenas **50 a 100 MB de RAM** (contra 500+ MB do Playwright/Node.js), com evasão nativa ao Google SearchGuard, scripts de isolamento injetados antes da primeira navegação e renovação em background do cookie `__Secure-1PSIDTS`.
 
-#### 2. Ativação Plena da Esteira de Curadoria Obsidian DB ("The 30-Minute Drip")
+#### 2. Visão Cognitiva $\mathcal{O}(1)$ & Automação de Interface via AXTree e Formato LEAN (ADR-029)
+* **Banimento Definitivo de VLMs e Screenshots Analógicos (0 MB VRAM):**
+  - O processamento de imagens e o envio contínuo de capturas de tela (2K/4K) para VLMs (LLaVA, UI-TARS) foi permanentemente expurgado. Alocaria tensores massivos devorando de 1.5 GB a 2.5 GB de VRAM por passagem, violando o teto de 5.294 MB e provocando spillover catastrófico pelo barramento PCIe na RTX 2060m. A percepção do Souls Engine é 100% matemática, semântica e orientada à CPU Host.
+* **Extração Nativa da Árvore de Acessibilidade (AXTree):**
+  - Em vez de rasterizar pixels, o sistema extrai diretamente a árvore de acessibilidade do sistema operacional (Windows UI Automation API via `windows-sys`) e do navegador (via Chrome DevTools Protocol — `Accessibility.getFullAXTree` na crate Rust `chaser-oxide`).
+  - Filtro de ruído extremo: descarta 95% da decoração visual HTML/CSS, capturando estritamente nós com papéis operacionais (`roles`, rótulos acessíveis, botões, campos de texto, menus, estados e caixas delimitadoras/`bounding_boxes`).
+* **Mapeamento Geométrico e Controle Vetorial do Mouse:**
+  - Ponto de clique determinístico e vetorial calculado na CPU Host pela média geométrica das coordenadas dos pontos diagonais opostos (`DOM.getBoxModel` no CDP ou `RECT` no Win32):
+    $$\begin{bmatrix} x_{\text{clique}} \\ y_{\text{clique}} \end{bmatrix} = \begin{bmatrix} \frac{x_0 + x_2}{2} \\ \frac{y_0 + y_2}{2} \end{bmatrix}$$
+  - Injeção direta de eventos HID nativos do kernel (`SendInput` via Win32 API e `Input.dispatchMouseEvent` via CDP), proporcionando precisão cirúrgica de clique com latência sub-milissegundo sem qualquer inferência visual de rede neural.
+* **Convocação por Apontamento e Spotlight Contextual (`Alt+Space`):**
+  - Mapeamento passivo contínuo das coordenadas $(X,Y)$ do mouse e do estado de ociosidade do usuário (`GetLastInputInfo`).
+  - Ao convocar o assistente por atalho global (`Alt+Space`) ou pausar o mouse sobre um elemento de interface, o daemon em Rust consulta a coordenada exata contra o Grafo de Acessibilidade ativo na RAM Host e extrai apenas o nó sob o cursor (com seus nós pai/filho imediatos), criando um pacote de contexto cirúrgico e instantâneo.
+* **Serialização no Formato LEAN (LLM-Efficient Adaptive Notation):**
+  - Abandono de JSON/TOON bruto: a AXTree é serializada pelo parser zero-copy em Rust no formato **LEAN**, aplanando hierarquias profundas via Notação de Ponto (`Dot-Notation`) e compactando estados booleanos (`focused`, `editable`, `ignored`) em literais de caractere único (`T`, `F`, `_`).
+  - Redução de **71% no consumo de tokens** em relação ao HTML/JSON tradicional, condensando a estrutura de telas completas em menos de 500 tokens no KV-cache do modelo.
+
+#### 3. Ativação Plena da Esteira de Curadoria Obsidian DB ("The 30-Minute Drip")
 * **Orquestração Autônoma em Segundo Plano:** Execução do script `curate_obsidian.ps1` via cron a cada 30 minutos, destilando 2 a 3 notas de `raw/` para `wiki/` com frontmatter YAML e links bidirecionais `[[...]]`.
 * **Blindagem `obsidian-privacy-shield`:** Higienização de documentos sensíveis (médicos e financeiros) no silício local antes de qualquer síntese em contexto longo.
 * **Monitoramento no Dashboard:** Exibição do backlog restante (dos 498 arquivos) e log de auditoria em tempo real na sub-aba de conhecimento.
@@ -213,7 +232,7 @@ Abertura do ecossistema para a vida pessoal e profissional do operador através 
 ### MILESTONE v0.9.0: SOULS ANTHROPOPHAGY 2.0 & ENXAME DE AUTO-EVOLUÇÃO
 
 > **Documento de Referência Arquitetural SSOT:**  
-> 📄 [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/.souls_scratchpad/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md)
+> 📄 [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md)
 
 Transformação do módulo de antropofagia em um pipeline estruturado de auto-otimização recursiva inspirado no Google Harness², no microkernel reversível Cordis do DeepSeek e na telemetria hemisférica.
 
@@ -311,16 +330,69 @@ A análise dos três estudos de referência revelou padrões arquiteturais inéd
 4. **Preservação de Cache de Prefixo via Injeção Efêmera em `pre_llm_call`:**
    Reforço da Linha Vermelha 2: nenhuma notificação ou telemetria em tempo real (Gmail, Calendar, Jules, VRAM) altera o system prompt. Toda a dinâmica entra efemeramente no turno do usuário ou via `prefetch()`, assegurando taxa de hit de prefix cache >95%.
 
-### 5.2 Futuros Estudos de "Deep Research" Mapeados para o Ecossistema
-Para manter o padrão de excelência de especificação técnica, foram identificados quatro domínios críticos que receberão seus próprios cadernos de pesquisa aprofundada antes da implementação correspondente:
-* **Deep Research 1: Voice & Real-Time Multimodal Embodiment (Live Audio/Video Streamable Protocol):**
-  Estudo da integração de protocolos de streaming de voz de ultra-baixa latência (WebRTC / OpenAI Realtime API / Gemini Live API vs motores locais bare-metal como Whisper-cpp + Kokoro-82M / Vapi / Twilio) acoplados à máquina de estados afetivos SODA.
-* **Deep Research 2: Autonomous High-Cardinality Graph & Vector Engine (LadybugDB vs KùzuDB vs LanceDB Deep Benchmark):**
-  Benchmark empírico no Windows NT sobre ReFS medindo concorrência multithread, tempo de busca em grafos causais com mais de 100.000 nós e consumo de memória sob WDDM.
-* **Deep Research 3: Single-Binary Packaging & Production Daemonization (MSVC Self-Extractor vs Windows Service):**
-  Engenharia de empacotamento para gerar um único binário auto-extraível e auto-instalável, com suporte nativo a registro como Windows Service (NT Daemon) resiliente a reinicializações do sistema operacional.
-* **Deep Research 4: Cross-Platform Bare-Metal Storage & File-System Virtualization (NTFS vs ReFS vs APFS vs ext4 & Defender Evasion):**
-  Estudo aprofundado de I/O de baixo nível, tunings de SQLite e LanceDB em sistemas de arquivos comerciais, estratégias de exclusão programática de antivírus sem quebrar a segurança do usuário e orquestração de daemons multiplataforma (`systemd` no Linux e `launchd` no macOS).
+### 5.2 Cadernos de "Deep Research" Estruturados para o Ecossistema
+
+Para manter o padrão de excelência de especificação técnica e blindar o projeto contra premissas redundantes ou "slop" de mercado, foram consolidados quatro cadernos de pesquisa aprofundada com direcionamento cirúrgico para embasar as futuras implementações:
+
+#### Deep Research 1: Real-Time Multimodal Grounding & Gemini Live Protocol (WebRTC / WebSockets via `webrtc-rs` e Captura Zero-Copy de Tela)
+* **Contexto & Justificativa Técnica:**
+  - A interface de voz conversacional e síntese com o usuário já está consolidada no Hermes Agent Desktop em CPU Host (`SenseVoiceSmall` + `Kokoro-82M` com 0 MB de VRAM). O Souls Engine é um daemon 100% headless (Linha Vermelha 1) e não atua como tocador de áudio interativo.
+  - A lacuna real a ser investigada reside na **percepção multimodal contínua em tempo real**: como o Souls Engine pode atuar como um *relay bare-metal de ultra-baixa latência*, transmitindo fluxos de vídeo/tela e áudio ambiente capturados no host diretamente para a **Gemini Live API** (e futuros VLMs de borda via streaming WebRTC/WebSocket), permitindo raciocínio visual-espacial contínuo durante sessões de codificação e pesquisa.
+* **Desafio Bare-Metal & Hardware (RTX 2060m):**
+  - Captura de frames de tela em Windows 11 via DirectX Desktop Duplication API (DXGI) sem sobrecarregar a dGPU e sem alocar tensores VRAM.
+  - Conversão e empacotamento zero-copy de frames em tracks de vídeo WebRTC nativos em Rust (`webrtc-rs`) ou WebSocket framing (`tokio-tungstenite`).
+  - Sincronização de relógio de socket (*clock skew*) e bufferização adaptativa de jitter para manter a latência de ponta a ponta abaixo de 250 ms.
+* **Metodologia & Benchmarking Proposto:**
+  - Medição de consumo de CPU, FPS de captura (10 a 30 FPS adaptativos), jitter de rede e descarte de quadros em conexões instáveis.
+  - Validação da coexistência térmica com inferência de LLM na CPU e GPU.
+* **Entregáveis Esperados:**
+  - ADR formalizando o contrato de streaming multimodal do Souls Engine.
+  - Especificação da crate interna ou módulo `souls_core::multimodal_stream` e ferramenta MCP `gemini_live_stream`.
+
+#### Deep Research 2: LadybugDB High-Density Scaling & Catnap Pruning (petgraph RAM Footprint vs Mapped B-Tree sob Carga de 100k+ Nós & Langevin Decay)
+* **Contexto & Justificativa Técnica:**
+  - A disputa entre KùzuDB e LanceDB já foi formalmente liquidada (ADR-004): KùzuDB (C++ FFI) foi expurgado; LanceDB (`mmap` Arrow) é L3 Vetorial com 0 MB VRAM; e LadybugDB (`petgraph::DiGraph` em RAM persistido no FrankenSQLite STRICT WAL) é o Grafo Ontológico de L2.
+  - A incerteza real reside na **escalabilidade e fragmentação de Heap** sob alta densidade: qual é o comportamento e a pegada de RAM do `petgraph` quando o grafo ontológico ultrapassar 100.000 nós e 500.000 arestas relacionais, geradas pela ingestão contínua de símbolos de código (Tree-sitter) e notas do Obsidian?
+* **Desafio Bare-Metal & Concorrência:**
+  - Evitar que o rebalanceamento de ponteiros do grafo na RAM trave as consultas de leitura do Hermes Agent.
+  - Implementação da rotina de **Poda por Decaimento de Langevin e Expurgos BFS** fatiada em micro-lotes de 30 a 90 segundos durante os **Cochilos Cognitivos (*Cognitive Catnap Protocol*)**, garantindo preempção imediata (0 ms) se o usuário retomar o uso do computador.
+* **Metodologia & Benchmarking Proposto:**
+  - Simulação sintética de estresse gerando de 10.000 a 250.000 nós causais e medindo consumo de memória RSS no Windows 11 Dev Drive ReFS vs NTFS.
+  - Avaliação de alternativas: `petgraph` puro vs estruturas em disco memory-mapped (ex: `lmdb-rkv`, `sled` ou B-Tree flat buffer) caso a RAM ultrapasse 500 MB.
+* **Entregáveis Esperados:**
+  - Dossiê empírico com curvas de latência BFS de 2 saltos e limite físico de nós em RAM.
+  - Algoritmo de particionamento atômico e reconciliação assíncrona MPSC para o LadybugDB.
+
+#### Deep Research 3: User-Session Daemonization, Session 0 NVML Bypass & Universal Packaging (Windows Task Scheduler vs SCM & Defender Exclusions)
+> **Documento de Referência Arquitetural SSOT:**  
+> 📄 [Arquitetura e Engenharia de Colorizacao de Logs para Servicos em Rust no Ambiente Windows PowerShell.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20e%20Engenharia%20de%20Colorizacao%20de%20Logs%20para%20Servicos%20em%20Rust%20no%20Ambiente%20Windows%20PowerShell.md)
+
+* **Contexto & Justificativa Técnica:**
+  - O `souls_server.exe` já é um binário único headless com Graceful Shutdown em 5 fases. A discussão teórica entre UI Desktop e daemon está encerrada (ADR-001).
+  - O ponto cego crítico identificado é o **Paradoxo da Isolação da Sessão 0 no Windows NT**: se o daemon for registrado cegamente como um Windows Service clássico via SCM (Service Control Manager), ele roda na Sessão 0. Na Sessão 0, o Windows 11 isola chamadas gráficas WDDM, e o driver C-FFI do NVML (NVIDIA) e o driver ACPI da ASUS (`\\.\ATKACPI` para leitura de ventiladores/potência de laptop) frequentemente retornam `ACCESS_DENIED` ou `DEVICE_NOT_FOUND`, cegando o Hardware Watchdog!
+* **Desafio Bare-Metal & Governança Win32:**
+  - Provar a viabilidade e estabilidade de um **Daemon de Sessão de Usuário de Alta Resiliência** (executado na Sessão 1 via Agendador de Tarefas do Windows / Task Scheduler com a flag `"Run only when user is logged on"` e reinício automático) vs um NT Service em Sessão 0 com elevação de privilégios.
+  - Automação limpa e idempotente das exclusões do Windows Defender (`Add-MpPreference -ExclusionPath` e `-ExclusionProcess`) pelo instalador `setup.ps1` sem disparar alertas heurísticos do SmartScreen.
+  - Padronização multiplataforma para execução como serviço sem privilégios de root (`systemd --user` no Linux e `LaunchAgents` no macOS).
+* **Metodologia & Benchmarking Proposto:**
+  - Testes de leitura de métricas térmicas e RPM em laptop ASUS com RTX 2060m sob Sessão 0 vs Sessão 1.
+  - Validação do instalador PowerShell em máquina Windows 11 virgem sem ferramentas de desenvolvimento instaladas.
+* **Entregáveis Esperados:**
+  - Dossiê de arquitetura de daemonização e mitigação da Sessão 0.
+  - Script universal `setup.ps1` com injeção de exclusões Defender, verificação de integridade e registro no Task Scheduler.
+
+#### Deep Research 4: Cross-Platform Bare-Metal Storage & File-System Virtualization (NTFS vs ReFS vs APFS vs ext4 & Defender Evasion)
+* **Contexto & Justificativa Técnica:**
+  - No ambiente de desenvolvimento, o Souls Engine aproveita o Dev Drive ReFS (`Z:\`) com *Performance Mode* nativo do Defender e *Block Cloning*. Em máquinas de produção de usuários comuns, a instalação padrão operará sobre NTFS comercial (Windows 11), ext4/btrfs (Linux) ou APFS (macOS).
+  - É imperativo garantir que o FrankenSQLite STRICT WAL e o LanceDB alcancem paridade de IOPS e imunidade contra bloqueios (`os error 5` / `database is locked`) em qualquer partição comercial.
+* **Desafio Bare-Metal & I/O de Baixo Nível:**
+  - Compensação da ausência de Block Cloning no NTFS: adoção do comando online `VACUUM INTO 'snapshot.db'` ou hardlinks idempotentes para snapshots sem congelamento de transações.
+  - Validação das diretivas de tunings do SQLite (`PRAGMA synchronous = NORMAL;`, `PRAGMA mmap_size = 268435456;`, `PRAGMA temp_store = MEMORY;`) sob rajadas de escrita no NTFS.
+  - Abstração do sistema de arquivos através do módulo `souls_core::paths` respeitando convenções XDG no Linux e Library no macOS.
+* **Metodologia & Benchmarking Proposto:**
+  - Benchmark comparativo de throughput de leitura vetorial e inserção SQLite (10.000 transações concorrentes) em NTFS sem exclusão vs NTFS com exclusão Defender vs ReFS.
+* **Entregáveis Esperados:**
+  - Matriz de calibração de I/O em runtime que aplica dinamicamente os melhores PRAGMAs com base no sistema de arquivos detectado pelo motor no boot.
 
 ---
 
