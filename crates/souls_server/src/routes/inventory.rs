@@ -22,17 +22,43 @@ use souls_llm_inventory::{
 fn enrich_hardware_diagnostic(diag: souls_llm_inventory::HardwareDiagnostic) -> Value {
     let mut val = serde_json::to_value(&diag).unwrap_or_else(|_| json!({}));
     if let Some(obj) = val.as_object_mut() {
-        obj.insert("gpu_name".to_string(), json!("NVIDIA GeForce RTX 2060 (Turing TU106 • CC 7.5)"));
-        obj.insert("gpu_architecture".to_string(), json!("Turing TU106"));
-        obj.insert("gpu_compute_capability".to_string(), json!("7.5"));
-        obj.insert("gpu_details".to_string(), json!("1.920 CUDA Cores • 240 Tensor Cores (FP16/INT8)"));
-        obj.insert("cpu_name".to_string(), json!("Intel Core i9-9980HK (8 Cores / 16 Threads)"));
+        let (_usable_gb, weights_gb, kv_gb, ceiling_tokens, ceiling_sub, formula_sub) = if diag.has_dedicated_gpu && diag.vram_safe_usable_mb > 0 {
+            let usable_mb = diag.vram_safe_usable_mb as f64;
+            let usable_gb = usable_mb / 1024.0;
+            // Alocação física realista de VRAM: ~72% para pesos do modelo e ~28% para KV-Cache
+            let weights = ((usable_gb * 0.72) * 10.0).round() / 10.0;
+            let kv = ((usable_gb - weights) * 10.0).round() / 10.0;
+
+            let (tokens, sub, desc) = if usable_mb >= 11_000.0 {
+                (32_768, "(até 64k c/ KV Q4)", format!("Baseado em {:.2} GB úteis: seguro p/ 7B/14B FP16; subagentes em fila.", usable_gb))
+            } else if usable_mb >= 7_000.0 {
+                (16_384, "(até 32k c/ KV Q4)", format!("Baseado em {:.2} GB úteis: seguro p/ 7B (8k FP16 / 16k Q4); subagentes em fila.", usable_gb))
+            } else if usable_mb >= 4_500.0 {
+                // Nossa dGPU RTX 2060m (~5.17 GB úteis sob WDDM)
+                (16_384, "(até 32k c/ KV Q4)", format!("Baseado em {:.2} GB úteis: seguro p/ 3B (16k-32k) e 7B c/ KV Q4 (4k-8k FP16). Sessões curtas evitam spillover PCIe.", usable_gb))
+            } else {
+                (8_192, "(até 16k c/ KV Q4)", format!("Baseado em {:.2} GB úteis: recomendado 3B Q4_K_M com sessões enxutas.", usable_gb))
+            };
+            (usable_gb, weights, kv, tokens, sub, desc)
+        } else {
+            let usable_gb = (diag.host_ram_safe_usable_mb as f64) / 1024.0;
+            (usable_gb, 4.0, 2.0, 8_192, "(AVX2 Offload)", "Execução via CPU Host AVX2. Sessões contidas para manter latência aceitável.".to_string())
+        };
+
+        if diag.has_dedicated_gpu {
+            obj.insert("gpu_name".to_string(), json!("NVIDIA GeForce RTX 2060 (Turing TU106 • CC 7.5)"));
+            obj.insert("gpu_architecture".to_string(), json!("Turing TU106"));
+            obj.insert("gpu_compute_capability".to_string(), json!("7.5"));
+            obj.insert("gpu_details".to_string(), json!("1.920 CUDA Cores • 240 Tensor Cores (FP16/INT8)"));
+        }
+        obj.insert("cpu_name".to_string(), json!(format!("Intel Core i9-9980HK ({} Cores / {} Threads)", diag.cpu_cores_physical, diag.cpu_cores_logical)));
         obj.insert("cpu_instructions_extended".to_string(), json!("AVX2 • FMA • BMI2 • SSE4.2 • AES-NI"));
-        obj.insert("weights_budget_gb".to_string(), json!(3.8));
-        obj.insert("kv_cache_budget_gb".to_string(), json!(1.3));
-        obj.insert("context_ceiling_tokens".to_string(), json!(16384));
-        obj.insert("context_ceiling_display".to_string(), json!("16.384 tokens (até 32k c/ KV Q4)"));
-        obj.insert("context_formula_subtitle".to_string(), json!("Com base nos 5.17 GB VRAM (16k em 7B FP16; 32k em 3B ou c/ KV Q4_0)"));
+        obj.insert("weights_budget_gb".to_string(), json!(weights_gb));
+        obj.insert("kv_cache_budget_gb".to_string(), json!(kv_gb));
+        obj.insert("context_ceiling_tokens".to_string(), json!(ceiling_tokens));
+        obj.insert("context_ceiling_display".to_string(), json!(format!("{}.{:03} tokens", ceiling_tokens / 1000, ceiling_tokens % 1000)));
+        obj.insert("context_ceiling_sub".to_string(), json!(ceiling_sub));
+        obj.insert("context_formula_subtitle".to_string(), json!(formula_sub));
     }
     val
 }

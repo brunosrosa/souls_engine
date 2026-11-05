@@ -3994,8 +3994,11 @@
             </div>
             <div class="hw-spec-card">
               <div class="hw-spec-label">Teto de Contexto dGPU</div>
-              <div class="hw-spec-val" id="hw-context-ceiling" style="color: #34d399; font-size: 0.88rem;">16.384 tokens (até 32k c/ KV Q4)</div>
-              <div id="hw-context-sub" style="font-size: 0.63rem; color: #34d399; margin-top: 3px; line-height: 1.3;">Com base nos 5.17 GB VRAM (16k em 7B FP16; 32k em 3B ou c/ KV Q4_0)</div>
+              <div id="hw-context-ceiling-container" style="display: flex; flex-direction: column; justify-content: center; min-height: 38px;">
+                <div class="hw-spec-val" id="hw-context-ceiling" style="color: #34d399; font-size: 0.95rem; font-weight: 700; line-height: 1.2;">16.384 tokens</div>
+                <div id="hw-context-ceiling-sub" style="color: #38bdf8; font-size: 0.70rem; font-weight: 600; margin-top: 2px; line-height: 1.2;">(até 32k c/ KV Q4)</div>
+              </div>
+              <div id="hw-context-sub" style="font-size: 0.63rem; color: #94a3b8; margin-top: 5px; line-height: 1.35;">Baseado em 5.17 GB úteis: seguro p/ 3B (16k-32k) e 7B c/ KV Q4 (4k-8k FP16). Sessões curtas evitam spillover PCIe.</div>
             </div>
           </div>
         </div>
@@ -10124,11 +10127,16 @@
       }
 
       if (elCtx) {
-        elCtx.innerText = hw.context_ceiling_display || (hw.context_ceiling_tokens ? `${hw.context_ceiling_tokens.toLocaleString()} tokens` : '16.384 tokens (até 32k c/ KV Q4)');
+        const tokensVal = hw.context_ceiling_tokens ? `${hw.context_ceiling_tokens.toLocaleString()} tokens` : '16.384 tokens';
+        elCtx.innerText = hw.context_ceiling_display && !hw.context_ceiling_display.includes('(') ? hw.context_ceiling_display : tokensVal;
+      }
+      const elCtxSub = document.getElementById('hw-context-ceiling-sub');
+      if (elCtxSub) {
+        elCtxSub.innerText = hw.context_ceiling_sub || '(até 32k c/ KV Q4)';
       }
       const ctxSub = document.getElementById('hw-context-sub');
       if (ctxSub) {
-        ctxSub.innerText = hw.context_formula_subtitle || 'Com base nos 5.17 GB VRAM (16k em 7B FP16; 32k em 3B ou c/ KV Q4_0)';
+        ctxSub.innerText = hw.context_formula_subtitle || 'Baseado em 5.17 GB úteis: seguro p/ 3B (16k-32k) e 7B c/ KV Q4 (4k-8k FP16). Sessões curtas evitam spillover PCIe.';
       }
       updateDynamicParamFitPills(hw);
     }
