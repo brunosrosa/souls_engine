@@ -1501,28 +1501,38 @@
     /* TOASTS */
     #toast-container {
       position: fixed;
-      bottom: 24px;
+      top: 72px;
       right: 24px;
-      z-index: 1000;
+      z-index: 100000;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
+      max-width: 420px;
+      pointer-events: none;
     }
 
     .toast {
-      background: rgba(15, 23, 42, 0.95);
+      background: rgba(15, 23, 42, 0.96);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      padding: 12px 18px;
+      padding: 10px 14px;
       font-size: 0.82rem;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.65), 0 0 1px rgba(255,255,255,0.1);
+      backdrop-filter: blur(16px);
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 10px;
-      min-width: 280px;
-      animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      transition: opacity 0.3s, transform 0.3s;
+      min-width: 290px;
+      max-width: 420px;
+      pointer-events: auto;
+      cursor: pointer;
+      animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .toast:hover {
+      filter: brightness(1.1);
     }
 
     @keyframes slideIn {
@@ -1530,9 +1540,10 @@
       to { transform: translateX(0); opacity: 1; }
     }
 
-    .toast.success { border-color: rgba(16, 185, 129, 0.5); }
-    .toast.warning { border-color: rgba(245, 158, 11, 0.5); }
-    .toast.error { border-color: rgba(239, 68, 68, 0.5); }
+    .toast.success { border-color: rgba(16, 185, 129, 0.55); box-shadow: 0 10px 30px rgba(0,0,0,0.65), 0 0 12px rgba(16, 185, 129, 0.15); }
+    .toast.warning { border-color: rgba(245, 158, 11, 0.55); box-shadow: 0 10px 30px rgba(0,0,0,0.65), 0 0 12px rgba(245, 158, 11, 0.15); }
+    .toast.error { border-color: rgba(239, 68, 68, 0.55); box-shadow: 0 10px 30px rgba(0,0,0,0.65), 0 0 12px rgba(239, 68, 68, 0.15); }
+    .toast.info { border-color: rgba(6, 182, 212, 0.55); box-shadow: 0 10px 30px rgba(0,0,0,0.65), 0 0 12px rgba(6, 182, 212, 0.15); }
 
     /* TOOLTIPS INFORMATIVOS (i) */
     .info-icon {
@@ -3519,10 +3530,12 @@
     /* EDITORES ERGONÔMICOS COM RÉGUA DE LINHAS & STATUSBAR */
     .editor-container-with-lines {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      align-items: stretch;
       position: relative;
-      border-radius: 8px;
+      border-radius: 8px 8px 0 0;
       border: 1px solid var(--border-subtle);
+      border-bottom: none;
       background: #080d1a;
       overflow: hidden;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -3532,19 +3545,15 @@
       border-color: var(--cyan);
       box-shadow: 0 0 0 1px var(--cyan), 0 4px 20px rgba(6, 182, 212, 0.2);
     }
-    .editor-body-wrapper {
-      display: flex;
-      flex: 1;
-      position: relative;
-      background: transparent;
-      overflow: hidden;
+    .editor-container-with-lines:focus-within + .editor-statusbar {
+      border-color: var(--cyan);
     }
     .editor-gutter {
-      width: 48px;
-      min-width: 48px;
+      width: 52px;
+      min-width: 52px;
       background: #060913;
       color: #475569;
-      padding: 12px 6px;
+      padding: 12px 8px 12px 4px;
       text-align: right;
       user-select: none;
       font-size: 0.78rem;
@@ -3553,10 +3562,12 @@
       overflow: hidden;
       border-right: 1px solid rgba(255, 255, 255, 0.06);
       box-sizing: border-box;
+      white-space: pre;
+      pointer-events: none;
     }
     .editor-textarea {
       flex: 1;
-      min-height: 560px;
+      min-height: 540px;
       background: transparent;
       border: none;
       outline: none;
@@ -3567,6 +3578,7 @@
       font-family: var(--font-mono);
       resize: vertical;
       overflow-y: scroll;
+      overflow-x: auto;
       white-space: pre;
       tab-size: 2;
       box-sizing: border-box;
@@ -3577,10 +3589,12 @@
       align-items: center;
       padding: 6px 12px;
       background: #060913;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0 0 8px 8px;
       font-size: 0.72rem;
       color: var(--text-muted);
       font-family: var(--font-mono);
+      transition: border-color 0.2s ease;
     }
     .editor-statusbar .status-left {
       display: flex;

@@ -99,18 +99,72 @@
       }
     }
 
-    // FEEDBACK VISUAL (TOAST)
+    // FEEDBACK VISUAL (TOAST DESDUPLICADO & AUTO-STACK)
     function showToast(msg, type = "success") {
       const c = document.getElementById('toast-container');
+      if (!c) return;
+
+      // Normalização de cores e tipos
+      if (type === 'green') type = 'success';
+      if (type === 'red') type = 'error';
+      if (!['success', 'warning', 'error', 'info'].includes(type)) {
+        type = 'info';
+      }
+
+      // Evita duplicação empilhando mensagens idênticas
+      const existing = Array.from(c.querySelectorAll('.toast'));
+      const duplicate = existing.find(t => t.dataset.msg === msg);
+      if (duplicate) {
+        duplicate.style.animation = 'none';
+        void duplicate.offsetWidth;
+        duplicate.style.animation = 'slideIn 0.25s ease-out';
+        return;
+      }
+
+      // Limita a 3 notificações ativas para nunca cobrir a tela
+      while (c.children.length >= 3) {
+        c.firstElementChild.remove();
+      }
+
       const el = document.createElement('div');
       el.className = 'toast ' + type;
-      el.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> <div>${msg}</div>`;
-      c.appendChild(el);
-      setTimeout(() => {
+      el.dataset.msg = msg;
+
+      const icons = {
+        success: '✅',
+        warning: '⚠️',
+        error: '❌',
+        info: 'ℹ️'
+      };
+      const icon = icons[type] || 'ℹ️';
+
+      el.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">
+          <span style="font-size: 0.95rem; flex-shrink: 0;">${icon}</span>
+          <div style="font-weight: 500; line-height: 1.35; word-break: break-word;">${msg}</div>
+        </div>
+        <button class="toast-close-btn" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 2px 6px; font-size: 0.85rem; line-height: 1; border-radius: 4px; margin-left: 8px;" title="Fechar aviso">✕</button>
+      `;
+
+      let timer = null;
+      const removeToast = () => {
+        if (timer) clearTimeout(timer);
         el.style.opacity = '0';
         el.style.transform = 'translateX(100%)';
-        setTimeout(() => el.remove(), 300);
-      }, 3500);
+        setTimeout(() => el.remove(), 250);
+      };
+
+      const closeBtn = el.querySelector('.toast-close-btn');
+      if (closeBtn) {
+        closeBtn.onclick = (e) => {
+          e.stopPropagation();
+          removeToast();
+        };
+      }
+      el.onclick = removeToast;
+
+      c.appendChild(el);
+      timer = setTimeout(removeToast, 4000);
     }
 
     // 1. FETCH TELEMETRIA & MASTER BRAIN
