@@ -100,7 +100,7 @@ Cruzamento do draft [`.souls_scratchpad/lembretes.txt`](file:///Z:/souls_engine/
 | :--- | :--- | :---: | :--- |
 | **#1 Refatoração de UI** | Quebrar monólito HTML em módulos para manutenção ágil | **JÁ REALIZADO (v0.5.0)** | Concluído via ADR-012 (25 parciais atômicos sob `templates/`). |
 | **#2 Revisão de Deps Rust** | Unificar versões e auditar flags de compilação | **JÁ REALIZADO (v0.5.0)** | Concluído via SSOT em `[workspace.dependencies]`. |
-| **#3 Skills Hub & Forge** | Visualização, descoberta, busca em APIs e criação agêntica local de skills | **GAP IDENTIFICADO** | **Milestone v0.6.0** (Aba dedicada + Agêntico Forge). |
+| **#3 Skills Hub & Forge** | Visualização, descoberta, busca em APIs e criação agêntica local de skills | **CONCLUÍDO (v0.6.0-p1)** | Concluído em `souls_server`: 4 sub-abas, índice RAM 101k+, Auto-Fix seguro, Pausar/Excluir com backup e Estúdio Forge. |
 | **#4 Perfis do Hermes** | Inspecionar/editar `AGENTS.md`, `SOUL.md` e configs dos perfis no Dashboard | **GAP IDENTIFICADO** | **Milestone v0.6.0** (Hermes Personas & Governance Inspector). |
 | **#5 Deep Research Engine** | Capability/Tool base de pesquisa profunda em árvore com síntese e fontes | **GAP IDENTIFICADO** | **Milestone v0.7.0** ➔ Ref.: [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/.souls_scratchpad/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md). |
 | **#6 Gateway Cloud Multi-Provedor** | Universalizar despacho de subagentes para além de OpenAI/Claude/Gemini | **GAP IDENTIFICADO** | **Milestone v0.7.0** (DeepSeek API, Groq, Together, Bedrock). |
@@ -138,11 +138,11 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 
 O objetivo desta etapa é transformar o Dashboard em uma central completa de gestão comportamental dos agentes e subagentes, sem depender de edição manual de arquivos no terminal.
 
-#### 1. Módulo Skills Hub & Agêntico Forge (`templates/tabs/skills_hub.html`)
-* **Catálogo Visual de Skills:** Listagem interativa das 15+ skills instaladas nos diretórios do sistema (`.agents/skills/`, `%LOCALAPPDATA%\hermes\skills/`, `~/.gemini/config/skills/`).
-* **Visualizador de Metadados:** Exibição do nome, descrição, gatilhos de ativação, ferramentas MCP associadas e regras operacionais de cada `SKILL.md`.
-* **Skills Marketplace & Explorer:** Interface de busca integrada para consultar repositórios de skills comunitárias (ex: Agent Marketplace, GitHub) via API do `souls_core`.
-* **Skills Forge (Gerador Agêntico Local):** Assistente no dashboard que recebe uma necessidade em linguagem natural e utiliza o Tier 1 local ou subagente de nuvem para compor um novo `SKILL.md` padronizado, com validação sintática estrita antes da gravação.
+#### 1. Módulo Skills Hub & Agêntico Forge (`templates/tabs/skills_hub.html`) — **[100% CONCLUÍDO]**
+* **Catálogo Visual Multi-Ambiente:** Listagem ordenável e interativa das skills ativas/pausadas com detecção dinâmica de programas instalados no host (`.agents/skills/` ou app local, `%LOCALAPPDATA%\hermes\skills/`, Personas isoladas e `~/.gemini/...`).
+* **Editor, Auto-Correção Segura & Governança:** Botão `Corrigir Automaticamente` preservando 100% das instruções do corpo (`body_preserved_exact`), explicação clara dos avisos preventivos/SO, `Pausar` (`SKILL.md.disabled`) e `Excluir` com backup no Histórico.
+* **Skills Marketplace & Explorer (101k+):** Busca instantânea em RAM com vitrine personalizada (`Sugeridas para o Seu Ambiente`), filtro por Tema e Origem (`Comunidade` / `Oficial` / `GitHub Live`) e Área de Revisão antes de instalar.
+* **Estúdio de Criação & Adaptação (Forge):** Assistente em linguagem natural com motor instantâneo gratuito, modelo local ou nuvem, Myers Diff visual e publicação seletiva multi-ambiente.
 
 #### 2. Hermes Personas & Governance Inspector (`templates/settings/subtab_personas.html`)
 * **Inspeção de Perfis do Hermes:** Mapeamento dinâmico dos perfis existentes em `%LOCALAPPDATA%\hermes\profiles/` e perfil `default`.
