@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)  
-> **VERSÃO CONSOLIDADA:** v0.5.0 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
+> **VERSÃO CONSOLIDADA:** v0.6.0 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -60,9 +60,9 @@ flowchart TD
 
 ## 2. HISTÓRICO CONSOLIDADO DE ENTREGAS (O QUE JÁ FOI REALIZADO)
 
-Até a consolidação da **Milestone v0.5.0**, todo o ciclo fundacional de infraestrutura, inferência, governança e interface foi construído e homologado:
+Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infraestrutura, inferência, governança comportamental (Skills + Personas) e interface foi construído e homologado:
 
-### 2.1 Tabela Histórica de Sessões e Marcos (v0.1.0 ➔ v0.5.0)
+### 2.1 Tabela Histórica de Sessões e Marcos (v0.1.0 ➔ v0.6.0)
 
 | Sessão / Marco | Escopo Principal | Estado | Principais Entregas |
 | :--- | :--- | :---: | :--- |
@@ -82,11 +82,12 @@ Até a consolidação da **Milestone v0.5.0**, todo o ciclo fundacional de infra
 | **Sessão 18** | Local Silicon Arena | **100% CONCLUÍDO** | Crate `souls_llm_local_arena`, 5 baterias empíricas ADR-007 no silício real (32/32 testes PASS). |
 | **Sessão 19** | Two-Stage Switchboard | **100% CONCLUÍDO** | Switchboard em 2 estágios (<1.7ms na CPU AVX2), projeção dinâmica no `tools/list` (33/33 PASS). |
 | **Milestone v0.5.0** | **Modularização UI & SSOT Rust** | **100% CONCLUÍDO** | **ADR-012:** Monólito de 15k linhas decomposto em 25 componentes em `templates/` via `concat!(include_str!(...))` em `.rodata`. Unificação de dependências no root `Cargo.toml`. Teto de contexto dGPU dinâmico baseado em VRAM real. Revisão total das sub-abas de Settings (zero mocks). |
+| **Milestone v0.6.0** | **Skills Hub & Hermes Personas** | **100% CONCLUÍDO** | **Skills Hub:** Catálogo multi-ambiente, índice RAM 101k+, quarentena Zero-Trust, Auto-Fix seguro (`body_preserved_exact`) e Estúdio Forge. **Hermes Personas:** Aba dedicada `🎭 Personas`, Guardião de Privacidade & Coerência em 1 clique, cirurgia hierárquica YAML, Bancada Dupla (`Painel Rápido` + `SOUL.md`), Estúdio Criar/Clonar, Arquivamento e Comparador Myers Diff (48/48 testes PASS). |
 
-### 2.2 Inventário de Ativos Consolidados na v0.5.0
+### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
 * **Catálogo MCP:** 55 Ferramentas de revelação progressiva divididas em 6 namespaces (`code.*`, `context.*`, `memory.*`, `think.*`, `ops.*`, `sys.*`).
-* **Matriz de Skills:** 15 Skills canônicas procedimentais ativas em `.agents/skills` e `%LOCALAPPDATA%\hermes\skills`.
+* **Governança de Skills & Personas:** Catálogo unificado multi-superfície + Explorador de 101.000+ skills em RAM (<5ms) + Gestão completa de Personas Hermes (`default` e `profiles/*`) com soberania Read-Only sobre `MEMORY.md`/`USER.md`.
 * **Desempenho de Compilação:** `cargo check -p souls_server` acelerado de ~8.7s para **2.06s** (~4.2x mais rápido).
 * **Binário de Produção:** `souls_engine.exe` compilado em release MSVC (`lto = "thin"`, `codegen-units = 1`, `panic = "abort"`), pesando menos de 45 MB com zero dependências de DLLs externas.
 
@@ -94,18 +95,18 @@ Até a consolidação da **Milestone v0.5.0**, todo o ciclo fundacional de infra
 
 ## 3. MATRIZ DE DEMANDAS, SCRATCHPAD & ANÁLISE DE GAPS
 
-Cruzamento do draft [`.souls_scratchpad/lembretes.txt`](file:///Z:/souls_engine/.souls_scratchpad/lembretes.txt) e dos documentos de pesquisa com o estado do repositório:
+Cruzamento do draft [`docs/reference/lembretes.txt`](file:///Z:/souls_engine/docs/reference/lembretes.txt) e dos documentos de pesquisa com o estado do repositório:
 
 | Item do Lembrete | Descrição Sintética | Estado Atual | Destino no Roadmap & Referência |
 | :--- | :--- | :---: | :--- |
 | **#1 Refatoração de UI** | Quebrar monólito HTML em módulos para manutenção ágil | **JÁ REALIZADO (v0.5.0)** | Concluído via ADR-012 (25 parciais atômicos sob `templates/`). |
 | **#2 Revisão de Deps Rust** | Unificar versões e auditar flags de compilação | **JÁ REALIZADO (v0.5.0)** | Concluído via SSOT em `[workspace.dependencies]`. |
-| **#3 Skills Hub & Forge** | Visualização, descoberta, busca em APIs e criação agêntica local de skills | **CONCLUÍDO (v0.6.0-p1)** | Concluído em `souls_server`: 4 sub-abas, índice RAM 101k+, Auto-Fix seguro, Pausar/Excluir com backup e Estúdio Forge. |
-| **#4 Perfis do Hermes** | Inspecionar/editar `AGENTS.md`, `SOUL.md` e configs dos perfis no Dashboard | **GAP IDENTIFICADO** | **Milestone v0.6.0** (Hermes Personas & Governance Inspector). |
-| **#5 Deep Research Engine** | Capability/Tool base de pesquisa profunda em árvore com síntese e fontes | **GAP IDENTIFICADO** | **Milestone v0.7.0** ➔ Ref.: [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/.souls_scratchpad/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md). |
+| **#3 Skills Hub & Forge** | Visualização, descoberta, busca em APIs e criação agêntica local de skills | **CONCLUÍDO (v0.6.0)** | Concluído em `souls_server`: 4 sub-abas, índice RAM 101k+, Auto-Fix seguro, Pausar/Excluir com backup e Estúdio Forge. |
+| **#4 Perfis do Hermes** | Inspecionar/editar `AGENTS.md`, `SOUL.md` e configs dos perfis no Dashboard | **CONCLUÍDO (v0.6.0)** | Concluído em `souls_server`: Aba `🎭 Personas`, Guardião de Privacidade & Coerência em 1 clique, Bancada Dupla, Estúdio Criar/Clonar e Comparador Myers Diff. |
+| **#5 Deep Research Engine** | Capability/Tool base de pesquisa profunda em árvore com síntese e fontes | **GAP IDENTIFICADO** | **Milestone v0.7.0** ➔ Ref.: [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/docs/reference/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md). |
 | **#6 Gateway Cloud Multi-Provedor** | Universalizar despacho de subagentes para além de OpenAI/Claude/Gemini | **GAP IDENTIFICADO** | **Milestone v0.7.0** (DeepSeek API, Groq, Together, Bedrock). |
-| **#7 Google Universe Bridge** | Ferramentas MCP para Google Docs, Sheets, Drive, Calendar e Gmail | **GAP IDENTIFICADO** | **Milestone v0.8.0** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/.souls_scratchpad/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
-| **#8 & #10 Souls Anthropophagy 2.0** | Ingestão mecânica (Blobs) ➔ Essências ➔ Enxame (85+ colunas) ➔ Auto-Evolução | **GAP IDENTIFICADO** | **Milestone v0.9.0** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/.souls_scratchpad/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
+| **#7 Google Universe Bridge** | Ferramentas MCP para Google Docs, Sheets, Drive, Calendar e Gmail | **GAP IDENTIFICADO** | **Milestone v0.8.0** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
+| **#8 & #10 Souls Anthropophagy 2.0** | Ingestão mecânica (Blobs) ➔ Essências ➔ Enxame (85+ colunas) ➔ Auto-Evolução | **GAP IDENTIFICADO** | **Milestone v0.9.0** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
 | **#9 Universal Installer & Hardware Adaptability** | Instalador zero-atrito, piso mínimo na 2060m adaptável a qualquer hardware | **GAP IDENTIFICADO** | **Milestone v1.0.0** (Universal Installer & Release Oficial). |
 
 ---
@@ -118,9 +119,9 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ┌──────────────────────────────────────────────────────────────────────────────────┐
 │                     JORNADA DE DESENVOLVIMENTO RUMO À v1.0                       │
 ├───────────────┬──────────────────────────────────┬───────────────────────────────┤
-│ v0.5.0 (HOJE) │ Base Bare-Metal & UI Modular     │ [CONCLUÍDO] 11 Crates, ADR-012│
+│ v0.5.0        │ Base Bare-Metal & UI Modular     │ [CONCLUÍDO] 11 Crates, ADR-012│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.6.0        │ Governança Visual & Skills Hub   │ Skills Forge + Hermes Personas│
+│ v0.6.0 (HOJE) │ Governança Visual & Skills Hub   │ [CONCLUÍDO] Skills + Personas │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.7.0        │ Cognição Profunda & Gateway Cloud│ Deep Research + Multi-Provider│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
@@ -134,7 +135,7 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 
 ---
 
-### MILESTONE v0.6.0: GOVERNANÇA VISUAL, SKILLS HUB & HERMES PERSONAS
+### MILESTONE v0.6.0: GOVERNANÇA VISUAL, SKILLS HUB & HERMES PERSONAS — **[100% CONCLUÍDO]**
 
 O objetivo desta etapa é transformar o Dashboard em uma central completa de gestão comportamental dos agentes e subagentes, sem depender de edição manual de arquivos no terminal.
 
@@ -144,10 +145,11 @@ O objetivo desta etapa é transformar o Dashboard em uma central completa de ges
 * **Skills Marketplace & Explorer (101k+):** Busca instantânea em RAM com vitrine personalizada (`Sugeridas para o Seu Ambiente`), filtro por Tema e Origem (`Comunidade` / `Oficial` / `GitHub Live`) e Área de Revisão antes de instalar.
 * **Estúdio de Criação & Adaptação (Forge):** Assistente em linguagem natural com motor instantâneo gratuito, modelo local ou nuvem, Myers Diff visual e publicação seletiva multi-ambiente.
 
-#### 2. Hermes Personas & Governance Inspector (`templates/settings/subtab_personas.html`)
-* **Inspeção de Perfis do Hermes:** Mapeamento dinâmico dos perfis existentes em `%LOCALAPPDATA%\hermes\profiles/` e perfil `default`.
-* **Editor/Visualizador Seguro de `AGENTS.md` e `SOUL.md`:** Visualização formatada em Markdown com realce de sintaxe dos guardrails e identidade de cada persona, com controle de versão e diff antes da mutação.
-* **Sincronização de Defaults:** Ajuste dos parâmetros de temperatura, max_tokens e restrições de cada persona com reflexo automático nas sessões do Hermes.
+#### 2. Hermes Personas & Governance Inspector (`templates/tabs/personas_hub.html`) — **[100% CONCLUÍDO]**
+* **Galeria Portátil de Assistentes Hermes:** Descoberta automática da Persona Principal (`default`) e perfis isolados (`%LOCALAPPDATA%\hermes\profiles/*`), com avatares reais (`assets/avatar.png`), status de conexão MCP e resumo de coerência.
+* **Guardião de Privacidade & Coerência em 1 Clique:** Diagnóstico cruzando `SOUL.md` vs `config.yaml` vs `profile.yaml` (bloqueio de modelos `:free` em Personas de dados sensíveis, ativação de `mcp_servers.souls_engine` em `:9123/mcp` e higiene textual) com prévia `dry_run` em **Myers Diff** e backup automático antes de gravar.
+* **Bancada Dupla (`Painel Rápido` + `SOUL.md`) & Soberania de Memória:** Edição visual sem tocar em YAML bruto via cirurgia hierárquica de blocos (`AGENTS.md` §8.1), checagem de contratos ancorados (`AGENTS.md` / `wiki/` do cofre Obsidian), visualização protegida Read-Only de `MEMORY.md`/`USER.md` (`AGENTS.md` §4) e zero exposição de `.env`/`auth.json`.
+* **Estúdio Criar & Clonar + Ciclo de Vida Completo:** Criação guiada ou clonagem de novas Personas prontas para conversar no Hermes (com escolha de Skills iniciais), arquivamento/reativação segura e comparador lado a lado entre Personas com rollback em 1 clique.
 
 ---
 
@@ -404,9 +406,9 @@ Para assegurar uma esteira de entrega limpa e sem regressões (em estrita obedi�
 flowchart TD
     v050["v0.5.0: Base Consolidada (UI Modular + SSOT Rust)"]
     
-    subgraph M060 ["Milestone v0.6.0 (Governança Visual & Agentes)"]
-        SkillsHub["Skills Hub & Forge (souls_server / souls_core)"]
-        Personas["Hermes Personas & AGENTS.md Inspector"]
+    subgraph M060 ["Milestone v0.6.0 — CONCLUÍDO (Governança Visual & Agentes)"]
+        SkillsHub["Skills Hub & Forge (souls_server)"]
+        Personas["Hermes Personas & Governance Inspector (souls_server)"]
     end
 
     subgraph M070 ["Milestone v0.7.0 (Cognição & Gateway Universal)"]
