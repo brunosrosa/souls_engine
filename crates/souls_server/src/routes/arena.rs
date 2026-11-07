@@ -86,6 +86,20 @@ pub async fn arena_models_handler(State(state): State<AppState>) -> Json<Value> 
                 "PENDING"
             };
 
+            let latest_tpot_ms = latest_tps.map(|t| if t > 0.0 { (1000.0 / t).min(9999.0) } else { 0.0 });
+            let is_vlm = m.has_mmproj || m.model_id.to_lowercase().contains("vl") || m.name.to_lowercase().contains("vl");
+            let mut capabilities = vec!["chat".to_string()];
+            if is_vlm {
+                capabilities.push("vision".to_string());
+            }
+            let mid_lower = m.model_id.to_lowercase();
+            if mid_lower.contains("coder") || mid_lower.contains("code") || mid_lower.contains("arch") {
+                capabilities.push("code".to_string());
+            }
+            if mid_lower.contains("reasoning") || mid_lower.contains("cot") || mid_lower.contains("smollm") || mid_lower.contains("phi") {
+                capabilities.push("reasoning".to_string());
+            }
+
             json!({
                 "model_id": m.model_id,
                 "name": m.name,
@@ -100,9 +114,12 @@ pub async fn arena_models_handler(State(state): State<AppState>) -> Json<Value> 
                 "status": status,
                 "latest_tps": latest_tps,
                 "latest_ttft_ms": latest_ttft_ms,
+                "latest_tpot_ms": latest_tpot_ms,
                 "latest_vram_peak_mb": latest_vram_peak_mb,
                 "last_benchmarked": last_benchmarked,
-                "e3_score": e3_score
+                "e3_score": e3_score,
+                "capabilities": capabilities,
+                "recommended_silicon": if m.size_mb < 5120.0 { "dGPU NVIDIA (CUDA)" } else { "Host CPU (AVX2)" }
             })
         })
         .collect();
@@ -285,27 +302,40 @@ pub async fn arena_run_benchmark_handler(
     };
 
     let b_type = payload.benchmark_type.unwrap_or(1);
+    let vault_conn = runner.connect_vault().await;
 
     match b_type {
         1 => {
             // Type 1: HardwareProfile
             match runner.run_hardware_profile(&model, engine_type).await {
-                Ok(res) => Json(json!({
-                    "status": "success",
-                    "benchmark_type": "HardwareProfile",
-                    "model_id": res.model_id,
-                    "engine": res.engine,
-                    "metrics": {
-                        "tps": res.tps,
-                        "ttft_ms": res.ttft_ms,
-                        "tpot_ms": res.tpot_ms,
-                        "peak_vram_mb": res.peak_vram_mb,
-                        "ram_mb": res.ram_mb,
-                        "cold_load_ms": res.cold_load_ms,
-                        "e3_score": res.e3_score,
-                        "verdict": res.status
+                Ok(res) => {
+                    let mut persisted = false;
+                    if let Ok(ref vault) = vault_conn {
+                        if let Err(ve) = vault.record_hardware_profile(&res).await {
+                            tracing::warn!("Failed to record hardware profile in vault: {}", ve);
+                        } else {
+                            persisted = true;
+                            tracing::info!("HardwareProfile for '{}' successfully persisted in Heuristic Vault.", res.model_id);
+                        }
                     }
-                })),
+                    Json(json!({
+                        "status": "success",
+                        "benchmark_type": "HardwareProfile",
+                        "model_id": res.model_id,
+                        "engine": res.engine,
+                        "persisted": persisted,
+                        "metrics": {
+                            "tps": res.tps,
+                            "ttft_ms": res.ttft_ms,
+                            "tpot_ms": res.tpot_ms,
+                            "peak_vram_mb": res.peak_vram_mb,
+                            "ram_mb": res.ram_mb,
+                            "cold_load_ms": res.cold_load_ms,
+                            "e3_score": res.e3_score,
+                            "verdict": res.status
+                        }
+                    }))
+                }
                 Err(e) => Json(json!({
                     "status": "error",
                     "message": format!("HardwareProfile benchmark failed: {}", e)
@@ -315,19 +345,31 @@ pub async fn arena_run_benchmark_handler(
         2 => {
             // Type 2: CognitiveEval (Rust AST track)
             match runner.run_cognitive_eval(&model, engine_type, "2A_RustAst").await {
-                Ok(res) => Json(json!({
-                    "status": "success",
-                    "benchmark_type": "CognitiveEval",
-                    "model_id": res.model_id,
-                    "track": res.track,
-                    "metrics": {
-                        "accuracy_pct": res.accuracy_pct,
-                        "avg_tps": res.avg_tps,
-                        "avg_ttft_ms": res.avg_ttft_ms,
-                        "e3_score": res.e3_score,
-                        "verdict": res.status
+                Ok(res) => {
+                    let mut persisted = false;
+                    if let Ok(ref vault) = vault_conn {
+                        if let Err(ve) = vault.record_cognitive_eval(&res).await {
+                            tracing::warn!("Failed to record cognitive eval in vault: {}", ve);
+                        } else {
+                            persisted = true;
+                            tracing::info!("CognitiveEval for '{}' successfully persisted in Heuristic Vault.", res.model_id);
+                        }
                     }
-                })),
+                    Json(json!({
+                        "status": "success",
+                        "benchmark_type": "CognitiveEval",
+                        "model_id": res.model_id,
+                        "track": res.track,
+                        "persisted": persisted,
+                        "metrics": {
+                            "accuracy_pct": res.accuracy_pct,
+                            "avg_tps": res.avg_tps,
+                            "avg_ttft_ms": res.avg_ttft_ms,
+                            "e3_score": res.e3_score,
+                            "verdict": res.status
+                        }
+                    }))
+                }
                 Err(e) => Json(json!({
                     "status": "error",
                     "message": format!("CognitiveEval benchmark failed: {}", e)
@@ -337,17 +379,29 @@ pub async fn arena_run_benchmark_handler(
         3 => {
             // Type 3: MultimodalVision
             match runner.run_multimodal_vision(&model, engine_type).await {
-                Ok(res) => Json(json!({
-                    "status": "success",
-                    "benchmark_type": "MultimodalVision",
-                    "model_id": res.model_id,
-                    "metrics": {
-                        "sidecar_path": res.sidecar_path,
-                        "multimodal_ttft_ms": res.multimodal_ttft_ms,
-                        "projection_latency_ms": res.projection_latency_ms,
-                        "verdict": res.status
+                Ok(res) => {
+                    let mut persisted = false;
+                    if let Ok(ref vault) = vault_conn {
+                        if let Err(ve) = vault.record_multimodal_vision(&res).await {
+                            tracing::warn!("Failed to record multimodal vision in vault: {}", ve);
+                        } else {
+                            persisted = true;
+                            tracing::info!("MultimodalVision for '{}' successfully persisted in Heuristic Vault.", res.model_id);
+                        }
                     }
-                })),
+                    Json(json!({
+                        "status": "success",
+                        "benchmark_type": "MultimodalVision",
+                        "model_id": res.model_id,
+                        "persisted": persisted,
+                        "metrics": {
+                            "sidecar_path": res.sidecar_path,
+                            "multimodal_ttft_ms": res.multimodal_ttft_ms,
+                            "projection_latency_ms": res.projection_latency_ms,
+                            "verdict": res.status
+                        }
+                    }))
+                }
                 Err(e) => Json(json!({
                     "status": "error",
                     "message": format!("MultimodalVision benchmark failed: {}", e)
@@ -357,17 +411,29 @@ pub async fn arena_run_benchmark_handler(
         4 => {
             // Type 4: SpeculativeDraft
             match runner.run_speculative_draft(&model, engine_type, None).await {
-                Ok(res) => Json(json!({
-                    "status": "success",
-                    "benchmark_type": "SpeculativeDraft",
-                    "model_id": res.model_id,
-                    "metrics": {
-                        "speculative_tps": res.speculative_tps,
-                        "speedup_ratio": res.speedup_ratio,
-                        "acceptance_rate_alpha": res.acceptance_rate_alpha,
-                        "verdict": res.verdict
+                Ok(res) => {
+                    let mut persisted = false;
+                    if let Ok(ref vault) = vault_conn {
+                        if let Err(ve) = vault.record_speculative_draft(&res).await {
+                            tracing::warn!("Failed to record speculative draft in vault: {}", ve);
+                        } else {
+                            persisted = true;
+                            tracing::info!("SpeculativeDraft for '{}' successfully persisted in Heuristic Vault.", res.model_id);
+                        }
                     }
-                })),
+                    Json(json!({
+                        "status": "success",
+                        "benchmark_type": "SpeculativeDraft",
+                        "model_id": res.model_id,
+                        "persisted": persisted,
+                        "metrics": {
+                            "speculative_tps": res.speculative_tps,
+                            "speedup_ratio": res.speedup_ratio,
+                            "acceptance_rate_alpha": res.acceptance_rate_alpha,
+                            "verdict": res.verdict
+                        }
+                    }))
+                }
                 Err(e) => Json(json!({
                     "status": "error",
                     "message": format!("SpeculativeDraft benchmark failed: {}", e)
@@ -377,21 +443,33 @@ pub async fn arena_run_benchmark_handler(
         5 => {
             // Type 5: ContextPressure
             match runner.run_context_pressure(&model, engine_type).await {
-                Ok(res) => Json(json!({
-                    "status": "success",
-                    "benchmark_type": "ContextPressure",
-                    "model_id": res.model_id,
-                    "metrics": {
-                        "max_tested_context": res.max_tested_context,
-                        "max_effective_context": res.max_effective_context,
-                        "needle_at_4k": res.needle_at_4k,
-                        "needle_at_8k": res.needle_at_8k,
-                        "needle_at_16k": res.needle_at_16k,
-                        "needle_at_32k": res.needle_at_32k,
-                        "degradation_detected": res.degradation_detected,
-                        "verdict": res.status
+                Ok(res) => {
+                    let mut persisted = false;
+                    if let Ok(ref vault) = vault_conn {
+                        if let Err(ve) = vault.record_context_pressure(&res).await {
+                            tracing::warn!("Failed to record context pressure in vault: {}", ve);
+                        } else {
+                            persisted = true;
+                            tracing::info!("ContextPressure for '{}' successfully persisted in Heuristic Vault.", res.model_id);
+                        }
                     }
-                })),
+                    Json(json!({
+                        "status": "success",
+                        "benchmark_type": "ContextPressure",
+                        "model_id": res.model_id,
+                        "persisted": persisted,
+                        "metrics": {
+                            "max_tested_context": res.max_tested_context,
+                            "max_effective_context": res.max_effective_context,
+                            "needle_at_4k": res.needle_at_4k,
+                            "needle_at_8k": res.needle_at_8k,
+                            "needle_at_16k": res.needle_at_16k,
+                            "needle_at_32k": res.needle_at_32k,
+                            "degradation_detected": res.degradation_detected,
+                            "verdict": res.status
+                        }
+                    }))
+                }
                 Err(e) => Json(json!({
                     "status": "error",
                     "message": format!("ContextPressure benchmark failed: {}", e)

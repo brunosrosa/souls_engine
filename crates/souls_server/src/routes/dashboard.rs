@@ -1245,24 +1245,52 @@ fn resolve_multi_tier_and_tags(model_id: &str, primary_tier: &str, existing_tags
 pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> {
     let _guard = state.acquire_connection();
 
-    // Consultar benchmarks empíricos reais na tabela arena_telemetry
+    // Consultar benchmarks empíricos reais na tabela arena_telemetry e model_registry
     let db_path = resolve_vault_db_path();
-    let mut arena_map: HashMap<String, (f64, f64)> = HashMap::new();
+    // Armazena (tps, ttft_ms, tpot_ms, e3_score, created_at) indexado por múltiplas chaves normalizadas
+    let mut arena_map: HashMap<String, (f64, f64, f64, f64, String)> = HashMap::new();
     if let Ok(pool) = SqlitePoolOptions::new()
         .max_connections(2)
         .connect(&format!("sqlite://{}", db_path.display()))
         .await
     {
-        if let Ok(rows) = sqlx::query("SELECT model_id, tps, ttft_ms FROM arena_telemetry WHERE tps > 0 ORDER BY id ASC")
-            .fetch_all(&pool)
-            .await
+        if let Ok(rows) = sqlx::query(
+            "SELECT model_id, file_path, COALESCE(tps, 0.0) as tps, COALESCE(ttft_ms, 0.0) as ttft_ms,
+                    COALESCE(tpot_ms, 0.0) as tpot_ms, COALESCE(e3_score, 0.0) as e3_score,
+                    COALESCE(created_at, '') as created_at
+             FROM arena_telemetry
+             WHERE tps > 0
+             ORDER BY id ASC"
+        )
+        .fetch_all(&pool)
+        .await
         {
             for r in rows {
                 let mid: Option<String> = r.try_get("model_id").ok();
+                let fpath: Option<String> = r.try_get("file_path").ok();
                 let tps: f64 = r.try_get("tps").unwrap_or(0.0);
                 let ttft: f64 = r.try_get("ttft_ms").unwrap_or(0.0);
+                let tpot: f64 = r.try_get("tpot_ms").unwrap_or(if tps > 0.0 { 1000.0 / tps } else { 0.0 });
+                let e3: f64 = r.try_get("e3_score").unwrap_or(0.0);
+                let created: String = r.try_get("created_at").unwrap_or_default();
+                let entry = (tps, ttft, tpot, e3, created);
+
+                let register_keys = |key: &str, map: &mut HashMap<String, (f64, f64, f64, f64, String)>| {
+                    let k_lower = key.to_lowercase();
+                    map.insert(k_lower.clone(), entry.clone());
+                    let clean = k_lower.replace(".gguf", "");
+                    map.insert(clean.clone(), entry.clone());
+                    map.insert(clean.replace('-', "_"), entry.clone());
+                    map.insert(clean.replace('_', "-"), entry.clone());
+                };
+
                 if let Some(m_id) = mid {
-                    arena_map.insert(m_id.to_lowercase(), (tps, ttft));
+                    register_keys(&m_id, &mut arena_map);
+                }
+                if let Some(fp) = fpath {
+                    if let Some(fname) = std::path::Path::new(&fp).file_name().and_then(|s| s.to_str()) {
+                        register_keys(fname, &mut arena_map);
+                    }
                 }
             }
         }
@@ -1303,14 +1331,60 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                     ("--".to_string(), 999)
                 };
 
-                // Opção A: Throughput & TTFT da Silicon Arena
-                let bench = arena_map
-                    .get(&m.model_id.to_lowercase())
-                    .or_else(|| arena_map.get(&m.name.to_lowercase()));
-                let (tps, ttft_ms) = match bench {
-                    Some(&(t, tt)) => (Some(t), Some(tt)),
-                    None => (None, None),
+                // Opção A: Throughput & TTFT da Silicon Arena com busca inteligente
+                let lookup_keys = vec![
+                    m.model_id.to_lowercase(),
+                    m.name.to_lowercase(),
+                    m.model_id.to_lowercase().replace(".gguf", ""),
+                    m.name.to_lowercase().replace(".gguf", ""),
+                    m.model_id.to_lowercase().replace('-', "_"),
+                    m.model_id.to_lowercase().replace('_', "-"),
+                ];
+
+                let bench = lookup_keys
+                    .iter()
+                    .find_map(|k| arena_map.get(k));
+
+                let (tps, ttft_ms, tpot_ms, e3_score, last_bench_at) = match bench {
+                    Some(&(t, tt, tp, e, ref created)) => (
+                        Some(t),
+                        Some(tt),
+                        Some(tp),
+                        if e > 0.0 { Some(e) } else { None },
+                        if !created.is_empty() { Some(created.clone()) } else { None },
+                    ),
+                    None => (None, None, None, None, None),
                 };
+
+                // Detecção de mmproj multimodal e capacidades agênticas
+                let parent_dir = m.file_path.parent();
+                let has_sidecar_mmproj = parent_dir.map(|p| {
+                    if let Ok(entries) = fs::read_dir(p) {
+                        entries.flatten().any(|e| {
+                            let name = e.file_name().to_string_lossy().to_lowercase();
+                            name.contains("mmproj") && name.ends_with(".gguf")
+                        })
+                    } else {
+                        false
+                    }
+                }).unwrap_or(false);
+
+                let is_vlm = has_sidecar_mmproj
+                    || m.model_id.to_lowercase().contains("vl")
+                    || m.name.to_lowercase().contains("vl")
+                    || m.tags.iter().any(|t| t.to_lowercase().contains("vision") || t.to_lowercase().contains("vlm"));
+
+                let mut capabilities = vec!["chat".to_string()];
+                if is_vlm {
+                    capabilities.push("vision".to_string());
+                }
+                let mid_lower = m.model_id.to_lowercase();
+                if mid_lower.contains("coder") || mid_lower.contains("code") || mid_lower.contains("arch") {
+                    capabilities.push("code".to_string());
+                }
+                if mid_lower.contains("reasoning") || mid_lower.contains("cot") || mid_lower.contains("smollm") || mid_lower.contains("phi") {
+                    capabilities.push("reasoning".to_string());
+                }
 
                 let (multi_tiers, multi_tags) = resolve_multi_tier_and_tags(&m.model_id, &m.tier, &m.tags);
 
@@ -1332,6 +1406,11 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                     "freshness_days": freshness_days,
                     "tps": tps,
                     "ttft_ms": ttft_ms,
+                    "tpot_ms": tpot_ms,
+                    "e3_score": e3_score,
+                    "last_benchmarked_at": last_bench_at,
+                    "has_mmproj": is_vlm,
+                    "capabilities": capabilities,
                 })
             })
             .collect();

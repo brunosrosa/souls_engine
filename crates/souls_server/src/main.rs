@@ -1975,6 +1975,31 @@ model:
         let bytes_err = to_bytes(resp_run_err.into_body(), usize::MAX).await.unwrap();
         let json_err: serde_json::Value = serde_json::from_slice(&bytes_err).unwrap();
         assert_eq!(json_err["status"], "error");
+
+        // 5. POST /api/v1/arena/benchmark/run (com primeiro modelo descoberto se disponível)
+        if let Some(first_model) = json_models["models"].as_array().and_then(|a| a.first()) {
+            if let Some(mid) = first_model.get("model_id").and_then(|v| v.as_str()) {
+                let payload_ok = serde_json::json!({
+                    "model_id": mid,
+                    "benchmark_type": 1,
+                    "engine": "mock"
+                });
+                let req_run_ok = Request::builder()
+                    .uri("/api/v1/arena/benchmark/run")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&payload_ok).unwrap()))
+                    .unwrap();
+                let resp_run_ok = app.clone().oneshot(req_run_ok).await.unwrap();
+                assert_eq!(resp_run_ok.status(), StatusCode::OK);
+                let bytes_ok = to_bytes(resp_run_ok.into_body(), usize::MAX).await.unwrap();
+                let json_ok: serde_json::Value = serde_json::from_slice(&bytes_ok).unwrap();
+                assert_eq!(json_ok["status"], "success");
+                assert_eq!(json_ok["benchmark_type"], "HardwareProfile");
+                assert!(json_ok["metrics"].is_object());
+                assert!(json_ok["metrics"]["tps"].is_number());
+            }
+        }
     }
 
     #[tokio::test]

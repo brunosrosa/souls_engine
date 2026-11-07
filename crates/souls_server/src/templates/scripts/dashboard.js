@@ -941,19 +941,24 @@
     function renderLocalTable(models) {
       const tbody = document.getElementById('local-arena-tbody');
       if (!models || models.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo físico encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo físico encontrado.</td></tr>';
         return;
       }
 
-      // Atualiza contadores dos pills de filtro
+      // Atualiza contadores dos pills de filtro e cabeçalho dinamicamente
       const dgpuCount = models.filter(m => m.target && m.target.includes('dGPU')).length;
       const cpuCount = models.filter(m => !(m.target && m.target.includes('dGPU'))).length;
       const elAll = document.getElementById('count-local-all');
       const elDgpu = document.getElementById('count-local-dgpu');
       const elCpu = document.getElementById('count-local-cpu');
+      const badgeSubtab = document.getElementById('badge-subtab-installed-count');
+      const totalHeader = document.getElementById('local-total-models');
+
       if (elAll) elAll.innerText = models.length;
       if (elDgpu) elDgpu.innerText = dgpuCount;
       if (elCpu) elCpu.innerText = cpuCount;
+      if (badgeSubtab) badgeSubtab.innerText = models.length;
+      if (totalHeader) totalHeader.innerText = `${models.length} modelos físicos`;
 
       // Filtragem
       let filtered = models.filter(m => {
@@ -964,13 +969,14 @@
         if (localModelFilterQuery) {
           const prof = resolveAgenticProfile(m);
           const tiersStr = (m.tiers || [m.tier]).join(' ');
-          const hay = `${m.model || ''} ${m.name || ''} ${tiersStr} ${prof.title} ${m.quantization || ''} ${(m.tags || []).join(' ')} ${m.file_path || ''}`.toLowerCase();
+          const capsStr = (m.capabilities || []).join(' ');
+          const hay = `${m.model || ''} ${m.name || ''} ${tiersStr} ${capsStr} ${prof.title} ${m.quantization || ''} ${(m.tags || []).join(' ')} ${m.file_path || ''}`.toLowerCase();
           if (!hay.includes(localModelFilterQuery)) return false;
         }
         return true;
       });
 
-      // Ordenação
+      // Ordenação dinâmica
       filtered.sort((a, b) => {
         let cmp = 0;
         if (localModelSortKey === 'tier') {
@@ -992,6 +998,8 @@
           const tA = a.tps || 0;
           const tB = b.tps || 0;
           cmp = tA - tB;
+        } else if (localModelSortKey === 'e3') {
+          cmp = (a.e3_score || 0) - (b.e3_score || 0);
         } else if (localModelSortKey === 'context') {
           cmp = (a.context_window || 0) - (b.context_window || 0);
         } else if (localModelSortKey === 'freshness') {
@@ -1001,12 +1009,12 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
         return;
       }
 
       tbody.innerHTML = filtered.map(m => {
-        const tagsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 3px 5px; max-width: 175px; align-items: center;">` +
+        const tagsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 3px 5px; max-width: 160px; align-items: center;">` +
           (m.tags || []).map(t => renderTagBadge(t)).join('') +
           `</div>`;
         const isGpu = m.target && m.target.includes('dGPU');
@@ -1015,8 +1023,9 @@
           : '<span class="badge badge-value" style="font-size: 0.70rem; padding: 3px 8px; white-space: nowrap;">⚡ Host CPU (AVX2)</span>';
         const sizeMb = m.size_mb ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(2) + ' GB' : m.size_mb.toFixed(0) + ' MB') : '--';
         const modelId = m.model || m.name;
+        const rowSlug = (modelId || '').toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-        // Opção D: Perfil Agêntico
+        // Perfil Agêntico
         const prof = resolveAgenticProfile(m);
         const profileHtml = `
           <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
@@ -1025,7 +1034,24 @@
           </div>
         `;
 
-        // Opção B: VRAM & Margem WDDM (teto 5.17 GB)
+        // Capacidades do Modelo (VLM, Code, Reasoning, Chat)
+        const caps = m.capabilities || ['chat'];
+        let capsHtml = '<div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center;">';
+        if (m.has_mmproj || caps.includes('vision')) {
+          capsHtml += '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); font-size: 0.65rem; padding: 2px 5px;" title="Suporta Visão Multimodal com projetor mmproj">👁️ VLM</span>';
+        }
+        if (caps.includes('code')) {
+          capsHtml += '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.65rem; padding: 2px 5px;" title="Especialista em Código & AST">💻 Code</span>';
+        }
+        if (caps.includes('reasoning')) {
+          capsHtml += '<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.65rem; padding: 2px 5px;" title="Raciocínio Lógico & CoT">🧠 CoT</span>';
+        }
+        if (caps.length === 1 && caps[0] === 'chat') {
+          capsHtml += '<span class="badge" style="background: rgba(148, 163, 184, 0.12); color: #cbd5e1; font-size: 0.65rem; padding: 2px 5px;" title="Conversacional Geral">💬 Chat</span>';
+        }
+        capsHtml += '</div>';
+
+        // VRAM & Margem WDDM (teto 5.17 GB)
         let vramHtml = '';
         if (isGpu) {
           const vramGb = m.size_mb ? (m.size_mb / 1024).toFixed(1) : '0';
@@ -1050,27 +1076,52 @@
           `;
         }
 
-        // Opção A: Velocidade Empírica (Throughput & TTFT)
+        // Velocidade Empírica (Throughput, TTFT e TPOT)
         let speedHtml = '';
         if (m.tps && m.tps > 0) {
           const ttftStr = m.ttft_ms ? `${m.ttft_ms.toFixed(0)}ms` : '--';
+          const tpotStr = m.tpot_ms ? `${m.tpot_ms.toFixed(0)}ms` : (m.tps > 0 ? (1000 / m.tps).toFixed(0) + 'ms' : '--');
           speedHtml = `
             <div class="mono text-center" style="color: var(--green); font-weight: 600; font-size: 0.76rem;">⚡ ${m.tps.toFixed(1)} tok/s</div>
-            <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;">TTFT: <strong style="color: var(--cyan);">${ttftStr}</strong></div>
+            <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;" title="TTFT: Tempo de resposta inicial • TPOT: Tempo por token gerado">
+              TTFT: <strong style="color: var(--cyan);">${ttftStr}</strong> <span style="color: rgba(255,255,255,0.2);">•</span> TPOT: <strong style="color: #cbd5e1;">${tpotStr}</strong>
+            </div>
           `;
         } else {
           const approxTps = isGpu ? (m.size_mb > 3000 ? '28~45' : '45~75') : '90~150';
           speedHtml = `
             <div style="font-size: 0.68rem; color: var(--text-muted); text-align: center;">~${approxTps} tok/s</div>
             <div style="text-align: center; margin-top: 2px;">
-              <button class="btn" style="padding: 1px 7px; font-size: 0.62rem; border-radius: 4px; border-color: rgba(6, 182, 212, 0.3); color: var(--cyan); white-space: nowrap;" onclick="testModelInArena('${modelId}')" title="Aferir velocidade na Local Silicon Arena">
+              <button class="btn" style="padding: 1px 7px; font-size: 0.62rem; border-radius: 4px; border-color: rgba(6, 182, 212, 0.3); color: var(--cyan); white-space: nowrap;" onclick="testModelInArena('${modelId}')" title="Aferir velocidade real na Local Silicon Arena">
                 Aferir 🏟️
               </button>
             </div>
           `;
         }
 
-        // Opção E: Freshness ("Há X dias")
+        // Eficiência E³ e Homologação
+        let e3Html = '';
+        if (m.e3_score && m.e3_score > 0) {
+          const dateTitle = m.last_benchmarked_at ? `Último ensaio: ${m.last_benchmarked_at}` : 'Aferido no silício';
+          e3Html = `
+            <div class="text-center" title="${dateTitle} • Eficiência E³: ${m.e3_score.toFixed(1)}">
+              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.70rem; font-weight: 700;">
+                ⚡ ${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)} E³
+              </span>
+              <div style="font-size: 0.60rem; color: var(--emerald); margin-top: 2px; font-weight: 600;">✓ Homologado</div>
+            </div>
+          `;
+        } else {
+          e3Html = `
+            <div class="text-center">
+              <span class="badge" style="background: rgba(234, 179, 8, 0.12); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.25); font-size: 0.68rem;" title="Execute a prova na Silicon Arena para calcular a eficiência física e homologar o modelo.">
+                ⏳ Pendente
+              </span>
+            </div>
+          `;
+        }
+
+        // Freshness ("Há X dias")
         const freshnessLabel = m.freshness || 'Hoje';
         const freshnessHtml = `
           <div class="text-center" style="font-size: 0.72rem; color: #cbd5e1; white-space: nowrap;">
@@ -1079,7 +1130,7 @@
         `;
 
         return `
-          <tr>
+          <tr id="local-row-${rowSlug}" data-model-id="${modelId}">
             <td>
               ${formatModelDisplayName(modelId, true)}
               <div style="font-size: 0.65rem; color: var(--text-muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
@@ -1098,9 +1149,11 @@
             </td>
             <td class="text-center" style="vertical-align: middle;">${renderTierBadges(m)}</td>
             <td style="vertical-align: middle;">${profileHtml}</td>
+            <td class="text-center" style="vertical-align: middle;">${capsHtml}</td>
             <td class="mono text-center" style="white-space: nowrap; vertical-align: middle;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
             <td class="text-center" style="vertical-align: middle;">${vramHtml}</td>
             <td class="text-center" style="vertical-align: middle;">${speedHtml}</td>
+            <td class="text-center" style="vertical-align: middle;">${e3Html}</td>
             <td class="mono text-center" style="vertical-align: middle;">${(m.context_window || 8192).toLocaleString()}</td>
             <td style="vertical-align: middle;">${tagsHtml}</td>
             <td style="vertical-align: middle;">${freshnessHtml}</td>
@@ -1147,18 +1200,170 @@
       return null;
     }
 
+    let targetArenaModelId = null;
+
     function testModelInArena(modelId) {
+      targetArenaModelId = modelId;
       switchLocalSubtab('arena');
+      if (arenaModelsData && arenaModelsData.length > 0) {
+        selectModelInArenaRunner(modelId);
+      }
+      showToast(`Modelo ${modelId} preparado na Local Silicon Arena. Pronto para aferição!`, 'success');
+    }
+
+    function selectModelInArenaRunner(targetId) {
       const select = document.getElementById('arena-runner-model-select');
-      if (select) {
-        for (let i = 0; i < select.options.length; i++) {
-          if (select.options[i].value.toLowerCase().includes(modelId.toLowerCase()) || modelId.toLowerCase().includes(select.options[i].value.toLowerCase())) {
-            select.selectedIndex = i;
-            break;
+      if (!select || !arenaModelsData || arenaModelsData.length === 0) return;
+
+      const cleanTarget = (targetId || '').toLowerCase().replace(/\.gguf$/, '').replace(/[-_]/g, '');
+      let foundIndex = -1;
+
+      for (let i = 0; i < arenaModelsData.length; i++) {
+        const m = arenaModelsData[i];
+        const mid = (m.model_id || '').toLowerCase().replace(/[-_]/g, '');
+        const mname = (m.name || '').toLowerCase().replace(/\.gguf$/, '').replace(/[-_]/g, '');
+        const mpath = (m.file_path || '').toLowerCase().replace(/[-_]/g, '');
+        if (mid === cleanTarget || mname === cleanTarget || mpath.includes(cleanTarget) || cleanTarget.includes(mid)) {
+          foundIndex = i;
+          break;
+        }
+      }
+
+      if (foundIndex >= 0) {
+        select.selectedIndex = foundIndex;
+      }
+
+      // Atualiza preview de compatibilidade e opções do select de tipo
+      onArenaModelSelectChange(select.value);
+
+      // Scroll suave até o runner e highlight visual
+      setTimeout(() => {
+        const card = document.getElementById('arena-runner-card');
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.classList.add('highlight-pulse');
+          setTimeout(() => card.classList.remove('highlight-pulse'), 2200);
+        }
+        // Destaque na tabela se o elemento existir
+        const rowId = 'arena-row-' + (select.value || '').toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const rowEl = document.getElementById(rowId);
+        if (rowEl) {
+          rowEl.classList.add('highlight-row');
+          setTimeout(() => rowEl.classList.remove('highlight-row'), 2500);
+        }
+      }, 100);
+    }
+
+    function onArenaModelSelectChange(modelId) {
+      if (!arenaModelsData || arenaModelsData.length === 0) return;
+      const model = arenaModelsData.find(m => m.model_id === modelId) || arenaModelsData[0];
+      if (!model) return;
+
+      // 1. Atualiza Card de Preview
+      const tierBadge = document.getElementById('arena-preview-tier-badge');
+      const previewTitle = document.getElementById('arena-preview-title');
+      const previewSub = document.getElementById('arena-preview-sub');
+      const pillsContainer = document.getElementById('arena-preview-capabilities-pills');
+
+      if (tierBadge) tierBadge.innerText = model.tier || 'Tier 1';
+      if (previewTitle) {
+        const isBench = model.status === 'BENCHMARKED';
+        const tpsStr = model.latest_tps ? ` (${model.latest_tps.toFixed(1)} tok/s)` : '';
+        previewTitle.innerHTML = `<strong>${model.name}</strong> • <span style="color: ${isBench ? 'var(--emerald)' : '#facc15'};">${isBench ? '✅ Homologado' + tpsStr : '⏳ Pendente de Aferição'}</span>`;
+      }
+      if (previewSub) {
+        const sizeGb = (model.size_mb / 1024).toFixed(1);
+        const isGpu = model.size_mb < 5120;
+        const targetStr = isGpu ? '🎮 dGPU NVIDIA RTX 2060m (CUDA)' : '⚡ Host CPU (AVX2)';
+        const vramFree = Math.max(0, 5.17 - (model.size_mb / 1024)).toFixed(1);
+        previewSub.innerText = `${model.quantization || 'GGUF'} • ${sizeGb} GB • Silício Ideal: ${targetStr} • Folga WDDM: ~${vramFree} GB`;
+      }
+
+      if (pillsContainer) {
+        let pillsHtml = '';
+        if (model.has_mmproj) {
+          pillsHtml += '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); font-size: 0.70rem;">👁️ Visão Multimodal (mmproj ✅)</span>';
+        } else {
+          pillsHtml += '<span class="badge" style="background: rgba(148, 163, 184, 0.1); color: #94a3b8; font-size: 0.70rem;">📝 LLM Texto Puro</span>';
+        }
+        if ((model.name || '').toLowerCase().includes('coder') || (model.model_id || '').toLowerCase().includes('coder')) {
+          pillsHtml += '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.70rem;">💻 Code & AST</span>';
+        }
+        if ((model.name || '').toLowerCase().includes('reasoning') || (model.tier || '').includes('0')) {
+          pillsHtml += '<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.70rem;">🧠 Raciocínio CoT</span>';
+        }
+        pillsContainer.innerHTML = pillsHtml;
+      }
+
+      // 2. Adapta o Select de Tipos de Prova
+      const typeSelect = document.getElementById('arena-runner-type-select');
+      const optVlm = document.getElementById('opt-arena-type-vlm');
+      if (typeSelect && optVlm) {
+        if (model.has_mmproj) {
+          optVlm.disabled = false;
+          optVlm.innerText = '👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj ✅)';
+          optVlm.style.color = 'var(--cyan)';
+        } else {
+          optVlm.disabled = true;
+          optVlm.innerText = '👁️ Visão Multimodal (Indisponível: sem projetor mmproj)';
+          optVlm.style.color = 'var(--text-muted)';
+          if (typeSelect.value === '3') {
+            typeSelect.value = '1';
           }
         }
       }
-      showToast(`Modelo ${modelId} preparado na Local Silicon Arena. Pronto para aferição!`, 'success');
+
+      // 3. Adapta sugestão de acelerador
+      const engineSelect = document.getElementById('arena-runner-engine-select');
+      if (engineSelect) {
+        if (model.size_mb > 5120 || (model.tier && (model.tier.includes('0') && !model.tier.includes('1')))) {
+          engineSelect.value = 'llama-cpu';
+        } else {
+          engineSelect.value = 'llama-cuda';
+        }
+      }
+    }
+
+    function onArenaBenchmarkTypeChange() {
+      const modelId = document.getElementById('arena-runner-model-select')?.value;
+      const typeSelect = document.getElementById('arena-runner-type-select');
+      if (!typeSelect || !modelId) return;
+
+      const model = (arenaModelsData || []).find(m => m.model_id === modelId);
+      if (typeSelect.value === '3' && model && !model.has_mmproj) {
+        showToast('Este modelo não possui projetor multimodal (mmproj). Selecionando teste de velocidade.', 'warning');
+        typeSelect.value = '1';
+      }
+    }
+
+    function setArenaStep(stepNumber) {
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById('arena-step-' + i);
+        if (!el) continue;
+        const labelEl = el.querySelector('div:first-child');
+        if (i < stepNumber) {
+          el.style.background = 'rgba(16, 185, 129, 0.15)';
+          el.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+          if (labelEl) {
+            labelEl.style.color = 'var(--emerald)';
+            labelEl.innerText = 'FASE ' + i + ' ✓';
+          }
+        } else if (i === stepNumber) {
+          el.style.background = 'rgba(6, 182, 212, 0.2)';
+          el.style.borderColor = 'var(--cyan)';
+          if (labelEl) {
+            labelEl.style.color = 'var(--cyan)';
+            labelEl.innerText = 'FASE ' + i + ' ⏳';
+          }
+        } else {
+          el.style.background = 'rgba(15, 23, 42, 0.5)';
+          el.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          if (labelEl) {
+            labelEl.style.color = 'var(--text-muted)';
+            labelEl.innerText = 'FASE ' + i;
+          }
+        }
+      }
     }
 
     // ==========================================
@@ -1263,6 +1468,7 @@
         select.innerHTML = '<option value="">Nenhum modelo disponível</option>';
         return;
       }
+      const currentVal = select.value;
       select.innerHTML = models.map(m => {
         const isBenchmarked = m.status === 'BENCHMARKED';
         const prefix = isBenchmarked ? '✅' : '⏳';
@@ -1270,6 +1476,16 @@
         const paramsStr = m.parameters ? ` • ${m.parameters}` : '';
         return `<option value="${m.model_id}">${prefix} ${m.name} (${m.tier}${paramsStr} • ${m.quantization || 'GGUF'}${tpsStr})</option>`;
       }).join('');
+
+      if (targetArenaModelId) {
+        selectModelInArenaRunner(targetArenaModelId);
+        targetArenaModelId = null;
+      } else if (currentVal && models.some(m => m.model_id === currentVal)) {
+        select.value = currentVal;
+        onArenaModelSelectChange(select.value);
+      } else if (models.length > 0) {
+        onArenaModelSelectChange(models[0].model_id);
+      }
     }
 
     function filterArenaModels(filter) {
@@ -1298,7 +1514,7 @@
     }
 
     function updateArenaSortIndicators() {
-      const keys = ['tier', 'name', 'quant', 'tps', 'ttft', 'vram', 'e3', 'status'];
+      const keys = ['tier', 'name', 'quant', 'tps', 'ttft', 'tpot', 'vram', 'e3', 'status'];
       keys.forEach(k => {
         const el = document.getElementById('sort-ind-' + k);
         if (el) {
@@ -1350,6 +1566,10 @@
           cmp = (a.latest_tps || 0) - (b.latest_tps || 0);
         } else if (currentArenaSortKey === 'ttft') {
           cmp = (a.latest_ttft_ms || 99999) - (b.latest_ttft_ms || 99999);
+        } else if (currentArenaSortKey === 'tpot') {
+          const tpA = a.latest_tpot_ms || (a.latest_tps > 0 ? 1000 / a.latest_tps : 99999);
+          const tpB = b.latest_tpot_ms || (b.latest_tps > 0 ? 1000 / b.latest_tps : 99999);
+          cmp = tpA - tpB;
         } else if (currentArenaSortKey === 'vram') {
           cmp = (a.latest_vram_peak_mb || 0) - (b.latest_vram_peak_mb || 0);
         } else if (currentArenaSortKey === 'e3') {
@@ -1361,7 +1581,7 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
         return;
       }
 
@@ -1379,6 +1599,11 @@
           ? `<div style="line-height: 1.2;"><span class="mono" style="color: var(--cyan); font-size: 0.82rem; font-weight: 600;">${m.latest_ttft_ms.toFixed(0)}</span><div style="font-size: 0.65rem; color: var(--text-muted);">ms</div></div>`
           : '<span style="color: var(--text-muted);">--</span>';
 
+        const tpotVal = m.latest_tpot_ms || (m.latest_tps ? (1000 / m.latest_tps) : null);
+        const tpotHtml = tpotVal
+          ? `<div style="line-height: 1.2;"><span class="mono" style="color: #cbd5e1; font-size: 0.82rem; font-weight: 600;">${tpotVal.toFixed(0)}</span><div style="font-size: 0.65rem; color: var(--text-muted);">ms/tok</div></div>`
+          : '<span style="color: var(--text-muted);">--</span>';
+
         const vramHtml = m.latest_vram_peak_mb
           ? `<div style="line-height: 1.2;"><span class="mono" style="color: #f43f5e; font-size: 0.82rem; font-weight: 600;">${m.latest_vram_peak_mb.toFixed(0)}</span><div style="font-size: 0.65rem; color: var(--text-muted);">MB</div></div>`
           : `<div style="line-height: 1.2;"><span class="mono" style="color: var(--text-muted); font-size: 0.75rem;">${m.size_mb ? (m.size_mb + 36).toFixed(0) : '--'}</span><div style="font-size: 0.65rem; color: var(--text-muted);">MB (est)</div></div>`;
@@ -1388,9 +1613,33 @@
           : '<span style="color: var(--text-muted); font-size: 0.75rem;" title="Score não calculado ainda. Execute o teste Type 1 para aferir Throughput, TTFT e VRAM.">--</span>';
 
         const activeFile = m.file_path || m.model_id;
+        const rowSlug = (m.model_id || '').toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+        // Capacidades
+        const caps = m.capabilities || ['chat'];
+        let capsHtml = '<div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center;">';
+        if (m.has_mmproj || caps.includes('vision')) {
+          capsHtml += '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); font-size: 0.65rem; padding: 2px 5px;" title="Suporta Visão Multimodal com projetor mmproj">👁️ VLM</span>';
+        }
+        if (caps.includes('code')) {
+          capsHtml += '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.65rem; padding: 2px 5px;" title="Especialista em Código & AST">💻 Code</span>';
+        }
+        if (caps.includes('reasoning')) {
+          capsHtml += '<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.65rem; padding: 2px 5px;" title="Raciocínio Lógico & CoT">🧠 CoT</span>';
+        }
+        if (caps.length === 1 && caps[0] === 'chat') {
+          capsHtml += '<span class="badge" style="background: rgba(148, 163, 184, 0.12); color: #cbd5e1; font-size: 0.65rem; padding: 2px 5px;" title="Conversacional Geral">💬 Chat</span>';
+        }
+        capsHtml += '</div>';
+
+        // Silício Recomendado
+        const isGpu = m.size_mb < 5120;
+        const targetBadge = isGpu
+          ? '<span class="badge badge-champion" style="font-size: 0.68rem; padding: 2px 7px;">🎮 dGPU (CUDA)</span>'
+          : '<span class="badge badge-value" style="font-size: 0.68rem; padding: 2px 7px;">⚡ Host CPU</span>';
 
         return `
-          <tr>
+          <tr id="arena-row-${rowSlug}">
             <td class="text-center" style="vertical-align: middle;">
               ${renderTierBadge(m.tier)}
             </td>
@@ -1398,15 +1647,18 @@
               <div style="font-weight: 600; color: #fff; font-size: 0.82rem;">${m.name}</div>
               <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">${m.model_id}</div>
             </td>
+            <td class="text-center" style="vertical-align: middle;">${capsHtml}</td>
             <td class="text-center mono" style="font-size: 0.78rem;">${m.quantization || 'GGUF'}</td>
             <td class="text-center">${tpsHtml}</td>
             <td class="text-center">${ttftHtml}</td>
+            <td class="text-center">${tpotHtml}</td>
             <td class="text-center">${vramHtml}</td>
             <td class="text-center">${e3Html}</td>
+            <td class="text-center" style="vertical-align: middle;">${targetBadge}</td>
             <td class="text-center">${statusBadge}</td>
             <td class="text-center">
               <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
-                <button class="btn btn-emerald" style="padding: 4px 10px; font-size: 0.72rem; height: 28px;" onclick="runSpecificArenaBenchmark('${m.model_id}', 1)" title="Executar Teste de Silício (Hardware Profile)">
+                <button class="btn btn-emerald" style="padding: 4px 10px; font-size: 0.72rem; height: 28px;" onclick="testModelInArena('${m.model_id}')" title="Selecionar e Testar na Silicon Arena">
                   <span>⚡</span> Testar
                 </button>
                 ${isBenchmarked ? `
@@ -1429,7 +1681,7 @@
       }
       if (!tbody) return;
       if (!history || history.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhum ensaio registrado no SQLite Vault.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhum ensaio registrado no SQLite Vault.</td></tr>';
         return;
       }
 
@@ -1460,17 +1712,21 @@
           typeBadge = `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.68rem;">🔬 ${h.benchmark_type || 'Geral'}</span>`;
         }
 
+        const tpotVal = h.tpot_ms > 0 ? h.tpot_ms : (h.tps > 0 ? (1000 / h.tps) : 0);
+
         return `
-          <tr>
+          <tr id="telemetry-row-${h.id}">
             <td class="text-center mono" style="color: var(--text-muted); font-size: 0.72rem;">#${h.id}</td>
             <td>
               <div style="font-weight: 600; color: #fff; font-size: 0.8rem;">${h.model_id}</div>
             </td>
             <td>${typeBadge}</td>
             <td class="text-center mono" style="font-size: 0.72rem; color: var(--cyan);">${h.engine}</td>
-            <td class="text-center mono" style="color: var(--emerald); font-weight: 600;">${h.tps > 0 ? h.tps.toFixed(1) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">tps</span>' : '--'}</td>
+            <td class="text-center mono" style="color: var(--emerald); font-weight: 600;">${h.tps > 0 ? h.tps.toFixed(1) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">tok/s</span>' : '--'}</td>
             <td class="text-center mono">${h.ttft_ms > 0 ? h.ttft_ms.toFixed(0) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">ms</span>' : '--'}</td>
+            <td class="text-center mono" style="color: #cbd5e1;">${tpotVal > 0 ? tpotVal.toFixed(0) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">ms</span>' : '--'}</td>
             <td class="text-center mono" style="color: #f43f5e;">${h.vram_peak_mb > 0 ? h.vram_peak_mb.toFixed(0) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">MB</span>' : '--'}</td>
+            <td class="text-center mono" style="color: #c084fc; font-weight: 600;">${h.e3_score > 0 ? (h.e3_score > 9000 ? '9999' : h.e3_score.toFixed(1)) : '--'}</td>
             <td class="text-center">${statusBadge}</td>
             <td class="mono" style="font-size: 0.7rem; color: var(--text-muted);">${h.created_at || '--'}</td>
           </tr>
@@ -1505,10 +1761,15 @@
 
       if (feedback) {
         feedback.style.display = 'block';
-        if (titleEl) titleEl.innerText = `Executando Prova no Silício para ${modelId}...`;
-        if (verdictEl) verdictEl.innerHTML = '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan);">NVML Watchdog Ativo</span>';
-        if (gridEl) gridEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem; grid-column: 1 / -1;"><span style="display:inline-block; animation:spin 1s linear infinite; margin-right:6px;">⚙️</span> Carregando tensores via memmap2 e medindo telemetria bare-metal...</div>';
+        if (titleEl) titleEl.innerHTML = `<span>⚡</span> Executando Prova no Silício para <strong>${modelId}</strong>...`;
+        if (verdictEl) verdictEl.innerHTML = '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.4);">NVML Watchdog Ativo</span>';
+        if (gridEl) gridEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem; grid-column: 1 / -1;"><span style="display:inline-block; animation:spin 1s linear infinite; margin-right:6px;">⚙️</span> Preparando tensores via memmap2 e medindo telemetria física bare-metal...</div>';
       }
+
+      // Ativa Stepper Fase 1
+      setArenaStep(1);
+      setTimeout(() => setArenaStep(2), 350);
+      setTimeout(() => setArenaStep(3), 750);
 
       try {
         const payload = {
@@ -1526,8 +1787,9 @@
         const data = await res.json();
 
         if (res.ok && data.status === 'success') {
-          showToast(`Prova ${data.benchmark_type} concluída no silício com sucesso!`, 'success');
-          if (titleEl) titleEl.innerText = `Resultado da Prova: ${data.model_id} (${data.benchmark_type})`;
+          setArenaStep(4);
+          showToast(`✨ Prova ${data.benchmark_type} concluída e persistida no Heuristic Vault com sucesso!`, 'success');
+          if (titleEl) titleEl.innerHTML = `<span>✅</span> Resultado da Prova: <strong>${data.model_id}</strong> (${data.benchmark_type})`;
           if (verdictEl) verdictEl.innerHTML = `<span class="badge badge-champion">${data.metrics?.verdict || 'NOMINAL'}</span>`;
 
           if (gridEl && data.metrics) {
@@ -1546,6 +1808,15 @@
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Tempo Resposta (TTFT)</div>
                   <div class="hw-spec-val" style="color: var(--cyan);">${data.metrics.ttft_ms.toFixed(0)} <span style="font-size: 0.7rem;">ms</span></div>
+                </div>
+              `;
+            }
+            if (data.metrics.tpot_ms !== undefined || data.metrics.tps !== undefined) {
+              const tp = data.metrics.tpot_ms || (data.metrics.tps > 0 ? (1000 / data.metrics.tps) : 0);
+              cardsHtml += `
+                <div class="hw-spec-card">
+                  <div class="hw-spec-label">Latência por Token (TPOT)</div>
+                  <div class="hw-spec-val" style="color: #cbd5e1;">${tp.toFixed(0)} <span style="font-size: 0.7rem;">ms/tok</span></div>
                 </div>
               `;
             }
@@ -1658,8 +1929,24 @@
             gridEl.innerHTML = cardsHtml;
           }
 
-          // Atualiza tabelas
-          await fetchLocalArenaData();
+          // ATUALIZA AMBAS AS TABELAS EM TEMPO REAL
+          await Promise.all([fetchLocalArenaData(), fetchLocalModels()]);
+
+          // Highlight na linha testada
+          const slug = (modelId || '').toLowerCase().replace(/[^a-z0-9]/g, '-');
+          setTimeout(() => {
+            const rowArena = document.getElementById('arena-row-' + slug);
+            if (rowArena) {
+              rowArena.classList.add('highlight-row');
+              setTimeout(() => rowArena.classList.remove('highlight-row'), 2800);
+            }
+            const rowLocal = document.getElementById('local-row-' + slug);
+            if (rowLocal) {
+              rowLocal.classList.add('highlight-row');
+              setTimeout(() => rowLocal.classList.remove('highlight-row'), 2800);
+            }
+          }, 150);
+
         } else {
           showToast(data.message || 'Falha ao executar prova no silício.', 'error');
           if (titleEl) titleEl.innerText = 'Falha na Prova de Silício';
@@ -1672,7 +1959,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<span>⚡</span> Iniciar Teste';
+          btn.innerHTML = '<span>⚡</span> Iniciar Teste no Silício';
         }
       }
     }

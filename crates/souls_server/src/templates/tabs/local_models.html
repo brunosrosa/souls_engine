@@ -3,7 +3,7 @@
       <div class="subtabs-bar">
         <button class="subtab-btn active" id="btn-subtab-installed" onclick="switchLocalSubtab('installed')">
           <span>💾 Modelos Locais Instalados</span>
-          <span class="tab-count-badge" id="badge-subtab-installed-count">13</span>
+          <span class="tab-count-badge" id="badge-subtab-installed-count">--</span>
         </button>
         <button class="subtab-btn" id="btn-subtab-hub" onclick="switchLocalSubtab('hub')">
           <span>✨ Model Hub & Downloads</span>
@@ -15,7 +15,7 @@
         </button>
         <button class="subtab-btn" id="btn-subtab-switchboard" onclick="switchLocalSubtab('switchboard')">
           <span>⚡ Switchboard MCP</span>
-          <span class="tab-count-badge" id="badge-switchboard-tools-count" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">55</span>
+          <span class="tab-count-badge" id="badge-switchboard-tools-count" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">--</span>
         </button>
       </div>
 
@@ -29,7 +29,7 @@
                 Inventário Físico de Modelos
               </div>
               <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Diretório Físico: <code class="mono" id="local-root-dir">C:\Users\rosas\llm_local_models</code> <span style="color: var(--cyan); margin: 0 4px; font-weight: bold;">•</span> Total: <strong id="local-total-models" style="color: var(--cyan);">13 modelos físicos</strong> (23.98 GB)
+                Diretório Físico: <code class="mono" id="local-root-dir">Detectando...</code> <span style="color: var(--cyan); margin: 0 4px; font-weight: bold;">•</span> Total: <strong id="local-total-models" style="color: var(--cyan);">Carregando modelos...</strong>
               </p>
             </div>
             <div style="display: flex; gap: 8px;">
@@ -45,17 +45,17 @@
           <!-- BARRA DE FILTRO E PESQUISA INSTANTÂNEA -->
           <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 260px; position: relative;">
-              <input type="text" id="local-models-search-input" class="setting-input" placeholder="🔍 Filtrar modelos por nome, quantização, tags..." oninput="handleLocalModelsSearch(this.value)" style="width: 100%; padding-left: 12px; height: 36px; font-size: 0.78rem;">
+              <input type="text" id="local-models-search-input" class="setting-input" placeholder="🔍 Filtrar modelos por nome, quantização, tags, capacidades..." oninput="handleLocalModelsSearch(this.value)" style="width: 100%; padding-left: 12px; height: 36px; font-size: 0.78rem;">
             </div>
             <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
               <button class="filter-provider-btn active" id="btn-filter-local-all" onclick="setLocalSiliconFilter('all')" style="padding: 4px 10px; font-size: 0.72rem;">
-                Todos (<span id="count-local-all">13</span>)
+                Todos (<span id="count-local-all">--</span>)
               </button>
               <button class="filter-provider-btn" id="btn-filter-local-dgpu" onclick="setLocalSiliconFilter('dgpu')" style="padding: 4px 10px; font-size: 0.72rem;">
-                🎮 dGPU (<span id="count-local-dgpu">11</span>)
+                🎮 dGPU (<span id="count-local-dgpu">--</span>)
               </button>
               <button class="filter-provider-btn" id="btn-filter-local-cpu" onclick="setLocalSiliconFilter('cpu')" style="padding: 4px 10px; font-size: 0.72rem;">
-                ⚡ CPU (<span id="count-local-cpu">2</span>)
+                ⚡ CPU (<span id="count-local-cpu">--</span>)
               </button>
             </div>
           </div>
@@ -64,23 +64,25 @@
             <table class="arena-table">
               <thead>
                 <tr style="cursor: pointer; user-select: none;">
-                  <th style="min-width: 220px; max-width: 270px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
-                  <th class="text-center" style="width: 105px;">Ações</th>
-                  <th class="text-center" style="width: 95px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier(s) ↕</th>
-                  <th style="width: 120px;" onclick="sortLocalModels('profile')" title="Clique para ordenar por Perfil Agêntico">Perfil Agêntico ↕</th>
+                  <th style="min-width: 200px; max-width: 250px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
+                  <th class="text-center" style="width: 110px;">Ações</th>
+                  <th class="text-center" style="width: 85px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier(s) ↕</th>
+                  <th style="width: 115px;" onclick="sortLocalModels('profile')" title="Clique para ordenar por Perfil Agêntico">Perfil Agêntico ↕</th>
+                  <th style="width: 105px;" class="text-center" title="Capacidades identificadas (VLM, Código, Raciocínio, Chat)">Capacidades ↕</th>
                   <th class="text-center" style="width: 105px;" onclick="sortLocalModels('size')" title="Clique para ordenar por Tamanho">Tamanho / Quant ↕</th>
-                  <th class="text-center" style="width: 110px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM e Folga">VRAM & Folga WDDM ↕</th>
-                  <th class="text-center" style="width: 100px;" onclick="sortLocalModels('tps')" title="Clique para ordenar por Velocidade">Velocidade (Arena) ↕</th>
+                  <th class="text-center" style="width: 115px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM e Folga">VRAM & Folga WDDM ↕</th>
+                  <th class="text-center" style="width: 125px;" onclick="sortLocalModels('tps')" title="Throughput e Tempo de Resposta aferidos na Silicon Arena. Clique para ordenar.">Velocidade & TPOT ↕</th>
+                  <th class="text-center" style="width: 95px;" onclick="sortLocalModels('e3')" title="Eficiência Empírica E³ e Homologação no Silício. Clique para ordenar.">Eficiência E³ ↕</th>
                   <th class="text-center" style="width: 75px;" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
-                  <th style="min-width: 140px; max-width: 180px;">Tags Especializadas</th>
+                  <th style="min-width: 130px; max-width: 160px;">Tags Especializadas</th>
                   <th class="text-center" style="width: 85px;" onclick="sortLocalModels('freshness')" title="Clique para ordenar por Data de Adição">Freshness ↕</th>
-                  <th class="text-center" style="width: 135px; white-space: nowrap;">Status & Silício Alvo</th>
+                  <th class="text-center" style="width: 125px; white-space: nowrap;">Silício Alvo</th>
                 </tr>
               </thead>
               <tbody id="local-arena-tbody">
                 <!-- Renderizado dinamicamente via JS -->
                 <tr>
-                  <td colspan="11" style="text-align: center; color: var(--text-muted);">Varrendo modelos físicos em C:\Users\rosas\llm_local_models...</td>
+                  <td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Varrendo modelos físicos em disco...</td>
                 </tr>
               </tbody>
             </table>
@@ -91,7 +93,7 @@
       <!-- PAINEL 3: LOCAL SILICON ARENA (BENCHMARKS BARE-METAL) -->
       <div id="panel-local-arena" style="display: none;">
         <!-- CARD 1: RUNNER DE BENCHMARK INTERATIVO -->
-        <div class="card" style="margin-bottom: 20px;">
+        <div class="card" id="arena-runner-card" style="margin-bottom: 20px;">
           <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
             <div>
               <div class="card-title">
@@ -99,7 +101,7 @@
                 Arena de Testes de Silício (Benchmarks Locais)
               </div>
               <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Meça a velocidade real (tokens/s), tempo de resposta (TTFT) e consumo de VRAM diretamente na sua placa NVIDIA RTX 2060m e CPU Intel i9.
+                Meça a velocidade real (tokens/s), tempo de resposta (TTFT), TPOT e consumo de VRAM diretamente na sua placa NVIDIA RTX 2060m e CPU Intel i9.
               </p>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -118,26 +120,26 @@
             <div style="display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: end;">
               <div>
                 <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">MODELO LOCAL PARA TESTE</label>
-                <select id="arena-runner-model-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
+                <select id="arena-runner-model-select" class="form-select" onchange="onArenaModelSelectChange(this.value)" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
                   <option value="">Carregando modelos instalados...</option>
                 </select>
               </div>
 
               <div>
                 <button class="btn btn-emerald" id="btn-run-arena-benchmark" onclick="executeSelectedArenaBenchmark()" style="height: 40px; padding: 0 24px; white-space: nowrap; font-weight: 600; font-size: 0.82rem;">
-                  <span>⚡</span> Iniciar Teste
+                  <span>⚡</span> Iniciar Teste no Silício
                 </button>
               </div>
             </div>
 
-            <!-- LINHA 2: TIPO DE TESTE / PROVA (ESPAÇOSO) + ACELERADOR DE SILÍCIO -->
+            <!-- LINHA 2: TIPO DE TESTE / PROVA (ADAPTATIVO) + ACELERADOR DE SILÍCIO -->
             <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; align-items: end;">
               <div>
                 <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TIPO DE TESTE / PROVA</label>
-                <select id="arena-runner-type-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
+                <select id="arena-runner-type-select" class="form-select" onchange="onArenaBenchmarkTypeChange()" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
                   <option value="1">⚡ Velocidade & Memória (Throughput tok/s, VRAM e TTFT)</option>
                   <option value="2">🧠 Avaliação Cognitiva (Raciocínio CoT & Parsing Rust AST)</option>
-                  <option value="3">👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj)</option>
+                  <option value="3" id="opt-arena-type-vlm">👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj)</option>
                   <option value="4">🚀 Aceleração Especulativa (Drafting & Ganho de Velocidade)</option>
                   <option value="5">📦 Pressão de Contexto (Janela Longa de 4k até 32k tokens)</option>
                 </select>
@@ -154,14 +156,49 @@
               </div>
             </div>
 
-            <!-- RESULTADO EM TEMPO REAL DO TESTE -->
-            <div id="arena-live-feedback" style="display: none; margin-top: 10px; padding: 14px; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
+            <!-- CARD DINÂMICO DE COMPATIBILIDADE & PERFIL DO MODELO -->
+            <div id="arena-model-profile-preview" style="background: rgba(10, 16, 28, 0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span id="arena-preview-tier-badge" class="badge badge-champion">Tier 1</span>
+                <div>
+                  <div id="arena-preview-title" style="font-size: 0.82rem; font-weight: 600; color: #fff;">Selecione um modelo para ver sua compatibilidade</div>
+                  <div id="arena-preview-sub" style="font-size: 0.70rem; color: var(--text-muted); margin-top: 2px;">Metadados de silício e projetor mmproj</div>
+                </div>
+              </div>
+              <div id="arena-preview-capabilities-pills" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                <!-- Pílulas de capacidade preenchidas via JS -->
+              </div>
+            </div>
+
+            <!-- RESULTADO EM TEMPO REAL & STEPPER DE EXECUÇÃO -->
+            <div id="arena-live-feedback" style="display: none; margin-top: 10px; padding: 16px; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <div style="font-size: 0.84rem; font-weight: 600; color: #fff;" id="arena-live-title">
-                  Resultado do Benchmark
+                <div style="font-size: 0.86rem; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;" id="arena-live-title">
+                  <span>⚡</span> Execução no Silício
                 </div>
                 <div id="arena-live-verdict-badge"></div>
               </div>
+
+              <!-- STEPPER DE 4 FASES BARE-METAL -->
+              <div id="arena-stepper-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0;">
+                <div class="arena-step-card active" id="arena-step-1" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(6, 182, 212, 0.4); border-radius: 6px; padding: 8px 10px;">
+                  <div style="font-size: 0.65rem; color: var(--cyan); font-weight: 600;">FASE 1</div>
+                  <div style="font-size: 0.72rem; color: #fff; margin-top: 2px;">🛡️ Watchdog NVML</div>
+                </div>
+                <div class="arena-step-card" id="arena-step-2" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 10px;">
+                  <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">FASE 2</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">⚙️ Alocação memmap2</div>
+                </div>
+                <div class="arena-step-card" id="arena-step-3" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 10px;">
+                  <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">FASE 3</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">🔬 Inferência & TPOT</div>
+                </div>
+                <div class="arena-step-card" id="arena-step-4" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 10px;">
+                  <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">FASE 4</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">💾 Persistência Vault</div>
+                </div>
+              </div>
+
               <div id="arena-live-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px;"></div>
             </div>
           </div>
@@ -176,10 +213,10 @@
                 Modelos Homologados & Resultados Medidos
               </div>
               <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Velocidade e consumo medidos no seu computador real. Modelos aprovados aqui alimentam automaticamente o Hub e o Roteador de Subagentes.
+                Velocidade, latência por token (TPOT) e consumo medidos no seu computador real. Modelos homologados alimentam automaticamente o orquestrador Hermes.
               </p>
             </div>
-            <div id="arena-models-summary-badge" class="badge badge-champion">14 Modelos Mapeados</div>
+            <div id="arena-models-summary-badge" class="badge badge-champion">Carregando Modelos...</div>
           </div>
 
           <!-- BARRA DE FILTROS & BUSCA RÁPIDA NA ARENA -->
@@ -203,36 +240,45 @@
             <table class="arena-table">
               <thead>
                 <tr>
-                  <th style="width: 80px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tier')" title="Clique para ordenar por Tier">
+                  <th style="width: 75px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tier')" title="Clique para ordenar por Tier">
                     Tier <span id="sort-ind-tier" style="font-size: 0.65rem; color: var(--cyan);">▲</span>
                   </th>
-                  <th style="cursor: pointer; user-select: none;" onclick="sortArenaTable('name')" title="Clique para ordenar por Modelo">
+                  <th style="min-width: 190px; cursor: pointer; user-select: none;" onclick="sortArenaTable('name')" title="Clique para ordenar por Modelo">
                     Modelo & Identificador <span id="sort-ind-name" style="font-size: 0.65rem; color: var(--text-muted);"></span>
                   </th>
-                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('quant')" title="Clique para ordenar por Quantização">
-                    Quantização <span id="sort-ind-quant" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th style="width: 100px;" class="text-center" title="Capacidades identificadas (VLM, Código, Raciocínio, Chat)">
+                    Capacidades
                   </th>
-                  <th style="width: 130px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tps')" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token. Clique para ordenar.">
-                    Throughput (TPS) <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token.">ⓘ</span> <span id="sort-ind-tps" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th style="width: 85px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('quant')" title="Clique para ordenar por Quantização">
+                    Quant <span id="sort-ind-quant" style="font-size: 0.65rem; color: var(--text-muted);"></span>
                   </th>
-                  <th style="width: 110px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('ttft')" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial. Clique para ordenar.">
-                    TTFT Prefill <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial.">ⓘ</span> <span id="sort-ind-ttft" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th style="width: 120px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tps')" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token. Clique para ordenar.">
+                    Throughput <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token.">ⓘ</span> <span id="sort-ind-tps" style="font-size: 0.65rem; color: var(--text-muted);"></span>
                   </th>
-                  <th style="width: 120px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('vram')" title="VRAM Pico: Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução. Clique para ordenar.">
+                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('ttft')" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial. Clique para ordenar.">
+                    TTFT <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial.">ⓘ</span> <span id="sort-ind-ttft" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tpot')" title="Time Per Output Token: Tempo por token gerado em milissegundos (1000/TPS). Quanto menor, mais suave é o streaming. Clique para ordenar.">
+                    TPOT <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Time Per Output Token: Tempo por token gerado em milissegundos (1000/TPS).">ⓘ</span> <span id="sort-ind-tpot" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  </th>
+                  <th style="width: 110px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('vram')" title="VRAM Pico: Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução. Clique para ordenar.">
                     VRAM Pico <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução.">ⓘ</span> <span id="sort-ind-vram" style="font-size: 0.65rem; color: var(--text-muted);"></span>
                   </th>
-                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('e3')" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente! Clique para ordenar.">
-                    E³ Score <span style="cursor: help; color: #c084fc; font-size: 0.75rem; margin-left: 2px; font-weight: bold;" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente!">ⓘ</span> <span id="sort-ind-e3" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th style="width: 90px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('e3')" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente! Clique para ordenar.">
+                    E³ Score <span style="cursor: help; color: #c084fc; font-size: 0.75rem; margin-left: 2px; font-weight: bold;" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Quanto maior, mais eficiente!">ⓘ</span> <span id="sort-ind-e3" style="font-size: 0.65rem; color: var(--text-muted);"></span>
                   </th>
-                  <th style="width: 130px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('status')" title="Clique para ordenar por Status de Homologação">
+                  <th style="width: 120px;" class="text-center" title="Acelerador ideal para este modelo">
+                    Silício Alvo
+                  </th>
+                  <th style="width: 110px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('status')" title="Clique para ordenar por Status de Homologação">
                     Status <span id="sort-ind-status" style="font-size: 0.65rem; color: var(--text-muted);"></span>
                   </th>
-                  <th style="width: 160px;" class="text-center">Ações</th>
+                  <th style="width: 140px;" class="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody id="arena-models-tbody">
                 <tr>
-                  <td colspan="9" style="text-align: center; color: var(--text-muted);">Carregando modelos da Arena...</td>
+                  <td colspan="12" style="text-align: center; color: var(--text-muted); padding: 24px;">Carregando modelos da Arena...</td>
                 </tr>
               </tbody>
             </table>
@@ -248,7 +294,7 @@
                 Histórico de Testes Realizados no Silício
               </div>
               <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Registro detalhado dos testes de desempenho executados na sua máquina com telemetria oficial de hardware.
+                Registro detalhado e auditável dos ensaios de desempenho executados na sua máquina com telemetria oficial de hardware.
               </p>
             </div>
             <div id="arena-telemetry-summary-badge" class="badge badge-lowcost">Histórico de Provas</div>
@@ -261,17 +307,19 @@
                   <th style="width: 60px;" class="text-center">ID</th>
                   <th>Modelo</th>
                   <th style="width: 150px;">Tipo de Prova</th>
-                  <th style="width: 110px;" class="text-center">Acelerador</th>
+                  <th style="width: 100px;" class="text-center">Acelerador</th>
                   <th style="width: 100px;" class="text-center">Velocidade</th>
-                  <th style="width: 90px;" class="text-center">TTFT</th>
-                  <th style="width: 110px;" class="text-center">VRAM Pico</th>
-                  <th style="width: 100px;" class="text-center">Status</th>
-                  <th style="width: 140px;">Data / Hora</th>
+                  <th style="width: 80px;" class="text-center">TTFT</th>
+                  <th style="width: 80px;" class="text-center">TPOT</th>
+                  <th style="width: 100px;" class="text-center">VRAM Pico</th>
+                  <th style="width: 80px;" class="text-center">E³ Score</th>
+                  <th style="width: 90px;" class="text-center">Status</th>
+                  <th style="width: 130px;">Data / Hora</th>
                 </tr>
               </thead>
               <tbody id="arena-telemetry-tbody">
                 <tr>
-                  <td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum histórico registrado no vault ainda.</td>
+                  <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhum histórico registrado no vault ainda.</td>
                 </tr>
               </tbody>
             </table>
