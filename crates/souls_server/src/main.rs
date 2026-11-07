@@ -9,6 +9,7 @@
 mod mcp;
 pub mod profiles;
 mod routes;
+pub mod skills_hub;
 mod shutdown;
 mod state;
 pub mod templates;
@@ -2390,5 +2391,83 @@ model:
         assert!(json_ov["evolving_count"].as_i64().unwrap() >= 2);
 
         let _ = std::fs::remove_dir_all(&temp_home);
+    }
+
+    #[tokio::test]
+    async fn test_skills_hub_axum_routes_smoke() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Verify Dashboard SPA embeds Skills Hub tab & JS controller
+        let req_dash = Request::builder()
+            .uri("/dashboard")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_dash = app.clone().oneshot(req_dash).await.unwrap();
+        assert_eq!(resp_dash.status(), StatusCode::OK);
+        let html_bytes = to_bytes(resp_dash.into_body(), usize::MAX).await.unwrap();
+        let html_str = String::from_utf8_lossy(&html_bytes);
+        assert!(html_str.contains("id=\"btn-tab-skills\""));
+        assert!(html_str.contains("id=\"tab-skills\""));
+        assert!(html_str.contains("function switchSkillsSubtab"));
+
+        // 2. Verify POST /api/v1/skills/forge/generate (deterministic_scaffold)
+        let forge_body = serde_json::json!({
+            "mode": "from_scratch",
+            "engine": "deterministic_scaffold",
+            "slug": "smoke-test-skill",
+            "category": "souls-engine",
+            "goal_prompt": "Verify AST outlines cleanly before editing Rust files.",
+            "selected_mcp_tools": ["outline", "symbol"]
+        });
+        let req_forge = Request::builder()
+            .uri("/api/v1/skills/forge/generate")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(forge_body.to_string()))
+            .unwrap();
+        let resp_forge = app.clone().oneshot(req_forge).await.unwrap();
+        assert_eq!(resp_forge.status(), StatusCode::OK);
+        let forge_bytes = to_bytes(resp_forge.into_body(), usize::MAX).await.unwrap();
+        let forge_json: serde_json::Value = serde_json::from_slice(&forge_bytes).unwrap();
+        assert_eq!(forge_json["status"], "success");
+        assert!(forge_json["quality_score"].as_u64().unwrap_or(0) >= 90);
+        let generated_md = forge_json["content"].as_str().unwrap_or("");
+        assert!(generated_md.starts_with("---\n"));
+        assert!(!generated_md.contains("\r\n"));
+
+        // 3. Verify POST /api/v1/skills/diff (Myers Diff endpoint)
+        let modified_md = generated_md.replace("Verify AST outlines", "Audit AST outlines");
+        let diff_body = serde_json::json!({
+            "before_content": generated_md,
+            "after_content": modified_md
+        });
+        let req_diff = Request::builder()
+            .uri("/api/v1/skills/diff")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(diff_body.to_string()))
+            .unwrap();
+        let resp_diff = app.clone().oneshot(req_diff).await.unwrap();
+        assert_eq!(resp_diff.status(), StatusCode::OK);
+        let diff_bytes = to_bytes(resp_diff.into_body(), usize::MAX).await.unwrap();
+        let diff_json: serde_json::Value = serde_json::from_slice(&diff_bytes).unwrap();
+        assert_eq!(diff_json["status"], "success");
+        assert_eq!(diff_json["diff"]["unchanged"], false);
+        assert!(diff_json["diff"]["additions"].as_u64().unwrap_or(0) >= 1);
+
+        // 4. Verify GET /api/v1/skills/installed
+        let req_inst = Request::builder()
+            .uri("/api/v1/skills/installed")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_inst = app.clone().oneshot(req_inst).await.unwrap();
+        assert_eq!(resp_inst.status(), StatusCode::OK);
+        let inst_bytes = to_bytes(resp_inst.into_body(), usize::MAX).await.unwrap();
+        let inst_json: serde_json::Value = serde_json::from_slice(&inst_bytes).unwrap();
+        assert_eq!(inst_json["status"], "success");
+        assert!(inst_json["overview"]["total_unique_skills"].as_u64().is_some());
     }
 }

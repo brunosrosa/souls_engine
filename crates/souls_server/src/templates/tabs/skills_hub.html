@@ -1,0 +1,682 @@
+    <!-- ABA: CENTRAL DE SKILLS (v0.6.0 — PRODUTO, DESCOBERTA GUIADA & MELHORIA CONTÍNUA) -->
+    <div id="tab-skills" class="tab-panel">
+
+      <!-- 1. RESUMO RÁPIDO (KPI STRIP AMIGÁVEL) -->
+      <div class="skills-kpi-grid">
+        <div class="card skills-kpi-card">
+          <div class="skills-kpi-top">
+            <span class="skills-kpi-label">Minhas Habilidades</span>
+            <span class="skills-kpi-icon" style="color: var(--cyan);">🧩</span>
+          </div>
+          <div class="skills-kpi-value" id="skills-kpi-total">--</div>
+          <div class="skills-kpi-sub">
+            <span id="skills-kpi-synced" style="color: var(--green);">-- em dia</span> •
+            <span id="skills-kpi-drifted">-- diferentes</span> •
+            <span id="skills-kpi-paused">-- pausadas</span>
+            <span id="skills-kpi-installs" style="display:none;">0</span>
+          </div>
+        </div>
+
+        <div class="card skills-kpi-card" title="Toda habilidade ativa ocupa um pequeno espaço fixo na memória da IA no início de cada conversa. Pausar habilidades que você não usa deixa a IA mais leve e focada.">
+          <div class="skills-kpi-top">
+            <span class="skills-kpi-label">Peso na Memória da IA</span>
+            <span class="skills-kpi-icon" style="color: var(--amber);">⚡</span>
+          </div>
+          <div class="skills-kpi-value" id="skills-kpi-boot-tokens" style="color: var(--cyan);">--</div>
+          <div class="skills-kpi-sub">
+            Fixo por conversa • Conteúdo sob demanda: <strong id="skills-kpi-l2-tokens" style="color: var(--text-main);">--</strong>
+          </div>
+        </div>
+
+        <div class="card skills-kpi-card">
+          <div class="skills-kpi-top">
+            <span class="skills-kpi-label">Biblioteca para Explorar</span>
+            <span class="skills-kpi-icon" style="color: var(--purple);">🧭</span>
+          </div>
+          <div class="skills-kpi-value" id="skills-kpi-marketplace-total">101k+</div>
+          <div class="skills-kpi-sub">
+            Busca instantânea • Na fila de revisão: <strong id="skills-kpi-quarantine-count" style="color: var(--amber);">0</strong>
+          </div>
+        </div>
+
+        <div class="card skills-kpi-card">
+          <div class="skills-kpi-top">
+            <span class="skills-kpi-label">Qualidade do Catálogo</span>
+            <span class="skills-kpi-icon" style="color: var(--green);">🩺</span>
+          </div>
+          <div class="skills-kpi-value" id="skills-kpi-avg-score">-- / 100</div>
+          <div class="skills-kpi-sub">
+            <span id="skills-kpi-over60" style="color: var(--amber);">0 resumos longos</span> •
+            <span id="skills-kpi-zombies">0 sem uso recente</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. NAVEGAÇÃO INTERNA DAS 4 SUB-ABAS -->
+      <div class="subtabs-bar" id="skills-subtabs-bar" style="margin-bottom: 16px;">
+        <button class="subtab-btn active" id="btn-skills-subtab-installed" onclick="switchSkillsSubtab('installed')">
+          📦 Minhas Skills <span class="tab-badge" id="badge-skills-installed-count">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-skills-subtab-explorer" onclick="switchSkillsSubtab('explorer')">
+          🧭 Descobrir Novas <span class="tab-badge" id="badge-skills-quarantine-pill" style="display:none; background: rgba(245,158,11,0.2); color: var(--amber);">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-skills-subtab-forge" onclick="switchSkillsSubtab('forge')">
+          ✨ Criar &amp; Adaptar
+        </button>
+        <button class="subtab-btn" id="btn-skills-subtab-health" onclick="switchSkillsSubtab('health')">
+          🩺 Cuidados &amp; Histórico <span class="tab-badge" id="badge-skills-health-alerts" style="background: rgba(245,158,11,0.2); color: var(--amber);">0</span>
+        </button>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- SUB-ABA 1: MINHAS SKILLS (CATÁLOGO, ORDENAÇÃO & CONTROLE DE ESTADO) -->
+      <!-- =================================================================== -->
+      <div id="panel-skills-installed" class="skills-subtab-panel">
+        <div class="card">
+          <div class="skills-header-row">
+            <div>
+              <div class="card-title">
+                <div class="card-icon" style="background: rgba(6, 182, 212, 0.16); color: var(--cyan);">📦</div>
+                Suas Habilidades Instaladas
+              </div>
+              <div class="skills-header-stack">
+                <p class="skills-subtitle-primary">
+                  Gerencie em um único lugar tudo o que seus assistentes sabem fazer hoje.
+                </p>
+                <p class="skills-subtitle-secondary">
+                  Mostramos automaticamente apenas os programas e personas instalados neste computador. Clique no título de qualquer coluna para ordenar.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button class="btn-action" onclick="openForgeFromScratch()">
+                ✨ Criar Nova Skill
+              </button>
+              <button class="btn-action primary" onclick="fetchInstalledSkills(true)">
+                🔄 Atualizar Lista
+              </button>
+            </div>
+          </div>
+
+          <!-- BARRA DE FILTRO RÁPIDO + AMBIENTES DETECTADOS -->
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px;">
+            <div style="flex: 1; min-width: 240px;">
+              <input
+                type="text"
+                id="skills-installed-search"
+                class="setting-input"
+                placeholder="🔍 Buscar pelo nome, o que ela faz, tema ou ferramenta..."
+                oninput="renderInstalledSkillsTable()"
+                style="width: 100%; height: 36px; font-size: 0.78rem;"
+              >
+            </div>
+            <div class="subtabs-bar" id="skills-surface-filters" style="margin-bottom: 0; padding: 3px; flex-wrap: wrap;">
+              <!-- Preenchido dinamicamente por skills_hub.js de acordo com os ambientes instalados na máquina -->
+              <button class="subtab-btn active" data-sfilter="all" onclick="setSkillsSurfaceFilter('all')" style="padding: 5px 10px; font-size: 0.73rem;">Todas</button>
+            </div>
+          </div>
+
+          <!-- TABELA ORDENÁVEL DE HABILIDADES -->
+          <div style="overflow-x: auto; max-height: 540px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+            <table class="arena-table" id="skills-installed-table">
+              <thead style="position: sticky; top: 0; z-index: 4; background: #0c1220;">
+                <tr>
+                  <th class="skills-th-sort" data-sort-col="name" onclick="toggleInstalledSkillsSort('name')" style="min-width: 230px;" title="Clique para ordenar por nome">
+                    Habilidade <span class="skills-sort-ind" id="sort-ind-name">↕</span>
+                  </th>
+                  <th class="skills-th-sort" style="min-width: 162px; text-align: center;" data-sort-col="surfaces" onclick="toggleInstalledSkillsSort('surfaces')" title="Clique para ordenar pela quantidade de ambientes onde está ativa">
+                    Onde está ativa <span class="skills-sort-ind" id="sort-ind-surfaces">↕</span>
+                  </th>
+                  <th class="skills-th-sort" style="min-width: 96px; text-align: center;" data-sort-col="sync" onclick="toggleInstalledSkillsSort('sync')" title="Indica se o conteúdo está igual em todas as pastas ou se está pausada">
+                    Estado <span class="skills-sort-ind" id="sort-ind-sync">↕</span>
+                  </th>
+                  <th class="skills-th-sort" data-sort-col="tokens" onclick="toggleInstalledSkillsSort('tokens')" title="Primeiro número: custo fixo ao abrir conversas. Segundo número: tamanho completo quando usada.">
+                    Peso na IA <span class="skills-sort-ind" id="sort-ind-tokens">↕</span>
+                  </th>
+                  <th class="skills-th-sort" data-sort-col="usage" onclick="toggleInstalledSkillsSort('usage')" title="Quantas vezes foi acionada recentemente">
+                    Uso <span class="skills-sort-ind" id="sort-ind-usage">↕</span>
+                  </th>
+                  <th class="skills-th-sort" data-sort-col="score" onclick="toggleInstalledSkillsSort('score')" title="Nota de clareza, concisão e estrutura (0 a 100)">
+                    Qualidade <span class="skills-sort-ind" id="sort-ind-score">↕</span>
+                  </th>
+                  <th class="skills-th-sort" data-sort-col="security" onclick="toggleInstalledSkillsSort('security')" title="Verificação automática de segurança e compatibilidade com Windows. Passe o mouse sobre o selo para ver o motivo.">
+                    Verificação <span class="skills-sort-ind" id="sort-ind-security">↕</span>
+                  </th>
+                  <th style="text-align: right; min-width: 155px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="skills-installed-tbody">
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 28px; color: var(--text-muted);">
+                    Carregando suas habilidades instaladas...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PAINEL DE EDIÇÃO, EXPLICAÇÃO DE ALERTAS & AUTO-CORREÇÃO SEGURA -->
+        <div class="card" id="skills-inspector-card" style="display: none; margin-top: 16px; border-color: rgba(6, 182, 212, 0.4);">
+          <div class="skills-header-row" style="margin-bottom: 12px;">
+            <div>
+              <div class="card-title">
+                <div class="card-icon" style="background: rgba(168, 85, 247, 0.16); color: var(--purple);">✏️</div>
+                <span id="insp-skill-title">Detalhes da Habilidade</span>
+                <span class="skills-badge" id="insp-skill-score-badge" style="margin-left: 8px;">Qualidade --</span>
+                <span class="skills-badge" id="insp-skill-verdict-badge" style="margin-left: 4px;">Verificada</span>
+              </div>
+              <div class="mono" id="insp-skill-path" style="font-size: 0.71rem; color: var(--text-muted); margin-top: 4px;">--</div>
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn-action primary" id="btn-insp-autofix" onclick="autofixInspectedSkill()" title="Ajusta automaticamente cabeçalho e resumo longo sem alterar nenhuma instrução do corpo da skill">
+                ✨ Corrigir Automaticamente
+              </button>
+              <button class="btn-action" id="btn-insp-toggle-pause" onclick="togglePauseInspectedSkill()" title="Pausar libera memória da IA sem apagar seus arquivos">
+                ⏸️ Pausar
+              </button>
+              <button class="btn-action" onclick="sendInspectedSkillToForge('evolve')" title="Abrir no Estúdio para reescrever ou adaptar instruções">
+                ✨ Adaptar no Estúdio
+              </button>
+              <button class="btn-action" id="btn-insp-compare-drift" onclick="compareInspectedSkillDrift()" style="display: none;">
+                ⚖️ Ver Diferenças
+              </button>
+              <button class="btn-action" id="btn-insp-delete" onclick="deleteInspectedSkill()" style="border-color: rgba(239,68,68,0.35); color: #fca5a5;" title="Remove a habilidade das pastas selecionadas (salva cópia de segurança antes)">
+                🗑️ Excluir
+              </button>
+              <button class="btn-action" onclick="closeSkillInspector()">✕ Fechar</button>
+            </div>
+          </div>
+
+          <!-- EXPLICAÇÃO CLARA QUANDO HOUVER AVISO DE ATENÇÃO / COMPATIBILIDADE / SEGURANÇA -->
+          <div id="insp-security-explainer" class="skills-why-callout" style="display: none;"></div>
+
+          <div class="skills-two-col">
+            <!-- COLUNA ESQUERDA: EDITOR DIRETO SKILL.md -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px;">
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">
+                  Lendo arquivo do ambiente:
+                </label>
+                <select id="insp-surface-select" class="setting-input mono" style="height: 30px; font-size: 0.73rem; min-width: 220px;" onchange="reloadInspectedSurface(this.value)"></select>
+              </div>
+              <textarea
+                id="insp-skill-editor"
+                class="setting-input mono"
+                spellcheck="false"
+                oninput="updateLiveDescCounter('insp-skill-editor', 'insp-desc-counter')"
+                style="width: 100%; min-height: 330px; font-size: 0.75rem; line-height: 1.5; resize: vertical; padding: 12px;"
+              ></textarea>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.72rem;">
+                <span id="insp-desc-counter" class="mono" style="color: var(--text-muted);">Resumo inicial: -- / 60 caracteres</span>
+                <span id="insp-autofix-guarantee" style="color: var(--text-muted);">Salvamento automático em formato limpo (LF)</span>
+              </div>
+            </div>
+
+            <!-- COLUNA DIREITA: DIAGNÓSTICO EXPLICADO, AMBIENTES & HISTÓRICO -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="skills-subpanel">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <div class="skills-subpanel-title" style="margin-bottom: 0;">🩺 Sugestões de Ajuste &amp; Revisão</div>
+                  <button class="btn-action" id="btn-insp-inline-autofix" onclick="autofixInspectedSkill()" style="padding: 3px 9px; font-size: 0.69rem; border-color: rgba(6,182,212,0.4); color: var(--cyan);">
+                    ✨ Aplicar Ajustes Seguros
+                  </button>
+                </div>
+                <div id="insp-lint-list" style="font-size: 0.74rem; max-height: 125px; overflow-y: auto;">--</div>
+              </div>
+
+              <div class="skills-subpanel">
+                <div class="skills-subpanel-title">🧰 Recursos Utilizados por esta Skill</div>
+                <div id="insp-mcp-tools-list" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px;">--</div>
+                <div id="insp-aux-files-list" class="mono" style="font-size: 0.71rem; color: var(--text-muted);">--</div>
+              </div>
+
+              <div class="skills-subpanel">
+                <div class="skills-subpanel-title">🎯 Onde Salvar e Manter Sincronizada</div>
+                <div id="insp-sync-targets" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 6px; margin-bottom: 10px;"></div>
+                <button class="btn-action primary" style="width: 100%; justify-content: center;" onclick="saveAndSyncInspectedSkill()">
+                  💾 Salvar Alterações nos Ambientes Marcados
+                </button>
+              </div>
+
+              <div class="skills-subpanel">
+                <div class="skills-subpanel-title">🕒 Versões Anteriores (Desfazer com 1 Clique)</div>
+                <div id="insp-history-list" style="max-height: 115px; overflow-y: auto; font-size: 0.72rem;">--</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- SUB-ABA 2: DESCOBRIR NOVAS (EXPLORER GUIADO, FILTROS & REVISÃO)     -->
+      <!-- =================================================================== -->
+      <div id="panel-skills-explorer" class="skills-subtab-panel" style="display: none;">
+        <div class="card">
+          <div class="skills-header-row">
+            <div>
+              <div class="card-title">
+                <div class="card-icon" style="background: rgba(59, 130, 246, 0.18); color: #60a5fa;">🧭</div>
+                Explorar Biblioteca de Habilidades
+              </div>
+              <div class="skills-header-stack">
+                <p class="skills-subtitle-primary">
+                  Encontre novas capacidades prontas para código, finanças, saúde, documentos e automação.
+                </p>
+                <p class="skills-subtitle-secondary">
+                  Para sua segurança, nada é instalado direto: toda habilidade escolhida abre primeiro na Área de Revisão abaixo para você conferir.
+                </p>
+              </div>
+            </div>
+            <div class="mono" id="explorer-latency-pill" style="font-size: 0.72rem; color: var(--cyan); background: rgba(6,182,212,0.1); padding: 5px 11px; border-radius: 999px; border: 1px solid rgba(6,182,212,0.25); white-space: nowrap;">
+              ⚡ Catálogo pronto
+            </div>
+          </div>
+
+          <!-- VITRINE INTELIGENTE: SUGESTÕES BASEADAS NO PERFIL DO USUÁRIO -->
+          <div class="skills-rec-shelf" id="skills-recommendations-shelf" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <div style="font-size: 0.77rem; font-weight: 700; color: var(--text-main);">
+                ✨ Sugeridas para o Seu Ambiente <span style="font-weight: 400; color: var(--text-muted); font-size: 0.72rem;">— escolhidas com base nas suas Personas e ferramentas atuais (ainda não instaladas)</span>
+              </div>
+              <button class="btn-action" onclick="toggleRecommendationsShelf()" style="padding: 2px 8px; font-size: 0.68rem;">Ocultar sugestões</button>
+            </div>
+            <div class="skills-rec-grid" id="skills-recommendations-grid"></div>
+          </div>
+
+          <!-- ATALHOS DE TEMAS COM 1 CLIQUE -->
+          <div class="skills-topic-bar" id="skills-quick-topics">
+            <span style="font-size: 0.72rem; color: var(--text-muted); margin-right: 2px;">Explorar rápido:</span>
+            <button class="skills-topic-pill active" data-topic="" onclick="applyQuickExplorerTopic('', 'all', 'all', this)">🌟 Destaques</button>
+            <button class="skills-topic-pill" data-topic="official" onclick="applyQuickExplorerTopic('', 'official', 'all', this)">⭐ Oficiais Hermes</button>
+            <button class="skills-topic-pill" data-topic="code" onclick="applyQuickExplorerTopic('', 'all', 'code', this)">🦀 Código &amp; Rust</button>
+            <button class="skills-topic-pill" data-topic="mcp" onclick="applyQuickExplorerTopic('', 'all', 'mcp', this)">🔌 Integrações MCP</button>
+            <button class="skills-topic-pill" data-topic="finance" onclick="applyQuickExplorerTopic('', 'all', 'finance', this)">💰 Finanças &amp; Excel</button>
+            <button class="skills-topic-pill" data-topic="health" onclick="applyQuickExplorerTopic('', 'all', 'health', this)">🩺 Saúde &amp; Bem-Estar</button>
+            <button class="skills-topic-pill" data-topic="notes" onclick="applyQuickExplorerTopic('', 'all', 'notes', this)">📝 Notas &amp; PDF</button>
+            <button class="skills-topic-pill" data-topic="security" onclick="applyQuickExplorerTopic('', 'all', 'security', this)">🛡️ Segurança</button>
+            <button class="skills-topic-pill" data-topic="automation" onclick="applyQuickExplorerTopic('', 'all', 'automation', this)">🤖 Automação Web</button>
+          </div>
+
+          <!-- BARRA DE BUSCA + FILTROS (INCLUINDO TEMA/IDENTIFICADOR & COMUNIDADE CORRIGIDO) -->
+          <div style="display: grid; grid-template-columns: 1.5fr auto auto auto auto; gap: 8px; align-items: center; margin-bottom: 10px;">
+            <input
+              type="text"
+              id="skills-marketplace-query"
+              class="setting-input"
+              placeholder="🔍 O que você precisa? (ex: organizar planilhas, revisar código, ler PDF, obsidian)..."
+              oninput="debouncedMarketplaceSearch()"
+              style="width: 100%; height: 38px; font-size: 0.8rem;"
+            >
+            <select id="skills-marketplace-category" class="setting-input" style="height: 38px; font-size: 0.75rem;" onchange="runMarketplaceSearch(0)" title="Filtrar pelo tipo ou área de atuação da habilidade">
+              <option value="all">Tema: Todos</option>
+              <option value="code">💻 Código &amp; Dev</option>
+              <option value="mcp">🔌 MCP &amp; APIs</option>
+              <option value="security">🛡️ Segurança</option>
+              <option value="finance">💰 Finanças</option>
+              <option value="health">🩺 Saúde</option>
+              <option value="notes">📝 Notas &amp; Docs</option>
+              <option value="automation">🤖 Automação &amp; Web</option>
+              <option value="ai-data">📊 IA &amp; Dados</option>
+              <option value="productivity">⚡ Produtividade</option>
+            </select>
+            <select id="skills-marketplace-source" class="setting-input" style="height: 38px; font-size: 0.75rem;" onchange="runMarketplaceSearch(0)" title="Escolher de qual catálogo buscar">
+              <option value="all">Origem: Todas (101k+)</option>
+              <option value="official">⭐ Oficiais Hermes</option>
+              <option value="github">🐙 Parceiros GitHub</option>
+              <option value="community">🌐 Comunidade (Todas)</option>
+              <option value="clawhub">🦀 ClawHub (79k+)</option>
+              <option value="skills.sh">📦 skills.sh (20k)</option>
+              <option value="lobehub">🧩 LobeHub</option>
+            </select>
+            <select id="skills-marketplace-trust" class="setting-input" style="height: 38px; font-size: 0.75rem;" onchange="runMarketplaceSearch(0)" title="Filtrar pelo nível de curadoria">
+              <option value="all">Curadoria: Todas</option>
+              <option value="builtin">Oficiais Nativas</option>
+              <option value="verified">Parceiros Confiáveis</option>
+              <option value="community">Comunidade Aberta</option>
+            </select>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--text-main); cursor: pointer; padding: 0 10px; height: 38px; border: 1px solid var(--border-subtle); border-radius: 6px; background: rgba(10,16,28,0.6); white-space: nowrap;" title="Complementa a busca consultando repositórios públicos do GitHub em tempo real">
+              <input type="checkbox" id="skills-marketplace-live-gh" onchange="runMarketplaceSearch(0)">
+              <span>+ GitHub Online</span>
+            </label>
+          </div>
+
+          <!-- IMPORTAR DIRETO POR LINK -->
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 14px; padding: 8px 10px; background: rgba(15, 23, 42, 0.55); border-radius: var(--radius-sm); border: 1px dashed var(--border-subtle);">
+            <span style="font-size: 0.74rem; color: var(--text-muted); white-space: nowrap;">🔗 Tem um link direto?</span>
+            <input
+              type="text"
+              id="skills-direct-url-input"
+              class="setting-input mono"
+              placeholder="Cole aqui o link de um repositório ou arquivo SKILL.md do GitHub..."
+              style="flex: 1; height: 32px; font-size: 0.74rem;"
+            >
+            <button class="btn-action primary" onclick="fetchDirectUrlToQuarantine()" style="height: 32px; font-size: 0.74rem; white-space: nowrap;">
+              🛡️ Trazer para Revisão
+            </button>
+          </div>
+
+          <!-- RESULTADOS DO EXPLORER (COLUNAS PROPORCIONAIS SEM QUEBRAR REPOSITÓRIO) -->
+          <div style="overflow-x: auto; max-height: 440px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+            <table class="arena-table skills-mp-table">
+              <colgroup>
+                <col style="width: 21%;">
+                <col style="width: 27%;">
+                <col style="width: 10%;">
+                <col style="width: 10%;">
+                <col style="width: 20%;">
+                <col style="width: 122px;">
+              </colgroup>
+              <thead style="position: sticky; top: 0; z-index: 4; background: #0c1220;">
+                <tr>
+                  <th>Habilidade &amp; Tema</th>
+                  <th>O que ela faz</th>
+                  <th>Catálogo</th>
+                  <th>Curadoria</th>
+                  <th>Autor / Repositório</th>
+                  <th style="text-align: right;">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="skills-marketplace-tbody">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 26px; color: var(--text-muted);">
+                    Carregando opções da biblioteca...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.74rem; color: var(--text-muted);">
+            <span id="skills-marketplace-page-info">Mostrando 0 resultados</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-action" id="btn-mp-prev" onclick="stepMarketplacePage(-1)" disabled>◀ Anterior</button>
+              <button class="btn-action" id="btn-mp-next" onclick="stepMarketplacePage(1)" disabled>Próxima ▶</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ÁREA DE REVISÃO SEGURA (ANTIGA QUARENTENA ZERO-TRUST) -->
+        <div class="card" style="margin-top: 16px; border-color: rgba(245, 158, 11, 0.35);">
+          <div class="skills-header-row" style="margin-bottom: 10px;">
+            <div>
+              <div class="card-title">
+                <div class="card-icon" style="background: rgba(245, 158, 11, 0.18); color: var(--amber);">🛡️</div>
+                Área de Revisão Antes de Instalar
+              </div>
+              <div class="skills-header-stack">
+                <p class="skills-subtitle-primary">
+                  Confira o conteúdo e a verificação automática de segurança da habilidade baixada.
+                </p>
+                <p class="skills-subtitle-secondary">
+                  Você pode aprovar a instalação direto ou abrir no Estúdio para adaptar o texto ao seu jeito antes de ativar.
+                </p>
+              </div>
+            </div>
+            <button class="btn-action" onclick="fetchQuarantineList()">🔄 Atualizar Fila</button>
+          </div>
+
+          <div id="skills-quarantine-empty" style="padding: 18px; text-align: center; color: var(--text-muted); font-size: 0.78rem; background: rgba(10,16,28,0.45); border-radius: var(--radius-sm);">
+            Nenhuma habilidade aguardando revisão no momento. Clique em <strong>"🛡️ Revisar"</strong> em qualquer item acima para trazê-lo para cá.
+          </div>
+
+          <div id="skills-quarantine-workbench" style="display: none;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;" id="skills-quarantine-pills"></div>
+
+            <div class="skills-two-col">
+              <div>
+                <div style="font-size: 0.73rem; color: var(--text-muted); margin-bottom: 4px;">
+                  Pré-visualização isolada (<span id="q-preview-slug" class="mono">--</span>):
+                </div>
+                <textarea id="q-preview-content" class="setting-input mono" readonly style="width: 100%; min-height: 250px; font-size: 0.73rem; line-height: 1.45;"></textarea>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="skills-subpanel">
+                  <div class="skills-subpanel-title">🔍 Resultado da Verificação Automática</div>
+                  <div id="q-scan-summary" style="margin-bottom: 8px;">--</div>
+                  <div id="q-scan-findings" style="max-height: 120px; overflow-y: auto; font-size: 0.73rem;">--</div>
+                </div>
+
+                <div class="skills-subpanel">
+                  <div class="skills-subpanel-title">🚀 Como deseja prosseguir?</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">
+                    Dica: se a habilidade tiver descrição longa ou comandos de Mac/Linux, clique em <strong>Adaptar no Estúdio</strong> antes de instalar.
+                  </div>
+                  <div id="q-install-targets" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; margin-bottom: 10px;"></div>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn-action" style="flex: 1; justify-content: center;" onclick="forkQuarantineItemToForge()">
+                      ✨ Adaptar no Estúdio
+                    </button>
+                    <button class="btn-action primary" id="btn-q-approve-install" style="flex: 1; justify-content: center;" onclick="approveAndInstallQuarantineItem()">
+                      ✅ Aprovar &amp; Instalar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- SUB-ABA 3: CRIAR & ADAPTAR (ESTÚDIO GUIADO DE SKILLS)               -->
+      <!-- =================================================================== -->
+      <div id="panel-skills-forge" class="skills-subtab-panel" style="display: none;">
+        <div class="card">
+          <div class="skills-header-row">
+            <div>
+              <div class="card-title">
+                <div class="card-icon" style="background: rgba(168, 85, 247, 0.18); color: var(--purple);">✨</div>
+                Estúdio de Criação &amp; Adaptação de Skills
+              </div>
+              <div class="skills-header-stack">
+                <p class="skills-subtitle-primary">
+                  Ensine um novo fluxo de trabalho aos seus assistentes descrevendo o objetivo em linguagem natural.
+                </p>
+                <p class="skills-subtitle-secondary">
+                  Gere uma estrutura limpa instantaneamente ($0,00), use um modelo local no seu PC ou refine uma habilidade que você já possui.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="skills-two-col">
+            <!-- ESQUERDA: DEFINIÇÃO DO QUE O USUÁRIO PRECISA -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label class="skills-field-label">O que você quer fazer?</label>
+                  <select id="forge-mode" class="setting-input" style="width: 100%; height: 36px; font-size: 0.77rem;" onchange="handleForgeModeChange()">
+                    <option value="from_scratch">✨ Criar uma nova do zero</option>
+                    <option value="fork_refine">🧬 Adaptar um texto/modelo externo</option>
+                    <option value="evolve">🔧 Melhorar uma habilidade já instalada</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="skills-field-label">Como gerar o texto?</label>
+                  <select id="forge-engine" class="setting-input" style="width: 100%; height: 36px; font-size: 0.77rem;" onchange="handleForgeEngineChange()">
+                    <option value="deterministic_scaffold">⚡ Modelo Estruturado Instantâneo (Grátis)</option>
+                    <option value="local_silicon">🧠 IA Local no seu PC (Privada e Grátis)</option>
+                    <option value="cloud_worker">☁️ IA na Nuvem (Com filtro de privacidade)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="forge-local-model-row" style="display: none;">
+                <label class="skills-field-label">Modelo Local instalado neste PC</label>
+                <select id="forge-local-model-select" class="setting-input mono" style="width: 100%; height: 34px; font-size: 0.74rem;">
+                  <option value="">Automático (Modelo padrão ativo)</option>
+                </select>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px;">
+                <div>
+                  <label class="skills-field-label">Nome curto (sem espaços)</label>
+                  <input type="text" id="forge-slug" class="setting-input mono" placeholder="ex: revisor-planilha-mensal" style="width: 100%; height: 36px; font-size: 0.77rem;">
+                </div>
+                <div>
+                  <label class="skills-field-label">Tema / Pasta</label>
+                  <select id="forge-category" class="setting-input" style="width: 100%; height: 36px; font-size: 0.76rem;">
+                    <option value="souls-engine">souls-engine (Padrão)</option>
+                    <option value="software-development">software-development (Código)</option>
+                    <option value="research">research (Pesquisa)</option>
+                    <option value="note-taking">note-taking (Notas &amp; Obsidian)</option>
+                    <option value="productivity">productivity (Produtividade)</option>
+                    <option value="finance">finance (Finanças)</option>
+                    <option value="security">security (Segurança)</option>
+                    <option value="devops">devops (Automação)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="skills-field-label">Explique o que a habilidade deve fazer e quais cuidados tomar</label>
+                <textarea
+                  id="forge-goal-prompt"
+                  class="setting-input"
+                  placeholder="Ex: Sempre que eu pedir para revisar gastos do mês, organize por categoria, destaque assinaturas duplicadas e nunca envie dados pessoais para fora do computador..."
+                  style="width: 100%; min-height: 100px; font-size: 0.78rem; line-height: 1.45; padding: 10px;"
+                ></textarea>
+              </div>
+
+              <div id="forge-base-container" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="skills-field-label" style="margin: 0;">Habilidade de partida (para melhorar ou adaptar)</label>
+                  <select id="forge-existing-picker" class="setting-input mono" style="height: 28px; font-size: 0.72rem; max-width: 240px;" onchange="loadInstalledIntoForgeBase(this.value)">
+                    <option value="">-- Escolher uma instalada --</option>
+                  </select>
+                </div>
+                <textarea id="forge-base-content" class="setting-input mono" placeholder="O conteúdo original aparece aqui para comparação antes/depois..." style="width: 100%; min-height: 110px; font-size: 0.72rem;"></textarea>
+              </div>
+
+              <div class="skills-subpanel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span class="skills-subpanel-title" style="margin: 0;">🧰 Ferramentas que esta Skill pode usar (opcional)</span>
+                  <input type="text" id="forge-tools-filter" class="setting-input" placeholder="Filtrar ferramenta..." oninput="renderForgeMcpToolsSelector()" style="height: 24px; width: 145px; font-size: 0.7rem;">
+                </div>
+                <div id="forge-mcp-tools-selector" style="display: flex; flex-wrap: wrap; gap: 5px; max-height: 105px; overflow-y: auto;">
+                  <span style="font-size: 0.72rem; color: var(--text-muted);">Carregando ferramentas disponíveis...</span>
+                </div>
+              </div>
+
+              <button class="btn-action primary" id="btn-forge-run" onclick="runSkillsForge()" style="width: 100%; height: 40px; justify-content: center; font-size: 0.82rem;">
+                ✨ Gerar Rascunho da Habilidade
+              </button>
+            </div>
+
+            <!-- DIREITA: PRÉVIA EDITÁVEL & PUBLICAÇÃO -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  <span class="skills-badge" id="forge-out-score">Qualidade: --</span>
+                  <span class="skills-badge mono" id="forge-out-tokens">Memória: --</span>
+                  <span class="skills-badge" id="forge-out-verdict">Verificação: --</span>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                  <button class="btn-action" id="btn-forge-view-code" onclick="toggleForgeRightView('code')" style="padding: 4px 10px; font-size: 0.72rem;">📄 Texto Final</button>
+                  <button class="btn-action" id="btn-forge-view-diff" onclick="toggleForgeRightView('diff')" style="padding: 4px 10px; font-size: 0.72rem;">⚖️ O que mudou</button>
+                </div>
+              </div>
+
+              <div id="forge-code-pane">
+                <textarea
+                  id="forge-output-editor"
+                  class="setting-input mono"
+                  spellcheck="false"
+                  placeholder="O rascunho pronto aparecerá aqui para você revisar e ajustar livremente antes de instalar..."
+                  oninput="updateLiveDescCounter('forge-output-editor', 'forge-desc-meter')"
+                  style="width: 100%; min-height: 290px; font-size: 0.74rem; line-height: 1.48; padding: 12px;"
+                ></textarea>
+                <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.72rem;">
+                  <span id="forge-desc-meter" class="mono" style="color: var(--text-muted);">Resumo: -- / 60 caracteres</span>
+                  <span id="forge-engine-note" style="color: var(--cyan);"></span>
+                </div>
+              </div>
+
+              <div id="forge-diff-pane" style="display: none;">
+                <div id="forge-diff-viewer" class="skills-diff-box mono">
+                  <div style="padding: 20px; color: var(--text-muted); text-align: center;">Gere uma adaptação sobre uma habilidade existente para comparar o antes e depois.</div>
+                </div>
+              </div>
+
+              <div id="forge-lint-feedback" style="font-size: 0.73rem;"></div>
+
+              <div class="skills-subpanel">
+                <div class="skills-subpanel-title">🚀 Onde deseja ativar esta nova habilidade?</div>
+                <div id="forge-publish-targets" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; margin-bottom: 10px;"></div>
+                <button class="btn-action primary" onclick="publishForgedSkill()" style="width: 100%; justify-content: center;">
+                  ✅ Salvar &amp; Ativar nos Ambientes Selecionados
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- SUB-ABA 4: CUIDADOS & HISTÓRICO (SUGESTÕES CLARAS & VERSÕES)        -->
+      <!-- =================================================================== -->
+      <div id="panel-skills-health" class="skills-subtab-panel" style="display: none;">
+        <div class="skills-two-col">
+          <!-- ESQUERDA: SUGESTÕES DE MELHORIA EXPLICADAS EM LINGUAGEM SIMPLES -->
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 4px;">
+              <div class="card-icon" style="background: rgba(16, 185, 129, 0.16); color: var(--green);">🩺</div>
+              Sugestões para Deixar Tudo Redondo
+            </div>
+            <div class="skills-header-stack" style="margin-bottom: 12px;">
+              <p class="skills-subtitle-primary">
+                Identificamos pontos simples onde suas habilidades podem economizar memória ou funcionar melhor no Windows.
+              </p>
+              <p class="skills-subtitle-secondary">
+                Cada recomendação explica o motivo exato e permite ajustar ou pausar sem risco de quebrar nada.
+              </p>
+            </div>
+
+            <div class="skills-subpanel" style="margin-bottom: 12px;">
+              <div class="skills-subpanel-title">🤖 Aprendizado Automático do Assistente</div>
+              <div id="health-curator-summary" class="mono" style="font-size: 0.72rem; color: var(--text-muted);">Carregando histórico do curador...</div>
+            </div>
+
+            <div id="health-opportunities-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow-y: auto;"></div>
+          </div>
+
+          <!-- DIREITA: COMPARADOR DE VERSÕES & DESFAZER ALTERAÇÕES -->
+          <div class="card">
+            <div class="card-title" style="margin-bottom: 4px;">
+              <div class="card-icon" style="background: rgba(6, 182, 212, 0.16); color: var(--cyan);">🕒</div>
+              Comparar Versões &amp; Desfazer Alterações
+            </div>
+            <div class="skills-header-stack" style="margin-bottom: 12px;">
+              <p class="skills-subtitle-primary">
+                Escolha uma habilidade para ver suas versões salvas ou comparar diferenças entre ambientes.
+              </p>
+              <p class="skills-subtitle-secondary">
+                Sempre que você edita, corrige ou exclui uma habilidade, uma cópia anterior fica guardada aqui.
+              </p>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+              <select id="health-skill-selector" class="setting-input mono" style="flex: 1; height: 36px; font-size: 0.75rem;" onchange="loadHealthSkillTimeline(this.value)">
+                <option value="">-- Escolha uma habilidade --</option>
+              </select>
+              <button class="btn-action" onclick="compareSelectedHealthDrift()" title="Compara o arquivo salvo entre dois ambientes diferentes">⚖️ Comparar Pastas</button>
+            </div>
+
+            <div id="health-timeline-box" style="margin-bottom: 12px; max-height: 150px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 8px; font-size: 0.73rem; color: var(--text-muted);">
+              Selecione uma habilidade acima para listar os backups disponíveis.
+            </div>
+
+            <div id="health-diff-metrics" class="mono" style="font-size: 0.72rem; color: var(--cyan); margin-bottom: 6px;"></div>
+
+            <div id="health-diff-viewer" class="skills-diff-box mono">
+              <div style="padding: 24px; text-align: center; color: var(--text-muted);">
+                As linhas adicionadas aparecerão em verde e as removidas em vermelho para facilitar sua conferência.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>

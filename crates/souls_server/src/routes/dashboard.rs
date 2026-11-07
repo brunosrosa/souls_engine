@@ -2206,3 +2206,374 @@ pub async fn tools_catalog_handler() -> Json<Value> {
     }))
 }
 
+// ============================================================================
+// MILESTONE v0.6.0 — SKILLS HUB, ZERO-TRUST EXPLORER & AGENTIC FORGE ENDPOINTS
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct SkillDetailQuery {
+    pub slug: String,
+    pub surface: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SkillSyncRequest {
+    pub slug: String,
+    pub content: String,
+    pub targets: Vec<String>,
+    pub category: Option<String>,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SkillStateToggleRequest {
+    pub slug: String,
+    pub pinned: Option<bool>,
+    pub archived: Option<bool>,
+    pub disabled: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MarketplaceSearchQuery {
+    pub q: Option<String>,
+    pub source: Option<String>,
+    pub trust: Option<String>,
+    pub category: Option<String>,
+    pub live_github: Option<bool>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SkillAutoFixRequest {
+    pub slug: String,
+    pub content: String,
+    #[serde(default = "default_autofix_llm_true")]
+    pub use_local_model: bool,
+}
+
+fn default_autofix_llm_true() -> bool {
+    true
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SkillDeleteRequest {
+    pub slug: String,
+    #[serde(default)]
+    pub targets: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct QuarantineFetchRequest {
+    pub identifier: Option<String>,
+    pub url: Option<String>,
+    pub repo: Option<String>,
+    pub path: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SkillDiffRequest {
+    pub slug: Option<String>,
+    pub left_surface: Option<String>,
+    pub right_surface: Option<String>,
+    pub before_content: Option<String>,
+    pub after_content: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SkillRollbackRequest {
+    pub slug: String,
+    pub snapshot_id: String,
+    #[serde(default)]
+    pub targets: Vec<String>,
+}
+
+/// Returns the unified multi-surface inventory of installed skills, SHA-256 drift matrix,
+/// `cl100k_base` Level 1/Level 2 token budgets, and Zombie skill diagnostics.
+pub async fn skills_hub_list_handler(State(state): State<AppState>) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+    let overview = tokio::task::spawn_blocking(move || {
+        crate::skills_hub::scan_installed_ecosystem(&roots)
+    })
+    .await;
+
+    match overview {
+        Ok(ov) => Json(json!({
+            "status": "success",
+            "overview": ov
+        })),
+        Err(e) => Json(json!({
+            "status": "error",
+            "message": format!("Falha ao varrer ecossistema de skills: {e}")
+        })),
+    }
+}
+
+/// Returns complete anatomy, Markdown source, auxiliary files, Zero-Trust scan, and rollback snapshots for a skill.
+pub async fn skills_hub_detail_handler(
+    State(state): State<AppState>,
+    Query(query): Query<SkillDetailQuery>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+    let slug = query.slug.clone();
+    let surface = query.surface.clone();
+
+    let res = tokio::task::spawn_blocking(move || {
+        crate::skills_hub::inspect_skill_detail(&roots, &slug, surface.as_deref())
+    })
+    .await;
+
+    match res {
+        Ok(Ok(val)) => Json(val),
+        Ok(Err(err)) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
+        Err(e) => Json(json!({
+            "status": "error",
+            "message": format!("Join error inspecting skill: {e}")
+        })),
+    }
+}
+
+/// Propagates or publishes a normalized LF `SKILL.md` across selected target surfaces with pre-write backup.
+pub async fn skills_hub_sync_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<SkillSyncRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+    let reason = payload.reason.as_deref().unwrap_or("dashboard_sync");
+
+    match crate::skills_hub::sync_skill_to_targets(
+        &roots,
+        &payload.slug,
+        &payload.content,
+        &payload.targets,
+        payload.category.as_deref(),
+        reason,
+    ) {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
+    }
+}
+
+/// Toggles `pinned`, `archived`, or `disabled` (pause/resume) state across surfaces.
+pub async fn skills_hub_toggle_state_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<SkillStateToggleRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+
+    match crate::skills_hub::update_skill_hub_state_ext(
+        &roots,
+        &payload.slug,
+        payload.pinned,
+        payload.archived,
+        payload.disabled,
+    ) {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
+    }
+}
+
+/// Paginated sub-5ms search over the 101k+ RAM marketplace index + category filter + personalized suggestions.
+pub async fn skills_hub_marketplace_search_handler(
+    State(state): State<AppState>,
+    Query(query): Query<MarketplaceSearchQuery>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+
+    let val = crate::skills_hub::search_marketplace_hybrid_ext(
+        roots,
+        query.q.unwrap_or_default(),
+        query.source,
+        query.trust,
+        query.category,
+        query.live_github.unwrap_or(false),
+        query.limit.unwrap_or(40),
+        query.offset.unwrap_or(0),
+    )
+    .await;
+
+    Json(val)
+}
+
+/// Downloads an external skill into Zero-Trust quarantine and executes static security/Win11 analysis.
+pub async fn skills_hub_quarantine_fetch_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<QuarantineFetchRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+
+    match crate::skills_hub::fetch_skill_to_quarantine(
+        &roots,
+        payload.identifier.as_deref(),
+        payload.url.as_deref(),
+        payload.repo.as_deref(),
+        payload.path.as_deref(),
+    )
+    .await
+    {
+        Ok(item) => Json(json!({
+            "status": "success",
+            "item": item
+        })),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
+    }
+}
+
+/// Lists all packages currently retained in `.souls_data/skills_hub/quarantine/`.
+pub async fn skills_hub_quarantine_list_handler(State(state): State<AppState>) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+    let items = crate::skills_hub::list_quarantine_items(&roots);
+
+    Json(json!({
+        "status": "success",
+        "total": items.len(),
+        "items": items
+    }))
+}
+
+/// Runs the Tri-Engine Agentic Forge (`local_silicon`, `cloud_worker`, or `deterministic_scaffold`).
+pub async fn skills_hub_forge_generate_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<crate::skills_hub::SkillForgeRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+
+    match crate::skills_hub::forge_generate_skill(&state, &roots, payload).await {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
+    }
+}
+
+/// Computes Myers Diff and Score/Token delta either between two raw texts or between two drifted surfaces.
+pub async fn skills_hub_diff_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<SkillDiffRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+
+    let (before_str, after_str) = if let (Some(b), Some(a)) =
+        (payload.before_content, payload.after_content)
+    {
+        (b, a)
+    } else if let Some(slug) = payload.slug {
+        let left_detail = crate::skills_hub::inspect_skill_detail(
+            &roots,
+            &slug,
+            payload.left_surface.as_deref(),
+        );
+        let right_detail = crate::skills_hub::inspect_skill_detail(
+            &roots,
+            &slug,
+            payload.right_surface.as_deref(),
+        );
+        match (left_detail, right_detail) {
+            (Ok(l), Ok(r)) => (
+                l.get("content")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                r.get("content")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+            ),
+            (Err(e), _) | (_, Err(e)) => {
+                return Json(json!({
+                    "status": "error",
+                    "message": e
+                }));
+            }
+        }
+    } else {
+        return Json(json!({
+            "status": "error",
+            "message": "Forneça (before_content, after_content) ou (slug, left_surface, right_surface)."
+        }));
+    };
+
+    let report = crate::skills_hub::compute_skill_diff(&before_str, &after_str);
+    Json(json!({
+        "status": "success",
+        "diff": report
+    }))
+}
+
+/// Restores a previous snapshot from `.souls_data/skills_hub/history/` across target surfaces.
+pub async fn skills_hub_rollback_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<SkillRollbackRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+
+    match crate::skills_hub::rollback_skill_version(
+        &roots,
+        &payload.slug,
+        &payload.snapshot_id,
+        &payload.targets,
+    ) {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
+    }
+}
+
+/// Safely heals YAML frontmatter, `<= 60` char description, and LF line endings while preserving 100% of body instructions.
+pub async fn skills_hub_autofix_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<SkillAutoFixRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let val = crate::skills_hub::autofix_skill_markdown(
+        &state,
+        &payload.slug,
+        &payload.content,
+        payload.use_local_model,
+    )
+    .await;
+    Json(val)
+}
+
+/// Safely deletes a skill from target surfaces after recording a recovery snapshot in `.souls_data/skills_hub/history/`.
+pub async fn skills_hub_delete_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<SkillDeleteRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::skills_hub::SkillsHubRoots::from_system();
+
+    match crate::skills_hub::delete_skill_from_surfaces(&roots, &payload.slug, &payload.targets) {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": err
+        })),
+    }
+}
+

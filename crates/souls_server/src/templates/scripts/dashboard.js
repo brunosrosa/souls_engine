@@ -77,6 +77,10 @@
         fetchCloudChampions();
       } else if (tabId === 'tab-overview') {
         fetchRouterMatrix();
+      } else if (tabId === 'tab-skills') {
+        if (typeof initSkillsHubTab === 'function') {
+          initSkillsHubTab();
+        }
       } else if (tabId === 'tab-settings') {
         fetchConfigToml();
       initSlidersMagneticSnap();
@@ -1165,7 +1169,7 @@
 
     function switchLocalSubtab(subtab) {
       currentLocalSubtab = subtab;
-      document.querySelectorAll('.subtab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('#tab-local .subtab-btn').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.getElementById('btn-subtab-' + subtab);
       if (activeBtn) activeBtn.classList.add('active');
 
@@ -7468,8 +7472,11 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         fetchProfiles();
       });
       fetchConfigToml();
+      if (typeof fetchSkillsCountBadgeOnly === 'function') {
+        fetchSkillsCountBadgeOnly();
+      }
 
-      // Suporte a Deep Linking via Hash (ex: #tab-local, #tab-cloud, #tab-settings/subtab-sandbox)
+      // Suporte a Deep Linking via Hash (ex: #tab-local, #tab-cloud, #tab-skills/forge, #tab-settings/subtab-sandbox)
       if (window.location.hash) {
         const fullHash = window.location.hash.replace('#', '').split('?')[0];
         const parts = fullHash.split('/');
@@ -7477,8 +7484,10 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         const subTab = parts[1];
         if (document.getElementById(mainTab)) {
           switchTab(mainTab);
-          if (subTab && typeof switchSettingsSubtab === 'function') {
+          if (subTab && mainTab === 'tab-settings' && typeof switchSettingsSubtab === 'function') {
             switchSettingsSubtab(subTab);
+          } else if (subTab && mainTab === 'tab-skills' && typeof switchSkillsSubtab === 'function') {
+            switchSkillsSubtab(subTab);
           }
         }
       }
