@@ -56,6 +56,17 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/skills/rollback", post(dashboard::skills_hub_rollback_handler))
         .route("/api/v1/skills/autofix", post(dashboard::skills_hub_autofix_handler))
         .route("/api/v1/skills/delete", post(dashboard::skills_hub_delete_handler))
+        // Milestone v0.6.0 (Delivery 2): Hermes Personas & Governance Inspector Endpoints
+        .route("/api/v1/personas/list", get(dashboard::personas_hub_list_handler))
+        .route("/api/v1/personas/detail", get(dashboard::personas_hub_detail_handler))
+        .route("/api/v1/personas/avatar", get(dashboard::personas_hub_avatar_handler))
+        .route("/api/v1/personas/update", post(dashboard::personas_hub_update_handler))
+        .route("/api/v1/personas/align", post(dashboard::personas_hub_align_handler))
+        .route("/api/v1/personas/create", post(dashboard::personas_hub_create_handler))
+        .route("/api/v1/personas/refine-soul", post(dashboard::personas_hub_refine_soul_handler))
+        .route("/api/v1/personas/diff", post(dashboard::personas_hub_diff_handler))
+        .route("/api/v1/personas/archive", post(dashboard::personas_hub_archive_handler))
+        .route("/api/v1/personas/rollback", post(dashboard::personas_hub_rollback_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))

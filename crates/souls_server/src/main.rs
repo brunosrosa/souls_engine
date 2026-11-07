@@ -7,6 +7,7 @@
 #![recursion_limit = "256"]
 
 mod mcp;
+pub mod personas_hub;
 pub mod profiles;
 mod routes;
 pub mod skills_hub;
@@ -2469,5 +2470,82 @@ model:
         let inst_json: serde_json::Value = serde_json::from_slice(&inst_bytes).unwrap();
         assert_eq!(inst_json["status"], "success");
         assert!(inst_json["overview"]["total_unique_skills"].as_u64().is_some());
+    }
+
+    #[tokio::test]
+    async fn test_personas_hub_axum_routes_smoke() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Verify Dashboard SPA embeds Personas Hub tab & JS controller
+        let req_dash = Request::builder()
+            .uri("/dashboard")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_dash = app.clone().oneshot(req_dash).await.unwrap();
+        assert_eq!(resp_dash.status(), StatusCode::OK);
+        let html_bytes = to_bytes(resp_dash.into_body(), usize::MAX).await.unwrap();
+        let html_str = String::from_utf8_lossy(&html_bytes);
+        assert!(html_str.contains("id=\"btn-tab-personas\""));
+        assert!(html_str.contains("id=\"tab-personas\""));
+        assert!(html_str.contains("function switchPersonasSubtab"));
+
+        // 2. Verify POST /api/v1/personas/refine-soul (deterministic cleanup + guideline append, 0 disk mutations)
+        let refine_body = serde_json::json!({
+            "slug": "smoke-persona",
+            "current_soul": "Você é um consultor estratégico.\n- Sempre responda de forma\n- Sempre responda de forma clara e gentil.\n",
+            "instruction": "Priorize exemplos práticos antes de teoria.",
+            "use_local_model": false
+        });
+        let req_ref = Request::builder()
+            .uri("/api/v1/personas/refine-soul")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(refine_body.to_string()))
+            .unwrap();
+        let resp_ref = app.clone().oneshot(req_ref).await.unwrap();
+        assert_eq!(resp_ref.status(), StatusCode::OK);
+        let ref_bytes = to_bytes(resp_ref.into_body(), usize::MAX).await.unwrap();
+        let ref_json: serde_json::Value = serde_json::from_slice(&ref_bytes).unwrap();
+        assert_eq!(ref_json["status"], "success");
+        let refined_md = ref_json["content"].as_str().unwrap_or("");
+        assert!(refined_md.starts_with("# SOUL.md"));
+        assert!(!refined_md.contains("- Sempre responda de forma\n"));
+        assert!(refined_md.contains("Priorize exemplos práticos antes de teoria."));
+        assert!(!refined_md.contains("\r\n"));
+
+        // 3. Verify POST /api/v1/personas/diff (Myers Diff endpoint)
+        let diff_body = serde_json::json!({
+            "file_name": "SOUL.md",
+            "before_content": "# SOUL.md\n- Regra A\n",
+            "after_content": "# SOUL.md\n- Regra A\n- Regra B\n"
+        });
+        let req_diff = Request::builder()
+            .uri("/api/v1/personas/diff")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(diff_body.to_string()))
+            .unwrap();
+        let resp_diff = app.clone().oneshot(req_diff).await.unwrap();
+        assert_eq!(resp_diff.status(), StatusCode::OK);
+        let diff_bytes = to_bytes(resp_diff.into_body(), usize::MAX).await.unwrap();
+        let diff_json: serde_json::Value = serde_json::from_slice(&diff_bytes).unwrap();
+        assert_eq!(diff_json["status"], "success");
+        assert_eq!(diff_json["diff"]["unchanged"], false);
+        assert!(diff_json["diff"]["additions"].as_u64().unwrap_or(0) >= 1);
+
+        // 4. Verify GET /api/v1/personas/list (read-only scan)
+        let req_list = Request::builder()
+            .uri("/api/v1/personas/list")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_list = app.clone().oneshot(req_list).await.unwrap();
+        assert_eq!(resp_list.status(), StatusCode::OK);
+        let list_bytes = to_bytes(resp_list.into_body(), usize::MAX).await.unwrap();
+        let list_json: serde_json::Value = serde_json::from_slice(&list_bytes).unwrap();
+        assert_eq!(list_json["status"], "success");
+        assert!(list_json["overview"]["total_active_personas"].as_u64().is_some());
     }
 }

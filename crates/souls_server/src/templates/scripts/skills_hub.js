@@ -93,6 +93,17 @@
       }
     }
 
+    async function fetchSkillsCountBadgeOnly() {
+      try {
+        const res = await fetch('/api/v1/skills/installed');
+        const data = await res.json();
+        if (data.status === 'success' && data.overview) {
+          const el = document.getElementById('badge-skills-count');
+          if (el) el.textContent = String(data.overview.total_unique_skills || 0);
+        }
+      } catch (_) {}
+    }
+
     function switchSkillsSubtab(subtab) {
       skillsHubState.currentSubtab = subtab;
       const subtabs = ['installed', 'explorer', 'forge', 'health'];
@@ -177,6 +188,7 @@
       setTxt('skills-kpi-zombies', `${ov.zombie_skills_count || 0} sem uso recente`);
 
       setTxt('badge-skills-installed-count', String(ov.total_unique_skills || 0));
+      setTxt('badge-skills-count', String(ov.total_unique_skills || 0));
 
       const qPill = document.getElementById('badge-skills-quarantine-pill');
       if (qPill) {

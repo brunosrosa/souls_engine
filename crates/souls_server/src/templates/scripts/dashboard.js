@@ -81,6 +81,10 @@
         if (typeof initSkillsHubTab === 'function') {
           initSkillsHubTab();
         }
+      } else if (tabId === 'tab-personas') {
+        if (typeof initPersonasHubTab === 'function') {
+          initPersonasHubTab();
+        }
       } else if (tabId === 'tab-settings') {
         fetchConfigToml();
       initSlidersMagneticSnap();
@@ -7475,8 +7479,11 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       if (typeof fetchSkillsCountBadgeOnly === 'function') {
         fetchSkillsCountBadgeOnly();
       }
+      if (typeof fetchPersonasCountBadgeOnly === 'function') {
+        fetchPersonasCountBadgeOnly();
+      }
 
-      // Suporte a Deep Linking via Hash (ex: #tab-local, #tab-cloud, #tab-skills/forge, #tab-settings/subtab-sandbox)
+      // Suporte a Deep Linking via Hash (ex: #tab-local, #tab-cloud, #tab-skills/forge, #tab-personas/governance, #tab-settings/subtab-sandbox)
       if (window.location.hash) {
         const fullHash = window.location.hash.replace('#', '').split('?')[0];
         const parts = fullHash.split('/');
@@ -7488,6 +7495,8 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
             switchSettingsSubtab(subTab);
           } else if (subTab && mainTab === 'tab-skills' && typeof switchSkillsSubtab === 'function') {
             switchSkillsSubtab(subTab);
+          } else if (subTab && mainTab === 'tab-personas' && typeof switchPersonasSubtab === 'function') {
+            switchPersonasSubtab(subTab);
           }
         }
       }

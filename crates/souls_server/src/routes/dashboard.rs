@@ -2577,3 +2577,211 @@ pub async fn skills_hub_delete_handler(
     }
 }
 
+// ============================================================================
+// MILESTONE v0.6.0 (DELIVERY 2): HERMES PERSONAS & GOVERNANCE INSPECTOR
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct PersonaQuerySlug {
+    pub slug: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PersonaCompareRequest {
+    pub left_slug: Option<String>,
+    pub right_slug: Option<String>,
+    pub before_content: Option<String>,
+    pub after_content: Option<String>,
+    pub file_name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PersonaArchiveRequest {
+    pub slug: String,
+    #[serde(default)]
+    pub restore: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PersonaRollbackRequest {
+    pub slug: String,
+    pub snapshot_id: String,
+}
+
+/// Scans all active and archived Hermes Personas along with Governance & Privacy scores.
+pub async fn personas_hub_list_handler(State(state): State<AppState>) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::personas_hub::PersonasHubRoots::from_system();
+
+    let res = tokio::task::spawn_blocking(move || {
+        crate::personas_hub::scan_personas_ecosystem(&roots)
+    })
+    .await;
+
+    match res {
+        Ok(overview) => Json(json!({
+            "status": "success",
+            "overview": overview
+        })),
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": format!("Falha ao varrer Personas do Hermes: {err}")
+        })),
+    }
+}
+
+/// Returns complete Persona detail (`SOUL.md`, parsed sections, config, skills, read-only memories & history).
+pub async fn personas_hub_detail_handler(
+    State(state): State<AppState>,
+    Query(query): Query<PersonaQuerySlug>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::personas_hub::PersonasHubRoots::from_system();
+    let slug = query.slug.clone();
+
+    let res = tokio::task::spawn_blocking(move || {
+        crate::personas_hub::inspect_persona_detail(&roots, &slug)
+    })
+    .await;
+
+    match res {
+        Ok(Ok(val)) => Json(val),
+        Ok(Err(msg)) => Json(json!({ "status": "error", "message": msg })),
+        Err(err) => Json(json!({ "status": "error", "message": format!("Erro interno: {err}") })),
+    }
+}
+
+/// Serves `assets/avatar.png` for a Persona safely without path traversal.
+pub async fn personas_hub_avatar_handler(
+    State(state): State<AppState>,
+    Query(query): Query<PersonaQuerySlug>,
+) -> Response {
+    let _guard = state.acquire_connection();
+    let roots = crate::personas_hub::PersonasHubRoots::from_system();
+    if let Some(bytes) = crate::personas_hub::read_persona_avatar_bytes(&roots, &query.slug) {
+        (
+            StatusCode::OK,
+            [
+                (header::CONTENT_TYPE, "image/png"),
+                (header::CACHE_CONTROL, "public, max-age=60"),
+            ],
+            bytes,
+        )
+            .into_response()
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
+}
+
+/// Updates Persona settings (`profile.yaml`, hierarchical `config.yaml` blocks, and/or `SOUL.md`) with automatic backup.
+pub async fn personas_hub_update_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<crate::personas_hub::PersonaUpdateRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::personas_hub::PersonasHubRoots::from_system();
+
+    match crate::personas_hub::update_persona(&roots, payload) {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Previews (`dry_run: true`) or applies (`dry_run: false`) 1-Click Privacy & Souls Engine Alignment.
+pub async fn personas_hub_align_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<crate::personas_hub::PersonaAlignRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::personas_hub::PersonasHubRoots::from_system();
+
+    match crate::personas_hub::preview_or_apply_persona_alignment(&roots, payload) {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Creates or clones a new Hermes Persona in `profiles/<slug>/` via the Persona Studio.
+pub async fn personas_hub_create_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<crate::personas_hub::PersonaCreateRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::personas_hub::PersonasHubRoots::from_system();
+    let skills_roots = crate::skills_hub::SkillsHubRoots::from_system();
+
+    match crate::personas_hub::create_or_clone_persona(&state, &roots, &skills_roots, payload).await
+    {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Polishes or cleans `SOUL.md` formatting while returning a preview diff before saving.
+pub async fn personas_hub_refine_soul_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<crate::personas_hub::PersonaSoulRefineRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let val = crate::personas_hub::refine_persona_soul_markdown(&state, payload).await;
+    Json(val)
+}
+
+/// Compares either two raw texts (`before_content` vs `after_content`) or two active Personas (`left_slug` vs `right_slug`).
+pub async fn personas_hub_diff_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<PersonaCompareRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    if let (Some(b), Some(a)) = (payload.before_content, payload.after_content) {
+        let fname = payload.file_name.unwrap_or_else(|| "SOUL.md".to_string());
+        let diff = crate::personas_hub::compute_persona_text_diff(&fname, &b, &a);
+        return Json(json!({
+            "status": "success",
+            "diff": diff
+        }));
+    }
+
+    if let (Some(left), Some(right)) = (payload.left_slug, payload.right_slug) {
+        let roots = crate::personas_hub::PersonasHubRoots::from_system();
+        return match crate::personas_hub::compare_two_personas(&roots, &left, &right) {
+            Ok(val) => Json(val),
+            Err(err) => Json(json!({ "status": "error", "message": err })),
+        };
+    }
+
+    Json(json!({
+        "status": "error",
+        "message": "Informe duas Personas ou dois textos para comparação."
+    }))
+}
+
+/// Archives (pauses) or restores a secondary Persona.
+pub async fn personas_hub_archive_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<PersonaArchiveRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::personas_hub::PersonasHubRoots::from_system();
+
+    match crate::personas_hub::archive_or_restore_persona(&roots, &payload.slug, payload.restore) {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Restores a previous snapshot (`SOUL.md`, `config.yaml`, or `profile.yaml`) for a Persona.
+pub async fn personas_hub_rollback_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<PersonaRollbackRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let roots = crate::personas_hub::PersonasHubRoots::from_system();
+
+    match crate::personas_hub::rollback_persona_snapshot(&roots, &payload.slug, &payload.snapshot_id)
+    {
+        Ok(val) => Json(val),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
