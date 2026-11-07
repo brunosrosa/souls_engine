@@ -52,13 +52,16 @@
         </div>
       </div>
 
-      <!-- 2. NAVEGAÇÃO INTERNA DAS 4 SUB-ABAS -->
+      <!-- 2. NAVEGAÇÃO INTERNA DAS 5 SUB-ABAS -->
       <div class="subtabs-bar" id="skills-subtabs-bar" style="margin-bottom: 16px;">
         <button class="subtab-btn active" id="btn-skills-subtab-installed" onclick="switchSkillsSubtab('installed')">
           📦 Minhas Skills <span class="tab-badge" id="badge-skills-installed-count">0</span>
         </button>
         <button class="subtab-btn" id="btn-skills-subtab-explorer" onclick="switchSkillsSubtab('explorer')">
           🧭 Descobrir Novas <span class="tab-badge" id="badge-skills-quarantine-pill" style="display:none; background: rgba(245,158,11,0.2); color: var(--amber);">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-skills-subtab-switchboard" onclick="switchSkillsSubtab('switchboard')">
+          ⚡ Switchboard MCP <span class="tab-badge" id="badge-skills-switchboard-count" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">55 Tools</span>
         </button>
         <button class="subtab-btn" id="btn-skills-subtab-forge" onclick="switchSkillsSubtab('forge')">
           ✨ Criar &amp; Adaptar
@@ -200,16 +203,20 @@
                 </label>
                 <select id="insp-surface-select" class="setting-input mono" style="height: 30px; font-size: 0.73rem; min-width: 220px;" onchange="reloadInspectedSurface(this.value)"></select>
               </div>
-              <textarea
-                id="insp-skill-editor"
-                class="setting-input mono"
-                spellcheck="false"
-                oninput="updateLiveDescCounter('insp-skill-editor', 'insp-desc-counter')"
-                style="width: 100%; min-height: 330px; font-size: 0.75rem; line-height: 1.5; resize: vertical; padding: 12px;"
-              ></textarea>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.72rem;">
+              <div class="editor-container-with-lines" style="min-height: 480px;">
+                <div class="editor-gutter" id="insp-skill-gutter">1</div>
+                <textarea
+                  id="insp-skill-editor"
+                  class="editor-textarea"
+                  spellcheck="false"
+                  oninput="updateLiveDescCounter('insp-skill-editor', 'insp-desc-counter')"
+                  placeholder="Carregando SKILL.md..."
+                ></textarea>
+              </div>
+              <div class="editor-statusbar">
+                <span id="insp-skill-status">Ln 1, Col 1</span>
                 <span id="insp-desc-counter" class="mono" style="color: var(--text-muted);">Resumo inicial: -- / 60 caracteres</span>
-                <span id="insp-autofix-guarantee" style="color: var(--text-muted);">Salvamento automático em formato limpo (LF)</span>
+                <span id="insp-autofix-guarantee" style="color: var(--text-muted);">Salvamento em LF</span>
               </div>
             </div>
 
@@ -460,8 +467,191 @@
       </div>
 
       <!-- =================================================================== -->
-      <!-- SUB-ABA 3: CRIAR & ADAPTAR (ESTÚDIO GUIADO DE SKILLS)               -->
+      <!-- SUB-ABA 3: SWITCHBOARD MCP & FERRAMENTAS (ROTEAMENTO DINÂMICO)       -->
       <!-- =================================================================== -->
+      <div id="panel-skills-switchboard" class="skills-subtab-panel" style="display: none;">
+        <!-- CARD 1: RUNNER DE PROJEÇÃO DINÂMICA INTERATIVO -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-purple">⚡</div>
+                Central de Roteamento Inteligente de Ferramentas
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5;">
+                Ativa sob demanda apenas as ferramentas necessárias para cada tarefa, acelerando as respostas do agente.<br>
+                Economiza até 91% dos tokens de contexto e preserva o cache da IA com 0 MB de uso de VRAM.
+              </p>
+            </div>
+            <button class="btn btn-purple" id="btn-refresh-skills" onclick="fetchSwitchboardSkills()" style="white-space: nowrap; flex-shrink: 0;">
+              <span>🔄</span> Recarregar Skills
+            </button>
+          </div>
+
+          <!-- CONTROLE DE ENTRADA DO SWITCHBOARD -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px;">
+            <div style="display: grid; grid-template-columns: 2.8fr 1.6fr 1fr auto; gap: 14px; align-items: end;">
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">O QUE O AGENTE PRECISA FAZER? (INTENÇÃO OU TAREFA)</label>
+                <input type="text" id="switchboard-query-input" class="setting-input" style="width: 100%; font-size: 0.82rem;" placeholder="Ex: refatorar função com myers diff na AST, consultar memória L2, medir temperatura da GPU RTX..." onkeydown="if(event.key==='Enter') executeSwitchboardEvaluation()">
+              </div>
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">FILTRAR NAMESPACE (OPCIONAL)</label>
+                <select id="switchboard-ns-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="">🌐 Todos os Namespaces</option>
+                  <option value="code">💻 code (Cirurgia AST, Myers Diff, Sintaxe)</option>
+                  <option value="memory">🧠 memory (FrankenSQLite L2 &amp; LadybugDB)</option>
+                  <option value="think">🤔 think (Freio Socrático DAG &amp; Hipóteses)</option>
+                  <option value="ops">🛡️ ops (JobObject Sandbox &amp; Subagentes)</option>
+                  <option value="sys">🌡️ sys (NVML Hardware Watchdog &amp; Telemetria)</option>
+                  <option value="context">🗜️ context (Compressão CCR &amp; Headroom)</option>
+                  <option value="core">⚙️ core (Descoberta &amp; Metadados MCP)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TOP-K TOOLS</label>
+                <select id="switchboard-topk-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
+                  <option value="3">Top-3</option>
+                  <option value="5" selected>Top-5</option>
+                  <option value="8">Top-8</option>
+                  <option value="10">Top-10</option>
+                </select>
+              </div>
+              <div>
+                <button class="btn btn-cyan" id="btn-run-switchboard" onclick="executeSwitchboardEvaluation()" style="padding: 9px 18px; font-weight: 600;">
+                  <span>⚡</span> Simular Seleção de Ferramentas
+                </button>
+              </div>
+            </div>
+
+            <!-- PRESETS DE TESTE RÁPIDO -->
+            <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center;">
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Presets Rápidos:</span>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('extrair outline e substituir symbol na ast de rust')">🔧 Código / AST</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('salvar fato epistemico no sqlite l2 e ladybug')">🧠 Memória L2</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('deliberar hipoteses em grafo dag socratico')">🤔 Pensamento Socrático</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('telemetria nvml vram temperatura rtx 2060m')">🌡️ Hardware NVML</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('comprimir tokens e deduplicar contexto em ram')">🗜️ Context Lean CCR</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('consultar precos e campeoes cloud arena pareto')">🌐 Cloud FinOps</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('executar comando shell em sandbox seguro')">🛡️ Safe Sandbox</button>
+              <button class="sb-preset-btn" onclick="setSwitchboardPreset('criar entidades e relacoes tipadas no grafo ladybugdb')">🕸️ Grafo Ontológico</button>
+            </div>
+          </div>
+
+          <!-- LIVE DECISION RESULT BANNER -->
+          <div id="switchboard-result-container" style="display: none; margin-top: 20px;">
+            <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 18px;">
+              
+              <!-- MINI-CARD DE IMPACTO FINOPS (SEM VS COM SWITCHBOARD) -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 16px;">
+                <div style="display: flex; align-items: center; gap: 10px; border-right: 1px solid rgba(255,255,255,0.08); padding-right: 12px;">
+                  <div style="font-size: 1.15rem;">🔴</div>
+                  <div>
+                    <div style="font-size: 0.72rem; color: #f87171; font-weight: 700; text-transform: uppercase;">Sem Switchboard (Carga Total)</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35;">55 ferramentas injetadas no prompt (~6.050 tokens) • Quebra prefix cache • Risco de alucinação</div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="font-size: 1.15rem;">🟢</div>
+                  <div>
+                    <div style="font-size: 0.72rem; color: #34d399; font-weight: 700; text-transform: uppercase;">Com Switchboard MCP (Injeção Cirúrgica)</div>
+                    <div style="font-size: 0.75rem; color: #cbd5e1; line-height: 1.35;">Apenas ferramentas essenciais (~550 tokens) • <strong style="color: #34d399;">~91% economia de tokens</strong> • Latência &lt; 2ms</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <span id="sb-stage-badge" class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); font-size: 0.8rem; padding: 4px 10px; font-weight: 700;">⚡ Fast-Path RAM Cosine</span>
+                  <span style="font-size: 0.82rem; color: #cbd5e1;" id="sb-summary-text">5 ferramentas projetadas para o contexto</span>
+                </div>
+                <div style="display: flex; gap: 16px; font-family: var(--font-mono); font-size: 0.78rem; flex-wrap: wrap;">
+                  <div>Latência: <strong id="sb-latency" style="color: var(--cyan);">0.0 ms</strong></div>
+                  <div>Confiança: <strong id="sb-confidence" style="color: var(--emerald);">0%</strong></div>
+                  <div>Entropia: <strong id="sb-entropy" style="color: var(--amber);">0.00</strong></div>
+                  <div>Economia Est.: <strong id="sb-tokens-saved" style="color: #34d399;">~5.500 tokens (91%)</strong></div>
+                </div>
+              </div>
+
+              <!-- SKILL RECOMENDADA -->
+              <div id="sb-skill-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="sb-skill-icon" style="font-size: 1.1rem;">🎯</span>
+                    <strong id="sb-skill-name" style="color: var(--purple); font-size: 0.92rem;">souls-code-surgeon</strong>
+                    <span id="sb-skill-score-badge" class="badge" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">Score: 0.95</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Skill Operacional Canônica</span>
+                    <button class="sb-action-btn" onclick="highlightSkillInCatalog()">
+                      <span>🔍</span> Localizar no Catálogo
+                    </button>
+                  </div>
+                </div>
+                <p id="sb-skill-desc" style="font-size: 0.78rem; color: #cbd5e1; margin: 6px 0 10px 0;">Descrição da skill recomendada.</p>
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                  <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Ferramentas Primárias da Skill:</span>
+                  <div id="sb-skill-primary-tools" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                </div>
+              </div>
+
+              <!-- FERRAMENTAS SELECIONADAS CIRURGICAMENTE -->
+              <div>
+                <h4 style="font-size: 0.8rem; color: #fff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em;">Ferramentas Selecionadas Cirurgicamente:</h4>
+                <div class="table-container">
+                  <table class="arena-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 200px;">Ferramenta &amp; Habilidade</th>
+                        <th style="width: 110px;" class="text-center">Namespace</th>
+                        <th style="width: 140px;" class="text-center">Afinidade / Score</th>
+                        <th>Descrição &amp; Parâmetros do Contrato MCP</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sb-projected-tools-tbody">
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: CATÁLOGO COMPLETO DAS 15 SKILLS CANÔNICAS -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <div class="card-icon icon-cyan">📚</div>
+                Competências &amp; Especialidades do Agente (Skills)
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+                Habilidades especializadas que combinam as ferramentas certas para resolver problemas complexos.
+              </p>
+            </div>
+            <span id="sb-catalog-stats-badge" class="badge badge-lowcost">15 Habilidades Prontas &bull; 55 Ferramentas Ativas</span>
+          </div>
+
+          <!-- BARRA DE PESQUISA E FILTROS DE CATEGORIA DE SKILLS -->
+          <div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <div style="flex: 1; min-width: 260px;">
+              <input type="text" id="sb-skill-search-input" class="setting-input" style="width: 100%; font-size: 0.8rem;" placeholder="🔍 Filtrar skills por nome, palavra-chave (#ast, #memória) ou ferramenta..." oninput="filterSwitchboardSkills()">
+            </div>
+            <div class="profile-selector" id="sb-skill-category-filters" style="margin-bottom: 0;">
+              <button class="profile-pill active" id="btn-sb-cat-all" onclick="setSwitchboardSkillCategory('all')">Todas (15)</button>
+              <button class="profile-pill" id="btn-sb-cat-coding" onclick="setSwitchboardSkillCategory('coding')">💻 Código</button>
+              <button class="profile-pill" id="btn-sb-cat-memory" onclick="setSwitchboardSkillCategory('memory')">🧠 Memória</button>
+              <button class="profile-pill" id="btn-sb-cat-hardware" onclick="setSwitchboardSkillCategory('hardware')">⚙️ Silício</button>
+              <button class="profile-pill" id="btn-sb-cat-security" onclick="setSwitchboardSkillCategory('security')">🛡️ Segurança</button>
+              <button class="profile-pill" id="btn-sb-cat-reasoning" onclick="setSwitchboardSkillCategory('reasoning')">🤔 Raciocínio</button>
+            </div>
+          </div>
+
+          <div id="sb-skills-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 8px;">
+            <div style="text-align: center; color: var(--text-muted); padding: 20px;">Carregando catálogo de skills...</div>
+          </div>
+        </div>
+      </div>
       <div id="panel-skills-forge" class="skills-subtab-panel" style="display: none;">
         <div class="card">
           <div class="skills-header-row">
@@ -580,15 +770,18 @@
               </div>
 
               <div id="forge-code-pane">
-                <textarea
-                  id="forge-output-editor"
-                  class="setting-input mono"
-                  spellcheck="false"
-                  placeholder="O rascunho pronto aparecerá aqui para você revisar e ajustar livremente antes de instalar..."
-                  oninput="updateLiveDescCounter('forge-output-editor', 'forge-desc-meter')"
-                  style="width: 100%; min-height: 290px; font-size: 0.74rem; line-height: 1.48; padding: 12px;"
-                ></textarea>
-                <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.72rem;">
+                <div class="editor-container-with-lines" style="min-height: 480px;">
+                  <div class="editor-gutter" id="forge-output-gutter">1</div>
+                  <textarea
+                    id="forge-output-editor"
+                    class="editor-textarea"
+                    spellcheck="false"
+                    placeholder="O rascunho pronto aparecerá aqui para você revisar e ajustar livremente antes de instalar..."
+                    oninput="updateLiveDescCounter('forge-output-editor', 'forge-desc-meter')"
+                  ></textarea>
+                </div>
+                <div class="editor-statusbar">
+                  <span id="forge-output-status">Ln 1, Col 1</span>
                   <span id="forge-desc-meter" class="mono" style="color: var(--text-muted);">Resumo: -- / 60 caracteres</span>
                   <span id="forge-engine-note" style="color: var(--cyan);"></span>
                 </div>

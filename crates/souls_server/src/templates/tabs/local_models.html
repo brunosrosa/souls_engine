@@ -1,21 +1,17 @@
     <section class="tab-pane" id="tab-local">
-      <!-- SUBTABS DE SILÍCIO LOCAL -->
+      <!-- SUBTABS DE MODELOS & ARENA -->
       <div class="subtabs-bar">
         <button class="subtab-btn active" id="btn-subtab-installed" onclick="switchLocalSubtab('installed')">
-          <span>💾 Modelos Locais Instalados</span>
+          <span>💾 Silício Local &amp; Arena</span>
           <span class="tab-count-badge" id="badge-subtab-installed-count">--</span>
         </button>
+        <button class="subtab-btn" id="btn-subtab-cloud" onclick="switchLocalSubtab('cloud')">
+          <span>🌐 Cloud Arena &amp; Pareto</span>
+          <span class="tab-count-badge" id="badge-subtab-cloud-count">9 Perfis</span>
+        </button>
         <button class="subtab-btn" id="btn-subtab-hub" onclick="switchLocalSubtab('hub')">
-          <span>✨ Model Hub & Downloads</span>
+          <span>✨ Model Hub &amp; Downloader</span>
           <span class="tab-count-badge" id="badge-active-downloads-count" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); display: none;">0</span>
-        </button>
-        <button class="subtab-btn" id="btn-subtab-arena" onclick="switchLocalSubtab('arena')">
-          <span>🏟️ Local Silicon Arena</span>
-          <span class="tab-count-badge" id="badge-subtab-arena-benchmarks" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); display: none;">0</span>
-        </button>
-        <button class="subtab-btn" id="btn-subtab-switchboard" onclick="switchLocalSubtab('switchboard')">
-          <span>⚡ Switchboard MCP</span>
-          <span class="tab-count-badge" id="badge-switchboard-tools-count" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">--</span>
         </button>
       </div>
 
@@ -88,12 +84,11 @@
             </table>
           </div>
         </div>
-      </div>
 
-      <!-- PAINEL 3: LOCAL SILICON ARENA (BENCHMARKS BARE-METAL) -->
-      <div id="panel-local-arena" style="display: none;">
-        <!-- CARD 1: RUNNER DE BENCHMARK INTERATIVO -->
-        <div class="card" id="arena-runner-card" style="margin-bottom: 20px;">
+        <!-- SEÇÃO UNIFICADA: ARENA DE TESTES & HEURISTIC VAULT -->
+        <div id="panel-local-arena" style="margin-top: 20px;">
+          <!-- CARD 1: RUNNER DE BENCHMARK INTERATIVO -->
+          <div class="card" id="arena-runner-card" style="margin-bottom: 20px;">
           <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
             <div>
               <div class="card-title">
@@ -140,7 +135,7 @@
                   <option value="1">⚡ Velocidade & Memória (Throughput tok/s, VRAM e TTFT)</option>
                   <option value="2">🧠 Avaliação Cognitiva (Raciocínio CoT & Parsing Rust AST)</option>
                   <option value="3" id="opt-arena-type-vlm">👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj)</option>
-                  <option value="4">🚀 Aceleração Especulativa (Drafting & Ganho de Velocidade)</option>
+                  <option value="4" id="opt-arena-type-speculative">🚀 Aceleração Especulativa (Drafting & Ganho de Velocidade)</option>
                   <option value="5">📦 Pressão de Contexto (Janela Longa de 4k até 32k tokens)</option>
                 </select>
               </div>
@@ -231,8 +226,11 @@
               <button class="profile-pill" id="btn-arena-filter-tier2" onclick="filterArenaModels('tier2')">Tier 2</button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <input type="text" id="arena-models-search" placeholder="🔍 Filtrar modelo..." class="setting-input" style="padding: 5px 12px; font-size: 0.75rem; width: 200px; border-radius: 6px;" oninput="onArenaModelsSearchInput()">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <input type="text" id="arena-models-search" placeholder="🔍 Filtrar modelo..." class="setting-input" style="padding: 5px 12px; font-size: 0.75rem; width: 180px; border-radius: 6px;" oninput="onArenaModelsSearchInput()">
+              <button id="arena-batch-run-btn" class="btn btn-primary" style="padding: 5px 14px; font-size: 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;" onclick="openBatchBenchmarkModal()" title="Homologar todos os modelos físicos sequencialmente">
+                <span>⚡</span> Homologar Todos os Modelos
+              </button>
             </div>
           </div>
 
@@ -325,7 +323,282 @@
             </table>
           </div>
         </div>
+
+        <!-- MODAL: HOMOLOGAÇÃO SEQUENCIAL EM LOTE NO SILÍCIO -->
+        <div id="arena-batch-modal" class="modal-backdrop">
+          <div class="modal-dialog" style="max-width: 720px; width: 92%;">
+            <div class="modal-header">
+              <div class="modal-title">
+                <span>⚡</span> Homologação Sequencial no Silício (Todos os Modelos)
+              </div>
+              <button class="modal-close" onclick="closeBatchBenchmarkModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 16px 0; max-height: 65vh; overflow-y: auto;">
+              <!-- AVISO DE ISOLAMENTO BARE-METAL -->
+              <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 0.78rem; color: #e2e8f0; line-height: 1.45;">
+                <strong style="color: var(--cyan);">Garantia Bare-Metal & FinOps:</strong>
+                A execução em lote ocorre estritamente em série (1 modelo por vez). O modelo anterior é totalmente descarregado da memória antes de alocar o próximo, protegendo a RTX 2060m e mantendo a folga de segurança do WDDM (teto útil de 5.2GB).
+              </div>
+
+              <!-- RESUMO PRÉ-FLIGHT DA BATERIA -->
+              <div id="arena-batch-preflight-card" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <span style="font-size: 0.82rem; font-weight: 600; color: #fff;">Matriz de Provas Elegíveis</span>
+                  <span id="arena-batch-summary-badge" class="badge badge-champion">-- Provas Mapeadas</span>
+                </div>
+                <div id="arena-batch-models-list" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;">
+                  <!-- Gerado dinamicamente via JS com o plano de cada modelo -->
+                </div>
+              </div>
+
+              <!-- PROGRESSO GLOBAL DA FILA (VISÍVEL DURANTE EXECUÇÃO) -->
+              <div id="arena-batch-progress-section" style="display: none; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span id="arena-batch-current-task" style="font-size: 0.80rem; font-weight: 600; color: #fff;">Executando ensaio...</span>
+                  <span id="arena-batch-progress-percent" style="font-size: 0.80rem; font-weight: 700; color: var(--emerald);">0%</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                  <div id="arena-batch-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--emerald)); transition: width 0.3s ease;"></div>
+                </div>
+                <div id="arena-batch-logs" style="background: #060911; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 8px 10px; font-family: monospace; font-size: 0.70rem; color: #94a3b8; max-height: 120px; overflow-y: auto;">
+                  [SISTEMA] Aguardando início da homologação sequencial...
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button id="btn-close-batch-modal" class="btn" style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1);" onclick="closeBatchBenchmarkModal()">Fechar</button>
+              <button id="btn-cancel-batch-benchmark" class="btn btn-danger" style="display: none; padding: 6px 14px; font-size: 0.78rem;" onclick="abortBatchBenchmark()">⏹️ Interromper Fila</button>
+              <button id="btn-start-batch-benchmark" class="btn btn-emerald" style="padding: 6px 18px; font-size: 0.78rem; font-weight: 600;" onclick="startBatchBenchmark()">🚀 Iniciar Homologação em Série</button>
+            </div>
+          </div>
+        </div>
+      </div> <!-- /panel-local-arena -->
+    </div> <!-- /panel-local-installed -->
+
+    <!-- PAINEL 2: CLOUD ARENA & PARETO -->
+    <div id="panel-local-cloud" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <div class="card-icon icon-purple">🌐</div>
+              Cloud Arena — Melhores Modelos de IA em Nuvem
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+              Monitoramento diário de inteligência, tarifas ($/1M) e velocidade dos modelos líderes de mercado.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-purple" onclick="switchTab('tab-settings'); switchSettingsSubtab('subtab-brain');">
+              <span>⚙️</span> Configurar / Trocar no Hermes
+            </button>
+            <button class="btn btn-cyan" id="btn-sync-cloud-arena" onclick="syncCloudArena()">
+              <span>⚡</span> Sincronizar Tarifas na Nuvem
+            </button>
+          </div>
+        </div>
+
+        <!-- CARD DE DESTAQUE: MODELO ATIVO NO HERMES (MASTER BRAIN) -->
+        <div id="active-hermes-brain-banner" style="margin-bottom: 16px; background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+              🎯
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="badge badge-active-hermes">
+                  🟢 Cérebro Mestre Ativo no Hermes
+                </span>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-family: var(--font-mono);" id="active-hermes-preset-tag">Preset: Frontier Balanced</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap;">
+                <span style="font-size: 1.08rem; font-weight: 700; color: #fff; font-family: var(--font-mono);" id="active-hermes-model-name">deepseek/deepseek-chat</span>
+                <span class="badge badge-nous" id="active-hermes-provider-tag">🧠 Nous Portal (Crédito Ativo)</span>
+              </div>
+              <div style="font-size: 0.72rem; color: #cbd5e1; margin-top: 2px;" id="active-hermes-meta-line">
+                Tarifa: $0.14 / 1M tokens • Janela: 64k tokens • Provedor Padrão: Nous Portal API
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn btn-purple" onclick="openQuickApplyModal(window.currentHermesMasterModel || 'deepseek/deepseek-chat', 'nous', false)" style="padding: 7px 14px; font-size: 0.76rem; font-weight: 600;">
+              <span>⚙️</span> Trocar Cérebro no Hermes
+            </button>
+          </div>
+        </div>
+
+        <!-- BARRA DE CONTROLE: PERFIS COGNITIVOS + FILTRO DE PROVEDOR -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <div class="profile-selector" id="profile-pill-container" style="margin-bottom: 0;">
+            <button class="profile-pill active" onclick="selectProfile('orchestrator')">👑 Maestro / Brain</button>
+            <button class="profile-pill" onclick="selectProfile('coding')">💻 Coding / SWE</button>
+            <button class="profile-pill" onclick="selectProfile('agentic')">🤖 Agentic / Tools</button>
+            <button class="profile-pill" onclick="selectProfile('reasoning')">🧠 Reasoning / Math</button>
+            <button class="profile-pill" onclick="selectProfile('fast')">⚡ Fast / Triage</button>
+            <button class="profile-pill" onclick="selectProfile('design')">🎨 Design / Frontend</button>
+          </div>
+
+          <!-- FILTRO DINÂMICO DE PROVEDOR CLOUD COM FOCO NO NOUS -->
+          <div style="display: flex; align-items: center; gap: 6px; background: rgba(15, 23, 42, 0.7); padding: 4px 8px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; padding-left: 4px;">Foco Provedor:</span>
+            <div class="filter-pills-group" id="cloud-provider-filter-pills">
+              <button class="filter-provider-btn active" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')">🌐 Todos (Mercado)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')">🧠 Nous Portal (Crédito Hermes)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')">🔀 OpenRouter (API)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BARRA DE FILTROS SECUNDÁRIOS: MODALIDADE + FABRICANTE + CÉREBRO HERMES -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; background: rgba(15, 23, 42, 0.55); padding: 5px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <!-- Modalidade -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em;">Modalidade:</span>
+              <div class="filter-pills-group" id="cloud-modality-filter-pills" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <button class="filter-provider-btn active" id="btn-cloud-modal-all" onclick="setCloudModalityFilter('all')">🌐 Todas</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-vision" onclick="setCloudModalityFilter('vision')" title="Apenas modelos multimodais que processam imagens, diagramas e OCR">👁️ Visão &amp; OCR</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-image_gen" onclick="setCloudModalityFilter('image_gen')" title="Modelos que geram imagens e artefatos visuais diretamente (Text-to-Image / Canvas)">🎨 Geração de Imagem</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-audio" onclick="setCloudModalityFilter('audio')" title="Modelos conversacionais de voz nativa e baixa latência (Realtime)">🎙️ Áudio &amp; Voz</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-video" onclick="setCloudModalityFilter('video')" title="Modelos de compreensão temporal e dinâmica de múltiplos frames">🎬 Vídeo &amp; Temporal</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-world" onclick="setCloudModalityFilter('world')" title="Modelos de simulação física, ambientes espaciais e mundos 3D interativos">🌍 World Models</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-decision" onclick="setCloudModalityFilter('decision')" title="Motores de decisão não-autorregressivos e tipagem estrita (estilo Jev / TypeSafe AI)">⚡ Decisão (Jev)</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-text" onclick="setCloudModalityFilter('text')" title="Modelos focados puramente em texto, código e raciocínio simbólico">📝 Texto Puro</button>
+              </div>
+            </div>
+
+            <!-- Fabricantes Multi-Select -->
+            <div style="position: relative;">
+              <button class="btn" id="btn-mfg-toggle" onclick="toggleMfgMenu(event)" style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-subtle); color: #cbd5e1; font-size: 0.74rem; padding: 4px 10px; display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: var(--radius-sm);">
+                <span>🏢</span> Fabricante: <span id="mfg-filter-label" style="color: var(--cyan); font-weight: 600;">Todos</span> ▾
+              </button>
+              <div id="mfg-dropdown-menu" style="display: none; position: absolute; left: 0; top: 100%; margin-top: 5px; background: #0f172a; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; width: 230px; z-index: 120; box-shadow: 0 12px 30px rgba(0,0,0,0.75);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 5px;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">Fabricantes</span>
+                  <div style="display: flex; gap: 6px;">
+                    <button onclick="toggleAllMfgs(true)" style="background: none; border: none; color: var(--cyan); font-size: 0.68rem; cursor: pointer;">Todos</button>
+                    <span style="color: var(--text-muted);">|</span>
+                    <button onclick="toggleAllMfgs(false)" style="background: none; border: none; color: #a78bfa; font-size: 0.68rem; cursor: pointer;">Limpar</button>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 3px; max-height: 220px; overflow-y: auto;" id="mfg-checkboxes-container">
+                  <!-- Gerado dinamicamente via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Indicador Cérebro Hermes Ativo -->
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.72rem;">
+            <span style="color: var(--text-muted);">🤖 Cérebro Hermes Ativo:</span>
+            <code class="mono" id="cloud-quick-active-model" style="color: #34d399; background: rgba(16, 185, 129, 0.12); padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 600;">deepseek/deepseek-chat</code>
+          </div>
+        </div>
+
+        <!-- SUBTEXTO DINÂMICO DO PERFIL ATIVO -->
+        <div id="cloud-profile-description-bar" style="margin-bottom: 14px; font-size: 0.74rem; color: #94a3b8; background: rgba(255, 255, 255, 0.02); padding: 6px 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--cyan);">
+          👑 <strong>Master Brain / Maestro:</strong> O modelo de fronteira all-around que orquestra o diálogo mestre, planeja cadeias agênticas e toma decisões executivas com raciocínio balanceado.
+        </div>
+
+        <!-- SEÇÃO 1: OS 3 CAMPEÕES DE PARETO (PÓDIO EM CARDS) -->
+        <div style="margin-top: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+          <h4 style="font-size: 0.86rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
+            <span style="color: var(--amber);">👑</span> Pódio dos Campeões (Fronteira de Pareto)
+          </h4>
+          <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-triad-sublabel">Recomendações canônicas de qualidade máxima, melhor ROI e menor custo</span>
+        </div>
+
+        <div class="cloud-podium-grid" id="cloud-podium-cards">
+          <!-- Renderizado dinamicamente via renderCloudTable() -->
+          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">
+            Carregando campeões da Cloud Arena...
+          </div>
+        </div>
+
+        <!-- SEÇÃO 2: RANKING COMPARATIVO DE MODELOS -->
+        <div style="margin-top: 18px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h4 style="font-size: 0.88rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
+              <span style="color: var(--cyan);">📊</span> Ranking Comparativo de Modelos (Benchmarks &amp; Custos)
+            </h4>
+            <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-ranked-count">Carregando catálogo...</span>
+          </div>
+
+          <!-- BARRA DE PESQUISA, SELETOR DE COLUNAS E ORDENAÇÃO -->
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div style="position: relative;">
+              <input type="text" id="cloud-search-input" placeholder="🔍 Filtrar modelo, fabricante ou id..." oninput="handleCloudSearch(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #fff; border-radius: var(--radius-sm); padding: 5px 10px; font-size: 0.76rem; width: 210px;" />
+            </div>
+
+            <!-- CONTROLE DE VISIBILIDADE DE COLUNAS (DROPDOWN) -->
+            <div style="position: relative;">
+              <button class="btn" id="btn-col-toggle" onclick="toggleColumnMenu(event)" style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-subtle); color: #cbd5e1; font-size: 0.76rem; padding: 5px 10px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <span>👁️</span> Colunas <span id="col-count-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">12/12</span> ▾
+              </button>
+              <div id="col-dropdown-menu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 5px; background: #0f172a; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; width: 250px; z-index: 100; box-shadow: 0 12px 30px rgba(0,0,0,0.65);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 5px;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">Exibir Colunas</span>
+                  <div style="display: flex; gap: 6px;">
+                    <button onclick="toggleAllColumns(true)" style="background: none; border: none; color: var(--cyan); font-size: 0.68rem; cursor: pointer;">Todas</button>
+                    <span style="color: var(--text-muted);">|</span>
+                    <button onclick="resetDefaultColumns()" style="background: none; border: none; color: #a78bfa; font-size: 0.68rem; cursor: pointer;">Padrão</button>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto;">
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-status" checked onchange="toggleColumn('status', this.checked)"> Status Pareto</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-score" checked onchange="toggleColumn('score', this.checked)"> Score Geral</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-roi" checked onchange="toggleColumn('roi', this.checked)"> ROI Index</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-nous" checked onchange="toggleColumn('nous', this.checked)"> <span style="color: #e879f9;">🟣</span> Tarifa Nous ($/1M)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-or" checked onchange="toggleColumn('or', this.checked)"> <span style="color: #818cf8;">🔀</span> Tarifa OpenRouter ($/1M)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-intel" checked onchange="toggleColumn('intel', this.checked)"> 🧠 Inteligência (Arena ELO)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-coding" checked onchange="toggleColumn('coding', this.checked)"> 💻 Coding (SWE)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-bfcl" checked onchange="toggleColumn('bfcl', this.checked)"> 🤖 Tools (BFCL)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-reasoning" checked onchange="toggleColumn('reasoning', this.checked)"> 🧠 Reasoning (GPQA)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-design" checked onchange="toggleColumn('design', this.checked)"> 🎨 Design UI/UX</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-vision" checked onchange="toggleColumn('vision', this.checked)"> 👁️ Visão (VQA)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ifeval" checked onchange="toggleColumn('ifeval', this.checked)"> 📋 Instrução (IFEval)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ttft" checked onchange="toggleColumn('ttft', this.checked)"> ⏱️ Latência (TTFT)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-tps" checked onchange="toggleColumn('tps', this.checked)"> ⚡ Throughput (TPS)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ctx" checked onchange="toggleColumn('ctx', this.checked)"> 📚 Janela &amp; RULER</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-prov" checked onchange="toggleColumn('prov', this.checked)"> 🌐 Provedores</label>
+                </div>
+              </div>
+            </div>
+
+            <select id="cloud-sort-select" onchange="handleCloudSort(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #cbd5e1; border-radius: var(--radius-sm); padding: 5px 8px; font-size: 0.76rem;">
+              <option value="score_desc">🏆 Maior Score Geral</option>
+              <option value="roi_desc">💎 Maior Custo-Benefício (ROI)</option>
+              <option value="nous_asc">🟣 Menor Tarifa Nous ($/1M)</option>
+              <option value="or_asc">🔀 Menor Tarifa OpenRouter ($/1M)</option>
+              <option value="intel_desc">🧠 Maior Inteligência (Arena ELO)</option>
+              <option value="coding_desc">💻 Maior Score Coding (SWE)</option>
+              <option value="bfcl_desc">🤖 Maior Score Tool Calling (BFCL)</option>
+              <option value="reasoning_desc">🧠 Maior Score Reasoning (Hard/Math)</option>
+              <option value="design_desc">🎨 Maior Score Design / UI/UX</option>
+              <option value="vision_desc">👁️ Maior Score Visão / VQA</option>
+              <option value="ifeval_desc">📋 Maior Score Instrução (IFEval)</option>
+              <option value="ttft_asc">⏱️ Menor Latência (TTFT)</option>
+              <option value="tps_desc">⚡ Maior Throughput (TPS)</option>
+              <option value="ctx_desc">📚 Maior Janela de Contexto</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-container arena-table-sticky-wrapper">
+          <table class="arena-table">
+            <thead id="cloud-ranked-thead">
+              <!-- Renderizado dinamicamente via renderCloudTableHeader() com suporte nativo a Drag & Drop -->
+            </thead>
+            <tbody id="cloud-ranked-tbody">
+              <!-- Renderizado dinamicamente via fetchCloudRankedModels() -->
+              <tr>
+                <td colspan="19" style="text-align: center; color: var(--text-muted); padding: 24px;">Buscando modelos da Cloud Arena com sub-scores de benchmarks e tarifas comparadas...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
 
       <!-- PAINEL 2: MODEL HUB & DOWNLOADS -->
       <div id="panel-local-hub" style="display: none;">
@@ -534,191 +807,6 @@
             <div style="text-align: center; color: var(--text-muted); padding: 16px; font-size: 0.82rem;">
               Selecione uma faixa de parâmetros ou tipo de tarefa acima, ou digite um termo para explorar arquivos GGUF na nuvem.
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PAINEL 4: TWO-STAGE SEMANTIC SWITCHBOARD -->
-      <div id="panel-local-switchboard" style="display: none;">
-        <!-- CARD 1: RUNNER DE PROJEÇÃO DINÂMICA INTERATIVO -->
-        <div class="card" style="margin-bottom: 20px;">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-purple">⚡</div>
-                Central de Roteamento Inteligente de Ferramentas
-              </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5;">
-                Ativa sob demanda apenas as ferramentas necessárias para cada tarefa, acelerando as respostas do agente.<br>
-                Economiza até 91% dos tokens de contexto e preserva o cache da IA com 0 MB de uso de VRAM.
-              </p>
-            </div>
-            <button class="btn btn-purple" id="btn-refresh-skills" onclick="fetchSwitchboardSkills()" style="white-space: nowrap; flex-shrink: 0;">
-              <span>🔄</span> Recarregar Skills
-            </button>
-          </div>
-
-          <!-- CONTROLE DE ENTRADA DO SWITCHBOARD -->
-          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px;">
-            <div style="display: grid; grid-template-columns: 2.8fr 1.6fr 1fr auto; gap: 14px; align-items: end;">
-              <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">O QUE O AGENTE PRECISA FAZER? (INTENÇÃO OU TAREFA)</label>
-                <input type="text" id="switchboard-query-input" class="setting-input" style="width: 100%; font-size: 0.82rem;" placeholder="Ex: refatorar função com myers diff na AST, consultar memória L2, medir temperatura da GPU RTX..." onkeydown="if(event.key==='Enter') executeSwitchboardEvaluation()">
-              </div>
-              <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">FILTRAR NAMESPACE (OPCIONAL)</label>
-                <select id="switchboard-ns-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
-                  <option value="">🌐 Todos os Namespaces</option>
-                  <option value="code">💻 code (Cirurgia AST, Myers Diff, Sintaxe)</option>
-                  <option value="memory">🧠 memory (FrankenSQLite L2 & LadybugDB)</option>
-                  <option value="think">🤔 think (Freio Socrático DAG & Hipóteses)</option>
-                  <option value="ops">🛡️ ops (JobObject Sandbox & Subagentes)</option>
-                  <option value="sys">🌡️ sys (NVML Hardware Watchdog & Telemetria)</option>
-                  <option value="context">🗜️ context (Compressão CCR & Headroom)</option>
-                  <option value="core">⚙️ core (Descoberta & Metadados MCP)</option>
-                </select>
-              </div>
-              <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TOP-K TOOLS</label>
-                <select id="switchboard-topk-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 8px 12px; font-size: 0.8rem;">
-                  <option value="3">Top-3</option>
-                  <option value="5" selected>Top-5</option>
-                  <option value="8">Top-8</option>
-                  <option value="10">Top-10</option>
-                </select>
-              </div>
-              <div>
-                <button class="btn btn-cyan" id="btn-run-switchboard" onclick="executeSwitchboardEvaluation()" style="padding: 9px 18px; font-weight: 600;">
-                  <span>⚡</span> Simular Seleção de Ferramentas
-                </button>
-              </div>
-            </div>
-
-            <!-- PRESETS DE TESTE RÁPIDO -->
-            <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center;">
-              <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Presets Rápidos:</span>
-              <button class="sb-preset-btn" onclick="setSwitchboardPreset('extrair outline e substituir symbol na ast de rust')">🔧 Código / AST</button>
-              <button class="sb-preset-btn" onclick="setSwitchboardPreset('salvar fato epistemico no sqlite l2 e ladybug')">🧠 Memória L2</button>
-              <button class="sb-preset-btn" onclick="setSwitchboardPreset('deliberar hipoteses em grafo dag socratico')">🤔 Pensamento Socrático</button>
-              <button class="sb-preset-btn" onclick="setSwitchboardPreset('telemetria nvml vram temperatura rtx 2060m')">🌡️ Hardware NVML</button>
-              <button class="sb-preset-btn" onclick="setSwitchboardPreset('comprimir tokens e deduplicar contexto em ram')">🗜️ Context Lean CCR</button>
-              <button class="sb-preset-btn" onclick="setSwitchboardPreset('consultar precos e campeoes cloud arena pareto')">🌐 Cloud FinOps</button>
-              <button class="sb-preset-btn" onclick="setSwitchboardPreset('executar comando shell em sandbox seguro')">🛡️ Safe Sandbox</button>
-              <button class="sb-preset-btn" onclick="setSwitchboardPreset('criar entidades e relacoes tipadas no grafo ladybugdb')">🕸️ Grafo Ontológico</button>
-            </div>
-          </div>
-
-          <!-- LIVE DECISION RESULT BANNER -->
-          <div id="switchboard-result-container" style="display: none; margin-top: 20px;">
-            <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 18px;">
-              
-              <!-- MINI-CARD DE IMPACTO FINOPS (SEM VS COM SWITCHBOARD) -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 16px;">
-                <div style="display: flex; align-items: center; gap: 10px; border-right: 1px solid rgba(255,255,255,0.08); padding-right: 12px;">
-                  <div style="font-size: 1.15rem;">🔴</div>
-                  <div>
-                    <div style="font-size: 0.72rem; color: #f87171; font-weight: 700; text-transform: uppercase;">Sem Switchboard (Carga Total)</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35;">55 ferramentas injetadas no prompt (~6.050 tokens) • Quebra prefix cache • Risco de alucinação</div>
-                  </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <div style="font-size: 1.15rem;">🟢</div>
-                  <div>
-                    <div style="font-size: 0.72rem; color: #34d399; font-weight: 700; text-transform: uppercase;">Com Switchboard MCP (Injeção Cirúrgica)</div>
-                    <div style="font-size: 0.75rem; color: #cbd5e1; line-height: 1.35;">Apenas ferramentas essenciais (~550 tokens) • <strong style="color: #34d399;">~91% economia de tokens</strong> • Latência &lt; 2ms</div>
-                  </div>
-                </div>
-              </div>
-
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                  <span id="sb-stage-badge" class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald); font-size: 0.8rem; padding: 4px 10px; font-weight: 700;">⚡ Fast-Path RAM Cosine</span>
-                  <span style="font-size: 0.82rem; color: #cbd5e1;" id="sb-summary-text">5 ferramentas projetadas para o contexto</span>
-                </div>
-                <div style="display: flex; gap: 16px; font-family: var(--font-mono); font-size: 0.78rem; flex-wrap: wrap;">
-                  <div>Latência: <strong id="sb-latency" style="color: var(--cyan);">0.0 ms</strong></div>
-                  <div>Confiança: <strong id="sb-confidence" style="color: var(--emerald);">0%</strong></div>
-                  <div>Entropia: <strong id="sb-entropy" style="color: var(--amber);">0.00</strong></div>
-                  <div>Economia Est.: <strong id="sb-tokens-saved" style="color: #34d399;">~5.500 tokens (91%)</strong></div>
-                </div>
-              </div>
-
-              <!-- SKILL RECOMENDADA -->
-              <div id="sb-skill-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span id="sb-skill-icon" style="font-size: 1.1rem;">🎯</span>
-                    <strong id="sb-skill-name" style="color: var(--purple); font-size: 0.92rem;">souls-code-surgeon</strong>
-                    <span id="sb-skill-score-badge" class="badge" style="background: rgba(168, 85, 247, 0.2); color: var(--purple);">Score: 0.95</span>
-                  </div>
-                  <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Skill Operacional Canônica</span>
-                    <button class="sb-action-btn" onclick="highlightSkillInCatalog()">
-                      <span>🔍</span> Localizar no Catálogo
-                    </button>
-                  </div>
-                </div>
-                <p id="sb-skill-desc" style="font-size: 0.78rem; color: #cbd5e1; margin: 6px 0 10px 0;">Descrição da skill recomendada.</p>
-                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                  <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Ferramentas Primárias da Skill:</span>
-                  <div id="sb-skill-primary-tools" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
-                </div>
-              </div>
-
-              <!-- FERRAMENTAS SELECIONADAS CIRURGICAMENTE -->
-              <div>
-                <h4 style="font-size: 0.8rem; color: #fff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em;">Ferramentas Selecionadas Cirurgicamente:</h4>
-                <div class="table-container">
-                  <table class="arena-table">
-                    <thead>
-                      <tr>
-                        <th style="width: 200px;">Ferramenta & Habilidade</th>
-                        <th style="width: 110px;" class="text-center">Namespace</th>
-                        <th style="width: 140px;" class="text-center">Afinidade / Score</th>
-                        <th>Descrição & Parâmetros do Contrato MCP</th>
-                      </tr>
-                    </thead>
-                    <tbody id="sb-projected-tools-tbody">
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- CARD 2: CATÁLOGO COMPLETO DAS 15 SKILLS CANÔNICAS -->
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-cyan">📚</div>
-                Competências & Especialidades do Agente (Skills)
-              </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Habilidades especializadas que combinam as ferramentas certas para resolver problemas complexos.
-              </p>
-            </div>
-            <span id="sb-catalog-stats-badge" class="badge badge-lowcost">15 Habilidades Prontas &bull; 55 Ferramentas Ativas</span>
-          </div>
-
-          <!-- BARRA DE PESQUISA E FILTROS DE CATEGORIA DE SKILLS -->
-          <div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-            <div style="flex: 1; min-width: 260px;">
-              <input type="text" id="sb-skill-search-input" class="setting-input" style="width: 100%; font-size: 0.8rem;" placeholder="🔍 Filtrar skills por nome, palavra-chave (#ast, #memória) ou ferramenta..." oninput="filterSwitchboardSkills()">
-            </div>
-            <div class="profile-selector" id="sb-skill-category-filters" style="margin-bottom: 0;">
-              <button class="profile-pill active" id="btn-sb-cat-all" onclick="setSwitchboardSkillCategory('all')">Todas (15)</button>
-              <button class="profile-pill" id="btn-sb-cat-coding" onclick="setSwitchboardSkillCategory('coding')">💻 Código</button>
-              <button class="profile-pill" id="btn-sb-cat-memory" onclick="setSwitchboardSkillCategory('memory')">🧠 Memória</button>
-              <button class="profile-pill" id="btn-sb-cat-hardware" onclick="setSwitchboardSkillCategory('hardware')">⚙️ Silício</button>
-              <button class="profile-pill" id="btn-sb-cat-security" onclick="setSwitchboardSkillCategory('security')">🛡️ Segurança</button>
-              <button class="profile-pill" id="btn-sb-cat-reasoning" onclick="setSwitchboardSkillCategory('reasoning')">🤔 Raciocínio</button>
-            </div>
-          </div>
-
-          <div id="sb-skills-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 8px;">
-            <div style="text-align: center; color: var(--text-muted); padding: 20px;">Carregando catálogo de skills...</div>
           </div>
         </div>
       </div>

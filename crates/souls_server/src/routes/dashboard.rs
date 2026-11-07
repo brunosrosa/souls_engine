@@ -1388,6 +1388,55 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
 
                 let (multi_tiers, multi_tags) = resolve_multi_tier_and_tags(&m.model_id, &m.tier, &m.tags);
 
+                let mid_lower_str = m.model_id.to_lowercase();
+                let name_lower_str = m.name.to_lowercase();
+                let is_mtp = mid_lower_str.contains("mtp") || name_lower_str.contains("mtp");
+                let is_sub1b = m.size_mb < 600.0
+                    || mid_lower_str.contains("135m")
+                    || mid_lower_str.contains("360m")
+                    || mid_lower_str.contains("0.5b");
+
+                let spec_info = if is_mtp {
+                    json!({
+                        "status": "NativeMtp",
+                        "companion_id": "Embedded-MTP-Heads",
+                        "reason": "Modelo com cabeças de predição Multi-Token (MTP) embutidas nativamente."
+                    })
+                } else if is_sub1b {
+                    json!({
+                        "status": "Sub1bExempt",
+                        "companion_id": null,
+                        "reason": "Modelos sub-1B já operam no limite do silício (100+ tok/s)."
+                    })
+                } else if mid_lower_str.contains("qwen") || name_lower_str.contains("qwen") {
+                    let has_qwen_draft = inventory.models.iter().any(|other| {
+                        let om = other.model_id.to_lowercase();
+                        om.contains("qwen") && (om.contains("0.5b") || om.contains("draft"))
+                    });
+                    if has_qwen_draft {
+                        json!({
+                            "status": "PairedAvailable",
+                            "companion_id": "qwen2.5-coder-0.5b-instruct",
+                            "recommended_companion": "Qwen2.5-Coder-0.5B-Instruct",
+                            "reason": "Par rascunho compatível detectado: Qwen2.5-Coder-0.5B"
+                        })
+                    } else {
+                        json!({
+                            "status": "CompanionMissing",
+                            "companion_id": null,
+                            "recommended_companion": "Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf",
+                            "reason": "Requer par draft Qwen 0.5B instalado (disponível no Hub)"
+                        })
+                    }
+                } else {
+                    json!({
+                        "status": "CompanionMissing",
+                        "companion_id": null,
+                        "recommended_companion": null,
+                        "reason": "Nenhum modelo rascunho compatível detectado no inventário."
+                    })
+                };
+
                 json!({
                     "tier": m.tier,
                     "tiers": multi_tiers,
@@ -1411,6 +1460,7 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                     "last_benchmarked_at": last_bench_at,
                     "has_mmproj": is_vlm,
                     "capabilities": capabilities,
+                    "speculative_info": spec_info,
                 })
             })
             .collect();

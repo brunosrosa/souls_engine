@@ -386,7 +386,11 @@
         renderWorkbenchReadOnlyMemories(data.memories_read_only || []);
 
         // Mode 2: SOUL.md & History
-        document.getElementById('pwb-soul-editor').value = data.soul_content || '';
+        const soulEditor = document.getElementById('pwb-soul-editor');
+        if (soulEditor) {
+          soulEditor.value = data.soul_content || '';
+          soulEditor.dispatchEvent(new Event('input'));
+        }
         document.getElementById('pwb-soul-instruction').value = '';
         const diffBox = document.getElementById('pwb-soul-diff-box');
         if (diffBox) diffBox.style.display = 'none';
@@ -984,7 +988,10 @@
         `- Responda sempre em **Português do Brasil (pt-BR)**, de forma direta e acolhedora, destacando **conceitos-chave em negrito**.\n`;
 
       const prevEl = document.getElementById('pstudio-soul-preview');
-      if (prevEl) prevEl.value = md;
+      if (prevEl) {
+        prevEl.value = md;
+        prevEl.dispatchEvent(new Event('input'));
+      }
     }
 
     async function loadSkillsListForPersonaStudio() {

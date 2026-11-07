@@ -234,7 +234,14 @@
                 </div>
               </div>
 
-              <textarea id="pwb-soul-editor" class="setting-input" rows="16" style="width: 100%; font-family: var(--font-mono); font-size: 0.77rem; line-height: 1.5; resize: vertical;"></textarea>
+              <div class="editor-container-with-lines" style="min-height: 520px;">
+                <div class="editor-gutter" id="pwb-soul-gutter">1</div>
+                <textarea id="pwb-soul-editor" class="editor-textarea" spellcheck="false" placeholder="Carregando SOUL.md..."></textarea>
+              </div>
+              <div class="editor-statusbar">
+                <span id="pwb-soul-status">Ln 1, Col 1</span>
+                <span>SOUL.md • UTF-8</span>
+              </div>
 
               <div style="display: flex; gap: 8px; margin-top: 8px; margin-bottom: 10px;">
                 <input type="text" id="pwb-soul-instruction" class="setting-input" style="flex: 1; height: 34px; font-size: 0.76rem;" placeholder="Opcional: adicione uma nova regra em linguagem simples (ex: Sempre resumir decisões em tabela no final)..." />
@@ -402,7 +409,14 @@
                   <span style="font-weight: 700; font-size: 0.83rem; color: #f1f5f9;">📜 Prévia Editável da Identidade (<code>SOUL.md</code>)</span>
                   <span style="font-size: 0.71rem; color: #38bdf8;">🔌 Nasce conectada ao Souls Engine</span>
                 </div>
-                <textarea id="pstudio-soul-preview" class="setting-input" rows="15" style="width: 100%; font-family: var(--font-mono); font-size: 0.76rem; line-height: 1.48; resize: vertical;"></textarea>
+                <div class="editor-container-with-lines" style="min-height: 480px;">
+                  <div class="editor-gutter" id="pstudio-soul-gutter">1</div>
+                  <textarea id="pstudio-soul-preview" class="editor-textarea" spellcheck="false" placeholder="A prévia gerada do SOUL.md aparecerá aqui..."></textarea>
+                </div>
+                <div class="editor-statusbar">
+                  <span id="pstudio-soul-status">Ln 1, Col 1</span>
+                  <span>SOUL.md • UTF-8</span>
+                </div>
                 <div style="margin-top: 8px; padding: 8px 10px; border-radius: 7px; background: rgba(34,197,94,0.09); border: 1px solid rgba(34,197,94,0.25); font-size: 0.74rem; color: #cbd5e1;">
                   ✓ Configura automaticamente <code>profile.yaml</code>, <code>config.yaml</code>, conexão MCP <code>127.0.0.1:9123</code> e estrutura de pastas sem expor chaves de acesso.
                 </div>

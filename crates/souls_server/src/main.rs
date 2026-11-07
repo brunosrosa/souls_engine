@@ -1998,6 +1998,33 @@ model:
                 assert_eq!(json_ok["benchmark_type"], "HardwareProfile");
                 assert!(json_ok["metrics"].is_object());
                 assert!(json_ok["metrics"]["tps"].is_number());
+
+                // 6. Test Speculative Draft companion verification
+                assert!(first_model["speculative_info"].is_object());
+                let spec_status = first_model["speculative_info"]["status"].as_str().unwrap_or("");
+                assert!(!spec_status.is_empty());
+
+                let payload_spec = serde_json::json!({
+                    "model_id": mid,
+                    "benchmark_type": 4,
+                    "engine": "mock"
+                });
+                let req_run_spec = Request::builder()
+                    .uri("/api/v1/arena/benchmark/run")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&payload_spec).unwrap()))
+                    .unwrap();
+                let resp_run_spec = app.clone().oneshot(req_run_spec).await.unwrap();
+                assert_eq!(resp_run_spec.status(), StatusCode::OK);
+                let bytes_spec = to_bytes(resp_run_spec.into_body(), usize::MAX).await.unwrap();
+                let json_spec: serde_json::Value = serde_json::from_slice(&bytes_spec).unwrap();
+                if spec_status == "Sub1bExempt" || spec_status == "CompanionMissing" {
+                    assert_eq!(json_spec["status"], "error");
+                } else {
+                    assert_eq!(json_spec["status"], "success");
+                    assert_eq!(json_spec["benchmark_type"], "SpeculativeDraft");
+                }
             }
         }
     }

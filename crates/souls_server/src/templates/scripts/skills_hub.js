@@ -106,7 +106,7 @@
 
     function switchSkillsSubtab(subtab) {
       skillsHubState.currentSubtab = subtab;
-      const subtabs = ['installed', 'explorer', 'forge', 'health'];
+      const subtabs = ['installed', 'explorer', 'switchboard', 'forge', 'health'];
       subtabs.forEach(k => {
         const btn = document.getElementById('btn-skills-subtab-' + k);
         const panel = document.getElementById('panel-skills-' + k);
@@ -119,6 +119,10 @@
       } else if (subtab === 'explorer') {
         runMarketplaceSearch(skillsHubState.marketplaceOffset);
         fetchQuarantineList();
+      } else if (subtab === 'switchboard') {
+        if (typeof fetchSwitchboardSkills === 'function') {
+          fetchSwitchboardSkills();
+        }
       } else if (subtab === 'forge') {
         populateForgeSkillPicker();
         loadForgeMcpCatalog();
@@ -639,6 +643,7 @@
         const editor = document.getElementById('insp-skill-editor');
         if (editor) {
           editor.value = data.content || '';
+          editor.dispatchEvent(new Event('input'));
           updateLiveDescCounter('insp-skill-editor', 'insp-desc-counter');
         }
 
@@ -765,8 +770,23 @@
         const col = isErr ? '#f87171' : (isWarn ? '#fbbf24' : '#38bdf8');
         const bg = isErr ? 'rgba(239,68,68,0.1)' : (isWarn ? 'rgba(245,158,11,0.1)' : 'rgba(56,189,248,0.08)');
         const icon = isErr ? '🛑' : (isWarn ? '💡' : 'ℹ️');
-        return `<div style="padding:7px 10px; border-radius:6px; background:${bg}; border-left:3px solid ${col}; font-size:0.76rem; color:#e2e8f0;">
-          ${icon} ${escapeSkillsHtml(i.message)}
+
+        // Extração de linha para salto ergonômico no editor
+        let lineNum = null;
+        if (typeof i.line === 'number') lineNum = i.line;
+        else if (typeof i.line_num === 'number') lineNum = i.line_num;
+        else {
+          const m = (i.message || '').match(/\b(?:linha|line)\s*(\d+)/i);
+          if (m) lineNum = parseInt(m[1], 10);
+        }
+
+        const jumpBtn = (lineNum && typeof jumpEditorToLine === 'function')
+          ? `<button class="editor-jump-btn" onclick="jumpEditorToLine('insp-skill-editor', ${lineNum})" title="Ir diretamente para a linha ${lineNum} no editor"><span>📍</span> Ir para Linha ${lineNum}</button>`
+          : '';
+
+        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:6px; background:${bg}; border-left:3px solid ${col}; font-size:0.76rem; color:#e2e8f0; gap:8px;">
+          <div>${icon} ${escapeSkillsHtml(i.message)}</div>
+          ${jumpBtn}
         </div>`;
       }).join('');
     }
@@ -819,6 +839,7 @@
         }
 
         editor.value = data.content;
+        editor.dispatchEvent(new Event('input'));
         updateLiveDescCounter('insp-skill-editor', 'insp-desc-counter');
 
         const scoreBadge = document.getElementById('insp-skill-score-badge');
@@ -1625,6 +1646,7 @@
         const outEditor = document.getElementById('forge-output-editor');
         if (outEditor) {
           outEditor.value = data.content || '';
+          outEditor.dispatchEvent(new Event('input'));
           updateLiveDescCounter('forge-output-editor', 'forge-desc-meter');
         }
 

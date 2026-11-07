@@ -50,11 +50,17 @@
 
     // NAVEGAÇÃO ENTRE ABAS
     function switchTab(tabId) {
+      if (tabId === 'tab-cloud') {
+        switchTab('tab-local');
+        switchLocalSubtab('cloud');
+        return;
+      }
+
       document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn, .nav-item').forEach(el => el.classList.remove('active'));
       
       const pane = document.getElementById(tabId);
-      const btn = document.getElementById('btn-' + tabId);
+      const btn = document.querySelector(`.nav-item[data-tab="${tabId}"]`) || document.getElementById('btn-' + tabId);
       if (pane) pane.classList.add('active');
       if (btn) btn.classList.add('active');
 
@@ -67,14 +73,15 @@
           fetchHardwareAndRecommendations();
           fetchInventoryDownloads();
           connectDownloadsSSE();
+        } else if (currentLocalSubtab === 'cloud') {
+          fetchCloudChampions();
         } else {
           fetchLocalModels();
+          fetchLocalArenaData();
         }
       } else if (tabId === 'tab-subagents') {
         fetchSubAgentSessions();
         fetchRouterMatrix();
-      } else if (tabId === 'tab-cloud') {
-        fetchCloudChampions();
       } else if (tabId === 'tab-overview') {
         fetchRouterMatrix();
       } else if (tabId === 'tab-skills') {
@@ -87,7 +94,7 @@
         }
       } else if (tabId === 'tab-settings') {
         fetchConfigToml();
-      initSlidersMagneticSnap();
+        initSlidersMagneticSnap();
         fetchProfiles();
       }
     }
@@ -1204,11 +1211,22 @@
 
     function testModelInArena(modelId) {
       targetArenaModelId = modelId;
-      switchLocalSubtab('arena');
+      switchTab('tab-local');
+      switchLocalSubtab('installed');
       if (arenaModelsData && arenaModelsData.length > 0) {
         selectModelInArenaRunner(modelId);
       }
-      showToast(`Modelo ${modelId} preparado na Local Silicon Arena. Pronto para aferição!`, 'success');
+      setTimeout(() => {
+        const runner = document.getElementById('arena-runner-card');
+        if (runner) {
+          runner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          runner.classList.remove('editor-line-flash');
+          void runner.offsetWidth;
+          runner.classList.add('editor-line-flash');
+          setTimeout(() => runner.classList.remove('editor-line-flash'), 1800);
+        }
+      }, 80);
+      showToast(`Modelo ${modelId} preparado na Silicon Arena. Pronto para aferição!`, 'success');
     }
 
     function selectModelInArenaRunner(targetId) {
@@ -1292,6 +1310,18 @@
         if ((model.name || '').toLowerCase().includes('reasoning') || (model.tier || '').includes('0')) {
           pillsHtml += '<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.70rem;">🧠 Raciocínio CoT</span>';
         }
+        const sInfo = model.speculative_info;
+        if (sInfo) {
+          if (sInfo.status === 'PairedAvailable') {
+            pillsHtml += `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.70rem;" title="${escapeHtml(sInfo.reason || '')}">⚡ Par Draft: ${escapeHtml(sInfo.companion_id || '0.5B')}</span>`;
+          } else if (sInfo.status === 'NativeMtp') {
+            pillsHtml += `<span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 0.70rem;" title="${escapeHtml(sInfo.reason || '')}">⚡ MTP Embutido</span>`;
+          } else if (sInfo.status === 'Sub1bExempt') {
+            pillsHtml += `<span class="badge" style="background: rgba(100, 116, 139, 0.2); color: #94a3b8; font-size: 0.70rem;" title="${escapeHtml(sInfo.reason || '')}">⚡ Sub-1B (Isento)</span>`;
+          } else if (sInfo.status === 'CompanionMissing') {
+            pillsHtml += `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 0.70rem;" title="${escapeHtml(sInfo.reason || '')}">⚡ Par Draft Ausente</span>`;
+          }
+        }
         pillsContainer.innerHTML = pillsHtml;
       }
 
@@ -1310,6 +1340,31 @@
           if (typeSelect.value === '3') {
             typeSelect.value = '1';
           }
+        }
+      }
+
+      const optSpec = document.getElementById('opt-arena-type-speculative');
+      if (typeSelect && optSpec) {
+        const sInfo = model.speculative_info;
+        if (sInfo && sInfo.status === 'PairedAvailable') {
+          optSpec.disabled = false;
+          optSpec.innerText = `🚀 Aceleração Especulativa (⚡ Par Ativo: ${sInfo.companion_id || 'Draft'})`;
+          optSpec.style.color = 'var(--emerald)';
+        } else if (sInfo && sInfo.status === 'NativeMtp') {
+          optSpec.disabled = false;
+          optSpec.innerText = '🚀 Aceleração Especulativa (⚡ MTP Nativo Embutido)';
+          optSpec.style.color = '#c084fc';
+        } else if (sInfo && sInfo.status === 'Sub1bExempt') {
+          optSpec.disabled = true;
+          optSpec.innerText = '🚀 Aceleração Especulativa (Indisponível: Modelos < 1B já operam no limite do silício)';
+          optSpec.style.color = 'var(--text-muted)';
+          if (typeSelect.value === '4') typeSelect.value = '1';
+        } else {
+          optSpec.disabled = true;
+          const recStr = sInfo?.recommended_companion ? ` - ex: ${sInfo.recommended_companion}` : '';
+          optSpec.innerText = `🚀 Aceleração Especulativa (Requer par draft no disco${recStr})`;
+          optSpec.style.color = 'var(--text-muted)';
+          if (typeSelect.value === '4') typeSelect.value = '1';
         }
       }
 
@@ -1333,6 +1388,13 @@
       if (typeSelect.value === '3' && model && !model.has_mmproj) {
         showToast('Este modelo não possui projetor multimodal (mmproj). Selecionando teste de velocidade.', 'warning');
         typeSelect.value = '1';
+      }
+      if (typeSelect.value === '4' && model) {
+        const sInfo = model.speculative_info;
+        if (!sInfo || (sInfo.status !== 'PairedAvailable' && sInfo.status !== 'NativeMtp')) {
+          showToast(`Aceleração especulativa indisponível: ${sInfo?.reason || 'Requer par rascunho compatível'}`, 'warning');
+          typeSelect.value = '1';
+        }
       }
     }
 
@@ -1367,6 +1429,192 @@
     }
 
     // ==========================================
+    // 3.0.1 BATCH BENCHMARK RUNNER (HOMOLOGAÇÃO SEQUENCIAL EM LOTE)
+    // ==========================================
+    let batchBenchmarkAborted = false;
+    let isBatchBenchmarkRunning = false;
+
+    function openBatchBenchmarkModal() {
+      if (!arenaModelsData || arenaModelsData.length === 0) {
+        showToast('Nenhum modelo detectado para homologação em lote.', 'warning');
+        return;
+      }
+      const modal = document.getElementById('arena-batch-modal');
+      const listEl = document.getElementById('arena-batch-models-list');
+      const badge = document.getElementById('arena-batch-summary-badge');
+      if (!modal || !listEl) return;
+
+      let totalTests = 0;
+      let listHtml = '';
+
+      arenaModelsData.forEach((m, idx) => {
+        const tests = ['1. Velocidade', '2. Cognitivo'];
+        if (m.has_mmproj) tests.push('3. Visão (mmproj)');
+        const sInfo = m.speculative_info;
+        if (sInfo && (sInfo.status === 'PairedAvailable' || sInfo.status === 'NativeMtp')) {
+          tests.push('4. Especulativo');
+        }
+        totalTests += tests.length;
+
+        const isGpu = m.size_mb < 5120;
+        const targetStr = isGpu ? '🎮 dGPU' : '⚡ CPU';
+        listHtml += `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <div style="font-size: 0.74rem; font-weight: 600; color: #fff; min-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              ${idx + 1}. ${escapeHtml(m.name)} <span style="font-size: 0.65rem; color: var(--text-muted);">(${targetStr})</span>
+            </div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+              ${tests.map(t => `<span class="badge" style="font-size: 0.65rem; padding: 2px 6px; background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.3);">${t}</span>`).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = listHtml;
+      const estMin = Math.max(1, Math.ceil(totalTests * 0.45));
+      if (badge) badge.innerText = `${arenaModelsData.length} Modelos • ${totalTests} Provas (~${estMin} min)`;
+
+      modal.classList.add('active');
+    }
+
+    function closeBatchBenchmarkModal() {
+      if (isBatchBenchmarkRunning) {
+        if (!confirm('A homologação sequencial está em andamento. Deseja realmente interromper e fechar?')) {
+          return;
+        }
+        abortBatchBenchmark();
+      }
+      const modal = document.getElementById('arena-batch-modal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function abortBatchBenchmark() {
+      batchBenchmarkAborted = true;
+      const cancelBtn = document.getElementById('btn-cancel-batch-benchmark');
+      if (cancelBtn) {
+        cancelBtn.disabled = true;
+        cancelBtn.innerText = '⏹️ Interrompendo...';
+      }
+      appendBatchLog('[AVISO] Sinal de cancelamento recebido. Finalizando ensaio atual...');
+    }
+
+    function appendBatchLog(text) {
+      const logsEl = document.getElementById('arena-batch-logs');
+      if (!logsEl) return;
+      const now = new Date().toLocaleTimeString();
+      logsEl.innerHTML += `<div><span style="color: var(--text-muted);">${now}</span> ${escapeHtml(text)}</div>`;
+      logsEl.scrollTop = logsEl.scrollHeight;
+    }
+
+    async function startBatchBenchmark() {
+      if (isBatchBenchmarkRunning || !arenaModelsData || arenaModelsData.length === 0) return;
+      isBatchBenchmarkRunning = true;
+      batchBenchmarkAborted = false;
+
+      const startBtn = document.getElementById('btn-start-batch-benchmark');
+      const cancelBtn = document.getElementById('btn-cancel-batch-benchmark');
+      const closeBtn = document.getElementById('btn-close-batch-modal');
+      const progressSec = document.getElementById('arena-batch-progress-section');
+      const progressBar = document.getElementById('arena-batch-progress-bar');
+      const progressPercent = document.getElementById('arena-batch-progress-percent');
+      const currentTask = document.getElementById('arena-batch-current-task');
+      const logsEl = document.getElementById('arena-batch-logs');
+
+      if (startBtn) startBtn.style.display = 'none';
+      if (cancelBtn) {
+        cancelBtn.style.display = 'inline-block';
+        cancelBtn.disabled = false;
+        cancelBtn.innerText = '⏹️ Interromper Fila';
+      }
+      if (closeBtn) closeBtn.disabled = true;
+      if (progressSec) progressSec.style.display = 'block';
+      if (logsEl) logsEl.innerHTML = '';
+
+      // Build task queue
+      const taskQueue = [];
+      arenaModelsData.forEach(m => {
+        taskQueue.push({ modelId: m.model_id, name: m.name, type: 1, typeName: 'Velocidade & Memória' });
+        taskQueue.push({ modelId: m.model_id, name: m.name, type: 2, typeName: 'Avaliação Cognitiva' });
+        if (m.has_mmproj) {
+          taskQueue.push({ modelId: m.model_id, name: m.name, type: 3, typeName: 'Visão Multimodal' });
+        }
+        const sInfo = m.speculative_info;
+        if (sInfo && (sInfo.status === 'PairedAvailable' || sInfo.status === 'NativeMtp')) {
+          taskQueue.push({ modelId: m.model_id, name: m.name, type: 4, typeName: 'Aceleração Especulativa' });
+        }
+      });
+
+      appendBatchLog(`[INÍCIO] Iniciando bateria para ${arenaModelsData.length} modelos (${taskQueue.length} provas sequenciais).`);
+
+      let completedCount = 0;
+      const totalTasks = taskQueue.length;
+
+      for (let i = 0; i < totalTasks; i++) {
+        if (batchBenchmarkAborted) {
+          appendBatchLog('[CANCELADO] Fila de homologação interrompida pelo operador.');
+          break;
+        }
+
+        const task = taskQueue[i];
+        const pct = Math.round((i / totalTasks) * 100);
+        if (progressBar) progressBar.style.width = pct + '%';
+        if (progressPercent) progressPercent.innerText = pct + '%';
+        if (currentTask) currentTask.innerText = `[${i + 1}/${totalTasks}] ${task.name} • ${task.typeName}`;
+
+        appendBatchLog(`[${i + 1}/${totalTasks}] Executando ${task.typeName} em '${task.name}'...`);
+
+        try {
+          const res = await fetch('/api/v1/arena/benchmark/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model_id: task.modelId,
+              benchmark_type: task.type
+            })
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            appendBatchLog(`  ❌ Erro: ${err.message || res.statusText}`);
+          } else {
+            const data = await res.json();
+            const metrics = data.metrics || {};
+            let metricSummary = '';
+            if (metrics.tps) metricSummary += `${metrics.tps.toFixed(1)} tok/s`;
+            if (metrics.ttft_ms) metricSummary += ` | TTFT: ${metrics.ttft_ms.toFixed(0)}ms`;
+            if (metrics.speedup_ratio) metricSummary += `Speedup: ${metrics.speedup_ratio.toFixed(2)}x`;
+            if (metrics.cognitive_score) metricSummary += `Score: ${metrics.cognitive_score.toFixed(1)}`;
+            appendBatchLog(`  ✅ Concluído! [${metricSummary || 'Auditado'}]`);
+            completedCount++;
+          }
+        } catch (err) {
+          appendBatchLog(`  ❌ Falha de rede/execução: ${err.message}`);
+        }
+
+        // Delay between physical allocations to guarantee WDDM VRAM garbage collection
+        await new Promise(r => setTimeout(r, 600));
+      }
+
+      if (progressBar) progressBar.style.width = '100%';
+      if (progressPercent) progressPercent.innerText = '100%';
+      if (currentTask) currentTask.innerText = `Homologação concluída (${completedCount}/${totalTasks} testes)`;
+      appendBatchLog(`[FIM] Fila finalizada. Atualizando registros do Heuristic Vault...`);
+
+      // Refresh live telemetry & models
+      await Promise.all([fetchLocalArenaData(), fetchLocalModels()]);
+
+      showToast(`Homologação em lote concluída: ${completedCount} de ${totalTasks} testes auditados com sucesso!`, 'success');
+
+      isBatchBenchmarkRunning = false;
+      if (startBtn) {
+        startBtn.style.display = 'inline-block';
+        startBtn.innerText = '🔄 Re-executar Homologação Completa';
+      }
+      if (cancelBtn) cancelBtn.style.display = 'none';
+      if (closeBtn) closeBtn.disabled = false;
+    }
+
+    // ==========================================
     // 3.1 MODEL HUB & HARDWARE PROFILER (RFC-007)
     // ==========================================
     let currentLocalSubtab = 'installed';
@@ -1377,42 +1625,45 @@
     let downloadEventSource = null;
 
     function switchLocalSubtab(subtab) {
+      if (subtab === 'arena') {
+        switchLocalSubtab('installed');
+        const runner = document.getElementById('arena-runner-card');
+        if (runner) runner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      if (subtab === 'switchboard') {
+        switchTab('tab-skills');
+        if (typeof switchSkillsSubtab === 'function') switchSkillsSubtab('switchboard');
+        return;
+      }
+
       currentLocalSubtab = subtab;
       document.querySelectorAll('#tab-local .subtab-btn').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.getElementById('btn-subtab-' + subtab);
       if (activeBtn) activeBtn.classList.add('active');
 
       const panelInstalled = document.getElementById('panel-local-installed');
+      const panelCloud = document.getElementById('panel-local-cloud');
       const panelHub = document.getElementById('panel-local-hub');
-      const panelArena = document.getElementById('panel-local-arena');
-      const panelSwitchboard = document.getElementById('panel-local-switchboard');
 
       if (subtab === 'installed') {
         if (panelInstalled) panelInstalled.style.display = 'block';
+        if (panelCloud) panelCloud.style.display = 'none';
         if (panelHub) panelHub.style.display = 'none';
-        if (panelArena) panelArena.style.display = 'none';
-        if (panelSwitchboard) panelSwitchboard.style.display = 'none';
         fetchLocalModels();
-      } else if (subtab === 'arena') {
-        if (panelInstalled) panelInstalled.style.display = 'none';
-        if (panelHub) panelHub.style.display = 'none';
-        if (panelArena) panelArena.style.display = 'block';
-        if (panelSwitchboard) panelSwitchboard.style.display = 'none';
         fetchLocalArenaData();
+      } else if (subtab === 'cloud') {
+        if (panelInstalled) panelInstalled.style.display = 'none';
+        if (panelCloud) panelCloud.style.display = 'block';
+        if (panelHub) panelHub.style.display = 'none';
+        fetchCloudChampions();
       } else if (subtab === 'hub') {
         if (panelInstalled) panelInstalled.style.display = 'none';
+        if (panelCloud) panelCloud.style.display = 'none';
         if (panelHub) panelHub.style.display = 'block';
-        if (panelArena) panelArena.style.display = 'none';
-        if (panelSwitchboard) panelSwitchboard.style.display = 'none';
         fetchHardwareAndRecommendations();
         fetchInventoryDownloads();
         connectDownloadsSSE();
-      } else if (subtab === 'switchboard') {
-        if (panelInstalled) panelInstalled.style.display = 'none';
-        if (panelHub) panelHub.style.display = 'none';
-        if (panelArena) panelArena.style.display = 'none';
-        if (panelSwitchboard) panelSwitchboard.style.display = 'block';
-        fetchSwitchboardSkills();
       }
     }
 
@@ -6165,6 +6416,10 @@
           showToast(`Master Brain atualizado para ${applied} (${prov})! Backup criado em config.yaml.bak.`, "success");
           const ind = document.getElementById('active-model-indicator');
           if (ind) ind.innerText = `Modelo Ativo no Hermes: ${applied}`;
+          window.currentHermesMasterModel = applied;
+          window.dispatchEvent(new CustomEvent('souls-state-changed', {
+            detail: { scope: 'master_brain', model: applied, provider: prov }
+          }));
           fetchTelemetry();
         } else {
           showToast(`Erro ao ativar modelo no Hermes: ${data.message || data.error || 'Falha de comunicação'}`, "error");
@@ -6313,6 +6568,7 @@
           const editor = document.getElementById('raw-toml-editor');
           if (editor && data.raw_toml) {
             editor.value = data.raw_toml;
+            editor.dispatchEvent(new Event('input'));
             updateTomlEditorMetrics(data.raw_toml);
           }
           if (data.file_size_bytes) {
@@ -6993,6 +7249,13 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       if (statActive) statActive.textContent = activeCount;
       if (statCompleted) statCompleted.textContent = completedCount;
 
+      const qBadge = document.getElementById('badge-subagents-queue-count');
+      if (qBadge) qBadge.textContent = activeCount;
+      const hBadge = document.getElementById('badge-subagents-handoffs-count');
+      if (hBadge) hBadge.textContent = completedCount;
+
+      renderSubagentHandoffsFeed();
+
       const filtered = sessions.filter(s => {
         const st = (s.status || 'SPAWNED').toUpperCase();
         if (currentSubagentFilter === 'completed') return st === 'COMPLETED';
@@ -7063,6 +7326,73 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       }
 
       tbody.innerHTML = rowsHtml;
+    }
+
+    let currentSubagentsSubtab = 'queue';
+    function switchSubagentsSubtab(subtab) {
+      currentSubagentsSubtab = subtab;
+      document.querySelectorAll('#tab-subagents .subtab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('btn-subtab-subagents-' + subtab);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const panelQueue = document.getElementById('panel-subagents-queue');
+      const panelHandoffs = document.getElementById('panel-subagents-handoffs');
+      const panelRouter = document.getElementById('panel-subagents-router');
+
+      if (subtab === 'queue') {
+        if (panelQueue) panelQueue.style.display = 'block';
+        if (panelHandoffs) panelHandoffs.style.display = 'none';
+        if (panelRouter) panelRouter.style.display = 'none';
+        fetchSubAgentSessions();
+      } else if (subtab === 'handoffs') {
+        if (panelQueue) panelQueue.style.display = 'none';
+        if (panelHandoffs) panelHandoffs.style.display = 'block';
+        if (panelRouter) panelRouter.style.display = 'none';
+        renderSubagentHandoffsFeed();
+      } else if (subtab === 'router') {
+        if (panelQueue) panelQueue.style.display = 'none';
+        if (panelHandoffs) panelHandoffs.style.display = 'none';
+        if (panelRouter) panelRouter.style.display = 'block';
+        fetchRouterMatrix();
+      }
+    }
+
+    function renderSubagentHandoffsFeed() {
+      const container = document.getElementById('subagents-handoffs-feed');
+      if (!container) return;
+      const completed = (cachedSubagentSessions || []).filter(s => (s.status || '').toUpperCase() === 'COMPLETED');
+      if (completed.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 24px; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px dashed var(--border-subtle);">Nenhum handoff concluído no histórico recente.</div>`;
+        return;
+      }
+      container.innerHTML = completed.map(s => {
+        const rawCreated = s.created_at;
+        const ts = typeof rawCreated === 'number' && rawCreated < 10000000000 ? rawCreated * 1000 : rawCreated;
+        const dateStr = ts ? new Date(ts).toLocaleString('pt-BR') : '--';
+        const title = deriveFriendlySubagentTitle(s);
+        return `
+          <div style="background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.35);">✅ Concluído</span>
+                <strong style="color: #fff; font-size: 0.88rem;">${title}</strong>
+                <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">${s.id}</span>
+              </div>
+              <div style="font-size: 0.75rem; color: #94a3b8;">
+                Origem: <code class="mono">${s.parent_session_id || 'Hermes Chat'}</code> • Entregue em: <strong>${dateStr}</strong>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-cyan" style="padding: 5px 12px; font-size: 0.74rem;" onclick="viewSubagentResult('${s.id}')">
+                <span>📦</span> Ver Resultado
+              </button>
+              <button class="btn" style="padding: 5px 12px; font-size: 0.74rem;" onclick="viewSubagentDiary('${s.id}')">
+                <span>📖</span> Diário L3
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     function deriveFriendlySubagentTitle(s) {
@@ -7752,6 +8082,86 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       }, { passive: true });
     }
 
+    // ==========================================
+    // ERGONOMIC TEXT EDITOR WITH SYNCHRONIZED GUTTER & JUMP-TO-LINE
+    // ==========================================
+    function setupErgonomicEditor(textareaId, gutterId, statusId) {
+      const textarea = document.getElementById(textareaId);
+      const gutter = document.getElementById(gutterId);
+      const status = document.getElementById(statusId);
+      if (!textarea || !gutter) return;
+
+      function updateGutter() {
+        const val = textarea.value || '';
+        const lineCount = Math.max(1, val.split('\n').length);
+        let gutterText = '';
+        for (let i = 1; i <= lineCount; i++) {
+          gutterText += i + '\n';
+        }
+        gutter.textContent = gutterText;
+      }
+
+      function updateCursor() {
+        if (!status) return;
+        const val = textarea.value || '';
+        const selStart = textarea.selectionStart || 0;
+        const line = val.substring(0, selStart).split('\n').length;
+        const lastNl = val.lastIndexOf('\n', selStart - 1);
+        const col = selStart - (lastNl === -1 ? 0 : lastNl + 1) + 1;
+        status.textContent = `Ln ${line}, Col ${col}`;
+      }
+
+      textarea.addEventListener('scroll', () => {
+        gutter.scrollTop = textarea.scrollTop;
+      });
+
+      textarea.addEventListener('input', () => {
+        updateGutter();
+        updateCursor();
+      });
+
+      textarea.addEventListener('click', updateCursor);
+      textarea.addEventListener('keyup', updateCursor);
+      textarea.addEventListener('select', updateCursor);
+
+      textarea.addEventListener('update-editor-gutter', () => {
+        updateGutter();
+        updateCursor();
+      });
+
+      // Observer para quando o textarea for preenchido enquanto estava oculto
+      const observer = new MutationObserver(() => updateGutter());
+      observer.observe(textarea, { attributes: true, childList: true, characterData: true });
+
+      updateGutter();
+      updateCursor();
+    }
+
+    function jumpEditorToLine(textareaId, lineNum) {
+      const textarea = document.getElementById(textareaId);
+      if (!textarea) return;
+      const num = parseInt(lineNum, 10);
+      if (isNaN(num) || num < 1) return;
+
+      const lines = textarea.value.split('\n');
+      let charOffset = 0;
+      for (let i = 0; i < Math.min(num - 1, lines.length); i++) {
+        charOffset += lines[i].length + 1;
+      }
+
+      textarea.focus();
+      textarea.setSelectionRange(charOffset, charOffset + (lines[num - 1] ? lines[num - 1].length : 0));
+
+      const lineHeight = 19;
+      textarea.scrollTop = Math.max(0, (num - 5) * lineHeight);
+
+      const container = textarea.closest('.editor-container-with-lines') || textarea;
+      container.classList.remove('editor-line-flash');
+      void container.offsetWidth;
+      container.classList.add('editor-line-flash');
+      setTimeout(() => container.classList.remove('editor-line-flash'), 1800);
+    }
+
     // INICIALIZAÇÃO NO CARREGAMENTO DA PÁGINA
     window.addEventListener('DOMContentLoaded', () => {
       initGlobalPortalTooltips();
@@ -7770,13 +8180,46 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         fetchPersonasCountBadgeOnly();
       }
 
+      // Inicialização dos editores ergonômicos com régua de linhas e indicador Ln/Col
+      setupErgonomicEditor('raw-toml-editor', 'raw-toml-gutter', 'footer-toml-cursor');
+      setupErgonomicEditor('pwb-soul-editor', 'pwb-soul-gutter', 'pwb-soul-status');
+      setupErgonomicEditor('pstudio-soul-preview', 'pstudio-soul-gutter', 'pstudio-soul-status');
+      setupErgonomicEditor('insp-skill-editor', 'insp-skill-gutter', 'insp-skill-status');
+      setupErgonomicEditor('forge-output-editor', 'forge-output-gutter', 'forge-output-status');
+
+      // Barramento de Eventos Reativo Global (Zero CTRL+R)
+      window.addEventListener('souls-state-changed', (e) => {
+        const detail = e.detail || {};
+        fetchTelemetry();
+        if (detail.model) {
+          const topBrain = document.getElementById('top-brain-name');
+          if (topBrain) topBrain.innerText = detail.model;
+          const heroBrain = document.getElementById('hero-brain-model');
+          if (heroBrain) heroBrain.innerText = detail.model;
+          const activeModelName = document.getElementById('active-hermes-model-name');
+          if (activeModelName) activeModelName.innerText = detail.model;
+          const quickActive = document.getElementById('cloud-quick-active-model');
+          if (quickActive) quickActive.innerText = detail.model;
+        }
+        if (currentLocalSubtab === 'cloud' || detail.scope === 'master_brain') {
+          fetchCloudChampions();
+        }
+        if (currentLocalSubtab === 'installed' || detail.scope === 'arena_benchmark') {
+          fetchLocalModels();
+          fetchLocalArenaData();
+        }
+      });
+
       // Suporte a Deep Linking via Hash (ex: #tab-local, #tab-cloud, #tab-skills/forge, #tab-personas/governance, #tab-settings/subtab-sandbox)
       if (window.location.hash) {
         const fullHash = window.location.hash.replace('#', '').split('?')[0];
         const parts = fullHash.split('/');
         const mainTab = parts[0];
         const subTab = parts[1];
-        if (document.getElementById(mainTab)) {
+        if (mainTab === 'tab-cloud') {
+          switchTab('tab-local');
+          switchLocalSubtab('cloud');
+        } else if (document.getElementById(mainTab)) {
           switchTab(mainTab);
           if (subTab && mainTab === 'tab-settings' && typeof switchSettingsSubtab === 'function') {
             switchSettingsSubtab(subTab);
@@ -7784,6 +8227,10 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
             switchSkillsSubtab(subTab);
           } else if (subTab && mainTab === 'tab-personas' && typeof switchPersonasSubtab === 'function') {
             switchPersonasSubtab(subTab);
+          } else if (subTab && mainTab === 'tab-local' && typeof switchLocalSubtab === 'function') {
+            switchLocalSubtab(subTab);
+          } else if (subTab && mainTab === 'tab-subagents' && typeof switchSubagentsSubtab === 'function') {
+            switchSubagentsSubtab(subTab);
           }
         }
       }

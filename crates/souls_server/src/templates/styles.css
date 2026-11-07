@@ -3515,3 +3515,100 @@
       animation: highlight-pulse-anim 2.2s ease-out;
       background: rgba(6, 182, 212, 0.12) !important;
     }
+
+    /* EDITORES ERGONÔMICOS COM RÉGUA DE LINHAS & STATUSBAR */
+    .editor-container-with-lines {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: #080d1a;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.2s ease;
+    }
+    .editor-container-with-lines:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 1px var(--cyan), 0 4px 20px rgba(6, 182, 212, 0.2);
+    }
+    .editor-body-wrapper {
+      display: flex;
+      flex: 1;
+      position: relative;
+      background: transparent;
+      overflow: hidden;
+    }
+    .editor-gutter {
+      width: 48px;
+      min-width: 48px;
+      background: #060913;
+      color: #475569;
+      padding: 12px 6px;
+      text-align: right;
+      user-select: none;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      font-family: var(--font-mono);
+      overflow: hidden;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      box-sizing: border-box;
+    }
+    .editor-textarea {
+      flex: 1;
+      min-height: 560px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f1f5f9;
+      padding: 12px 14px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      font-family: var(--font-mono);
+      resize: vertical;
+      overflow-y: scroll;
+      white-space: pre;
+      tab-size: 2;
+      box-sizing: border-box;
+    }
+    .editor-statusbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 12px;
+      background: #060913;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .editor-statusbar .status-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .editor-statusbar .status-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .editor-jump-btn {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fbbf24;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.68rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+    .editor-jump-btn:hover {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: #fbbf24;
+    }
+    .editor-line-flash {
+      animation: highlight-pulse-anim 2.5s ease-out;
+    }

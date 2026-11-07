@@ -23,6 +23,109 @@ pub struct RunBenchmarkPayload {
     pub engine: Option<String>,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SpeculativeCompanionInfo {
+    pub status: String,
+    pub companion_id: Option<String>,
+    pub recommended_companion: Option<String>,
+    pub reason: String,
+}
+
+/// Resolves the speculative drafting eligibility and companion model for a given target model.
+pub fn resolve_speculative_companion(
+    model: &souls_llm_local_arena::domain::model::ModelDescriptor,
+    all_models: &[souls_llm_local_arena::domain::model::ModelDescriptor],
+) -> SpeculativeCompanionInfo {
+    let mid = model.model_id.to_lowercase();
+    let name = model.name.to_lowercase();
+
+    // 1. Native MTP check
+    if mid.contains("mtp") || name.contains("mtp") {
+        return SpeculativeCompanionInfo {
+            status: "NativeMtp".to_string(),
+            companion_id: Some("Embedded-MTP-Heads".to_string()),
+            recommended_companion: None,
+            reason: "Modelo com cabeças de predição Multi-Token (MTP) embutidas nativamente.".to_string(),
+        };
+    }
+
+    // 2. Sub-1B check (< 600MB or explicit 135M / 360M / 0.5B tags)
+    let is_sub1b = model.size_mb < 600.0
+        || mid.contains("135m")
+        || mid.contains("360m")
+        || mid.contains("0.5b")
+        || name.contains("135m")
+        || name.contains("360m")
+        || name.contains("0.5b");
+
+    if is_sub1b {
+        return SpeculativeCompanionInfo {
+            status: "Sub1bExempt".to_string(),
+            companion_id: None,
+            recommended_companion: None,
+            reason: "Modelos sub-1B já operam no limite de velocidade do silício (100+ tok/s). Rascunhos adicionais adicionariam overhead sem ganho real.".to_string(),
+        };
+    }
+
+    // 3. Family-based draft resolution for models >= 1B
+    if mid.contains("qwen") || name.contains("qwen") {
+        let draft = all_models.iter().find(|m| {
+            let m_mid = m.model_id.to_lowercase();
+            let m_name = m.name.to_lowercase();
+            (m_mid.contains("qwen") || m_name.contains("qwen"))
+                && (m_mid.contains("0.5b") || m_name.contains("0.5b") || m_mid.contains("draft") || m_name.contains("draft"))
+        });
+
+        if let Some(d) = draft {
+            return SpeculativeCompanionInfo {
+                status: "PairedAvailable".to_string(),
+                companion_id: Some(d.model_id.clone()),
+                recommended_companion: Some("Qwen2.5-Coder-0.5B-Instruct".to_string()),
+                reason: format!("Par rascunho compatível detectado: {}", d.name),
+            };
+        } else {
+            return SpeculativeCompanionInfo {
+                status: "CompanionMissing".to_string(),
+                companion_id: None,
+                recommended_companion: Some("Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf".to_string()),
+                reason: "Requer par draft Qwen 0.5B instalado (disponível no Hub)".to_string(),
+            };
+        }
+    }
+
+    if mid.contains("llama") || name.contains("llama") {
+        let draft = all_models.iter().find(|m| {
+            let m_mid = m.model_id.to_lowercase();
+            let m_name = m.name.to_lowercase();
+            (m_mid.contains("llama") || m_name.contains("llama"))
+                && (m_mid.contains("1b") || m_name.contains("1b") || m_mid.contains("draft"))
+        });
+
+        if let Some(d) = draft {
+            return SpeculativeCompanionInfo {
+                status: "PairedAvailable".to_string(),
+                companion_id: Some(d.model_id.clone()),
+                recommended_companion: Some("Llama-3.2-1B-Instruct".to_string()),
+                reason: format!("Par rascunho compatível detectado: {}", d.name),
+            };
+        } else {
+            return SpeculativeCompanionInfo {
+                status: "CompanionMissing".to_string(),
+                companion_id: None,
+                recommended_companion: Some("Llama-3.2-1B-Instruct-Q4_K_M.gguf".to_string()),
+                reason: "Requer par draft Llama-3.2-1B instalado (disponível no Hub)".to_string(),
+            };
+        }
+    }
+
+    SpeculativeCompanionInfo {
+        status: "CompanionMissing".to_string(),
+        companion_id: None,
+        recommended_companion: None,
+        reason: "Nenhum modelo rascunho compatível com o mesmo vocabulário encontrado no inventário.".to_string(),
+    }
+}
+
 /// GET /api/v1/arena/models
 /// Lists all local models detected by the Local Arena scanner along with their latest vault benchmarks.
 pub async fn arena_models_handler(State(state): State<AppState>) -> Json<Value> {
@@ -64,7 +167,7 @@ pub async fn arena_models_handler(State(state): State<AppState>) -> Json<Value> 
     }
 
     let models_json: Vec<Value> = discovered
-        .into_iter()
+        .iter()
         .map(|m| {
             let key = m.model_id.to_lowercase();
             let bench_data = registry_map.get(&key).copied();
@@ -100,6 +203,8 @@ pub async fn arena_models_handler(State(state): State<AppState>) -> Json<Value> 
                 capabilities.push("reasoning".to_string());
             }
 
+            let spec_info = resolve_speculative_companion(&m, &discovered);
+
             json!({
                 "model_id": m.model_id,
                 "name": m.name,
@@ -110,7 +215,7 @@ pub async fn arena_models_handler(State(state): State<AppState>) -> Json<Value> 
                 "size_mb": m.size_mb,
                 "context_length": m.ctx_max,
                 "has_mmproj": m.has_mmproj,
-                "mmproj_path": m.mmproj_path.map(|p| p.to_string_lossy().to_string()),
+                "mmproj_path": m.mmproj_path.as_ref().map(|p| p.to_string_lossy().to_string()),
                 "status": status,
                 "latest_tps": latest_tps,
                 "latest_ttft_ms": latest_ttft_ms,
@@ -119,7 +224,8 @@ pub async fn arena_models_handler(State(state): State<AppState>) -> Json<Value> 
                 "last_benchmarked": last_benchmarked,
                 "e3_score": e3_score,
                 "capabilities": capabilities,
-                "recommended_silicon": if m.size_mb < 5120.0 { "dGPU NVIDIA (CUDA)" } else { "Host CPU (AVX2)" }
+                "recommended_silicon": if m.size_mb < 5120.0 { "dGPU NVIDIA (CUDA)" } else { "Host CPU (AVX2)" },
+                "speculative_info": spec_info
             })
         })
         .collect();
@@ -275,11 +381,11 @@ pub async fn arena_run_benchmark_handler(
 
     let discovered = runner.discover_models();
     let pat = payload.model_id.to_lowercase();
-    let target = discovered.into_iter().find(|m| {
+    let target = discovered.iter().find(|m| {
         m.model_id.to_lowercase().contains(&pat)
             || m.file_path.to_string_lossy().to_lowercase().contains(&pat)
             || m.name.to_lowercase().contains(&pat)
-    });
+    }).cloned();
 
     let model = match target {
         Some(m) => m,
@@ -410,33 +516,92 @@ pub async fn arena_run_benchmark_handler(
         }
         4 => {
             // Type 4: SpeculativeDraft
-            match runner.run_speculative_draft(&model, engine_type, None).await {
-                Ok(res) => {
-                    let mut persisted = false;
-                    if let Ok(ref vault) = vault_conn {
-                        if let Err(ve) = vault.record_speculative_draft(&res).await {
-                            tracing::warn!("Failed to record speculative draft in vault: {}", ve);
-                        } else {
-                            persisted = true;
-                            tracing::info!("SpeculativeDraft for '{}' successfully persisted in Heuristic Vault.", res.model_id);
-                        }
-                    }
+            let spec_info = resolve_speculative_companion(&model, &discovered);
+            match spec_info.status.as_str() {
+                "Sub1bExempt" => {
                     Json(json!({
-                        "status": "success",
-                        "benchmark_type": "SpeculativeDraft",
-                        "model_id": res.model_id,
-                        "persisted": persisted,
-                        "metrics": {
-                            "speculative_tps": res.speculative_tps,
-                            "speedup_ratio": res.speedup_ratio,
-                            "acceptance_rate_alpha": res.acceptance_rate_alpha,
-                            "verdict": res.verdict
-                        }
+                        "status": "error",
+                        "message": format!("Modelo '{}' é sub-1B e está isento de aceleração especulativa: {}", model.model_id, spec_info.reason)
                     }))
                 }
-                Err(e) => Json(json!({
+                "CompanionMissing" => {
+                    Json(json!({
+                        "status": "error",
+                        "message": format!("Aceleração especulativa indisponível para '{}': {}", model.model_id, spec_info.reason)
+                    }))
+                }
+                "PairedAvailable" => {
+                    let drafter_id = spec_info.companion_id.as_deref().unwrap_or_default();
+                    let drafter = discovered.iter().find(|m| m.model_id == drafter_id);
+
+                    match runner.run_speculative_draft(&model, engine_type, drafter).await {
+                        Ok(res) => {
+                            let mut persisted = false;
+                            if let Ok(ref vault) = vault_conn {
+                                if let Err(ve) = vault.record_speculative_draft(&res).await {
+                                    tracing::warn!("Failed to record speculative draft in vault: {}", ve);
+                                } else {
+                                    persisted = true;
+                                    tracing::info!("SpeculativeDraft for '{}' with drafter '{:?}' successfully persisted in Heuristic Vault.", res.model_id, drafter_id);
+                                }
+                            }
+                            Json(json!({
+                                "status": "success",
+                                "benchmark_type": "SpeculativeDraft",
+                                "model_id": res.model_id,
+                                "persisted": persisted,
+                                "metrics": {
+                                    "drafter_id": res.drafter_id,
+                                    "draft_type": res.draft_type,
+                                    "speculative_tps": res.speculative_tps,
+                                    "speedup_ratio": res.speedup_ratio,
+                                    "acceptance_rate_alpha": res.acceptance_rate_alpha,
+                                    "verdict": res.verdict
+                                }
+                            }))
+                        }
+                        Err(e) => Json(json!({
+                            "status": "error",
+                            "message": format!("SpeculativeDraft benchmark failed: {}", e)
+                        })),
+                    }
+                }
+                "NativeMtp" => {
+                    match runner.run_speculative_draft(&model, engine_type, None).await {
+                        Ok(res) => {
+                            let mut persisted = false;
+                            if let Ok(ref vault) = vault_conn {
+                                if let Err(ve) = vault.record_speculative_draft(&res).await {
+                                    tracing::warn!("Failed to record speculative draft in vault: {}", ve);
+                                } else {
+                                    persisted = true;
+                                    tracing::info!("SpeculativeDraft (Native MTP) for '{}' successfully persisted in Heuristic Vault.", res.model_id);
+                                }
+                            }
+                            Json(json!({
+                                "status": "success",
+                                "benchmark_type": "SpeculativeDraft",
+                                "model_id": res.model_id,
+                                "persisted": persisted,
+                                "metrics": {
+                                    "drafter_id": res.drafter_id,
+                                    "draft_type": res.draft_type,
+                                    "speculative_tps": res.speculative_tps,
+                                    "speedup_ratio": res.speedup_ratio,
+                                    "acceptance_rate_alpha": res.acceptance_rate_alpha,
+                                    "verdict": res.verdict
+                                }
+                            }))
+                        }
+                        Err(e) => Json(json!({
+                            "status": "error",
+                            "message": format!("SpeculativeDraft benchmark failed: {}", e)
+                        })),
+                    }
+                }
+                _ => Json(json!({
                     "status": "error",
-                    "message": format!("SpeculativeDraft benchmark failed: {}", e)
+                    "message": "Status de acelerador especulativo não suportado."
                 })),
             }
         }

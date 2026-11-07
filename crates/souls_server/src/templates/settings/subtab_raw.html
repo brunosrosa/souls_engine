@@ -155,13 +155,16 @@
           </div>
 
           <!-- ÁREA DO EDITOR DE TEXTO COM ESTILO TERMINAL BARE-METAL -->
-          <textarea id="raw-toml-editor" class="setting-input" spellcheck="false" style="height: 460px; font-size: 0.80rem; line-height: 1.55; font-family: 'Consolas', 'Fira Code', 'Cascadia Code', monospace; resize: vertical; background: #070c18; color: #e2e8f0; border-color: rgba(56, 189, 248, 0.2); tab-size: 2;" oninput="onTomlEditorInput()" onkeydown="handleTomlEditorKey(event)"></textarea>
+          <div class="editor-container-with-lines" style="min-height: 540px;">
+            <div class="editor-gutter" id="raw-toml-gutter">1</div>
+            <textarea id="raw-toml-editor" class="editor-textarea" spellcheck="false" style="tab-size: 2;" oninput="onTomlEditorInput()" onkeydown="handleTomlEditorKey(event)"></textarea>
+          </div>
 
           <!-- STATUS BAR INFERIOR DO EDITOR -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono); flex-wrap: wrap; gap: 8px;">
-            <div>
-              <span>Caminho Físico: </span>
-              <code id="footer-toml-path" style="color: #94a3b8;">Z:\souls_engine\.souls_data\config\souls_config.toml</code>
+          <div class="editor-statusbar">
+            <div style="display: flex; gap: 14px; align-items: center;">
+              <span id="footer-toml-cursor">Ln 1, Col 1</span>
+              <span>Caminho: <code id="footer-toml-path" style="color: #94a3b8;">Z:\souls_engine\.souls_data\config\souls_config.toml</code></span>
             </div>
             <div id="footer-toml-last-saved">
               Status: Sincronizado com o daemon
