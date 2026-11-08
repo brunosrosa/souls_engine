@@ -75,6 +75,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/research/mission/archive", post(dashboard::research_hub_archive_handler))
         .route("/api/v1/research/doctor", get(dashboard::research_hub_doctor_handler))
         .route("/api/v1/research/stream", get(dashboard::research_hub_stream_handler))
+        .route("/api/v1/research/mission/steer", post(dashboard::research_hub_steer_handler))
+        .route("/api/v1/research/report", get(dashboard::research_hub_report_handler))
+        .route("/api/v1/research/provision", post(dashboard::research_hub_provision_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))

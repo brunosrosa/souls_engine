@@ -230,6 +230,59 @@ pub enum ResearchStreamEvent {
     MissionStatusChanged { run_id: String, old_status: MissionStatus, new_status: MissionStatus },
     MissionProgress(ResearchTimelineEvent),
     MissionHeartbeat { run_id: String, lease_expires_at: String },
+    MissionSteeringUpdated { run_id: String, note: String, flags: ControlFlags },
+}
+
+// ============================================================================
+// EPISTEMIC REPORT PARSER & CITATION ANCHOR MODEL (v0.7.0 Phase 2)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EpistemicTagCount {
+    pub verified: usize,
+    pub sourced: usize,
+    pub reasoned: usize,
+    pub estimated: usize,
+    pub total: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedCitationItem {
+    pub citation_num: usize,
+    pub url: String,
+    pub domain: String,
+    pub tier: String, // "primary", "secondary", "tertiary"
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedEpistemicReport {
+    pub raw_markdown: String,
+    pub tag_counts: EpistemicTagCount,
+    pub citations: Vec<ParsedCitationItem>,
+    pub contradictions_count: usize,
+    pub is_verified: bool,
+    pub verification_receipt: Option<serde_json::Value>,
+}
+
+// ============================================================================
+// PROVISIONING MODELS (HERMES PROFILES & SKILL)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvisioningChangeDiff {
+    pub target_file: String,
+    pub before_content: String,
+    pub after_content: String,
+    pub change_type: String, // "create", "modify", "unchanged"
+    pub explanation: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvisioningResult {
+    pub dry_run: bool,
+    pub success: bool,
+    pub changes: Vec<ProvisioningChangeDiff>,
+    pub message: String,
 }
 
 // ============================================================================
@@ -511,6 +564,200 @@ impl ResearchIndex {
         let dir = self.roots.mission_dir(run_id).ok()?;
         let path = dir.join("01_evolving_report.md");
         fs::read_to_string(path).ok()
+    }
+
+    /// Appends operator steering instructions and updates control flags in-flight.
+    pub fn append_steering(
+        &self,
+        run_id: &str,
+        directive: Option<&str>,
+        pause: Option<bool>,
+        force_synthesis: Option<bool>,
+        cancel: Option<bool>,
+    ) -> Result<ControlFlags, String> {
+        let mut rec = self.get_mission(run_id).ok_or_else(|| "Missão não encontrada".to_string())?;
+        let mission_dir = self.roots.mission_dir(run_id)?;
+
+        let now = Utc::now();
+        let mut note_added = String::new();
+
+        if let Some(text) = directive {
+            let t = text.trim();
+            if !t.is_empty() {
+                let steering_file = mission_dir.join("steering.md");
+                let entry = format!("\n<!-- STEERING ENTRY: {} -->\n{}\n", now.to_rfc3339(), t);
+                let mut file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&steering_file)
+                    .map_err(|e| format!("Falha ao abrir steering.md: {e}"))?;
+                file.write_all(entry.as_bytes())
+                    .map_err(|e| format!("Falha ao gravar steering.md: {e}"))?;
+                note_added = t.to_string();
+            }
+        }
+
+        if let Some(p) = pause {
+            rec.flags.pause_requested = p;
+            if p && rec.status == MissionStatus::Researching {
+                rec.status = MissionStatus::Paused;
+            } else if !p && rec.status == MissionStatus::Paused {
+                rec.status = MissionStatus::Researching;
+            }
+        }
+
+        if let Some(fsyn) = force_synthesis {
+            rec.flags.force_synthesis_requested = fsyn;
+            if fsyn && (rec.status == MissionStatus::Researching || rec.status == MissionStatus::Paused) {
+                rec.status = MissionStatus::Synthesizing;
+            }
+        }
+
+        if let Some(c) = cancel {
+            rec.flags.cancel_requested = c;
+            if c {
+                rec.status = MissionStatus::Cancelled;
+            }
+        }
+
+        let updated_flags = rec.flags.clone();
+        let saved = self.upsert_and_persist(rec)?;
+
+        // Broadcast steering update
+        self.broadcast(ResearchStreamEvent::MissionSteeringUpdated {
+            run_id: run_id.to_string(),
+            note: note_added,
+            flags: updated_flags.clone(),
+        });
+
+        // Record in events timeline
+        let timeline_ev = ResearchTimelineEvent {
+            timestamp: now.to_rfc3339(),
+            run_id: run_id.to_string(),
+            phase: "operator_steering".to_string(),
+            round: saved.round,
+            summary: format!(
+                "Steering atualizado (pause: {}, force_synth: {}, cancel: {})",
+                updated_flags.pause_requested,
+                updated_flags.force_synthesis_requested,
+                updated_flags.cancel_requested
+            ),
+            spent_usd: 0.0,
+            turns_used: saved.budget.turns_used,
+        };
+        let _ = self.append_timeline_event(&timeline_ev);
+
+        Ok(updated_flags)
+    }
+
+    /// Parses epistemic tags, citations [n], and verification receipts for a mission report.
+    pub fn parse_epistemic_report(&self, run_id: &str) -> Result<ParsedEpistemicReport, String> {
+        let dir = self.roots.mission_dir(run_id)?;
+
+        // Prefer 02_draft_report.md, fallback to 01_evolving_report.md
+        let report_path = if dir.join("02_draft_report.md").exists() {
+            dir.join("02_draft_report.md")
+        } else if dir.join("01_evolving_report.md").exists() {
+            dir.join("01_evolving_report.md")
+        } else {
+            return Err("Nenhum relatório gerado ainda para esta missão".to_string());
+        };
+
+        let raw_markdown = fs::read_to_string(&report_path)
+            .map_err(|e| format!("Falha ao ler relatório de pesquisa: {e}"))?;
+
+        // 1. Count Epistemic Tags
+        let v_count = raw_markdown.matches("[VERIFIED]").count();
+        let s_count = raw_markdown.matches("[SOURCED]").count();
+        let r_count = raw_markdown.matches("[REASONED]").count();
+        let e_count = raw_markdown.matches("[ESTIMATED]").count();
+
+        let tag_counts = EpistemicTagCount {
+            verified: v_count,
+            sourced: s_count,
+            reasoned: r_count,
+            estimated: e_count,
+            total: v_count + s_count + r_count + e_count,
+        };
+
+        // 2. Count Contradictions
+        let contradictions_count = raw_markdown.matches("contradição").count()
+            + raw_markdown.matches("divergência").count()
+            + raw_markdown.matches("[refutes]").count();
+
+        // 3. Parse Citations & Domains (heuristic scan of markdown links or references)
+        let mut citations = Vec::new();
+        let mut cite_idx = 1;
+        for line in raw_markdown.lines() {
+            if (line.starts_with("- [") || line.starts_with("1.") || line.starts_with("* [") || line.contains("http://") || line.contains("https://"))
+                && (line.contains("http://") || line.contains("https://"))
+            {
+                let start_idx = line.find("http").unwrap_or(0);
+                let url_cand = line[start_idx..]
+                    .split(|c: char| c.is_whitespace() || c == ')' || c == ']' || c == '\"' || c == '\'')
+                    .next()
+                    .unwrap_or("")
+                    .trim();
+
+                if !url_cand.is_empty() && url_cand.starts_with("http") {
+                    let domain = url_cand
+                        .split('/')
+                        .nth(2)
+                        .unwrap_or("unknown")
+                        .to_string();
+
+                    let tier = if domain.contains("github.com")
+                        || domain.contains("docs.rs")
+                        || domain.contains("arxiv.org")
+                        || domain.contains(".gov")
+                        || domain.contains(".edu")
+                    {
+                        "primary".to_string()
+                    } else if domain.contains("wikipedia.org") || domain.contains("medium.com") {
+                        "secondary".to_string()
+                    } else {
+                        "tertiary".to_string()
+                    };
+
+                    citations.push(ParsedCitationItem {
+                        citation_num: cite_idx,
+                        url: url_cand.to_string(),
+                        domain,
+                        tier,
+                    });
+                    cite_idx += 1;
+                    if citations.len() >= 50 {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 4. Verification Receipt
+        let receipt_file = dir.join("03_verification_receipt.json");
+        let (is_verified, verification_receipt) = if receipt_file.exists() {
+            if let Ok(rc_raw) = fs::read_to_string(&receipt_file) {
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&rc_raw) {
+                    let st = val.get("status").and_then(|s| s.as_str()).unwrap_or("");
+                    (st.eq_ignore_ascii_case("confirmed"), Some(val))
+                } else {
+                    (false, None)
+                }
+            } else {
+                (false, None)
+            }
+        } else {
+            (false, None)
+        };
+
+        Ok(ParsedEpistemicReport {
+            raw_markdown,
+            tag_counts,
+            citations,
+            contradictions_count,
+            is_verified,
+            verification_receipt,
+        })
     }
 
     pub fn cancel_mission(&self, run_id: &str) -> Result<MissionRecord, String> {
@@ -1040,6 +1287,218 @@ pub fn run_research_doctor(roots: &ResearchRoots) -> ResearchDoctorReport {
 }
 
 // ============================================================================
+// 1-CLICK PROVISIONING ENGINE FOR HERMES (PROFILES & SKILL)
+// ============================================================================
+
+pub const CANONICAL_DEEPSOUL_SKILL_MD: &str = include_str!("templates/research/deepsoul_research_skill.md");
+pub const CANONICAL_SCOUT_INSTRUCTIONS_MD: &str = include_str!("templates/research/scout_instructions.md");
+pub const CANONICAL_VERIFIER_RUBRIC_MD: &str = include_str!("templates/research/verifier_rubric.md");
+
+/// Provisions Hermes Agent profiles (`fast-scout`, `verifier-readonly`) and canonical `deepsoul-research` skill.
+pub fn provision_hermes_research_assets(
+    roots: &ResearchRoots,
+    dry_run: bool,
+) -> Result<ProvisioningResult, String> {
+    let mut changes = Vec::new();
+
+    // 1. Target: ~/.hermes/config.yaml (profile_routes & mcp_servers.souls_engine)
+    let config_yaml_path = roots.hermes_home.join("config.yaml");
+    let before_config = if config_yaml_path.exists() {
+        fs::read_to_string(&config_yaml_path).unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let mut after_config = before_config.clone();
+
+    // Ensure mcp_servers.souls_engine
+    if !after_config.contains("souls_engine") {
+        if after_config.is_empty() {
+            after_config = "mcp_servers:\n  souls_engine:\n    url: \"http://127.0.0.1:9123/mcp\"\n".to_string();
+        } else if !after_config.contains("mcp_servers:") {
+            after_config.push_str("\nmcp_servers:\n  souls_engine:\n    url: \"http://127.0.0.1:9123/mcp\"\n");
+        }
+    }
+
+    // Ensure delegation profile_routes
+    if !after_config.contains("profile_routes:") {
+        after_config.push_str(
+            "\ndelegation:\n  backends:\n    profile_routes:\n      fast-scout:\n        profile: fast-scout\n        description: \"Subagente explorador web rápido para recolha e triagem de fontes\"\n      verifier-readonly:\n        profile: verifier-readonly\n        description: \"Auditor determinístico de citações e verificação factual Read-Only\"\n",
+        );
+    } else {
+        if !after_config.contains("fast-scout:") {
+            after_config = after_config.replace(
+                "profile_routes:\n",
+                "profile_routes:\n      fast-scout:\n        profile: fast-scout\n        description: \"Subagente explorador web rápido para recolha e triagem de fontes\"\n",
+            );
+        }
+        if !after_config.contains("verifier-readonly:") {
+            after_config = after_config.replace(
+                "profile_routes:\n",
+                "profile_routes:\n      verifier-readonly:\n        profile: verifier-readonly\n        description: \"Auditor determinístico de citações e verificação factual Read-Only\"\n",
+            );
+        }
+    }
+
+    if before_config != after_config {
+        changes.push(ProvisioningChangeDiff {
+            target_file: config_yaml_path.display().to_string(),
+            before_content: before_config,
+            after_content: after_config.clone(),
+            change_type: if config_yaml_path.exists() { "modify".to_string() } else { "create".to_string() },
+            explanation: "Configura mcp_servers.souls_engine e rotas de delegação fast-scout e verifier-readonly em config.yaml".to_string(),
+        });
+        if !dry_run {
+            let _ = fs::create_dir_all(&roots.hermes_home);
+            atomic_write_file(&config_yaml_path, after_config.as_bytes())?;
+        }
+    }
+
+    // 2. Target Profile: fast-scout (~/.hermes/profiles/fast-scout/config.yaml & SOUL.md)
+    let p_scout_dir = roots.hermes_home.join("profiles").join("fast-scout");
+    let scout_cfg_path = p_scout_dir.join("config.yaml");
+    let scout_soul_path = p_scout_dir.join("SOUL.md");
+
+    let scout_cfg_content = "model:\n  default: deepseek/deepseek-chat\n  provider: openrouter\ntoolsets:\n  - web\n  - file\n";
+    let scout_soul_content = "# SOUL.md — Fast-Scout Explorer\n\nVocê é um pesquisador analítico, cético e conciso. Foque exclusivamente em extrair fatos concretos, números e citações literais.\n";
+
+    let before_scout_cfg = fs::read_to_string(&scout_cfg_path).unwrap_or_default();
+    if before_scout_cfg != scout_cfg_content {
+        changes.push(ProvisioningChangeDiff {
+            target_file: scout_cfg_path.display().to_string(),
+            before_content: before_scout_cfg,
+            after_content: scout_cfg_content.to_string(),
+            change_type: if scout_cfg_path.exists() { "modify".to_string() } else { "create".to_string() },
+            explanation: "Provisiona config.yaml do perfil fast-scout com ferramentas web e file".to_string(),
+        });
+        if !dry_run {
+            let _ = fs::create_dir_all(&p_scout_dir);
+            atomic_write_file(&scout_cfg_path, scout_cfg_content.as_bytes())?;
+        }
+    }
+
+    let before_scout_soul = fs::read_to_string(&scout_soul_path).unwrap_or_default();
+    if before_scout_soul != scout_soul_content {
+        changes.push(ProvisioningChangeDiff {
+            target_file: scout_soul_path.display().to_string(),
+            before_content: before_scout_soul,
+            after_content: scout_soul_content.to_string(),
+            change_type: if scout_soul_path.exists() { "modify".to_string() } else { "create".to_string() },
+            explanation: "Provisiona SOUL.md analítico do perfil fast-scout isolado da persona principal".to_string(),
+        });
+        if !dry_run {
+            let _ = fs::create_dir_all(&p_scout_dir);
+            atomic_write_file(&scout_soul_path, scout_soul_content.as_bytes())?;
+        }
+    }
+
+    // 3. Target Profile: verifier-readonly (~/.hermes/profiles/verifier-readonly/config.yaml & SOUL.md)
+    let p_verifier_dir = roots.hermes_home.join("profiles").join("verifier-readonly");
+    let verifier_cfg_path = p_verifier_dir.join("config.yaml");
+    let verifier_soul_path = p_verifier_dir.join("SOUL.md");
+
+    let verifier_cfg_content = "model:\n  default: anthropic/claude-3-5-sonnet\n  provider: openrouter\ntoolsets:\n  - file\n";
+    let verifier_soul_content = "# SOUL.md — Verifier Read-Only\n\nVocê é um auditor factual rigoroso. Sua missão é validar se cada citação [n] confere exatamente com os dados brutos.\n";
+
+    let before_verifier_cfg = fs::read_to_string(&verifier_cfg_path).unwrap_or_default();
+    if before_verifier_cfg != verifier_cfg_content {
+        changes.push(ProvisioningChangeDiff {
+            target_file: verifier_cfg_path.display().to_string(),
+            before_content: before_verifier_cfg,
+            after_content: verifier_cfg_content.to_string(),
+            change_type: if verifier_cfg_path.exists() { "modify".to_string() } else { "create".to_string() },
+            explanation: "Provisiona config.yaml do perfil verifier-readonly com toolsets estritamente limitados a file".to_string(),
+        });
+        if !dry_run {
+            let _ = fs::create_dir_all(&p_verifier_dir);
+            atomic_write_file(&verifier_cfg_path, verifier_cfg_content.as_bytes())?;
+        }
+    }
+
+    let before_verifier_soul = fs::read_to_string(&verifier_soul_path).unwrap_or_default();
+    if before_verifier_soul != verifier_soul_content {
+        changes.push(ProvisioningChangeDiff {
+            target_file: verifier_soul_path.display().to_string(),
+            before_content: before_verifier_soul,
+            after_content: verifier_soul_content.to_string(),
+            change_type: if verifier_soul_path.exists() { "modify".to_string() } else { "create".to_string() },
+            explanation: "Provisiona SOUL.md do perfil verifier-readonly".to_string(),
+        });
+        if !dry_run {
+            let _ = fs::create_dir_all(&p_verifier_dir);
+            atomic_write_file(&verifier_soul_path, verifier_soul_content.as_bytes())?;
+        }
+    }
+
+    // 4. Target Skill: deepsoul-research (~/.hermes/skills/deepsoul-research/)
+    let skill_dir = roots.hermes_home.join("skills").join("deepsoul-research");
+    let ref_dir = skill_dir.join("references");
+    let skill_md_path = skill_dir.join("SKILL.md");
+    let scout_inst_path = ref_dir.join("scout-instructions.md");
+    let verifier_rubric_path = ref_dir.join("verifier-rubric.md");
+
+    let before_skill = fs::read_to_string(&skill_md_path).unwrap_or_default();
+    if before_skill != CANONICAL_DEEPSOUL_SKILL_MD {
+        changes.push(ProvisioningChangeDiff {
+            target_file: skill_md_path.display().to_string(),
+            before_content: before_skill,
+            after_content: CANONICAL_DEEPSOUL_SKILL_MD.to_string(),
+            change_type: if skill_md_path.exists() { "modify".to_string() } else { "create".to_string() },
+            explanation: "Instala playbook canônico SKILL.md deepsoul-research".to_string(),
+        });
+        if !dry_run {
+            let _ = fs::create_dir_all(&skill_dir);
+            atomic_write_file(&skill_md_path, CANONICAL_DEEPSOUL_SKILL_MD.as_bytes())?;
+        }
+    }
+
+    let before_scout_inst = fs::read_to_string(&scout_inst_path).unwrap_or_default();
+    if before_scout_inst != CANONICAL_SCOUT_INSTRUCTIONS_MD {
+        changes.push(ProvisioningChangeDiff {
+            target_file: scout_inst_path.display().to_string(),
+            before_content: before_scout_inst,
+            after_content: CANONICAL_SCOUT_INSTRUCTIONS_MD.to_string(),
+            change_type: if scout_inst_path.exists() { "modify".to_string() } else { "create".to_string() },
+            explanation: "Instala referências scout-instructions.md Level 2".to_string(),
+        });
+        if !dry_run {
+            let _ = fs::create_dir_all(&ref_dir);
+            atomic_write_file(&scout_inst_path, CANONICAL_SCOUT_INSTRUCTIONS_MD.as_bytes())?;
+        }
+    }
+
+    let before_rubric = fs::read_to_string(&verifier_rubric_path).unwrap_or_default();
+    if before_rubric != CANONICAL_VERIFIER_RUBRIC_MD {
+        changes.push(ProvisioningChangeDiff {
+            target_file: verifier_rubric_path.display().to_string(),
+            before_content: before_rubric,
+            after_content: CANONICAL_VERIFIER_RUBRIC_MD.to_string(),
+            change_type: if verifier_rubric_path.exists() { "modify".to_string() } else { "create".to_string() },
+            explanation: "Instala rubrica de auditoria verifier-rubric.md".to_string(),
+        });
+        if !dry_run {
+            let _ = fs::create_dir_all(&ref_dir);
+            atomic_write_file(&verifier_rubric_path, CANONICAL_VERIFIER_RUBRIC_MD.as_bytes())?;
+        }
+    }
+
+    let msg = if changes.is_empty() {
+        "O ecossistema Hermes já está 100% provisionado e pronto para Deep Research.".to_string()
+    } else if dry_run {
+        format!("Prévia calculada: {} arquivos serão provisionados/ajustados.", changes.len())
+    } else {
+        format!("Provisionamento concluído: {} arquivos atualizados com sucesso.", changes.len())
+    };
+
+    Ok(ProvisioningResult {
+        dry_run,
+        success: true,
+        changes,
+        message: msg,
+    })
+}
+
+// ============================================================================
 // UTILITIES
 // ============================================================================
 
@@ -1155,6 +1614,8 @@ mod tests {
             hermes_home: test_base.join("hermes"),
         };
         roots.ensure_directories();
+        let roots_clone_path = test_base.clone();
+        let roots_copy = roots.clone();
 
         let index = ResearchIndex::new(roots);
         let (brief, _) = generate_deterministic_plan("Test Tokio");
@@ -1191,6 +1652,43 @@ mod tests {
         assert_eq!(updated.status, MissionStatus::Researching);
         assert_eq!(updated.budget.turns_used, 8);
         assert_eq!(updated.budget.spent_usd, 0.15);
+
+        // 4. In-flight Steering (directive, pause, force_synthesis)
+        let steer_flags = index.append_steering(
+            &created.run_id,
+            Some("Foque estritamente em Windows 11 ReFS"),
+            Some(true),
+            None,
+            None,
+        ).unwrap();
+        assert!(steer_flags.pause_requested);
+
+        let paused_mission = index.get_mission(&created.run_id).unwrap();
+        assert_eq!(paused_mission.status, MissionStatus::Paused);
+
+        // Verify steering.md written
+        let steering_md = fs::read_to_string(roots_clone_path.join("research").join(&created.run_id).join("steering.md")).unwrap();
+        assert!(steering_md.contains("Foque estritamente em Windows 11 ReFS"));
+
+        // 5. Epistemic Report Parsing & Verification Receipt
+        let mission_dir = roots_clone_path.join("research").join(&created.run_id);
+        let draft_report_content = "# Relatório Técnico\n\n[VERIFIED] O Tokio suporta IOCP de forma nativa desde 2021 [1].\n[SOURCED] Benchmarks indicam 45k IOPS em ReFS [2].\n[REASONED] Conclui-se que a contenção é mínima.\n\n## Fontes\n- [1] https://github.com/tokio-rs/tokio (primary)\n- [2] https://medium.com/engineering/benchmark (secondary)\n";
+        fs::write(mission_dir.join("02_draft_report.md"), draft_report_content).unwrap();
+        fs::write(mission_dir.join("03_verification_receipt.json"), r#"{"status":"CONFIRMED","verified_claims":3}"#).unwrap();
+
+        let parsed_rep = index.parse_epistemic_report(&created.run_id).unwrap();
+        assert_eq!(parsed_rep.tag_counts.verified, 1);
+        assert_eq!(parsed_rep.tag_counts.sourced, 1);
+        assert_eq!(parsed_rep.tag_counts.reasoned, 1);
+        assert!(parsed_rep.is_verified);
+        assert_eq!(parsed_rep.citations.len(), 2);
+        assert_eq!(parsed_rep.citations[0].domain, "github.com");
+
+        // 6. Provisioning dry_run test
+        let prov_res = provision_hermes_research_assets(&roots_copy, true).unwrap();
+        assert!(prov_res.dry_run);
+        assert!(prov_res.success);
+        assert!(prov_res.changes.len() >= 3);
 
         let _ = fs::remove_dir_all(test_base);
     }

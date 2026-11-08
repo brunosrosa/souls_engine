@@ -217,11 +217,17 @@
         <div class="card" style="padding: 20px;">
           <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
             <span>⚙️ Diagnóstico de Prontidão do Ecossistema</span>
-            <button class="btn btn-sm btn-outline" onclick="loadResearchDoctorReport()"><span>🔄</span> Re-verificar</button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm btn-primary" onclick="triggerProvisioningFlow(true)"><span>🎛️</span> Provisionar em 1 Clique (Prévia)</button>
+              <button class="btn btn-sm btn-outline" onclick="loadResearchDoctorReport()"><span>🔄</span> Re-verificar</button>
+            </div>
           </div>
           <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
             Audita a presença do Hermes Agent, perfis de subagentes, chaves de busca web e integridade do repositório no Dev Drive ReFS.
           </p>
+          <div id="box-provisioning-diff" style="display: none; margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; border-radius: 8px; padding: 14px;">
+            <!-- Renderizado via research_hub.js -->
+          </div>
           <div id="list-doctor-checks" style="display: flex; flex-direction: column; gap: 8px;">
             <!-- Checagens preenchidas via research_hub.js -->
           </div>

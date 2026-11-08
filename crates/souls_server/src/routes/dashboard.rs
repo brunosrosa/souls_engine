@@ -3188,4 +3188,75 @@ pub async fn research_hub_stream_handler(
     axum::response::Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::new())
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ResearchSteerRequest {
+    pub run_id: String,
+    pub directive: Option<String>,
+    pub pause: Option<bool>,
+    pub force_synthesis: Option<bool>,
+    pub cancel: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchProvisionRequest {
+    pub dry_run: Option<bool>,
+}
+
+/// Injects real-time steering directives or in-flight control flags (pause/force_synthesis/cancel).
+pub async fn research_hub_steer_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchSteerRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    match state.research.append_steering(
+        &payload.run_id,
+        payload.directive.as_deref(),
+        payload.pause,
+        payload.force_synthesis,
+        payload.cancel,
+    ) {
+        Ok(flags) => Json(json!({
+            "status": "success",
+            "message": "Steering registrado com sucesso",
+            "flags": flags
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Returns parsed epistemic report anatomy (tags, citations, verification receipt).
+pub async fn research_hub_report_handler(
+    State(state): State<AppState>,
+    Query(query): Query<ResearchDetailQuery>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    match state.research.parse_epistemic_report(&query.run_id) {
+        Ok(report) => Json(json!({
+            "status": "success",
+            "report": report
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// 1-Click Provisioning of Hermes Agent profiles and canonical skills with dry_run support.
+pub async fn research_hub_provision_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchProvisionRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let dry_run = payload.dry_run.unwrap_or(true);
+
+    match crate::research_hub::provision_hermes_research_assets(state.research.roots(), dry_run) {
+        Ok(res) => Json(json!({
+            "status": "success",
+            "result": res
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+
 

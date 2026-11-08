@@ -316,6 +316,7 @@ function renderActiveMissions() {
             <h3 style="font-size: 1rem; font-weight: 600; color: #f8fafc; margin: 0;">${escapeHtml(m.question)}</h3>
           </div>
           <div style="display: flex; gap: 6px;">
+            <button class="btn btn-xs btn-outline" onclick="openMissionSteeringModal('${m.run_id}')">🧭 Steering</button>
             <button class="btn btn-xs btn-outline" onclick="inspectMissionDetail('${m.run_id}')">Inspecionar</button>
             <button class="btn btn-xs btn-danger" onclick="cancelResearchMission('${m.run_id}')">Cancelar</button>
           </div>
@@ -411,6 +412,7 @@ function renderMissionViewer(data) {
         <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">${escapeHtml(m.brief.question)}</h2>
       </div>
       <div style="display:flex; gap:6px;">
+        <button class="btn btn-xs btn-outline" onclick="inspectEpistemicReport('${m.run_id}')">🏷️ Leitor Epistêmico</button>
         <button class="btn btn-xs btn-outline" onclick="copyReportMarkdown()">📥 Copiar .md</button>
         <button class="btn btn-xs btn-danger" onclick="archiveResearchMission('${m.run_id}')">Arquivar</button>
       </div>
@@ -582,4 +584,210 @@ function escapeHtml(str) {
 document.addEventListener('DOMContentLoaded', () => {
   initResearchSseStream();
 });
+
+// ============================================================================
+// IN-FLIGHT STEERING & OPERATOR INTERVENTION (Fase 2)
+// ============================================================================
+
+function openMissionSteeringModal(run_id) {
+  const directive = prompt(`[STEERING EM VOO — ${run_id}]\nDigite a diretriz a ser injetada para os subagentes nesta ronda:\n(Ex: "Ignore discussões sobre Mac/Linux; foque estritamente em Windows 11 ReFS")`);
+  if (directive === null) return;
+
+  sendMissionSteering(run_id, { directive: directive.trim() || undefined });
+}
+
+async function sendMissionSteering(run_id, options = {}) {
+  try {
+    const res = await fetch('/api/v1/research/mission/steer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        run_id,
+        directive: options.directive,
+        pause: options.pause,
+        force_synthesis: options.force_synthesis,
+        cancel: options.cancel
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert('Comando de steering enviado com sucesso!');
+      loadResearchHubMissions();
+      if (selectedMissionDetail && selectedMissionDetail.mission.run_id === run_id) {
+        inspectMissionDetail(run_id);
+      }
+    } else {
+      alert('Erro ao enviar steering: ' + (data.message || 'Desconhecido'));
+    }
+  } catch (err) {
+    console.error('Falha ao enviar steering:', err);
+  }
+}
+
+// ============================================================================
+// EPISTEMIC REPORT VIEWER (Fase 2)
+// ============================================================================
+
+async function inspectEpistemicReport(run_id) {
+  try {
+    const res = await fetch(`/api/v1/research/report?run_id=${encodeURIComponent(run_id)}`);
+    const data = await res.json();
+    if (data.status === 'success') {
+      renderEpistemicViewer(data.report, run_id);
+    } else {
+      alert('Relatório ainda não finalizado: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao obter relatório epistêmico:', err);
+  }
+}
+
+function renderEpistemicViewer(rep, run_id) {
+  const viewer = document.getElementById('box-library-viewer');
+  if (!viewer) return;
+
+  const tc = rep.tag_counts;
+  const citations = rep.citations || [];
+
+  viewer.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+      <div>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+          <span class="badge" style="background:${rep.is_verified ? 'rgba(16,185,129,0.2)' : 'rgba(234,179,8,0.2)'}; color:${rep.is_verified ? '#10b981' : '#facc15'};">
+            ${rep.is_verified ? '✓ VERIFICADO READ-ONLY' : '⚡ RASCUNHO EM PROGRESSO'}
+          </span>
+          <span style="font-family:monospace; font-size:0.75rem; color:#64748b;">${run_id}</span>
+        </div>
+        <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">Leitor Epistêmico de Evidências</h2>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="btn btn-xs btn-outline" onclick="copyReportMarkdown()">📥 Copiar .md</button>
+        <button class="btn btn-xs btn-outline" onclick="inspectMissionDetail('${run_id}')">Timeline</button>
+      </div>
+    </div>
+
+    <!-- Chips Epistêmicos -->
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+      <span class="badge" style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:0.75rem; padding:4px 10px;">
+        [VERIFIED]: <strong>${tc.verified}</strong>
+      </span>
+      <span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:0.75rem; padding:4px 10px;">
+        [SOURCED]: <strong>${tc.sourced}</strong>
+      </span>
+      <span class="badge" style="background:rgba(234,179,8,0.15); color:#facc15; border:1px solid rgba(234,179,8,0.3); font-size:0.75rem; padding:4px 10px;">
+        [REASONED]: <strong>${tc.reasoned}</strong>
+      </span>
+      <span class="badge" style="background:rgba(148,163,184,0.15); color:#cbd5e1; border:1px solid rgba(148,163,184,0.3); font-size:0.75rem; padding:4px 10px;">
+        [ESTIMATED]: <strong>${tc.estimated}</strong>
+      </span>
+      ${rep.contradictions_count > 0 ? `
+        <span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:0.75rem; padding:4px 10px;">
+          Contradições Mapeadas: <strong>${rep.contradictions_count}</strong>
+        </span>
+      ` : ''}
+    </div>
+
+    <!-- Fontes & Citações Extraídas -->
+    ${citations.length > 0 ? `
+      <div style="margin-bottom:14px; background:#0f172a; padding:10px 12px; border-radius:6px; border:1px solid #1e293b;">
+        <span style="font-size:0.75rem; color:#94a3b8; font-weight:600; display:block; margin-bottom:6px;">FONTES IDENTIFICADAS (${citations.length}):</span>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; max-height:80px; overflow-y:auto;">
+          ${citations.map(c => `
+            <a href="${c.url}" target="_blank" rel="noopener" style="font-size:0.7rem; background:#1e293b; color:#38bdf8; padding:2px 8px; border-radius:4px; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+              <span>[${c.citation_num}]</span> ${escapeHtml(c.domain)}
+              <span style="color:#64748b; font-size:0.65rem;">(${c.tier})</span>
+            </a>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- Visualizador de Markdown com Renderização de Tags -->
+    <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:16px;">
+      <div id="text-report-markdown" style="font-size:0.85rem; color:#e2e8f0; line-height:1.6; white-space:pre-wrap; max-height:450px; overflow-y:auto;">${renderHighlightedEpistemicReport(rep.raw_markdown)}</div>
+    </div>
+  `;
+}
+
+function renderHighlightedEpistemicReport(raw) {
+  return escapeHtml(raw)
+    .replace(/\[VERIFIED\]/g, '<span style="background:rgba(16,185,129,0.25); color:#10b981; font-weight:700; padding:1px 6px; border-radius:3px;">[VERIFIED]</span>')
+    .replace(/\[SOURCED\]/g, '<span style="background:rgba(56,189,248,0.25); color:#38bdf8; font-weight:700; padding:1px 6px; border-radius:3px;">[SOURCED]</span>')
+    .replace(/\[REASONED\]/g, '<span style="background:rgba(234,179,8,0.25); color:#facc15; font-weight:700; padding:1px 6px; border-radius:3px;">[REASONED]</span>')
+    .replace(/\[ESTIMATED\]/g, '<span style="background:rgba(148,163,184,0.25); color:#cbd5e1; font-weight:700; padding:1px 6px; border-radius:3px;">[ESTIMATED]</span>');
+}
+
+// ============================================================================
+// 1-CLICK PROVISIONING FLOW (Fase 2)
+// ============================================================================
+
+async function triggerProvisioningFlow(dryRun) {
+  const box = document.getElementById('box-provisioning-diff');
+  if (box) {
+    box.style.display = 'block';
+    box.innerHTML = '<div style="color:#38bdf8; font-size:0.8rem;">Calculando modificações necessárias no ecossistema Hermes...</div>';
+  }
+
+  try {
+    const res = await fetch('/api/v1/research/provision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: dryRun })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      renderProvisioningBox(data.result);
+      if (!dryRun) {
+        loadResearchDoctorReport();
+      }
+    } else {
+      if (box) box.innerHTML = `<div style="color:#ef4444; font-size:0.8rem;">Erro no provisionamento: ${escapeHtml(data.message)}</div>`;
+    }
+  } catch (err) {
+    console.error('Falha no provisionamento:', err);
+  }
+}
+
+function renderProvisioningBox(result) {
+  const box = document.getElementById('box-provisioning-diff');
+  if (!box) return;
+
+  const changes = result.changes || [];
+  if (changes.length === 0) {
+    box.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="color:#10b981; font-size:0.85rem; font-weight:600;">✓ Ecossistema 100% alinhado! Nenhuma modificação pendente.</span>
+        <button class="btn btn-xs btn-outline" onclick="this.parentElement.parentElement.style.display='none'">Fechar</button>
+      </div>
+    `;
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div>
+        <strong style="font-size:0.9rem; color:#f8fafc;">${result.dry_run ? '🔍 Prévia de Provisionamento' : '✅ Provisionamento Aplicado'}</strong>
+        <span style="font-size:0.75rem; color:#94a3b8; display:block;">${escapeHtml(result.message)}</span>
+      </div>
+      <div style="display:flex; gap:6px;">
+        ${result.dry_run ? `
+          <button class="btn btn-xs btn-success" onclick="triggerProvisioningFlow(false)">🚀 Aplicar Modificações Agora</button>
+        ` : ''}
+        <button class="btn btn-xs btn-outline" onclick="document.getElementById('box-provisioning-diff').style.display='none'">Fechar</button>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;">
+      ${changes.map(c => `
+        <div style="background:#020617; border:1px solid #1e293b; padding:8px 10px; border-radius:4px; font-size:0.75rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <strong style="color:#38bdf8;">${escapeHtml(c.target_file)}</strong>
+            <span class="badge" style="font-size:0.65rem;">${c.change_type}</span>
+          </div>
+          <div style="color:#94a3b8; font-size:0.7rem;">${escapeHtml(c.explanation)}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 
