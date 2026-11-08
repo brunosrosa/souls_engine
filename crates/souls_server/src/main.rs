@@ -2722,7 +2722,44 @@ model:
         let claim_res_json: serde_json::Value = serde_json::from_slice(&claim_res_bytes).unwrap();
         assert!(claim_res_json["result"]["workspace_path"].as_str().is_some());
 
-        // 7. Clean up created smoke test mission via archive
+        // 7. Verify Fase 4 REST Endpoints: Domains, Feedback, Scorecard, Settings, Skill-Patch
+        let req_domains = Request::builder()
+            .uri("/api/v1/research/domains")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_domains = app.clone().oneshot(req_domains).await.unwrap();
+        assert_eq!(resp_domains.status(), StatusCode::OK);
+        let dom_bytes = to_bytes(resp_domains.into_body(), usize::MAX).await.unwrap();
+        let dom_json: serde_json::Value = serde_json::from_slice(&dom_bytes).unwrap();
+        assert_eq!(dom_json["status"], "success");
+        assert!(dom_json["ledger"]["domains"].as_object().unwrap().contains_key("arxiv.org"));
+
+        let req_scorecard = Request::builder()
+            .uri("/api/v1/research/scorecard")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_sc = app.clone().oneshot(req_scorecard).await.unwrap();
+        assert_eq!(resp_sc.status(), StatusCode::OK);
+
+        let req_settings = Request::builder()
+            .uri("/api/v1/research/settings")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_settings = app.clone().oneshot(req_settings).await.unwrap();
+        assert_eq!(resp_settings.status(), StatusCode::OK);
+
+        let req_patch = Request::builder()
+            .uri("/api/v1/research/skill-patch")
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+        let resp_patch = app.clone().oneshot(req_patch).await.unwrap();
+        assert_eq!(resp_patch.status(), StatusCode::OK);
+
+        // 8. Clean up created smoke test mission via archive
         let archive_req = Request::builder()
             .uri("/api/v1/research/mission/archive")
             .method("POST")

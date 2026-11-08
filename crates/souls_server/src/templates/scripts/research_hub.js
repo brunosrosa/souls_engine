@@ -44,8 +44,12 @@ function switchResearchSubtab(subtabId) {
     loadResearchHubMissions();
   } else if (subtabId === 'library') {
     loadResearchHubMissions();
+  } else if (subtabId === 'quality') {
+    loadResearchScorecard();
+    loadDomainTrustLedger();
   } else if (subtabId === 'doctor') {
     loadResearchDoctorReport();
+    loadResearchSettings();
   }
 }
 
@@ -440,125 +444,6 @@ function renderMissionViewer(data) {
   `;
 }
 
-// ============================================================================
-// FASE 3: RELATÓRIOS VIVOS (DELTA), RAMIFICAÇÃO, DIFF & PROMOÇÃO OBSIDIAN
-// ============================================================================
-
-async function openRefreshDeltaModal(run_id) {
-  if (!confirm(`Deseja lançar uma nova versão viva (Delta v2+) para a pesquisa ${run_id}?\nO Hermes reaproveitará o acervo de fontes e buscará atualizações e fatos recentes.`)) return;
-
-  try {
-    const res = await fetch('/api/v1/research/mission/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ parent_run_id: run_id })
-    });
-    const data = await res.json();
-    if (data.status === 'success') {
-      alert(`Versão Delta criada e enfileirada: ${data.mission.run_id}`);
-      loadResearchHubMissions();
-      switchResearchSubtab('active');
-    } else {
-      alert('Erro: ' + (data.message || 'Falha ao criar delta'));
-    }
-  } catch (err) {
-    console.error('Falha ao atualizar delta:', err);
-  }
-}
-
-async function openBranchSectionModal(run_id) {
-  const heading = prompt(`[RAMIFICAR SEÇÃO — ${run_id}]\nDigite o título ou heading do tópico que deseja aprofundar de forma autônoma:\n(Ex: "Mapeamento empírico de latência no ReFS")`);
-  if (!heading || !heading.trim()) return;
-
-  const customQ = prompt(`Pergunta específica para este subagente (ou deixe em branco para derivar automaticamente):`);
-
-  try {
-    const res = await fetch('/api/v1/research/mission/branch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        parent_run_id: run_id,
-        heading_title: heading.trim(),
-        custom_question: customQ && customQ.trim() ? customQ.trim() : undefined
-      })
-    });
-    const data = await res.json();
-    if (data.status === 'success') {
-      alert(`Missão ramificada criada e enfileirada com sucesso: ${data.mission.run_id}`);
-      loadResearchHubMissions();
-      switchResearchSubtab('active');
-    } else {
-      alert('Erro: ' + (data.message || 'Falha ao ramificar missão'));
-    }
-  } catch (err) {
-    console.error('Falha ao ramificar:', err);
-  }
-}
-
-async function openDiffModal(run_id) {
-  const viewer = document.getElementById('box-library-viewer');
-  if (!viewer) return;
-
-  try {
-    const res = await fetch(`/api/v1/research/diff?run_id=${encodeURIComponent(run_id)}`);
-    const data = await res.json();
-    if (data.status === 'success') {
-      const d = data.diff;
-      viewer.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-          <div>
-            <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">🔍 Comparador Myers Diff de Versões</h2>
-            <span style="font-size:0.75rem; color:#94a3b8;">Missão: ${run_id} (Adições: +${d.additions}, Remoções: -${d.deletions})</span>
-          </div>
-          <button class="btn btn-xs btn-outline" onclick="inspectMissionDetail('${run_id}')">Voltar ao Relatório</button>
-        </div>
-        <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:12px; font-family:monospace; font-size:0.75rem; max-height:450px; overflow-y:auto;">
-          ${d.diff_lines.length === 0 ? '<span style="color:#64748b;">Nenhuma alteração entre as versões baseline e atual.</span>' : d.diff_lines.map(line => {
-            if (line.startsWith('+')) {
-              return `<div style="background:rgba(16,185,129,0.15); color:#10b981;">${escapeHtml(line)}</div>`;
-            } else if (line.startsWith('-')) {
-              return `<div style="background:rgba(239,68,68,0.15); color:#ef4444;">${escapeHtml(line)}</div>`;
-            } else {
-              return `<div style="color:#94a3b8;">${escapeHtml(line)}</div>`;
-            }
-          }).join('')}
-        </div>
-      `;
-    } else {
-      alert('Erro ao calcular diff: ' + (data.message || ''));
-    }
-  } catch (err) {
-    console.error('Falha ao carregar diff:', err);
-  }
-}
-
-async function promoteReportModal(run_id) {
-  if (!confirm(`Deseja promover este relatório verificado para o Cofre Obsidian e Hipocampo L3?\nO Privacy Shield higienizará localmente quaisquer dados sensíveis (PII) antes de persistir.`)) return;
-
-  try {
-    const res = await fetch('/api/v1/research/promote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        run_id,
-        targets: ['obsidian', 'hippocampus'],
-        dry_run: false
-      })
-    });
-    const data = await res.json();
-    if (data.status === 'success') {
-      const p = data.promotion;
-      alert(`Relatório promovido com sucesso!\n- Obsidian: ${p.obsidian_file_path || 'raw/research/'}\n- PIIs Higienizados: ${p.pii_redactions_count}\n- Hipocampo L3: Espelhado`);
-      inspectMissionDetail(run_id);
-    } else {
-      alert('Erro na promoção: ' + (data.message || ''));
-    }
-  } catch (err) {
-    console.error('Falha ao promover relatório:', err);
-  }
-}
-
-
 function copyReportMarkdown() {
   const el = document.getElementById('text-report-markdown');
   if (el) {
@@ -784,6 +669,7 @@ function renderEpistemicViewer(rep, run_id) {
         <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">Leitor Epistêmico de Evidências</h2>
       </div>
       <div style="display:flex; gap:6px;">
+        <button class="btn btn-xs btn-primary" onclick="openClaimFeedbackModal('${run_id}')">⭐ Avaliar Fatos</button>
         <button class="btn btn-xs btn-outline" onclick="copyReportMarkdown()">📥 Copiar .md</button>
         <button class="btn btn-xs btn-outline" onclick="inspectMissionDetail('${run_id}')">Timeline</button>
       </div>
@@ -830,133 +716,6 @@ function renderEpistemicViewer(rep, run_id) {
       <div id="text-report-markdown" style="font-size:0.85rem; color:#e2e8f0; line-height:1.6; white-space:pre-wrap; max-height:450px; overflow-y:auto;">${renderHighlightedEpistemicReport(rep.raw_markdown)}</div>
     </div>
   `;
-}
-
-// ============================================================================
-// FASE 3: RELATÓRIOS VIVOS (DELTA), RAMIFICAÇÃO, DIFF & PROMOÇÃO OBSIDIAN
-// ============================================================================
-
-async function openRefreshDeltaModal(run_id) {
-  if (!confirm(`Deseja lançar uma nova versão viva (Delta v2+) para a pesquisa ${run_id}?\nO Hermes reaproveitará o acervo de fontes e buscará atualizações e fatos recentes.`)) return;
-
-  try {
-    const res = await fetch('/api/v1/research/mission/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ parent_run_id: run_id })
-    });
-    const data = await res.json();
-    if (data.status === 'success') {
-      alert(`Versão Delta criada e enfileirada: ${data.mission.run_id}`);
-      loadResearchHubMissions();
-      switchResearchSubtab('active');
-    } else {
-      alert('Erro: ' + (data.message || 'Falha ao criar delta'));
-    }
-  } catch (err) {
-    console.error('Falha ao atualizar delta:', err);
-  }
-}
-
-async function openBranchSectionModal(run_id) {
-  const heading = prompt(`[RAMIFICAR SEÇÃO — ${run_id}]\nDigite o título ou heading do tópico que deseja aprofundar de forma autônoma:\n(Ex: "Mapeamento empírico de latência no ReFS")`);
-  if (!heading || !heading.trim()) return;
-
-  const customQ = prompt(`Pergunta específica para este subagente (ou deixe em branco para derivar automaticamente):`);
-
-  try {
-    const res = await fetch('/api/v1/research/mission/branch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        parent_run_id: run_id,
-        heading_title: heading.trim(),
-        custom_question: customQ && customQ.trim() ? customQ.trim() : undefined
-      })
-    });
-    const data = await res.json();
-    if (data.status === 'success') {
-      alert(`Missão ramificada criada e enfileirada com sucesso: ${data.mission.run_id}`);
-      loadResearchHubMissions();
-      switchResearchSubtab('active');
-    } else {
-      alert('Erro: ' + (data.message || 'Falha ao ramificar missão'));
-    }
-  } catch (err) {
-    console.error('Falha ao ramificar:', err);
-  }
-}
-
-async function openDiffModal(run_id) {
-  const viewer = document.getElementById('box-library-viewer');
-  if (!viewer) return;
-
-  try {
-    const res = await fetch(`/api/v1/research/diff?run_id=${encodeURIComponent(run_id)}`);
-    const data = await res.json();
-    if (data.status === 'success') {
-      const d = data.diff;
-      viewer.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-          <div>
-            <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">🔍 Comparador Myers Diff de Versões</h2>
-            <span style="font-size:0.75rem; color:#94a3b8;">Missão: ${run_id} (Adições: +${d.additions}, Remoções: -${d.deletions})</span>
-          </div>
-          <button class="btn btn-xs btn-outline" onclick="inspectMissionDetail('${run_id}')">Voltar ao Relatório</button>
-        </div>
-        <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:12px; font-family:monospace; font-size:0.75rem; max-height:450px; overflow-y:auto;">
-          ${d.diff_lines.length === 0 ? '<span style="color:#64748b;">Nenhuma alteração entre as versões baseline e atual.</span>' : d.diff_lines.map(line => {
-            if (line.startsWith('+')) {
-              return `<div style="background:rgba(16,185,129,0.15); color:#10b981;">${escapeHtml(line)}</div>`;
-            } else if (line.startsWith('-')) {
-              return `<div style="background:rgba(239,68,68,0.15); color:#ef4444;">${escapeHtml(line)}</div>`;
-            } else {
-              return `<div style="color:#94a3b8;">${escapeHtml(line)}</div>`;
-            }
-          }).join('')}
-        </div>
-      `;
-    } else {
-      alert('Erro ao calcular diff: ' + (data.message || ''));
-    }
-  } catch (err) {
-    console.error('Falha ao carregar diff:', err);
-  }
-}
-
-async function promoteReportModal(run_id) {
-  if (!confirm(`Deseja promover este relatório verificado para o Cofre Obsidian e Hipocampo L3?\nO Privacy Shield higienizará localmente quaisquer dados sensíveis (PII) antes de persistir.`)) return;
-
-  try {
-    const res = await fetch('/api/v1/research/promote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        run_id,
-        targets: ['obsidian', 'hippocampus'],
-        dry_run: false
-      })
-    });
-    const data = await res.json();
-    if (data.status === 'success') {
-      const p = data.promotion;
-      alert(`Relatório promovido com sucesso!\n- Obsidian: ${p.obsidian_file_path || 'raw/research/'}\n- PIIs Higienizados: ${p.pii_redactions_count}\n- Hipocampo L3: Espelhado`);
-      inspectMissionDetail(run_id);
-    } else {
-      alert('Erro na promoção: ' + (data.message || ''));
-    }
-  } catch (err) {
-    console.error('Falha ao promover relatório:', err);
-  }
-}
-
-
-function renderHighlightedEpistemicReport(raw) {
-  return escapeHtml(raw)
-    .replace(/\[VERIFIED\]/g, '<span style="background:rgba(16,185,129,0.25); color:#10b981; font-weight:700; padding:1px 6px; border-radius:3px;">[VERIFIED]</span>')
-    .replace(/\[SOURCED\]/g, '<span style="background:rgba(56,189,248,0.25); color:#38bdf8; font-weight:700; padding:1px 6px; border-radius:3px;">[SOURCED]</span>')
-    .replace(/\[REASONED\]/g, '<span style="background:rgba(234,179,8,0.25); color:#facc15; font-weight:700; padding:1px 6px; border-radius:3px;">[REASONED]</span>')
-    .replace(/\[ESTIMATED\]/g, '<span style="background:rgba(148,163,184,0.25); color:#cbd5e1; font-weight:700; padding:1px 6px; border-radius:3px;">[ESTIMATED]</span>');
 }
 
 // ============================================================================
@@ -1032,6 +791,7 @@ function renderProvisioningBox(result) {
   `;
 }
 
+
 // ============================================================================
 // FASE 3: RELATÓRIOS VIVOS (DELTA), RAMIFICAÇÃO, DIFF & PROMOÇÃO OBSIDIAN
 // ============================================================================
@@ -1150,5 +910,244 @@ async function promoteReportModal(run_id) {
   }
 }
 
+// ============================================================================
+// FASE 4: SCORECARD E³, DOMAIN TRUST LEDGER, FEEDBACK & SETTINGS
+// ============================================================================
 
+async function loadResearchScorecard() {
+  try {
+    const res = await fetch('/api/v1/research/scorecard');
+    const data = await res.json();
+    if (data.status === 'success') {
+      const sc = data.scorecard;
+      const elE3 = document.getElementById('metric-e3-score');
+      const elAcc = document.getElementById('metric-accuracy-rate');
+      const elClaims = document.getElementById('metric-claims-evaluated');
+      const elCost = document.getElementById('metric-cost-per-verified');
 
+      if (elE3) elE3.innerText = `${sc.e3_score.toFixed(1)} / 100`;
+      if (elAcc) elAcc.innerText = `${(sc.epistemic_accuracy_rate * 100).toFixed(1)}%`;
+      if (elClaims) elClaims.innerText = `${sc.total_claims_evaluated} (${sc.accurate_claims} ✓ | ${sc.hallucinated_claims} ❌)`;
+      if (elCost) elCost.innerText = `$${sc.avg_cost_per_verified_claim.toFixed(3)}`;
+    }
+  } catch (err) {
+    console.error('Falha ao carregar scorecard E3:', err);
+  }
+}
+
+async function loadDomainTrustLedger() {
+  const tbody = document.getElementById('tbody-domain-ledger');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch('/api/v1/research/domains');
+    const data = await res.json();
+    if (data.status === 'success') {
+      const domains = Object.values(data.ledger.domains || {});
+      domains.sort((a, b) => b.trust_score - a.trust_score);
+
+      if (domains.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:16px; text-align:center; color:#64748b;">Nenhum domínio registrado.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = domains.map(d => {
+        const tierBadge = d.tier === 'boost'
+          ? '<span class="badge" style="background:rgba(16,185,129,0.2); color:#10b981;">🌟 Boost</span>'
+          : d.tier === 'block'
+          ? '<span class="badge" style="background:rgba(239,68,68,0.2); color:#ef4444;">🚫 Block</span>'
+          : '<span class="badge" style="background:rgba(148,163,184,0.2); color:#cbd5e1;">⚪ Allow</span>';
+
+        const scoreColor = d.trust_score >= 0.8 ? '#10b981' : d.trust_score >= 0.5 ? '#facc15' : '#ef4444';
+
+        return `
+          <tr style="border-bottom:1px solid #1e293b;">
+            <td style="padding:8px;">
+              <strong style="color:#f8fafc;">${escapeHtml(d.domain)}</strong>
+              ${d.notes ? `<div style="font-size:0.7rem; color:#64748b;">${escapeHtml(d.notes)}</div>` : ''}
+            </td>
+            <td style="padding:8px;">${tierBadge}</td>
+            <td style="padding:8px;">
+              <span style="color:${scoreColor}; font-weight:700;">${(d.trust_score * 100).toFixed(0)}%</span>
+            </td>
+            <td style="padding:8px; color:#94a3b8;">${d.claims_count} (${d.verified_count} ✓)</td>
+            <td style="padding:8px; color:${d.hallucinated_count > 0 ? '#ef4444' : '#64748b'};">${d.hallucinated_count}</td>
+            <td style="padding:8px; text-align:right;">
+              <div style="display:inline-flex; gap:4px;">
+                ${d.tier !== 'boost' ? `<button class="btn btn-xs btn-outline" style="color:#10b981;" onclick="changeDomainTier('${d.domain}', 'boost')">Boost</button>` : ''}
+                ${d.tier !== 'allow' ? `<button class="btn btn-xs btn-outline" style="color:#cbd5e1;" onclick="changeDomainTier('${d.domain}', 'allow')">Allow</button>` : ''}
+                ${d.tier !== 'block' ? `<button class="btn btn-xs btn-outline" style="color:#ef4444;" onclick="changeDomainTier('${d.domain}', 'block')">Block</button>` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    console.error('Falha ao carregar domain ledger:', err);
+  }
+}
+
+async function addNewDomainTrust() {
+  const input = document.getElementById('input-add-domain');
+  const select = document.getElementById('select-add-tier');
+  if (!input || !select) return;
+
+  const domain = input.value.trim();
+  const tier = select.value;
+  if (!domain) {
+    alert('Digite o domínio a ser cadastrado (ex: arxiv.org)');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/v1/research/domains', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain, tier })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      input.value = '';
+      loadDomainTrustLedger();
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao cadastrar'));
+    }
+  } catch (err) {
+    console.error('Falha ao adicionar domínio:', err);
+  }
+}
+
+async function changeDomainTier(domain, tier) {
+  try {
+    const res = await fetch('/api/v1/research/domains', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain, tier })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      loadDomainTrustLedger();
+      loadResearchScorecard();
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao atualizar'));
+    }
+  } catch (err) {
+    console.error('Falha ao alterar tier:', err);
+  }
+}
+
+async function openClaimFeedbackModal(run_id) {
+  const stmt = prompt(`[AVALIAÇÃO DE AFIRMAÇÃO — ${run_id}]\nDigite o trecho ou afirmação que deseja avaliar:`);
+  if (!stmt || !stmt.trim()) return;
+
+  const dom = prompt(`Domínio associado à fonte (opcional, ex: github.com ou spam.com):`);
+  const ratingStr = prompt(`Classificação:\n1 = 👍 Correto / Conforme\n2 = ⚠️ Disputado / Inconclusivo\n3 = ❌ Alucinação / Falso`);
+
+  let rating = 'accurate';
+  if (ratingStr === '2') rating = 'disputed';
+  if (ratingStr === '3') rating = 'hallucinated';
+
+  try {
+    const res = await fetch('/api/v1/research/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        run_id,
+        claim_index: Date.now() % 1000,
+        statement: stmt.trim(),
+        domain: dom && dom.trim() ? dom.trim() : undefined,
+        rating,
+        feedback_by: 'human',
+        recorded_at: new Date().toISOString()
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert('Feedback registrado! O ledger de reputação e métricas E3 foram atualizados.');
+      loadResearchScorecard();
+      loadDomainTrustLedger();
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao registrar feedback'));
+    }
+  } catch (err) {
+    console.error('Falha ao enviar feedback:', err);
+  }
+}
+
+async function generateSkillPatchProposal() {
+  const box = document.getElementById('box-skill-patch-proposal');
+  const targetEl = document.getElementById('skill-patch-target');
+  const contentEl = document.getElementById('skill-patch-content');
+  if (!box || !targetEl || !contentEl) return;
+
+  try {
+    const res = await fetch('/api/v1/research/skill-patch', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'success') {
+      const p = data.proposal;
+      targetEl.innerText = `Destino: ${p.target_file}\nJustificativa: ${p.rationale}`;
+      contentEl.innerText = p.patch_preview;
+      box.style.display = 'block';
+    } else {
+      alert('Erro ao gerar proposta: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao gerar auto-patch:', err);
+  }
+}
+
+async function loadResearchSettings() {
+  try {
+    const res = await fetch('/api/v1/research/settings');
+    const data = await res.json();
+    if (data.status === 'success') {
+      const s = data.settings;
+      const bEl = document.getElementById('setting-max-budget');
+      const eEl = document.getElementById('setting-default-effort');
+      const dEl = document.getElementById('setting-default-depth');
+      const lEl = document.getElementById('setting-lease-timeout');
+      const oEl = document.getElementById('setting-auto-obsidian');
+
+      if (bEl) bEl.value = s.max_budget_usd;
+      if (eEl) eEl.value = s.default_effort;
+      if (dEl) dEl.value = s.default_depth;
+      if (lEl) lEl.value = s.lease_timeout_secs;
+      if (oEl) oEl.checked = s.auto_promote_obsidian;
+    }
+  } catch (err) {
+    console.error('Falha ao carregar configurações:', err);
+  }
+}
+
+async function saveResearchSettings() {
+  const bEl = document.getElementById('setting-max-budget');
+  const eEl = document.getElementById('setting-default-effort');
+  const dEl = document.getElementById('setting-default-depth');
+  const lEl = document.getElementById('setting-lease-timeout');
+  const oEl = document.getElementById('setting-auto-obsidian');
+
+  const payload = {
+    max_budget_usd: bEl ? parseFloat(bEl.value) || 5.0 : 5.0,
+    default_effort: eEl ? eEl.value : 'L2Comparative',
+    default_depth: dEl ? parseInt(dEl.value, 10) || 2 : 2,
+    lease_timeout_secs: lEl ? parseInt(lEl.value, 10) || 180 : 180,
+    auto_promote_obsidian: oEl ? oEl.checked : false
+  };
+
+  try {
+    const res = await fetch('/api/v1/research/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert('Configurações do Research Hub salvas com sucesso!');
+    } else {
+      alert('Erro ao salvar configurações: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao salvar configurações:', err);
+  }
+}

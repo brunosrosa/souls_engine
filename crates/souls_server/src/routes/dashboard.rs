@@ -3366,6 +3366,127 @@ pub async fn research_hub_promote_handler(
     }
 }
 
+// ============================================================================
+// FASE 4 HANDLERS: DOMAIN TRUST, CLAIM FEEDBACK, E3 SCORECARD & SETTINGS
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchDomainUpdateRequest {
+    pub domain: String,
+    pub tier: String,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchScorecardQuery {
+    pub run_id: Option<String>,
+}
+
+/// Returns Domain Trust Ledger.
+pub async fn research_hub_domains_get_handler(
+    State(state): State<AppState>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let ledger = state.research.load_domain_trust_ledger();
+    Json(json!({
+        "status": "success",
+        "ledger": ledger
+    }))
+}
+
+/// Updates or inserts a domain in Domain Trust Ledger.
+pub async fn research_hub_domains_post_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchDomainUpdateRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let tier = match payload.tier.to_lowercase().as_str() {
+        "boost" => crate::research_hub::DomainTrustTier::Boost,
+        "block" => crate::research_hub::DomainTrustTier::Block,
+        _ => crate::research_hub::DomainTrustTier::Allow,
+    };
+
+    match state.research.update_domain_trust(&payload.domain, tier, payload.notes) {
+        Ok(entry) => Json(json!({
+            "status": "success",
+            "message": format!("Domínio '{}' atualizado com sucesso", payload.domain),
+            "entry": entry
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Records human or verifier claim-level feedback.
+pub async fn research_hub_feedback_post_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<crate::research_hub::ClaimFeedbackRecord>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    match state.research.record_claim_feedback(payload) {
+        Ok(_) => Json(json!({
+            "status": "success",
+            "message": "Feedback epistêmico registrado com sucesso"
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Computes Epistemic Scorecard with E3 metric.
+pub async fn research_hub_scorecard_handler(
+    State(state): State<AppState>,
+    Query(query): Query<ResearchScorecardQuery>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let scorecard = state.research.compute_scorecard(query.run_id.as_deref());
+    Json(json!({
+        "status": "success",
+        "scorecard": scorecard
+    }))
+}
+
+/// Returns Hub global settings.
+pub async fn research_hub_settings_get_handler(
+    State(state): State<AppState>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let settings = state.research.load_settings();
+    Json(json!({
+        "status": "success",
+        "settings": settings
+    }))
+}
+
+/// Updates Hub global settings.
+pub async fn research_hub_settings_post_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<crate::research_hub::ResearchSettings>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    match state.research.save_settings(&payload) {
+        Ok(_) => Json(json!({
+            "status": "success",
+            "message": "Configurações do Research Hub salvas com sucesso",
+            "settings": payload
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Generates automated skill patch proposal for deepsoul-research.
+pub async fn research_hub_skill_patch_handler(
+    State(state): State<AppState>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    match state.research.propose_skill_patch() {
+        Ok(proposal) => Json(json!({
+            "status": "success",
+            "proposal": proposal
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
 
 
 

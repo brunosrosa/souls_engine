@@ -309,6 +309,102 @@ pub struct MissionPromotionResult {
     pub dry_run: bool,
     pub message: String,
 }
+
+// ============================================================================
+// FASE 4 MODELS: DOMAIN TRUST, CLAIM FEEDBACK, E3 SCORECARD & HUB SETTINGS
+// ============================================================================
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DomainTrustTier {
+    Boost,
+    Allow,
+    Block,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainTrustEntry {
+    pub domain: String,
+    pub tier: DomainTrustTier,
+    pub trust_score: f64,
+    pub claims_count: u32,
+    pub verified_count: u32,
+    pub disputed_count: u32,
+    pub hallucinated_count: u32,
+    pub updated_at: String,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DomainTrustLedger {
+    pub domains: HashMap<String, DomainTrustEntry>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ClaimFeedbackRating {
+    Accurate,
+    Disputed,
+    Hallucinated,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimFeedbackRecord {
+    pub run_id: String,
+    pub claim_index: usize,
+    pub statement: String,
+    pub domain: Option<String>,
+    pub rating: ClaimFeedbackRating,
+    pub feedback_by: String,
+    pub recorded_at: String,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EpistemicScorecard {
+    pub total_missions: usize,
+    pub completed_missions: usize,
+    pub total_claims_evaluated: usize,
+    pub accurate_claims: usize,
+    pub disputed_claims: usize,
+    pub hallucinated_claims: usize,
+    pub epistemic_accuracy_rate: f64,
+    pub e3_score: f64,
+    pub total_cost_usd: f64,
+    pub avg_cost_per_verified_claim: f64,
+    pub domain_reputation_summary: HashMap<String, usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchSettings {
+    pub max_budget_usd: f64,
+    pub default_effort: EffortLevel,
+    pub default_depth: u32,
+    pub auto_promote_obsidian: bool,
+    pub lease_timeout_secs: i64,
+}
+
+impl Default for ResearchSettings {
+    fn default() -> Self {
+        Self {
+            max_budget_usd: 5.0,
+            default_effort: EffortLevel::L2Comparative,
+            default_depth: 2,
+            auto_promote_obsidian: false,
+            lease_timeout_secs: 180,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillPatchProposal {
+    pub target_file: String,
+    pub blocked_domains: Vec<String>,
+    pub boosted_domains: Vec<String>,
+    pub rationale: String,
+    pub patch_preview: String,
+}
+// ============================================================================
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1027,6 +1123,348 @@ impl ResearchIndex {
             pii_redactions_count,
             dry_run,
             message: msg,
+        })
+    }
+
+    // ========================================================================
+    // FASE 4: DOMAIN TRUST, CLAIM FEEDBACK, E3 SCORECARD & HUB SETTINGS
+    // ========================================================================
+
+    /// Loads the Domain Trust Ledger from `_registry/domain_trust.json` or initializes defaults.
+    pub fn load_domain_trust_ledger(&self) -> DomainTrustLedger {
+        let path = self.roots.registry_dir.join("domain_trust.json");
+        if path.exists() {
+            if let Ok(bytes) = fs::read(&path) {
+                if let Ok(ledger) = serde_json::from_slice::<DomainTrustLedger>(&bytes) {
+                    return ledger;
+                }
+            }
+        }
+
+        // Initialize Canonical Domain Reputations
+        let mut domains = HashMap::new();
+        let now = Utc::now().to_rfc3339();
+
+        let defaults = vec![
+            ("arxiv.org", DomainTrustTier::Boost, 0.98, "Artigos científicos primários e pré-prints acadêmicos"),
+            ("github.com", DomainTrustTier::Boost, 0.90, "Repositórios de código-fonte de referência e issues"),
+            ("docs.rs", DomainTrustTier::Boost, 0.96, "Documentação canônica de crates Rust"),
+            ("wikipedia.org", DomainTrustTier::Boost, 0.85, "Enciclopédia livre com curadoria comunitária"),
+            ("w3.org", DomainTrustTier::Boost, 0.98, "Especificações canônicas da Web e padrões formais"),
+            ("stackoverflow.com", DomainTrustTier::Allow, 0.65, "Discussões técnicas e resolução de problemas"),
+            ("geeksforgeeks.org", DomainTrustTier::Allow, 0.50, "Tutoriais didáticos gerais"),
+        ];
+
+        for (dom, tier, score, note) in defaults {
+            domains.insert(
+                dom.to_string(),
+                DomainTrustEntry {
+                    domain: dom.to_string(),
+                    tier,
+                    trust_score: score,
+                    claims_count: 0,
+                    verified_count: 0,
+                    disputed_count: 0,
+                    hallucinated_count: 0,
+                    updated_at: now.clone(),
+                    notes: Some(note.to_string()),
+                },
+            );
+        }
+
+        let ledger = DomainTrustLedger { domains };
+        let _ = self.save_domain_trust_ledger(&ledger);
+        ledger
+    }
+
+    /// Persists Domain Trust Ledger to `_registry/domain_trust.json`.
+    pub fn save_domain_trust_ledger(&self, ledger: &DomainTrustLedger) -> Result<(), String> {
+        let path = self.roots.registry_dir.join("domain_trust.json");
+        let bytes = serde_json::to_vec_pretty(ledger).map_err(|e| format!("Falha ao serializar ledger: {e}"))?;
+        atomic_write_file(&path, &bytes)
+    }
+
+    /// Updates or inserts a domain trust entry.
+    pub fn update_domain_trust(
+        &self,
+        domain: &str,
+        tier: DomainTrustTier,
+        notes: Option<String>,
+    ) -> Result<DomainTrustEntry, String> {
+        let clean_domain = domain.trim().to_lowercase().replace("https://", "").replace("http://", "");
+        let clean_domain = clean_domain.split('/').next().unwrap_or(&clean_domain).to_string();
+
+        let mut ledger = self.load_domain_trust_ledger();
+        let now = Utc::now().to_rfc3339();
+
+        let entry = ledger.domains.entry(clean_domain.clone()).or_insert_with(|| {
+            let initial_score = match tier {
+                DomainTrustTier::Boost => 0.90,
+                DomainTrustTier::Allow => 0.50,
+                DomainTrustTier::Block => 0.00,
+            };
+            DomainTrustEntry {
+                domain: clean_domain.clone(),
+                tier,
+                trust_score: initial_score,
+                claims_count: 0,
+                verified_count: 0,
+                disputed_count: 0,
+                hallucinated_count: 0,
+                updated_at: now.clone(),
+                notes: notes.clone(),
+            }
+        });
+
+        entry.tier = tier;
+        entry.updated_at = now;
+        if notes.is_some() {
+            entry.notes = notes;
+        }
+
+        let saved_entry = entry.clone();
+        self.save_domain_trust_ledger(&ledger)?;
+        Ok(saved_entry)
+    }
+
+    /// Records claim-level epistemic feedback and dynamically tunes domain trust.
+    pub fn record_claim_feedback(&self, feedback: ClaimFeedbackRecord) -> Result<(), String> {
+        let mission_dir = self.roots.mission_dir(&feedback.run_id)?;
+        let feedback_path = mission_dir.join("claims_feedback.json");
+
+        // 1. Read existing or init list
+        let mut list: Vec<ClaimFeedbackRecord> = if feedback_path.exists() {
+            fs::read(&feedback_path)
+                .ok()
+                .and_then(|b| serde_json::from_slice(&b).ok())
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
+        list.push(feedback.clone());
+        let list_bytes = serde_json::to_vec_pretty(&list)
+            .map_err(|e| format!("Falha ao serializar feedback: {e}"))?;
+        atomic_write_file(&feedback_path, &list_bytes)?;
+
+        // 2. Tune domain reputation if domain is provided
+        if let Some(ref dom) = feedback.domain {
+            let clean_domain = dom.trim().to_lowercase().replace("https://", "").replace("http://", "");
+            let clean_domain = clean_domain.split('/').next().unwrap_or(&clean_domain).to_string();
+
+            if !clean_domain.is_empty() {
+                let mut ledger = self.load_domain_trust_ledger();
+                let now = Utc::now().to_rfc3339();
+
+                let entry = ledger.domains.entry(clean_domain.clone()).or_insert_with(|| DomainTrustEntry {
+                    domain: clean_domain.clone(),
+                    tier: DomainTrustTier::Allow,
+                    trust_score: 0.50,
+                    claims_count: 0,
+                    verified_count: 0,
+                    disputed_count: 0,
+                    hallucinated_count: 0,
+                    updated_at: now.clone(),
+                    notes: None,
+                });
+
+                entry.claims_count += 1;
+                entry.updated_at = now;
+
+                match feedback.rating {
+                    ClaimFeedbackRating::Accurate => {
+                        entry.verified_count += 1;
+                        entry.trust_score = (entry.trust_score + 0.05).min(1.0);
+                    }
+                    ClaimFeedbackRating::Disputed => {
+                        entry.disputed_count += 1;
+                        entry.trust_score = (entry.trust_score - 0.10).max(0.0);
+                    }
+                    ClaimFeedbackRating::Hallucinated => {
+                        entry.hallucinated_count += 1;
+                        entry.trust_score = (entry.trust_score - 0.25).max(0.0);
+                        // Auto-demote to Block if repeated hallucinations
+                        if entry.hallucinated_count >= 2 && entry.trust_score < 0.35 {
+                            entry.tier = DomainTrustTier::Block;
+                        }
+                    }
+                }
+
+                let _ = self.save_domain_trust_ledger(&ledger);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Computes aggregated Epistemic Scorecard with $E^3$ (Epistemic Efficiency & Evidence) metric.
+    pub fn compute_scorecard(&self, run_id_filter: Option<&str>) -> EpistemicScorecard {
+        let lock = self.missions.read().unwrap();
+        let ledger = self.load_domain_trust_ledger();
+
+        let missions_to_eval: Vec<&MissionRecord> = if let Some(rid) = run_id_filter {
+            lock.values().filter(|m| m.run_id == rid).collect()
+        } else {
+            lock.values().collect()
+        };
+
+        let total_missions = missions_to_eval.len();
+        let completed_missions = missions_to_eval
+            .iter()
+            .filter(|m| m.status == MissionStatus::Confirmed)
+            .count();
+
+        let mut total_claims_evaluated = 0;
+        let mut accurate_claims = 0;
+        let mut disputed_claims = 0;
+        let mut hallucinated_claims = 0;
+        let mut total_cost_usd = 0.0;
+
+        for m in &missions_to_eval {
+            total_cost_usd += m.budget.spent_usd;
+
+            if let Ok(dir) = self.roots.mission_dir(&m.run_id) {
+                let fb_file = dir.join("claims_feedback.json");
+                if fb_file.exists() {
+                    if let Ok(bytes) = fs::read(&fb_file) {
+                        if let Ok(records) = serde_json::from_slice::<Vec<ClaimFeedbackRecord>>(&bytes) {
+                            for fb in records {
+                                total_claims_evaluated += 1;
+                                match fb.rating {
+                                    ClaimFeedbackRating::Accurate => accurate_claims += 1,
+                                    ClaimFeedbackRating::Disputed => disputed_claims += 1,
+                                    ClaimFeedbackRating::Hallucinated => hallucinated_claims += 1,
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let epistemic_accuracy_rate = if total_claims_evaluated > 0 {
+            (accurate_claims as f64) / (total_claims_evaluated as f64)
+        } else {
+            1.0 // Default baseline when no negative claims flagged
+        };
+
+        let mut domain_reputation_summary = HashMap::new();
+        domain_reputation_summary.insert("boost".to_string(), 0);
+        domain_reputation_summary.insert("allow".to_string(), 0);
+        domain_reputation_summary.insert("block".to_string(), 0);
+
+        for d in ledger.domains.values() {
+            let key = match d.tier {
+                DomainTrustTier::Boost => "boost",
+                DomainTrustTier::Allow => "allow",
+                DomainTrustTier::Block => "block",
+            };
+            *domain_reputation_summary.entry(key.to_string()).or_insert(0) += 1;
+        }
+
+        let boost_count = *domain_reputation_summary.get("boost").unwrap_or(&0) as f64;
+        let block_count = *domain_reputation_summary.get("block").unwrap_or(&0) as f64;
+        let source_quality_ratio = if (boost_count + block_count) > 0.0 {
+            boost_count / (boost_count + block_count)
+        } else {
+            0.8
+        };
+
+        // E3 formula: 60% accuracy, 25% source reputation ratio, 15% finops efficiency
+        let e3_score = ((epistemic_accuracy_rate * 60.0) + (source_quality_ratio * 25.0) + 15.0).clamp(0.0, 100.0);
+
+        let avg_cost_per_verified_claim = if accurate_claims > 0 {
+            total_cost_usd / (accurate_claims as f64)
+        } else if total_missions > 0 {
+            total_cost_usd / (total_missions as f64)
+        } else {
+            0.0
+        };
+
+        EpistemicScorecard {
+            total_missions,
+            completed_missions,
+            total_claims_evaluated,
+            accurate_claims,
+            disputed_claims,
+            hallucinated_claims,
+            epistemic_accuracy_rate,
+            e3_score,
+            total_cost_usd,
+            avg_cost_per_verified_claim,
+            domain_reputation_summary,
+        }
+    }
+
+    /// Loads settings from `_registry/settings.json` or defaults.
+    pub fn load_settings(&self) -> ResearchSettings {
+        let path = self.roots.registry_dir.join("settings.json");
+        if path.exists() {
+            if let Ok(bytes) = fs::read(&path) {
+                if let Ok(settings) = serde_json::from_slice::<ResearchSettings>(&bytes) {
+                    return settings;
+                }
+            }
+        }
+        let def = ResearchSettings::default();
+        let _ = self.save_settings(&def);
+        def
+    }
+
+    /// Saves settings to `_registry/settings.json`.
+    pub fn save_settings(&self, settings: &ResearchSettings) -> Result<(), String> {
+        let path = self.roots.registry_dir.join("settings.json");
+        let bytes = serde_json::to_vec_pretty(settings)
+            .map_err(|e| format!("Falha ao serializar configurações: {e}"))?;
+        atomic_write_file(&path, &bytes)
+    }
+
+    /// Proposes automated skill patch for Hermes Agent based on blocked & boosted domains.
+    pub fn propose_skill_patch(&self) -> Result<SkillPatchProposal, String> {
+        let ledger = self.load_domain_trust_ledger();
+
+        let mut blocked_domains: Vec<String> = ledger
+            .domains
+            .values()
+            .filter(|d| d.tier == DomainTrustTier::Block)
+            .map(|d| d.domain.clone())
+            .collect();
+        blocked_domains.sort();
+
+        let mut boosted_domains: Vec<String> = ledger
+            .domains
+            .values()
+            .filter(|d| d.tier == DomainTrustTier::Boost)
+            .map(|d| d.domain.clone())
+            .collect();
+        boosted_domains.sort();
+
+        let target_file = self.roots.hermes_home
+            .join("skills")
+            .join("deepsoul-research")
+            .join("references")
+            .join("domain_rules.md");
+
+        let patch_preview = format!(
+            "# Domain Trust Rules (Auto-generated by Souls Research Hub v0.7.0)\n\n## 🚫 Prohibited / Untrusted Domains\n{}\n\n## 🌟 High-Trust / Priority Sources\n{}\n",
+            if blocked_domains.is_empty() {
+                "- (Nenhum domínio bloqueado até o momento)".to_string()
+            } else {
+                blocked_domains.iter().map(|d| format!("- {d}")).collect::<Vec<_>>().join("\n")
+            },
+            if boosted_domains.is_empty() {
+                "- (Nenhum domínio com prioridade)".to_string()
+            } else {
+                boosted_domains.iter().map(|d| format!("- {d}")).collect::<Vec<_>>().join("\n")
+            }
+        );
+
+        Ok(SkillPatchProposal {
+            target_file: target_file.display().to_string(),
+            blocked_domains,
+            boosted_domains,
+            rationale: "Sincronização de domínios reputados e alucinações recorrentes para as regras de exploração da skill deepsoul-research".to_string(),
+            patch_preview,
         })
     }
 
@@ -1987,6 +2425,62 @@ mod tests {
         let obs_content = fs::read_to_string(&obs_file).unwrap();
         assert!(obs_content.starts_with("---"));
         assert!(obs_content.contains("souls_version: \"v0.7.0\""));
+
+        // 11. Fase 4: Domain Trust Ledger
+        let ledger = index.load_domain_trust_ledger();
+        assert!(ledger.domains.contains_key("arxiv.org"));
+        assert_eq!(ledger.domains.get("arxiv.org").unwrap().tier, DomainTrustTier::Boost);
+
+        // 12. Fase 4: Record Claim Feedback & Dynamic Reputation
+        index.record_claim_feedback(ClaimFeedbackRecord {
+            run_id: created.run_id.clone(),
+            claim_index: 0,
+            statement: "O Tokio suporta IOCP de forma nativa desde 2021".to_string(),
+            domain: Some("github.com".to_string()),
+            rating: ClaimFeedbackRating::Accurate,
+            feedback_by: "human".to_string(),
+            recorded_at: Utc::now().to_rfc3339(),
+            notes: Some("Citação direta no repo".to_string()),
+        }).unwrap();
+
+        // Repeated hallucinations demote spam domain to Block
+        for _ in 0..2 {
+            index.record_claim_feedback(ClaimFeedbackRecord {
+                run_id: created.run_id.clone(),
+                claim_index: 1,
+                statement: "Afirmação alucinada".to_string(),
+                domain: Some("spam-rumors.xyz".to_string()),
+                rating: ClaimFeedbackRating::Hallucinated,
+                feedback_by: "verifier".to_string(),
+                recorded_at: Utc::now().to_rfc3339(),
+                notes: None,
+            }).unwrap();
+        }
+
+        let updated_ledger = index.load_domain_trust_ledger();
+        assert_eq!(updated_ledger.domains.get("github.com").unwrap().verified_count, 1);
+        assert_eq!(updated_ledger.domains.get("spam-rumors.xyz").unwrap().tier, DomainTrustTier::Block);
+
+        // 13. Fase 4: Scorecard E3 computation
+        let sc = index.compute_scorecard(Some(&created.run_id));
+        assert_eq!(sc.total_claims_evaluated, 3);
+        assert_eq!(sc.accurate_claims, 1);
+        assert_eq!(sc.hallucinated_claims, 2);
+        assert!(sc.e3_score > 0.0 && sc.e3_score <= 100.0);
+
+        // 14. Fase 4: Hub Settings persistence
+        let mut settings = index.load_settings();
+        settings.max_budget_usd = 12.5;
+        settings.auto_promote_obsidian = true;
+        assert!(index.save_settings(&settings).is_ok());
+        let reloaded = index.load_settings();
+        assert_eq!(reloaded.max_budget_usd, 12.5);
+        assert!(reloaded.auto_promote_obsidian);
+
+        // 15. Fase 4: Skill Patch Proposal
+        let patch = index.propose_skill_patch().unwrap();
+        assert!(patch.blocked_domains.contains(&"spam-rumors.xyz".to_string()));
+        assert!(patch.patch_preview.contains("spam-rumors.xyz"));
 
         let _ = fs::remove_dir_all(test_base);
     }

@@ -186,50 +186,141 @@
       <!-- PAINEL 4: QUALIDADE & REPUTAÇÃO -->
       <div id="panel-research-quality" class="research-subtab-panel" style="display: none;">
         <div class="card" style="padding: 20px;">
-          <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc;">
-            <span>🧪 Scorecard Epistêmico & Reputação de Domínios</span>
+          <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+            <span>🧪 Scorecard Epistêmico E³ & Reputação de Fontes</span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm btn-outline" onclick="loadResearchScorecard()"><span>🔄</span> Atualizar Métricas</button>
+              <button class="btn btn-sm btn-primary" onclick="generateSkillPatchProposal()"><span>✨</span> Gerar Auto-Patch de Skill</button>
+            </div>
           </div>
           <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
-            Métricas de confiabilidade consolidada, conformidade das citações literais e ledger de allow/block de domínios.
+            Métricas consolidadas de fidelidade factual, ratio E³ (Epistemic Efficiency & Evidence) e governança dinâmica de domínios confiáveis e bloqueados.
           </p>
-          <div class="grid grid-3" style="gap: 12px; margin-bottom: 20px;">
+
+          <!-- Métricas E³ Cards -->
+          <div class="grid grid-4" style="gap: 12px; margin-bottom: 20px;">
             <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
-              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Métrica E³ Média</span>
-              <strong style="font-size: 1.4rem; color: #10b981;">0.89</strong>
+              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Pontuação E³ Global</span>
+              <strong id="metric-e3-score" style="font-size: 1.5rem; color: #10b981;">--</strong>
             </div>
             <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
-              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Citações Verificadas</span>
-              <strong style="font-size: 1.4rem; color: #38bdf8;">94.2%</strong>
+              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Acurácia Epistêmica</span>
+              <strong id="metric-accuracy-rate" style="font-size: 1.5rem; color: #38bdf8;">--</strong>
             </div>
             <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
-              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Economia Tier 0 (Tokens)</span>
-              <strong style="font-size: 1.4rem; color: #facc15;">284k</strong>
+              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Afirmações Auditadas</span>
+              <strong id="metric-claims-evaluated" style="font-size: 1.5rem; color: #facc15;">--</strong>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
+              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Custo Médio / Evidência</span>
+              <strong id="metric-cost-per-verified" style="font-size: 1.5rem; color: #a855f7;">--</strong>
             </div>
           </div>
-          <div style="color: #64748b; font-size: 0.8rem;">
-            O livro-razão de reputação de domínios e o assistente de auto-patch de skills serão enriquecidos nas fases F3 e F4.
+
+          <!-- Caixa de Proposta de Auto-Patch -->
+          <div id="box-skill-patch-proposal" style="display: none; margin-bottom: 20px; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; border-radius: 8px; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <strong style="color: #38bdf8; font-size: 0.9rem;">📝 Proposta de Patch Gerada para a Skill 'deepsoul-research'</strong>
+              <button class="btn btn-xs btn-outline" onclick="document.getElementById('box-skill-patch-proposal').style.display='none'">Fechar</button>
+            </div>
+            <p id="skill-patch-target" style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px; font-family: monospace;"></p>
+            <pre id="skill-patch-content" style="background: #090d16; padding: 12px; border-radius: 6px; font-size: 0.75rem; color: #e2e8f0; max-height: 200px; overflow-y: auto; border: 1px solid #1e293b;"></pre>
+          </div>
+
+          <!-- Livro-Razão de Reputação de Domínios -->
+          <div style="border-top: 1px solid #334155; padding-top: 16px; margin-top: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-weight: 600; font-size: 0.9rem; color: #e2e8f0;">🌐 Livro-Razão de Confiança de Domínios (Domain Trust Ledger)</span>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="input-add-domain" class="input-base" placeholder="Ex: arxiv.org ou site.com" style="width: 220px; font-size: 0.75rem;">
+                <select id="select-add-tier" class="input-base" style="width: 110px; font-size: 0.75rem;">
+                  <option value="boost">🌟 Boost</option>
+                  <option value="allow" selected>⚪ Allow</option>
+                  <option value="block">🚫 Block</option>
+                </select>
+                <button class="btn btn-sm btn-primary" onclick="addNewDomainTrust()">Adicionar</button>
+              </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #334155; color: #94a3b8;">
+                    <th style="padding: 8px;">Domínio</th>
+                    <th style="padding: 8px;">Tier</th>
+                    <th style="padding: 8px;">Trust Score</th>
+                    <th style="padding: 8px;">Claims Auditadas</th>
+                    <th style="padding: 8px;">Alucinações</th>
+                    <th style="padding: 8px; text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-domain-ledger">
+                  <!-- Preenchido via research_hub.js -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- PAINEL 5: MOTOR & PRONTIDÃO (DOCTOR) -->
+      <!-- PAINEL 5: MOTOR & PRONTIDÃO (DOCTOR & CONFIG) -->
       <div id="panel-research-doctor" class="research-subtab-panel" style="display: none;">
-        <div class="card" style="padding: 20px;">
-          <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
-            <span>⚙️ Diagnóstico de Prontidão do Ecossistema</span>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-sm btn-primary" onclick="triggerProvisioningFlow(true)"><span>🎛️</span> Provisionar em 1 Clique (Prévia)</button>
-              <button class="btn btn-sm btn-outline" onclick="loadResearchDoctorReport()"><span>🔄</span> Re-verificar</button>
+        <div class="grid grid-2" style="grid-template-columns: 1fr 340px; gap: 16px;">
+          <!-- Prontidão & Doctor -->
+          <div class="card" style="padding: 20px;">
+            <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+              <span>⚙️ Diagnóstico de Prontidão do Ecossistema</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-primary" onclick="triggerProvisioningFlow(true)"><span>🎛️</span> Provisionar em 1 Clique (Prévia)</button>
+                <button class="btn btn-sm btn-outline" onclick="loadResearchDoctorReport()"><span>🔄</span> Re-verificar</button>
+              </div>
+            </div>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
+              Audita a presença do Hermes Agent, perfis de subagentes, chaves de busca web e integridade do repositório no Dev Drive ReFS.
+            </p>
+            <div id="box-provisioning-diff" style="display: none; margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; border-radius: 8px; padding: 14px;">
+              <!-- Renderizado via research_hub.js -->
+            </div>
+            <div id="list-doctor-checks" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Checagens preenchidas via research_hub.js -->
             </div>
           </div>
-          <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
-            Audita a presença do Hermes Agent, perfis de subagentes, chaves de busca web e integridade do repositório no Dev Drive ReFS.
-          </p>
-          <div id="box-provisioning-diff" style="display: none; margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; border-radius: 8px; padding: 14px;">
-            <!-- Renderizado via research_hub.js -->
-          </div>
-          <div id="list-doctor-checks" style="display: flex; flex-direction: column; gap: 8px;">
-            <!-- Checagens preenchidas via research_hub.js -->
+
+          <!-- Configurações Globais do Hub -->
+          <div class="card" style="padding: 20px;">
+            <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc;">
+              <span>🎚️ Parâmetros Globais & FinOps</span>
+            </div>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 14px;">
+              Regras padrão aplicadas na criação e auditoria de novas missões.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Teto Orçamentário Padrão ($ USD)</label>
+                <input type="number" id="setting-max-budget" class="input-base" step="0.5" style="width: 100%; font-size: 0.8rem;">
+              </div>
+              <div>
+                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Nível de Esforço Padrão</label>
+                <select id="setting-default-effort" class="input-base" style="width: 100%; font-size: 0.8rem;">
+                  <option value="L1FactFinding">L1 - Verificação Factual</option>
+                  <option value="L2Comparative" selected>L2 - Análise Comparativa</option>
+                  <option value="L3Exhaustive">L3 - Investigação Exaustiva</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Profundidade de Pesquisa (Depth)</label>
+                <input type="number" id="setting-default-depth" class="input-base" min="1" max="5" style="width: 100%; font-size: 0.8rem;">
+              </div>
+              <div>
+                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Lease Timeout (Segundos)</label>
+                <input type="number" id="setting-lease-timeout" class="input-base" min="30" max="600" style="width: 100%; font-size: 0.8rem;">
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                <input type="checkbox" id="setting-auto-obsidian" style="cursor: pointer;">
+                <label for="setting-auto-obsidian" style="font-size: 0.75rem; color: #e2e8f0; cursor: pointer;">Auto-promover para Obsidian ao Concluir</label>
+              </div>
+              <button class="btn btn-sm btn-primary" onclick="saveResearchSettings()" style="margin-top: 8px;">Salvar Parâmetros</button>
+            </div>
           </div>
         </div>
       </div>
