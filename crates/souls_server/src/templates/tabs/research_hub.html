@@ -1,0 +1,230 @@
+    <!-- ========================================== -->
+    <!-- ABA 7: RESEARCH HUB & COGNIÇÃO PROFUNDA (v0.7.0) -->
+    <!-- ========================================== -->
+    <div id="tab-research" class="tab-pane">
+      <div class="content-header" style="margin-bottom: 16px;">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+            <span>🔬</span> Pesquisa Profunda & Cognição Hermética
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.7rem; padding: 2px 8px; border-radius: 9999px;">v0.7.0 SSOT</span>
+          </h2>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">
+            Plano de controle para missões de investigação com árvore recursiva, decomposição em Tiers FinOps e verificação factual.
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-sm btn-outline" onclick="loadResearchHubMissions()" title="Recarregar acervo de missões">
+            <span>🔄</span> Atualizar
+          </button>
+          <button class="btn btn-sm btn-primary" onclick="switchResearchSubtab('new-mission')">
+            <span>➕</span> Nova Missão
+          </button>
+        </div>
+      </div>
+
+      <!-- SUBTABS BAR -->
+      <div class="subtabs-bar" id="research-subtabs-bar" style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="subtab-btn active" id="btn-research-subtab-new" onclick="switchResearchSubtab('new-mission')">
+          <span>🚀 Nova Missão</span>
+        </button>
+        <button class="subtab-btn" id="btn-research-subtab-active" onclick="switchResearchSubtab('active')">
+          <span>📡 Missões Ativas & Fila</span>
+          <span class="tab-count-badge" id="badge-research-active-count">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-research-subtab-library" onclick="switchResearchSubtab('library')">
+          <span>📚 Biblioteca & Relatórios</span>
+          <span class="tab-count-badge" id="badge-research-library-count">0</span>
+        </button>
+        <button class="subtab-btn" id="btn-research-subtab-quality" onclick="switchResearchSubtab('quality')">
+          <span>🧪 Qualidade & Reputação</span>
+        </button>
+        <button class="subtab-btn" id="btn-research-subtab-doctor" onclick="switchResearchSubtab('doctor')">
+          <span>⚙️ Motor & Prontidão</span>
+          <span class="tab-count-badge" id="badge-research-doctor-status" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Check</span>
+        </button>
+      </div>
+
+      <!-- PAINEL 1: NOVA MISSÃO (SCOPING & FINOPS PREVIEW) -->
+      <div id="panel-research-new" class="research-subtab-panel">
+        <div class="grid grid-2" style="grid-template-columns: 1.2fr 0.8fr; gap: 16px;">
+          <!-- Coluna Esquerda: Elaboração do Brief -->
+          <div class="card" style="padding: 20px;">
+            <div class="card-title" style="margin-bottom: 14px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+              <span>📝 Definir Pergunta & Escopo</span>
+              <span id="label-effort-badge" class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">L2 Comparativo</span>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+              <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; font-weight: 600;">PERGUNTA PRINCIPAL DA PESQUISA:</label>
+              <textarea id="input-research-question" rows="3" class="input-base" style="width: 100%; resize: vertical; font-size: 0.85rem;" placeholder="Ex: Compare a arquitetura do Tokio vs Glommio para I/O bare-metal no Windows..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+              <button class="btn btn-sm btn-primary" onclick="generateResearchDraftPlan()">
+                <span>⚡ Gerar Plano Editável (Tier 0)</span>
+              </button>
+              <button class="btn btn-sm btn-outline" onclick="applyResearchTemplate('tech_benchmark')">
+                <span>📋 Exemplo Técnico</span>
+              </button>
+              <button class="btn btn-sm btn-outline" onclick="applyResearchTemplate('market_review')">
+                <span>📊 Exemplo Mercado</span>
+              </button>
+            </div>
+
+            <div id="box-editable-brief" style="display: none; border-top: 1px solid var(--border-color, #334155); padding-top: 16px;">
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">PERSPECTIVAS DISCIPLINARES (STORM PATTERN):</label>
+                <div id="list-brief-perspectives" style="display: flex; flex-direction: column; gap: 6px;"></div>
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">SUB-TÓPICOS DE EXPLORAÇÃO ATÔMICA:</label>
+                <div id="list-brief-subtopics" style="display: flex; flex-direction: column; gap: 6px;"></div>
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">FRONTEIRAS DE EXCLUSÃO (ANTI-RUÍDO):</label>
+                <div id="list-brief-exclusions" style="display: flex; flex-direction: column; gap: 6px;"></div>
+              </div>
+
+              <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <div style="flex: 1;">
+                  <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Largura (Breadth):</label>
+                  <input type="number" id="input-brief-breadth" min="1" max="6" value="3" class="input-base" style="width: 100%;">
+                </div>
+                <div style="flex: 1;">
+                  <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Profundidade (Depth):</label>
+                  <input type="number" id="input-brief-depth" min="1" max="4" value="2" class="input-base" style="width: 100%;">
+                </div>
+                <div style="flex: 1;">
+                  <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Teto FinOps (USD):</label>
+                  <input type="number" id="input-brief-cap" step="0.10" min="0.20" max="15.00" value="1.50" class="input-base" style="width: 100%;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Coluna Direita: Painel FinOps & Lançamento -->
+          <div class="card" style="padding: 20px;">
+            <div class="card-title" style="margin-bottom: 14px; font-weight: 600; color: #f8fafc;">
+              <span>💸 Prévia FinOps & Lançamento</span>
+            </div>
+
+            <div id="box-finops-preview" style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
+                <span style="color: #94a3b8;">Nível de Esforço:</span>
+                <strong id="finops-effort" style="color: #38bdf8;">--</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
+                <span style="color: #94a3b8;">Turnos Estimados:</span>
+                <strong id="finops-turns" style="color: #f8fafc;">--</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
+                <span style="color: #94a3b8;">Tokens Poupados (Tier 0 BM25):</span>
+                <strong id="finops-tokens-t0" style="color: #10b981;">--</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
+                <span style="color: #94a3b8;">Tokens Fast-Scout (Tier 2):</span>
+                <strong id="finops-tokens-t2" style="color: #cbd5e1;">--</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
+                <span style="color: #94a3b8;">Faixa de Custo Estimada:</span>
+                <strong id="finops-cost-range" style="color: #facc15;">$0.20 - $0.75</strong>
+              </div>
+              <div style="border-top: 1px dashed #334155; padding-top: 8px; margin-top: 8px; font-size: 0.7rem; color: #64748b;">
+                Teto máximo de segurança: <span id="finops-hard-cap" style="color: #ef4444; font-weight: 600;">$1.50</span> (força síntese se atingido).
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button class="btn btn-success" style="width: 100%; justify-content: center; padding: 10px;" onclick="submitNewResearchMission(true)">
+                <span>📥 Enfileirar para Hermes Agent</span>
+              </button>
+              <button class="btn btn-outline" style="width: 100%; justify-content: center;" onclick="submitNewResearchMission(false)">
+                <span>💾 Salvar como Rascunho</span>
+              </button>
+              <div id="box-copy-command" style="display: none; margin-top: 10px; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #1e293b;">
+                <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 4px;">Comando para invocar no chat do Hermes:</span>
+                <div style="display: flex; gap: 6px;">
+                  <code id="text-copy-command" style="flex: 1; font-size: 0.75rem; color: #38bdf8; background: #020617; padding: 4px 8px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></code>
+                  <button class="btn btn-xs btn-outline" onclick="copyResearchCommand()">Copiar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 2: MISSÕES ATIVAS & FILA DE ESPERA -->
+      <div id="panel-research-active" class="research-subtab-panel" style="display: none;">
+        <div id="container-active-missions" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Preenchido via research_hub.js -->
+          <div style="text-align: center; padding: 40px; color: #64748b;">Carregando missões ativas...</div>
+        </div>
+      </div>
+
+      <!-- PAINEL 3: BIBLIOTECA & LEITOR EPISTÊMICO -->
+      <div id="panel-research-library" class="research-subtab-panel" style="display: none;">
+        <div class="grid grid-2" style="grid-template-columns: 320px 1fr; gap: 16px;">
+          <!-- Lista de Relatórios -->
+          <div class="card" style="padding: 14px;">
+            <input type="text" id="input-search-library" class="input-base" placeholder="🔍 Filtrar relatórios..." style="width: 100%; margin-bottom: 10px; font-size: 0.8rem;" oninput="filterLibraryMissions()">
+            <div id="list-library-items" style="display: flex; flex-direction: column; gap: 6px; max-height: 600px; overflow-y: auto;">
+              <!-- Itens da biblioteca -->
+            </div>
+          </div>
+
+          <!-- Visualizador do Relatório Selecionado -->
+          <div class="card" style="padding: 20px;" id="box-library-viewer">
+            <div style="text-align: center; padding: 60px; color: #64748b;">
+              Selecione uma missão ou relatório na lista à esquerda para inspecionar evidências, tags epistêmicas e fontes.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 4: QUALIDADE & REPUTAÇÃO -->
+      <div id="panel-research-quality" class="research-subtab-panel" style="display: none;">
+        <div class="card" style="padding: 20px;">
+          <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc;">
+            <span>🧪 Scorecard Epistêmico & Reputação de Domínios</span>
+          </div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
+            Métricas de confiabilidade consolidada, conformidade das citações literais e ledger de allow/block de domínios.
+          </p>
+          <div class="grid grid-3" style="gap: 12px; margin-bottom: 20px;">
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
+              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Métrica E³ Média</span>
+              <strong style="font-size: 1.4rem; color: #10b981;">0.89</strong>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
+              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Citações Verificadas</span>
+              <strong style="font-size: 1.4rem; color: #38bdf8;">94.2%</strong>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
+              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Economia Tier 0 (Tokens)</span>
+              <strong style="font-size: 1.4rem; color: #facc15;">284k</strong>
+            </div>
+          </div>
+          <div style="color: #64748b; font-size: 0.8rem;">
+            O livro-razão de reputação de domínios e o assistente de auto-patch de skills serão enriquecidos nas fases F3 e F4.
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 5: MOTOR & PRONTIDÃO (DOCTOR) -->
+      <div id="panel-research-doctor" class="research-subtab-panel" style="display: none;">
+        <div class="card" style="padding: 20px;">
+          <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+            <span>⚙️ Diagnóstico de Prontidão do Ecossistema</span>
+            <button class="btn btn-sm btn-outline" onclick="loadResearchDoctorReport()"><span>🔄</span> Re-verificar</button>
+          </div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
+            Audita a presença do Hermes Agent, perfis de subagentes, chaves de busca web e integridade do repositório no Dev Drive ReFS.
+          </p>
+          <div id="list-doctor-checks" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Checagens preenchidas via research_hub.js -->
+          </div>
+        </div>
+      </div>
+    </div>

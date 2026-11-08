@@ -92,6 +92,10 @@
         if (typeof initPersonasHubTab === 'function') {
           initPersonasHubTab();
         }
+      } else if (tabId === 'tab-research') {
+        if (typeof loadResearchHubMissions === 'function') {
+          loadResearchHubMissions();
+        }
       } else if (tabId === 'tab-settings') {
         fetchConfigToml();
         initSlidersMagneticSnap();

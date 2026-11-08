@@ -123,7 +123,13 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.6.0 (HOJE) │ Governança Visual & Skills Hub   │ [CONCLUÍDO] Skills + Personas │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.7.0        │ Cognição Profunda & Gateway Cloud│ Deep Research + Multi-Provider│
+│ v0.7.0        │ Deep Research Hub (Dashboard)    │ Aba UI + MCP Pull + FS SSOT   │
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.7.1        │ Tier 0 Determinístico Zero-LLM   │ BM25 + SipHash + HTML->MD     │
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.7.2        │ Tier 1 Batch MinionS Silício     │ MinionS SLM + 0MB VRAM Extra  │
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.7.3        │ Gateway Cloud Multi-Provedor     │ DeepSeek, Groq + Fallbacks    │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.8.0        │ Conectividade & Integrações      │ Google Universe + Obsidian DB │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
@@ -153,32 +159,55 @@ O objetivo desta etapa é transformar o Dashboard em uma central completa de ges
 
 ---
 
-### MILESTONE v0.7.0: COGNIÇÃO PROFUNDA, DEEP RESEARCH & GATEWAY UNIVERSAL
+### MILESTONE v0.7.x: COGNIÇÃO PROFUNDA, DEEP RESEARCH & GATEWAY UNIVERSAL
 
 > **Documento de Referência Arquitetural SSOT:**  
 > 📄 [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/docs/reference/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md)
 
-Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem, operários locais (SLMs) e eliminação de aprisionamento em provedores proprietários.
+Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem, operários locais (SLMs), orquestração via Hermes Agent e eliminação de aprisionamento em provedores proprietários. Para assegurar a **Regra da Crate Única** e commits atômicos de alta previsibilidade, a milestone é dividida em 4 releases canônicas:
 
-#### 1. Deep Research Engine Nativo (`souls_core::research` & Ferramenta MCP `deep_research`)
-* **Hierarquia Cognitiva em 4 Níveis (Tiering FinOps):**
-  - **Tier 0 (Pré-Filtro Determinístico Zero-LLM):** Segmentação de páginas em blocos de ~600 palavras, desduplicação de URLs normalizados via SipHash, ranqueamento lexical BM25 local e conversão direta de HTML para Markdown limpo na RAM via `souls_core` (eliminando 65% do desperdício de tokens de LLM).
-  - **Tier 1 (Operário Local / SLM via MinionS):** Execução paralela de subtarefas atômicas de passo único (*single-step*) em modelos locais de 3B a 8B (Qwen 2.5 Coder / Llama 3.2 no silício bare-metal). O protocolo MinionS extrai citações literais e preenche o esquema tipado `StructuredLocalOutput` (`explanation`, `citation`, `answer`), recuperando 97,9% da precisão de modelos de fronteira a uma fração do custo.
-  - **Tier 2 (Explorador Rápido / FAST_LLM):** Subagentes dedicados (`fast-scout`) executados via `delegate_task` com DeepSeek v3 ou Gemini Flash para formular queries de busca diversificadas, explorar ramificações da árvore de busca e comprimir descobertas parciais.
-  - **Tier 3 (Cérebro Estratégico / STRATEGIC_LLM):** Condução do scoping socrático inicial, planejamento de árvore e redação do relatório final longo.
-* **Reconstrução do Espaço de Trabalho (`IterResearch`):** Em vez de manter um histórico contínuo que causa asfixia cognitiva (*cognitive suffocation*) e poluição por ruído, a pesquisa é dividida em rondas discretas; a cada ronda, os logs brutos são descartados e o agente reconstrói um relatório central em evolução (`01_evolving_report.md`).
-* **Passagem por Referência de Arquivo (*Filesystem Pointer Handoff*):** Subagentes gravam seus artefatos densos diretamente no ReFS (`.souls_data/research/{run_id}/scouts/scout_{n}.md`) e devolvem apenas um ponteiro leve com metadados para o orquestrador.
-* **Disciplina Epistêmica em 4 Níveis:** Todas as afirmações recolhidas recebem obrigatoriamente uma etiqueta de grau de evidência: `[VERIFIED]`, `[SOURCED]`, `[REASONED]` ou `[ESTIMATED]`, acompanhadas de polaridade causal (`supports` vs `refutes`).
-* **Verificador Read-Only Confinado (`role-research-verifier`):** Subagente dedicado de auditoria final que opera em modo estritamente somente-leitura (`toolsets=["file"]`) para checar e vincular 100% das citações literais antes de liberar o relatório.
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                   DECOMPOSIÇÃO CANÔNICA DA MILESTONE v0.7.x                            │
+├───────────────┬──────────────────────┬────────────────────────┬────────────────────────┤
+│ Versão        │ Escopo de Domínio    │ Crate Única Alvo       │ Entrega Principal      │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.7.0 (HOJE) │ Research ControlHub  │ souls_server           │ Aba UI + MCP + FS SSOT │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.7.1        │ Tier 0 Deterministic │ souls_core             │ BM25 + HTML->MD + SipH │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.7.2        │ Tier 1 Batch MinionS │ souls_inference_runtime│ MinionS SLM + 0MB VRAM │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.7.3        │ Multi-Cloud Gateway  │ souls_llm_cloud_arena &│ DeepSeek/Groq/Bedrock +│
+│               │ & Fallback Chain     │ souls_model_router     │ Sub-aba Provedores     │
+└───────────────┴──────────────────────┴────────────────────────┴────────────────────────┘
+```
 
-#### 2. Universal Cloud Dispatch Gateway para Subagentes (`souls_model_router` & `souls_llm_cloud_arena`)
-* **Expansão Multi-Provedor Oficial:** Além de OpenAI, Anthropic e Google Gemini, suporte nativo direto com telemetria para:
-  - **DeepSeek API:** Endpoints nativos v3 e r1 com cálculo real de cache hit/miss de tokens.
-  - **Groq & Cerebras:** Despacho de ultra-baixa latência (300+ tokens/s) para tarefas de triagem rápida.
-  - **Together AI & Mistral AI:** Modelos open-weights em nuvem com alta largura de banda.
-  - **OpenRouter & Nous Portal:** Roteadores universais com balanceamento automático.
-  - **AWS Bedrock / Azure OpenAI:** Conectores corporativos com autenticação IAM/Bearer.
-* **Fallback Chain Inteligente por Perfil:** Se o provedor principal sofrer *rate limit* (HTTP 429) ou indisponibilidade (HTTP 500), o gateway chaveia automaticamente para o segundo colocado da Fronteira de Pareto com overhead inferior a 150ms.
+#### 1. Versão v0.7.0 (Atual): Research Hub & Plano de Controle Operacional (`souls_server`)
+* **Aba de Topo `🔬 Pesquisa Profunda`:** Painel de controle no Dashboard SPA modular (ADR-012) dividido em 5 sub-abas:
+  - `🚀 Nova Missão`: Scoping interativo com planejador determinístico, estimativa FinOps antecipada e contrato mestre (`00_research_brief.json`).
+  - `📡 Missões Ativas`: Observabilidade em tempo real via SSE (`/api/v1/research/stream`), medidor de turnos (com teto Beast Mode aos 72 turnos) e controle de *steering* em voo (pausar, injetar diretrizes, forçar síntese).
+  - `📚 Biblioteca`: Acervo de relatórios com leitor epistêmico (chips `[VERIFIED]`, `[SOURCED]`, `[REASONED]`, `[ESTIMATED]`), visualizador de fontes por tier, rastreador de contradições, versões vivas (*deltas*), ramificação de tópicos, exportação de `.md` e promoção para o Cofre Obsidian (`raw/research/` via Privacy Shield) e hipocampo.
+  - `🧪 Qualidade & Aprendizado`: Scorecard de confiabilidade com métrica $E^3$ (Eficácia, Economia, Eficiência), livro-razão de reputação de domínios (*allow/block/boost*) e assistente de auto-patch para skills.
+  - `⚙️ Motor & Prontidão`: Verificador Doctor de pré-requisitos, ajuste de limites de orçamento FinOps e provisionamento 1-clique dos perfis e skill Hermes (`deepsoul-research`).
+* **Persistência Bare-Metal como SSOT no ReFS:** Estado contido em `Z:\souls_engine\.souls_data\research/{run_id}/` (zero DDL neste ciclo), com índice em RAM ultraveloz (`ResearchIndex`).
+* **Ferramentas MCP de Pull para o Hermes:** Exposição das ferramentas canônicas do namespace `research.*` (`research_claim`, `research_event`, `research_steering`, `research_complete`) para sincronização não-intrusiva com o orquestrador Hermes.
+
+#### 2. Versão v0.7.1: Tier 0 Determinístico Zero-LLM (`souls_core::research`)
+* **Conversão HTML para Markdown Zero-Allocation:** Motor de parsing de alta performance em Rust, limpando tags irrelevantes e ruídos de navegação diretamente na memória.
+* **Segmentação Deslizante (Chunking):** Divisão de documentos longos em blocos de ~600 palavras com overlap para consumo otimizado por SLMs.
+* **Filtro Lexical BM25 & SipHash Dedup:** Ranking de relevância de passagens sem custo de API/embeddings e desduplicação de URLs normalizados por SipHash.
+* **Ferramenta MCP `research_filter`:** Exposição do pipeline determinístico para uso pelos subagentes exploradores.
+
+#### 3. Versão v0.7.2: Tier 1 Operário Local & Protocolo MinionS (`souls_inference_runtime`)
+* **Execução Paralela MinionS em Lote:** Execução de tarefas atômicas de passo único em modelos locais de 3B a 8B (Qwen 2.5 Coder / Llama 3.2) via `llama.cpp` nativo.
+* **Esquema Tipado `StructuredLocalOutput`:** Extração determinística de citações literais, dados estatísticos e rotulagem epistêmica direta no silício.
+* **Conformidade FinOps WDDM:** Garantia de operação a 0 MB VRAM extra, desviando inferências locais para CPU/AVX2 quando a RTX 2060m atingir o teto de 5.294 MB.
+
+#### 4. Versão v0.7.3: Universal Cloud Dispatch Gateway & Fallback Chains (`souls_llm_cloud_arena` & `souls_model_router`)
+* **Expansão Multi-Provedor Nativa:** Suporte com cálculo de cache hits para DeepSeek API (v3/r1), Groq, Cerebras, Together AI, Bedrock e Azure OpenAI.
+* **Fallback Chain Inteligente por Perfil:** Roteamento de contingência em sub-150ms sob erros HTTP 429 (rate-limit) ou 500 para o próximo modelo na Fronteira de Pareto.
+* **Sub-Aba `🌐 Provedores & Fallback`:** Gestão visual de chaves, latências PeakEWMA e custos na aba *⚡ Modelos & Arena*.
 
 ---
 

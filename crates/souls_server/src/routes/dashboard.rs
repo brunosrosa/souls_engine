@@ -2914,3 +2914,278 @@ pub async fn personas_hub_rollback_handler(
     }
 }
 
+// ============================================================================
+// RESEARCH HUB REST HANDLERS (v0.7.0)
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchListQuery {
+    pub status: Option<String>,
+    pub search: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchDetailQuery {
+    pub run_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchPlanRequest {
+    pub question: String,
+    #[allow(dead_code)]
+    pub engine: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchCreateRequest {
+    pub question: String,
+    pub objectives: Option<Vec<String>>,
+    pub perspectives: Option<Vec<String>>,
+    pub subtopics: Option<Vec<String>>,
+    pub exclusions: Option<Vec<String>>,
+    pub source_hierarchy: Option<Vec<String>>,
+    pub effort: Option<String>,
+    pub breadth: Option<u8>,
+    pub depth: Option<u8>,
+    pub cap_usd: Option<f64>,
+    pub queue_immediately: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchCancelRequest {
+    pub run_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchArchiveRequest {
+    pub run_id: String,
+}
+
+/// Lists all Deep Research missions filtered by status or query.
+pub async fn research_hub_list_handler(
+    State(state): State<AppState>,
+    Query(query): Query<ResearchListQuery>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    let status_filter = query.status.as_deref().and_then(|s| {
+        match s.to_lowercase().as_str() {
+            "draft" => Some(crate::research_hub::MissionStatus::Draft),
+            "queued" => Some(crate::research_hub::MissionStatus::Queued),
+            "claimed" => Some(crate::research_hub::MissionStatus::Claimed),
+            "researching" => Some(crate::research_hub::MissionStatus::Researching),
+            "paused" => Some(crate::research_hub::MissionStatus::Paused),
+            "synthesizing" => Some(crate::research_hub::MissionStatus::Synthesizing),
+            "verifying" => Some(crate::research_hub::MissionStatus::Verifying),
+            "confirmed" => Some(crate::research_hub::MissionStatus::Confirmed),
+            "blocked" => Some(crate::research_hub::MissionStatus::Blocked),
+            "failed" => Some(crate::research_hub::MissionStatus::Failed),
+            "cancelled" => Some(crate::research_hub::MissionStatus::Cancelled),
+            _ => None,
+        }
+    });
+
+    let missions = state.research.list_missions(status_filter, query.search.as_deref());
+    Json(json!({
+        "status": "success",
+        "total": missions.len(),
+        "missions": missions
+    }))
+}
+
+/// Returns full anatomy of a research mission: brief, budget, events, report.
+pub async fn research_hub_detail_handler(
+    State(state): State<AppState>,
+    Query(query): Query<ResearchDetailQuery>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    if let Some(mission) = state.research.get_mission(&query.run_id) {
+        let events = state.research.read_timeline_events(&query.run_id);
+        let evolving_report = state.research.read_evolving_report(&query.run_id);
+        Json(json!({
+            "status": "success",
+            "mission": mission,
+            "events": events,
+            "evolving_report": evolving_report
+        }))
+    } else {
+        Json(json!({
+            "status": "error",
+            "message": format!("Missão com ID '{}' não encontrada", query.run_id)
+        }))
+    }
+}
+
+/// Generates an editable draft plan (brief + finops preview) for a research question.
+pub async fn research_hub_plan_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchPlanRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let q = payload.question.trim();
+    if q.is_empty() {
+        return Json(json!({
+            "status": "error",
+            "message": "A pergunta de pesquisa não pode ser vazia"
+        }));
+    }
+
+    let (brief, finops) = crate::research_hub::generate_deterministic_plan(q);
+
+    Json(json!({
+        "status": "success",
+        "brief": brief,
+        "finops": finops
+    }))
+}
+
+/// Creates a new research mission and saves it as draft or queued.
+pub async fn research_hub_create_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchCreateRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let q = payload.question.trim();
+    if q.is_empty() {
+        return Json(json!({
+            "status": "error",
+            "message": "A pergunta de pesquisa não pode ser vazia"
+        }));
+    }
+
+    let (mut brief, _finops) = crate::research_hub::generate_deterministic_plan(q);
+
+    // Apply operator overrides
+    if let Some(objs) = payload.objectives {
+        brief.objectives = objs;
+    }
+    if let Some(persp) = payload.perspectives {
+        brief.perspectives = persp;
+    }
+    if let Some(subs) = payload.subtopics {
+        brief.subtopics = subs;
+    }
+    if let Some(excs) = payload.exclusions {
+        brief.exclusions = excs;
+    }
+    if let Some(sh) = payload.source_hierarchy {
+        brief.source_hierarchy = sh;
+    }
+    if let Some(eff) = payload.effort {
+        match eff.to_lowercase().as_str() {
+            "l1" | "l1_fact_finding" | "fact_finding" => brief.effort = crate::research_hub::EffortLevel::L1FactFinding,
+            "l2" | "l2_comparative" | "comparative" => brief.effort = crate::research_hub::EffortLevel::L2Comparative,
+            "l3" | "l3_exhaustive" | "exhaustive" => brief.effort = crate::research_hub::EffortLevel::L3Exhaustive,
+            _ => {}
+        }
+    }
+    if let Some(b) = payload.breadth {
+        brief.breadth = b;
+    }
+    if let Some(d) = payload.depth {
+        brief.depth = d;
+    }
+
+    let mut record = crate::research_hub::create_mission_record(brief, payload.cap_usd);
+    if payload.queue_immediately.unwrap_or(false) {
+        record.status = crate::research_hub::MissionStatus::Queued;
+    }
+
+    match state.research.upsert_and_persist(record) {
+        Ok(saved) => {
+            state.research.broadcast(crate::research_hub::ResearchStreamEvent::MissionCreated(
+                crate::research_hub::MissionSummary {
+                    run_id: saved.run_id.clone(),
+                    slug: saved.slug.clone(),
+                    status: saved.status,
+                    effort: saved.brief.effort,
+                    question: saved.brief.question.clone(),
+                    created_at: saved.created_at.clone(),
+                    updated_at: saved.updated_at.clone(),
+                    spent_usd: saved.budget.spent_usd,
+                    cap_usd: saved.budget.cap_usd,
+                    turns_used: saved.budget.turns_used,
+                    round: saved.round,
+                },
+            ));
+
+            Json(json!({
+                "status": "success",
+                "mission": saved,
+                "command_hint": format!("/deep-research {}", saved.run_id)
+            }))
+        }
+        Err(err) => Json(json!({
+            "status": "error",
+            "message": format!("Falha ao persistir missão: {err}")
+        })),
+    }
+}
+
+/// Cancels an active or queued research mission.
+pub async fn research_hub_cancel_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchCancelRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    match state.research.cancel_mission(&payload.run_id) {
+        Ok(rec) => Json(json!({
+            "status": "success",
+            "message": "Missão cancelada com sucesso",
+            "mission": rec
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Archives a mission safely to `.souls_data/research/_archive/`.
+pub async fn research_hub_archive_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchArchiveRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    match state.research.archive_mission(&payload.run_id) {
+        Ok(_) => Json(json!({
+            "status": "success",
+            "message": format!("Missão '{}' arquivada com sucesso", payload.run_id)
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Runs full diagnostic doctor checks for Hermes & Research readiness.
+pub async fn research_hub_doctor_handler(State(state): State<AppState>) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let report = crate::research_hub::run_research_doctor(state.research.roots());
+    Json(json!({
+        "status": "success",
+        "doctor": report
+    }))
+}
+
+/// Server-Sent Events (SSE) stream for real-time Research Hub telemetry and progress.
+pub async fn research_hub_stream_handler(
+    State(state): State<AppState>,
+) -> axum::response::Sse<impl tokio_stream::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>> {
+    use axum::response::sse::Event;
+    use tokio_stream::wrappers::BroadcastStream;
+    use tokio_stream::StreamExt;
+
+    let rx = state.research.subscribe();
+    let stream = BroadcastStream::new(rx).filter_map(|res| {
+        match res {
+            Ok(item) => {
+                let data = serde_json::to_string(&item).unwrap_or_default();
+                Some(Ok(Event::default().data(data)))
+            }
+            Err(_) => None,
+        }
+    });
+
+    axum::response::Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::new())
+}
+
+

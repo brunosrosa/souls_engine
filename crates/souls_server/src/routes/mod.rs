@@ -67,6 +67,14 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/personas/diff", post(dashboard::personas_hub_diff_handler))
         .route("/api/v1/personas/archive", post(dashboard::personas_hub_archive_handler))
         .route("/api/v1/personas/rollback", post(dashboard::personas_hub_rollback_handler))
+        // Milestone v0.7.0: Deep Research Hub & Mission Control Plane Endpoints
+        .route("/api/v1/research/missions", get(dashboard::research_hub_list_handler).post(dashboard::research_hub_create_handler))
+        .route("/api/v1/research/mission", get(dashboard::research_hub_detail_handler))
+        .route("/api/v1/research/plan", post(dashboard::research_hub_plan_handler))
+        .route("/api/v1/research/mission/cancel", post(dashboard::research_hub_cancel_handler))
+        .route("/api/v1/research/mission/archive", post(dashboard::research_hub_archive_handler))
+        .route("/api/v1/research/doctor", get(dashboard::research_hub_doctor_handler))
+        .route("/api/v1/research/stream", get(dashboard::research_hub_stream_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))

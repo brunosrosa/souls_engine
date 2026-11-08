@@ -47,6 +47,7 @@ pub struct AppState {
     pub inventory_downloader: Arc<souls_llm_inventory::DownloadManager>,
     pub hf_client: Arc<souls_llm_inventory::HuggingFaceClient>,
     pub local_arena: Arc<tokio::sync::Mutex<souls_llm_local_arena::ArenaRunner>>,
+    pub research: Arc<crate::research_hub::ResearchIndex>,
     active_connections: Arc<AtomicUsize>,
     start_time: Instant,
 }
@@ -68,6 +69,7 @@ impl AppState {
             inventory_downloader: Arc::new(souls_llm_inventory::DownloadManager::new()),
             hf_client: Arc::new(souls_llm_inventory::HuggingFaceClient::new()),
             local_arena: Arc::new(tokio::sync::Mutex::new(souls_llm_local_arena::ArenaRunner::new())),
+            research: Arc::new(crate::research_hub::ResearchIndex::new(crate::research_hub::ResearchRoots::from_system())),
             active_connections: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),
         }

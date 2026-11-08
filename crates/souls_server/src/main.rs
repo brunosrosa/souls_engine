@@ -9,6 +9,7 @@
 mod mcp;
 pub mod personas_hub;
 pub mod profiles;
+pub mod research_hub;
 mod routes;
 pub mod skills_hub;
 mod shutdown;
@@ -296,6 +297,16 @@ async fn main() -> ExitCode {
             return ExitCode::from(1);
         }
     };
+
+    // 10. Background lease sweeper for Research Hub (sweeps expired claimed missions every 60s)
+    let research_for_sweeper = Arc::clone(&state.research);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+            research_for_sweeper.sweep_expired_leases();
+        }
+    });
 
     // Record PID file for process tracking and zombie cleanup
     let pid_file = data_dir.join("souls_server.pid");
@@ -653,7 +664,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 55, "Full mode must expose all 55 canonical tools");
+        assert_eq!(tools_full.len(), 59, "Full mode must expose all 59 canonical tools (55 baseline + 4 research.*)");
     }
 
     #[tokio::test]
@@ -2046,7 +2057,7 @@ model:
         let json_h: serde_json::Value = serde_json::from_slice(&bytes_h).unwrap();
         assert_eq!(json_h["status"], "healthy");
         assert_eq!(json_h["total_skills"], 15);
-        assert_eq!(json_h["total_tools"], 55);
+        assert_eq!(json_h["total_tools"], 59);
 
         // 2. GET /api/v1/switchboard/skills
         let req_skills = Request::builder()
@@ -2599,5 +2610,126 @@ model:
         let list_json: serde_json::Value = serde_json::from_slice(&list_bytes).unwrap();
         assert_eq!(list_json["status"], "success");
         assert!(list_json["overview"]["total_active_personas"].as_u64().is_some());
+    }
+
+    #[tokio::test]
+    async fn test_research_hub_axum_routes_smoke() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Verify Dashboard HTML contains the Research Hub tab & subtabs
+        let req_dash = Request::builder()
+            .uri("/dashboard")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_dash = app.clone().oneshot(req_dash).await.unwrap();
+        assert_eq!(resp_dash.status(), StatusCode::OK);
+        let html_bytes = to_bytes(resp_dash.into_body(), usize::MAX).await.unwrap();
+        let html_str = String::from_utf8_lossy(&html_bytes);
+        assert!(html_str.contains("id=\"btn-tab-research\""));
+        assert!(html_str.contains("id=\"tab-research\""));
+        assert!(html_str.contains("function switchResearchSubtab"));
+        assert!(html_str.contains("generateResearchDraftPlan"));
+
+        // 2. Verify POST /api/v1/research/plan (Tier 0 deterministic plan & finops preview)
+        let plan_body = serde_json::json!({
+            "question": "Compare Tokio vs Glommio para I/O bare-metal no Windows"
+        });
+        let req_plan = Request::builder()
+            .uri("/api/v1/research/plan")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(plan_body.to_string()))
+            .unwrap();
+        let resp_plan = app.clone().oneshot(req_plan).await.unwrap();
+        assert_eq!(resp_plan.status(), StatusCode::OK);
+        let plan_bytes = to_bytes(resp_plan.into_body(), usize::MAX).await.unwrap();
+        let plan_json: serde_json::Value = serde_json::from_slice(&plan_bytes).unwrap();
+        assert_eq!(plan_json["status"], "success");
+        assert_eq!(plan_json["brief"]["effort"], "l2_comparative");
+        assert_eq!(plan_json["brief"]["breadth"], 3);
+        assert!(plan_json["finops"]["est_turns"].as_u64().unwrap_or(0) >= 20);
+
+        // 3. Verify POST /api/v1/research/missions (Creation & queue)
+        let create_body = serde_json::json!({
+            "question": "Smoke Test Research Topic",
+            "queue_immediately": true,
+            "cap_usd": 1.50
+        });
+        let req_create = Request::builder()
+            .uri("/api/v1/research/missions")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(create_body.to_string()))
+            .unwrap();
+        let resp_create = app.clone().oneshot(req_create).await.unwrap();
+        assert_eq!(resp_create.status(), StatusCode::OK);
+        let create_bytes = to_bytes(resp_create.into_body(), usize::MAX).await.unwrap();
+        let create_json: serde_json::Value = serde_json::from_slice(&create_bytes).unwrap();
+        assert_eq!(create_json["status"], "success");
+        let run_id = create_json["mission"]["run_id"].as_str().unwrap();
+        assert_eq!(create_json["mission"]["status"], "queued");
+        assert!(create_json["command_hint"].as_str().unwrap().contains(run_id));
+
+        // 4. Verify GET /api/v1/research/missions (listing)
+        let req_list = Request::builder()
+            .uri("/api/v1/research/missions")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_list = app.clone().oneshot(req_list).await.unwrap();
+        assert_eq!(resp_list.status(), StatusCode::OK);
+        let list_bytes = to_bytes(resp_list.into_body(), usize::MAX).await.unwrap();
+        let list_json: serde_json::Value = serde_json::from_slice(&list_bytes).unwrap();
+        assert_eq!(list_json["status"], "success");
+        assert!(list_json["total"].as_u64().unwrap_or(0) >= 1);
+
+        // 5. Verify GET /api/v1/research/doctor (readiness report)
+        let req_doc = Request::builder()
+            .uri("/api/v1/research/doctor")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_doc = app.clone().oneshot(req_doc).await.unwrap();
+        assert_eq!(resp_doc.status(), StatusCode::OK);
+        let doc_bytes = to_bytes(resp_doc.into_body(), usize::MAX).await.unwrap();
+        let doc_json: serde_json::Value = serde_json::from_slice(&doc_bytes).unwrap();
+        assert_eq!(doc_json["status"], "success");
+        assert!(doc_json["doctor"]["checks"].as_array().unwrap().len() >= 5);
+
+        // 6. Verify MCP research_claim and research_event integration
+        let mcp_claim_req = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": "claim_test_1",
+                "method": "tools/call",
+                "params": {
+                    "name": "research_claim",
+                    "arguments": {
+                        "agent_id": "hermes_smoke_worker",
+                        "run_id": run_id
+                    }
+                }
+            }).to_string()))
+            .unwrap();
+        let resp_mcp_claim = app.clone().oneshot(mcp_claim_req).await.unwrap();
+        assert_eq!(resp_mcp_claim.status(), StatusCode::OK);
+        let claim_res_bytes = to_bytes(resp_mcp_claim.into_body(), usize::MAX).await.unwrap();
+        let claim_res_json: serde_json::Value = serde_json::from_slice(&claim_res_bytes).unwrap();
+        assert!(claim_res_json["result"]["workspace_path"].as_str().is_some());
+
+        // 7. Clean up created smoke test mission via archive
+        let archive_req = Request::builder()
+            .uri("/api/v1/research/mission/archive")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::json!({ "run_id": run_id }).to_string()))
+            .unwrap();
+        let resp_archive = app.oneshot(archive_req).await.unwrap();
+        assert_eq!(resp_archive.status(), StatusCode::OK);
     }
 }

@@ -36,7 +36,7 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 "properties": {
                     "namespace": {
                         "type": "string",
-                        "enum": ["all", "code", "context", "memory", "think", "ops", "sys"],
+                        "enum": ["all", "code", "context", "memory", "think", "ops", "sys", "research"],
                         "description": "Namespace funcional para listar ferramentas."
                     },
                     "query": {
@@ -844,6 +844,111 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                         "description": "Data específica para registrar a avaliação no formato YYYY-MM-DD."
                     }
                 },
+                "additionalProperties": false
+            }),
+        },
+        // research.* namespace (v0.7.0 Deep Research Hub & Mission Control Plane)
+        ToolMeta {
+            name: "research_claim",
+            namespace: "research",
+            description: "Reivindica a próxima missão de pesquisa enfileirada no Souls Engine para execução pelo Hermes Agent.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "agent_id": {
+                        "type": "string",
+                        "description": "Identificador do agente reivindicador (ex: 'hermes_master' ou nome da persona)."
+                    },
+                    "run_id": {
+                        "type": "string",
+                        "description": "ID opcional de uma missão específica para reivindicar diretamente."
+                    }
+                },
+                "required": ["agent_id"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "research_event",
+            namespace: "research",
+            description: "Reporta progresso, consumo de tokens por tier e atualiza o batimento cardíaco da missão ativa.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "run_id": {
+                        "type": "string",
+                        "description": "ID da missão ativa no formato YYYYMMDD-HHMMSS-slug."
+                    },
+                    "phase": {
+                        "type": "string",
+                        "description": "Fase atual (ex: 'scoping', 'scouts_round_1', 'synthesis', 'verifying')."
+                    },
+                    "round": {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Ronda IterResearch corrente."
+                    },
+                    "summary": {
+                        "type": "string",
+                        "description": "Resumo sintético do progresso ou descobertas desta ronda."
+                    },
+                    "tokens_tier0": { "type": "integer", "description": "Tokens poupados no Tier 0 determinístico." },
+                    "tokens_tier1": { "type": "integer", "description": "Tokens consumidos em SLMs locais MinionS." },
+                    "tokens_tier2": { "type": "integer", "description": "Tokens consumidos nos exploradores Fast-Scout." },
+                    "tokens_tier3": { "type": "integer", "description": "Tokens consumidos no cérebro estratégico." },
+                    "usd_spent": { "type": "number", "description": "Custo financeiro incorrido nesta fase em USD." },
+                    "turns_used": { "type": "integer", "description": "Turnos totais consumidos do IterationBudget." }
+                },
+                "required": ["run_id", "phase", "summary"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "research_steering",
+            namespace: "research",
+            description: "Consulta diretrizes em voo ou comandos de controle (pausa, forçar síntese, cancelar) injetados pelo operador.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "run_id": {
+                        "type": "string",
+                        "description": "ID da missão para consultar orientações de steering."
+                    }
+                },
+                "required": ["run_id"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "research_complete",
+            namespace: "research",
+            description: "Conclui uma missão de pesquisa com verificação factual e registra o status final.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "run_id": {
+                        "type": "string",
+                        "description": "ID da missão a finalizar."
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["confirmed", "blocked", "failed"],
+                        "description": "Status de conclusão (ex: 'confirmed' após validação pelo subagente verificador)."
+                    },
+                    "report_path": {
+                        "type": "string",
+                        "description": "Caminho do relatório final no sistema de arquivos."
+                    },
+                    "receipt_path": {
+                        "type": "string",
+                        "description": "Caminho do recibo 03_verification_receipt.json gerado pelo verificador."
+                    }
+                },
+                "required": ["run_id", "status"],
                 "additionalProperties": false
             }),
         },

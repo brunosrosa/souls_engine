@@ -340,6 +340,110 @@ pub async fn dispatch_jsonrpc(
                 "merge_sessions" => tools_extended::handle_merge_sessions(state, args).await.map_err(|e| e.to_jsonrpc_error()),
                 "feedback" => tools_extended::handle_feedback(state, args).await.map_err(|e| e.to_jsonrpc_error()),
 
+                // DOMAIN 7: RESEARCH HUB & MISSION CONTROL PLANE (v0.7.0)
+                "research_claim" => {
+                    let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("hermes_agent");
+                    let run_id = args.get("run_id").and_then(Value::as_str);
+                    match state.research.claim_queued_mission(agent_id, run_id) {
+                        Ok(Some(mission)) => {
+                            let mission_dir = state.research.roots().mission_dir(&mission.run_id).unwrap_or_default();
+                            Ok(json!({
+                                "status": "claimed",
+                                "run_id": mission.run_id,
+                                "slug": mission.slug,
+                                "workspace_path": mission_dir.display().to_string(),
+                                "brief": mission.brief,
+                                "budget": mission.budget,
+                                "claim": mission.claim
+                            }))
+                        }
+                        Ok(None) => Ok(json!({
+                            "status": "idle",
+                            "message": "Nenhuma missão de pesquisa aguardando na fila"
+                        })),
+                        Err(e) => Err(JsonRpcError::new(-32000, &e)),
+                    }
+                }
+
+                "research_event" => {
+                    let run_id = match args.get("run_id").and_then(Value::as_str) {
+                        Some(rid) => rid,
+                        None => return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, JsonRpcError::new(-32602, "Missing run_id"))).unwrap_or_default()),
+                    };
+                    let phase = args.get("phase").and_then(Value::as_str).unwrap_or("progress");
+                    let round = args.get("round").and_then(Value::as_u64).unwrap_or(1) as u32;
+                    let summary = args.get("summary").and_then(Value::as_str).unwrap_or("");
+                    let t0 = args.get("tokens_tier0").and_then(Value::as_u64);
+                    let t1 = args.get("tokens_tier1").and_then(Value::as_u64);
+                    let t2 = args.get("tokens_tier2").and_then(Value::as_u64);
+                    let t3 = args.get("tokens_tier3").and_then(Value::as_u64);
+                    let usd = args.get("usd_spent").and_then(Value::as_f64);
+                    let turns = args.get("turns_used").and_then(Value::as_u64).map(|n| n as u32);
+
+                    match state.research.record_agent_event(run_id, phase, round, summary, t0, t1, t2, t3, usd, turns) {
+                        Ok(flags) => Ok(json!({
+                            "status": "recorded",
+                            "run_id": run_id,
+                            "flags": flags
+                        })),
+                        Err(e) => Err(JsonRpcError::new(-32000, &e)),
+                    }
+                }
+
+                "research_steering" => {
+                    let run_id = match args.get("run_id").and_then(Value::as_str) {
+                        Some(rid) => rid,
+                        None => return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, JsonRpcError::new(-32602, "Missing run_id"))).unwrap_or_default()),
+                    };
+                    if let Some(mission) = state.research.get_mission(run_id) {
+                        let steering_notes = if let Ok(dir) = state.research.roots().mission_dir(run_id) {
+                            std::fs::read_to_string(dir.join("steering.md")).unwrap_or_default()
+                        } else {
+                            String::new()
+                        };
+                        Ok(json!({
+                            "run_id": run_id,
+                            "flags": mission.flags,
+                            "steering_notes": steering_notes
+                        }))
+                    } else {
+                        Err(JsonRpcError::new(-32000, "Missão não encontrada"))
+                    }
+                }
+
+                "research_complete" => {
+                    let run_id = match args.get("run_id").and_then(Value::as_str) {
+                        Some(rid) => rid,
+                        None => return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, JsonRpcError::new(-32602, "Missing run_id"))).unwrap_or_default()),
+                    };
+                    let status_str = args.get("status").and_then(Value::as_str).unwrap_or("confirmed");
+                    if let Some(mut mission) = state.research.get_mission(run_id) {
+                        let old_status = mission.status;
+                        mission.status = match status_str {
+                            "confirmed" => crate::research_hub::MissionStatus::Confirmed,
+                            "blocked" => crate::research_hub::MissionStatus::Blocked,
+                            _ => crate::research_hub::MissionStatus::Failed,
+                        };
+                        match state.research.upsert_and_persist(mission) {
+                            Ok(saved) => {
+                                state.research.broadcast(crate::research_hub::ResearchStreamEvent::MissionStatusChanged {
+                                    run_id: run_id.to_string(),
+                                    old_status,
+                                    new_status: saved.status,
+                                });
+                                Ok(json!({
+                                    "status": "completed",
+                                    "run_id": run_id,
+                                    "mission_status": saved.status
+                                }))
+                            }
+                            Err(e) => Err(JsonRpcError::new(-32000, &e)),
+                        }
+                    } else {
+                        Err(JsonRpcError::new(-32000, "Missão não encontrada"))
+                    }
+                }
+
                 other => {
                     // Check if known canonical tool
                     let tools = get_canonical_tools();
