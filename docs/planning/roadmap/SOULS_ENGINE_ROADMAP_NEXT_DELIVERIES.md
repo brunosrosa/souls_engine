@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)  
-> **VERSÃO CONSOLIDADA:** v0.6.0 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
+> **VERSÃO CONSOLIDADA:** v0.7.0 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -83,6 +83,7 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Sessão 19** | Two-Stage Switchboard | **100% CONCLUÍDO** | Switchboard em 2 estágios (<1.7ms na CPU AVX2), projeção dinâmica no `tools/list` (33/33 PASS). |
 | **Milestone v0.5.0** | **Modularização UI & SSOT Rust** | **100% CONCLUÍDO** | **ADR-012:** Monólito de 15k linhas decomposto em 25 componentes em `templates/` via `concat!(include_str!(...))` em `.rodata`. Unificação de dependências no root `Cargo.toml`. Teto de contexto dGPU dinâmico baseado em VRAM real. Revisão total das sub-abas de Settings (zero mocks). |
 | **Milestone v0.6.0** | **Skills Hub & Hermes Personas** | **100% CONCLUÍDO** | **Skills Hub:** Catálogo multi-ambiente, índice RAM 101k+, quarentena Zero-Trust, Auto-Fix seguro (`body_preserved_exact`) e Estúdio Forge. **Hermes Personas:** Aba dedicada `🎭 Personas`, Guardião de Privacidade & Coerência em 1 clique, cirurgia hierárquica YAML, Bancada Dupla (`Painel Rápido` + `SOUL.md`), Estúdio Criar/Clonar, Arquivamento e Comparador Myers Diff (48/48 testes PASS). |
+| **Milestone v0.7.0** | **Deep Research Hub & SSOT Control Plane** | **100% CONCLUÍDO** | **Deep Research Hub:** Aba `🔬 Pesquisa Profunda` (5 sub-abas: Nova Missão STORM, Missões Ativas SSE, Biblioteca viva/Myers Diff/Obsidian, Scorecard E³ + Domain Trust, Doctor & 1-Click Provisioning), SSOT ReFS puro, 4 tools MCP `research.*` (59 tools canônicas), 53/53 testes PASS. |
 
 ### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
@@ -183,15 +184,15 @@ Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem,
 └───────────────┴──────────────────────┴────────────────────────┴────────────────────────┘
 ```
 
-#### 1. Versão v0.7.0 (Atual): Research Hub & Plano de Controle Operacional (`souls_server`)
+#### 1. Versão v0.7.0: Research Hub & Plano de Controle Operacional (`souls_server`) — **[100% CONCLUÍDO]**
 * **Aba de Topo `🔬 Pesquisa Profunda`:** Painel de controle no Dashboard SPA modular (ADR-012) dividido em 5 sub-abas:
-  - `🚀 Nova Missão`: Scoping interativo com planejador determinístico, estimativa FinOps antecipada e contrato mestre (`00_research_brief.json`).
-  - `📡 Missões Ativas`: Observabilidade em tempo real via SSE (`/api/v1/research/stream`), medidor de turnos (com teto Beast Mode aos 72 turnos) e controle de *steering* em voo (pausar, injetar diretrizes, forçar síntese).
-  - `📚 Biblioteca`: Acervo de relatórios com leitor epistêmico (chips `[VERIFIED]`, `[SOURCED]`, `[REASONED]`, `[ESTIMATED]`), visualizador de fontes por tier, rastreador de contradições, versões vivas (*deltas*), ramificação de tópicos, exportação de `.md` e promoção para o Cofre Obsidian (`raw/research/` via Privacy Shield) e hipocampo.
-  - `🧪 Qualidade & Aprendizado`: Scorecard de confiabilidade com métrica $E^3$ (Eficácia, Economia, Eficiência), livro-razão de reputação de domínios (*allow/block/boost*) e assistente de auto-patch para skills.
-  - `⚙️ Motor & Prontidão`: Verificador Doctor de pré-requisitos, ajuste de limites de orçamento FinOps e provisionamento 1-clique dos perfis e skill Hermes (`deepsoul-research`).
-* **Persistência Bare-Metal como SSOT no ReFS:** Estado contido em `Z:\souls_engine\.souls_data\research/{run_id}/` (zero DDL neste ciclo), com índice em RAM ultraveloz (`ResearchIndex`).
-* **Ferramentas MCP de Pull para o Hermes:** Exposição das ferramentas canônicas do namespace `research.*` (`research_claim`, `research_event`, `research_steering`, `research_complete`) para sincronização não-intrusiva com o orquestrador Hermes.
+  - `🚀 Nova Missão`: Scoping interativo com planejador determinístico (STORM), estimativa FinOps antecipada e contrato mestre (`00_research_brief.json`).
+  - `📡 Missões Ativas`: Observabilidade em tempo real via SSE (`/api/v1/research/stream`), medidor de turnos (com teto Beast Mode aos 72 turnos) e controle de *steering* em voo (pausar, injetar diretrizes, forçar síntese, cancelar).
+  - `📚 Biblioteca`: Acervo de relatórios com leitor epistêmico (chips `[VERIFIED]`, `[SOURCED]`, `[REASONED]`, `[ESTIMATED]`), visualizador de fontes por tier, versões vivas (*deltas* incrementais v2+), ramificação de tópicos em missões filhas autônomas, comparador nativo Myers Diff, exportação de `.md` e promoção soberana para o Cofre Obsidian (`raw/research/` com higienização de PII via Privacy Shield em memória) e Hipocampo L2.
+  - `🧪 Qualidade & Reputação`: Scorecard epistêmico consolidado com métrica $E^3$ (Epistemic Efficiency & Evidence), livro-razão dinâmico de reputação de domínios (*allow/block/boost*) com auto-rebaixamento de alucinações recorrentes, formulário de feedback por afirmação e assistente de auto-patch de regras para a skill `deepsoul-research`.
+  - `🩺 Motor & Prontidão`: Verificador Doctor de pré-requisitos, formulário de parâmetros globais FinOps (`max_budget_usd`, esforço padrão, timeout de lease) e provisionamento 1-clique com prévia *dry-run* dos perfis (`fast-scout`, `verifier-readonly`) e da skill canônica no Hermes Agent.
+* **Persistência Bare-Metal como SSOT no ReFS:** Estado contido em `Z:\souls_engine\.souls_data\research/{run_id}/` (zero DDL neste ciclo), com índice em RAM ultraveloz (`ResearchIndex`) e varredura de leases expirados.
+* **Ferramentas MCP de Pull para o Hermes:** Exposição das ferramentas canônicas do namespace `research.*` (`research_claim`, `research_event`, `research_steering`, `research_complete`) expandindo o catálogo oficial para **59 ferramentas canônicas** (53/53 testes unitários e de integração Axum PASS).
 
 #### 2. Versão v0.7.1: Tier 0 Determinístico Zero-LLM (`souls_core::research`)
 * **Conversão HTML para Markdown Zero-Allocation:** Motor de parsing de alta performance em Rust, limpando tags irrelevantes e ruídos de navegação diretamente na memória.
