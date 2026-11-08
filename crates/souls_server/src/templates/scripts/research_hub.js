@@ -411,8 +411,12 @@ function renderMissionViewer(data) {
         </div>
         <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">${escapeHtml(m.brief.question)}</h2>
       </div>
-      <div style="display:flex; gap:6px;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="btn btn-xs btn-outline" onclick="inspectEpistemicReport('${m.run_id}')">🏷️ Leitor Epistêmico</button>
+        <button class="btn btn-xs btn-outline" onclick="openRefreshDeltaModal('${m.run_id}')">♻️ Atualizar (Delta)</button>
+        <button class="btn btn-xs btn-outline" onclick="openBranchSectionModal('${m.run_id}')">🌿 Ramificar</button>
+        <button class="btn btn-xs btn-outline" onclick="openDiffModal('${m.run_id}')">🔍 Diff</button>
+        <button class="btn btn-xs btn-primary" onclick="promoteReportModal('${m.run_id}')">📓 Promover</button>
         <button class="btn btn-xs btn-outline" onclick="copyReportMarkdown()">📥 Copiar .md</button>
         <button class="btn btn-xs btn-danger" onclick="archiveResearchMission('${m.run_id}')">Arquivar</button>
       </div>
@@ -435,6 +439,125 @@ function renderMissionViewer(data) {
     </div>
   `;
 }
+
+// ============================================================================
+// FASE 3: RELATÓRIOS VIVOS (DELTA), RAMIFICAÇÃO, DIFF & PROMOÇÃO OBSIDIAN
+// ============================================================================
+
+async function openRefreshDeltaModal(run_id) {
+  if (!confirm(`Deseja lançar uma nova versão viva (Delta v2+) para a pesquisa ${run_id}?\nO Hermes reaproveitará o acervo de fontes e buscará atualizações e fatos recentes.`)) return;
+
+  try {
+    const res = await fetch('/api/v1/research/mission/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parent_run_id: run_id })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert(`Versão Delta criada e enfileirada: ${data.mission.run_id}`);
+      loadResearchHubMissions();
+      switchResearchSubtab('active');
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao criar delta'));
+    }
+  } catch (err) {
+    console.error('Falha ao atualizar delta:', err);
+  }
+}
+
+async function openBranchSectionModal(run_id) {
+  const heading = prompt(`[RAMIFICAR SEÇÃO — ${run_id}]\nDigite o título ou heading do tópico que deseja aprofundar de forma autônoma:\n(Ex: "Mapeamento empírico de latência no ReFS")`);
+  if (!heading || !heading.trim()) return;
+
+  const customQ = prompt(`Pergunta específica para este subagente (ou deixe em branco para derivar automaticamente):`);
+
+  try {
+    const res = await fetch('/api/v1/research/mission/branch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        parent_run_id: run_id,
+        heading_title: heading.trim(),
+        custom_question: customQ && customQ.trim() ? customQ.trim() : undefined
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert(`Missão ramificada criada e enfileirada com sucesso: ${data.mission.run_id}`);
+      loadResearchHubMissions();
+      switchResearchSubtab('active');
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao ramificar missão'));
+    }
+  } catch (err) {
+    console.error('Falha ao ramificar:', err);
+  }
+}
+
+async function openDiffModal(run_id) {
+  const viewer = document.getElementById('box-library-viewer');
+  if (!viewer) return;
+
+  try {
+    const res = await fetch(`/api/v1/research/diff?run_id=${encodeURIComponent(run_id)}`);
+    const data = await res.json();
+    if (data.status === 'success') {
+      const d = data.diff;
+      viewer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div>
+            <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">🔍 Comparador Myers Diff de Versões</h2>
+            <span style="font-size:0.75rem; color:#94a3b8;">Missão: ${run_id} (Adições: +${d.additions}, Remoções: -${d.deletions})</span>
+          </div>
+          <button class="btn btn-xs btn-outline" onclick="inspectMissionDetail('${run_id}')">Voltar ao Relatório</button>
+        </div>
+        <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:12px; font-family:monospace; font-size:0.75rem; max-height:450px; overflow-y:auto;">
+          ${d.diff_lines.length === 0 ? '<span style="color:#64748b;">Nenhuma alteração entre as versões baseline e atual.</span>' : d.diff_lines.map(line => {
+            if (line.startsWith('+')) {
+              return `<div style="background:rgba(16,185,129,0.15); color:#10b981;">${escapeHtml(line)}</div>`;
+            } else if (line.startsWith('-')) {
+              return `<div style="background:rgba(239,68,68,0.15); color:#ef4444;">${escapeHtml(line)}</div>`;
+            } else {
+              return `<div style="color:#94a3b8;">${escapeHtml(line)}</div>`;
+            }
+          }).join('')}
+        </div>
+      `;
+    } else {
+      alert('Erro ao calcular diff: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao carregar diff:', err);
+  }
+}
+
+async function promoteReportModal(run_id) {
+  if (!confirm(`Deseja promover este relatório verificado para o Cofre Obsidian e Hipocampo L3?\nO Privacy Shield higienizará localmente quaisquer dados sensíveis (PII) antes de persistir.`)) return;
+
+  try {
+    const res = await fetch('/api/v1/research/promote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        run_id,
+        targets: ['obsidian', 'hippocampus'],
+        dry_run: false
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      const p = data.promotion;
+      alert(`Relatório promovido com sucesso!\n- Obsidian: ${p.obsidian_file_path || 'raw/research/'}\n- PIIs Higienizados: ${p.pii_redactions_count}\n- Hipocampo L3: Espelhado`);
+      inspectMissionDetail(run_id);
+    } else {
+      alert('Erro na promoção: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao promover relatório:', err);
+  }
+}
+
 
 function copyReportMarkdown() {
   const el = document.getElementById('text-report-markdown');
@@ -709,6 +832,125 @@ function renderEpistemicViewer(rep, run_id) {
   `;
 }
 
+// ============================================================================
+// FASE 3: RELATÓRIOS VIVOS (DELTA), RAMIFICAÇÃO, DIFF & PROMOÇÃO OBSIDIAN
+// ============================================================================
+
+async function openRefreshDeltaModal(run_id) {
+  if (!confirm(`Deseja lançar uma nova versão viva (Delta v2+) para a pesquisa ${run_id}?\nO Hermes reaproveitará o acervo de fontes e buscará atualizações e fatos recentes.`)) return;
+
+  try {
+    const res = await fetch('/api/v1/research/mission/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parent_run_id: run_id })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert(`Versão Delta criada e enfileirada: ${data.mission.run_id}`);
+      loadResearchHubMissions();
+      switchResearchSubtab('active');
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao criar delta'));
+    }
+  } catch (err) {
+    console.error('Falha ao atualizar delta:', err);
+  }
+}
+
+async function openBranchSectionModal(run_id) {
+  const heading = prompt(`[RAMIFICAR SEÇÃO — ${run_id}]\nDigite o título ou heading do tópico que deseja aprofundar de forma autônoma:\n(Ex: "Mapeamento empírico de latência no ReFS")`);
+  if (!heading || !heading.trim()) return;
+
+  const customQ = prompt(`Pergunta específica para este subagente (ou deixe em branco para derivar automaticamente):`);
+
+  try {
+    const res = await fetch('/api/v1/research/mission/branch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        parent_run_id: run_id,
+        heading_title: heading.trim(),
+        custom_question: customQ && customQ.trim() ? customQ.trim() : undefined
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert(`Missão ramificada criada e enfileirada com sucesso: ${data.mission.run_id}`);
+      loadResearchHubMissions();
+      switchResearchSubtab('active');
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao ramificar missão'));
+    }
+  } catch (err) {
+    console.error('Falha ao ramificar:', err);
+  }
+}
+
+async function openDiffModal(run_id) {
+  const viewer = document.getElementById('box-library-viewer');
+  if (!viewer) return;
+
+  try {
+    const res = await fetch(`/api/v1/research/diff?run_id=${encodeURIComponent(run_id)}`);
+    const data = await res.json();
+    if (data.status === 'success') {
+      const d = data.diff;
+      viewer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div>
+            <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">🔍 Comparador Myers Diff de Versões</h2>
+            <span style="font-size:0.75rem; color:#94a3b8;">Missão: ${run_id} (Adições: +${d.additions}, Remoções: -${d.deletions})</span>
+          </div>
+          <button class="btn btn-xs btn-outline" onclick="inspectMissionDetail('${run_id}')">Voltar ao Relatório</button>
+        </div>
+        <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:12px; font-family:monospace; font-size:0.75rem; max-height:450px; overflow-y:auto;">
+          ${d.diff_lines.length === 0 ? '<span style="color:#64748b;">Nenhuma alteração entre as versões baseline e atual.</span>' : d.diff_lines.map(line => {
+            if (line.startsWith('+')) {
+              return `<div style="background:rgba(16,185,129,0.15); color:#10b981;">${escapeHtml(line)}</div>`;
+            } else if (line.startsWith('-')) {
+              return `<div style="background:rgba(239,68,68,0.15); color:#ef4444;">${escapeHtml(line)}</div>`;
+            } else {
+              return `<div style="color:#94a3b8;">${escapeHtml(line)}</div>`;
+            }
+          }).join('')}
+        </div>
+      `;
+    } else {
+      alert('Erro ao calcular diff: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao carregar diff:', err);
+  }
+}
+
+async function promoteReportModal(run_id) {
+  if (!confirm(`Deseja promover este relatório verificado para o Cofre Obsidian e Hipocampo L3?\nO Privacy Shield higienizará localmente quaisquer dados sensíveis (PII) antes de persistir.`)) return;
+
+  try {
+    const res = await fetch('/api/v1/research/promote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        run_id,
+        targets: ['obsidian', 'hippocampus'],
+        dry_run: false
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      const p = data.promotion;
+      alert(`Relatório promovido com sucesso!\n- Obsidian: ${p.obsidian_file_path || 'raw/research/'}\n- PIIs Higienizados: ${p.pii_redactions_count}\n- Hipocampo L3: Espelhado`);
+      inspectMissionDetail(run_id);
+    } else {
+      alert('Erro na promoção: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao promover relatório:', err);
+  }
+}
+
+
 function renderHighlightedEpistemicReport(raw) {
   return escapeHtml(raw)
     .replace(/\[VERIFIED\]/g, '<span style="background:rgba(16,185,129,0.25); color:#10b981; font-weight:700; padding:1px 6px; border-radius:3px;">[VERIFIED]</span>')
@@ -789,5 +1031,124 @@ function renderProvisioningBox(result) {
     </div>
   `;
 }
+
+// ============================================================================
+// FASE 3: RELATÓRIOS VIVOS (DELTA), RAMIFICAÇÃO, DIFF & PROMOÇÃO OBSIDIAN
+// ============================================================================
+
+async function openRefreshDeltaModal(run_id) {
+  if (!confirm(`Deseja lançar uma nova versão viva (Delta v2+) para a pesquisa ${run_id}?\nO Hermes reaproveitará o acervo de fontes e buscará atualizações e fatos recentes.`)) return;
+
+  try {
+    const res = await fetch('/api/v1/research/mission/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parent_run_id: run_id })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert(`Versão Delta criada e enfileirada: ${data.mission.run_id}`);
+      loadResearchHubMissions();
+      switchResearchSubtab('active');
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao criar delta'));
+    }
+  } catch (err) {
+    console.error('Falha ao atualizar delta:', err);
+  }
+}
+
+async function openBranchSectionModal(run_id) {
+  const heading = prompt(`[RAMIFICAR SEÇÃO — ${run_id}]\nDigite o título ou heading do tópico que deseja aprofundar de forma autônoma:\n(Ex: "Mapeamento empírico de latência no ReFS")`);
+  if (!heading || !heading.trim()) return;
+
+  const customQ = prompt(`Pergunta específica para este subagente (ou deixe em branco para derivar automaticamente):`);
+
+  try {
+    const res = await fetch('/api/v1/research/mission/branch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        parent_run_id: run_id,
+        heading_title: heading.trim(),
+        custom_question: customQ && customQ.trim() ? customQ.trim() : undefined
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      alert(`Missão ramificada criada e enfileirada com sucesso: ${data.mission.run_id}`);
+      loadResearchHubMissions();
+      switchResearchSubtab('active');
+    } else {
+      alert('Erro: ' + (data.message || 'Falha ao ramificar missão'));
+    }
+  } catch (err) {
+    console.error('Falha ao ramificar:', err);
+  }
+}
+
+async function openDiffModal(run_id) {
+  const viewer = document.getElementById('box-library-viewer');
+  if (!viewer) return;
+
+  try {
+    const res = await fetch(`/api/v1/research/diff?run_id=${encodeURIComponent(run_id)}`);
+    const data = await res.json();
+    if (data.status === 'success') {
+      const d = data.diff;
+      viewer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div>
+            <h2 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;">🔍 Comparador Myers Diff de Versões</h2>
+            <span style="font-size:0.75rem; color:#94a3b8;">Missão: ${run_id} (Adições: +${d.additions}, Remoções: -${d.deletions})</span>
+          </div>
+          <button class="btn btn-xs btn-outline" onclick="inspectMissionDetail('${run_id}')">Voltar ao Relatório</button>
+        </div>
+        <div style="background:#020617; border:1px solid #1e293b; border-radius:8px; padding:12px; font-family:monospace; font-size:0.75rem; max-height:450px; overflow-y:auto;">
+          ${d.diff_lines.length === 0 ? '<span style="color:#64748b;">Nenhuma alteração entre as versões baseline e atual.</span>' : d.diff_lines.map(line => {
+            if (line.startsWith('+')) {
+              return `<div style="background:rgba(16,185,129,0.15); color:#10b981;">${escapeHtml(line)}</div>`;
+            } else if (line.startsWith('-')) {
+              return `<div style="background:rgba(239,68,68,0.15); color:#ef4444;">${escapeHtml(line)}</div>`;
+            } else {
+              return `<div style="color:#94a3b8;">${escapeHtml(line)}</div>`;
+            }
+          }).join('')}
+        </div>
+      `;
+    } else {
+      alert('Erro ao calcular diff: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao carregar diff:', err);
+  }
+}
+
+async function promoteReportModal(run_id) {
+  if (!confirm(`Deseja promover este relatório verificado para o Cofre Obsidian e Hipocampo L3?\nO Privacy Shield higienizará localmente quaisquer dados sensíveis (PII) antes de persistir.`)) return;
+
+  try {
+    const res = await fetch('/api/v1/research/promote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        run_id,
+        targets: ['obsidian', 'hippocampus'],
+        dry_run: false
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      const p = data.promotion;
+      alert(`Relatório promovido com sucesso!\n- Obsidian: ${p.obsidian_file_path || 'raw/research/'}\n- PIIs Higienizados: ${p.pii_redactions_count}\n- Hipocampo L3: Espelhado`);
+      inspectMissionDetail(run_id);
+    } else {
+      alert('Erro na promoção: ' + (data.message || ''));
+    }
+  } catch (err) {
+    console.error('Falha ao promover relatório:', err);
+  }
+}
+
 
 

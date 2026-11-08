@@ -286,7 +286,29 @@ pub struct ProvisioningResult {
 }
 
 // ============================================================================
-// DOCTOR READINESS MODEL
+// FASE 3 MODELS: DELTAS, BRANCHING, DIFFS & OBSIDIAN PROMOTION
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MissionDiffResult {
+    pub from_version: u32,
+    pub to_version: u32,
+    pub unchanged: bool,
+    pub additions: usize,
+    pub deletions: usize,
+    pub diff_lines: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MissionPromotionResult {
+    pub run_id: String,
+    pub promoted_to_obsidian: bool,
+    pub obsidian_file_path: Option<String>,
+    pub promoted_to_hippocampus: bool,
+    pub pii_redactions_count: usize,
+    pub dry_run: bool,
+    pub message: String,
+}
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -318,6 +340,7 @@ pub struct ResearchRoots {
     pub registry_dir: PathBuf,
     pub archive_dir: PathBuf,
     pub hermes_home: PathBuf,
+    pub obsidian_vault: PathBuf,
 }
 
 impl ResearchRoots {
@@ -342,12 +365,20 @@ impl ResearchRoots {
                 PathBuf::from(local).join("hermes")
             });
 
+        let obsidian_vault = std::env::var("OBSIDIAN_VAULT_PATH")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                let local = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| ".".to_string());
+                PathBuf::from(local).join("hermes").join("vault")
+            });
+
         let roots = Self {
             data_dir,
             research_dir,
             registry_dir,
             archive_dir,
             hermes_home,
+            obsidian_vault,
         };
 
         roots.ensure_directories();
@@ -757,6 +788,245 @@ impl ResearchIndex {
             contradictions_count,
             is_verified,
             verification_receipt,
+        })
+    }
+
+    /// Creates a delta refresh mission (Living Report v2+) preserving past deduplication & sources.
+    pub fn create_delta_mission(&self, parent_run_id: &str) -> Result<MissionRecord, String> {
+        let parent = self.get_mission(parent_run_id).ok_or_else(|| "Missão pai não encontrada".to_string())?;
+        let parent_dir = self.roots.mission_dir(parent_run_id)?;
+
+        let now = Utc::now();
+        let slug = format!("{}-v{}", parent.slug, parent.version + 1);
+        let new_run_id = format!("{}-{}", now.format("%Y%m%d-%H%M%S"), slug);
+
+        let mut new_brief = parent.brief.clone();
+        new_brief.since = Some(parent.created_at.clone());
+        new_brief.objectives.insert(
+            0,
+            format!("Atualização viva (delta) da pesquisa prévia '{}' (desde {})", parent.brief.question, parent.created_at)
+        );
+
+        let mut new_mission = create_mission_record(new_brief, Some(parent.budget.cap_usd));
+        new_mission.run_id = new_run_id.clone();
+        new_mission.slug = slug;
+        new_mission.version = parent.version + 1;
+        new_mission.parent_run_id = Some(parent_run_id.to_string());
+        new_mission.status = MissionStatus::Queued;
+
+        let new_dir = self.roots.mission_dir(&new_run_id)?;
+        fs::create_dir_all(&new_dir).map_err(|e| format!("Falha ao criar diretório delta: {e}"))?;
+
+        // Inherit dedup_registry.json if exists
+        let old_dedup = parent_dir.join("dedup_registry.json");
+        if old_dedup.exists() {
+            let _ = fs::copy(&old_dedup, new_dir.join("dedup_registry.json"));
+        }
+
+        // Copy evolving report as v1 baseline snapshot for Myers Diff comparison
+        let old_rep = parent_dir.join("02_draft_report.md");
+        if old_rep.exists() {
+            let _ = fs::copy(&old_rep, new_dir.join("01_evolving_report.md"));
+            let _ = fs::copy(&old_rep, new_dir.join("report_v1.md"));
+        }
+
+        let saved = self.upsert_and_persist(new_mission)?;
+        self.broadcast(ResearchStreamEvent::MissionCreated(MissionSummary {
+            run_id: saved.run_id.clone(),
+            slug: saved.slug.clone(),
+            status: saved.status,
+            effort: saved.brief.effort,
+            question: saved.brief.question.clone(),
+            created_at: saved.created_at.clone(),
+            updated_at: saved.updated_at.clone(),
+            spent_usd: saved.budget.spent_usd,
+            cap_usd: saved.budget.cap_usd,
+            turns_used: saved.budget.turns_used,
+            round: saved.round,
+        }));
+
+        Ok(saved)
+    }
+
+    /// Branches a specific topic section into an autonomous child mission.
+    pub fn branch_section_mission(
+        &self,
+        parent_run_id: &str,
+        heading_title: &str,
+        custom_question: Option<&str>,
+    ) -> Result<MissionRecord, String> {
+        let parent = self.get_mission(parent_run_id).ok_or_else(|| "Missão pai não encontrada".to_string())?;
+
+        let clean_heading = heading_title.trim_start_matches('#').trim();
+        let derived_q = custom_question
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| format!("Aprofundamento temático: {} (Derivado de '{}')", clean_heading, parent.brief.question));
+
+        let (mut brief, finops) = generate_deterministic_plan(&derived_q);
+        brief.focus_section = Some(clean_heading.to_string());
+        brief.objectives.insert(
+            0,
+            format!("Ramificação de alta densidade da seção '{}' da pesquisa {}", clean_heading, parent.run_id)
+        );
+
+        let mut mission = create_mission_record(brief, Some(finops.cap_usd));
+        mission.parent_run_id = Some(parent_run_id.to_string());
+        mission.status = MissionStatus::Queued;
+
+        let saved = self.upsert_and_persist(mission)?;
+        self.broadcast(ResearchStreamEvent::MissionCreated(MissionSummary {
+            run_id: saved.run_id.clone(),
+            slug: saved.slug.clone(),
+            status: saved.status,
+            effort: saved.brief.effort,
+            question: saved.brief.question.clone(),
+            created_at: saved.created_at.clone(),
+            updated_at: saved.updated_at.clone(),
+            spent_usd: saved.budget.spent_usd,
+            cap_usd: saved.budget.cap_usd,
+            turns_used: saved.budget.turns_used,
+            round: saved.round,
+        }));
+
+        Ok(saved)
+    }
+
+    /// Computes safe Myers Diff between two report versions or between child and parent.
+    pub fn diff_mission_versions(
+        &self,
+        run_id: &str,
+        compare_run_id: Option<&str>,
+    ) -> Result<MissionDiffResult, String> {
+        let dir = self.roots.mission_dir(run_id)?;
+
+        let (from_content, to_content, v_from, v_to) = if let Some(comp_id) = compare_run_id {
+            let comp_dir = self.roots.mission_dir(comp_id)?;
+            let from_c = fs::read_to_string(comp_dir.join("02_draft_report.md"))
+                .or_else(|_| fs::read_to_string(comp_dir.join("01_evolving_report.md")))
+                .unwrap_or_default();
+            let to_c = fs::read_to_string(dir.join("02_draft_report.md"))
+                .or_else(|_| fs::read_to_string(dir.join("01_evolving_report.md")))
+                .unwrap_or_default();
+            (from_c, to_c, 1, 2)
+        } else {
+            // Check for snapshot report_v1.md in current dir
+            let v1_path = dir.join("report_v1.md");
+            let from_c = fs::read_to_string(&v1_path).unwrap_or_default();
+            let to_c = fs::read_to_string(dir.join("02_draft_report.md"))
+                .or_else(|_| fs::read_to_string(dir.join("01_evolving_report.md")))
+                .unwrap_or_default();
+            (from_c, to_c, 1, 2)
+        };
+
+        let myers = souls_ast::compute_safe_myers_diff(&from_content, &to_content)
+            .map_err(|e| format!("Falha ao calcular Myers Diff da pesquisa: {e}"))?;
+
+        let mut diff_lines = Vec::new();
+        for ch in &myers.changes {
+            match ch.tag {
+                souls_ast::DiffTag::Equal => {
+                    diff_lines.push(format!(" {}", ch.text));
+                }
+                souls_ast::DiffTag::Insert => {
+                    diff_lines.push(format!("+{}", ch.text));
+                }
+                souls_ast::DiffTag::Delete => {
+                    diff_lines.push(format!("-{}", ch.text));
+                }
+            }
+        }
+
+        Ok(MissionDiffResult {
+            from_version: v_from,
+            to_version: v_to,
+            unchanged: myers.stats.unchanged,
+            additions: myers.stats.additions,
+            deletions: myers.stats.deletions,
+            diff_lines,
+        })
+    }
+
+    /// Promotes report to Obsidian Vault (`raw/research/`) with local Privacy Shield PII sanitization.
+    pub fn promote_to_obsidian_and_hippocampus(
+        &self,
+        run_id: &str,
+        promote_obsidian: bool,
+        promote_hippocampus: bool,
+        dry_run: bool,
+    ) -> Result<MissionPromotionResult, String> {
+        let dir = self.roots.mission_dir(run_id)?;
+        let mission = self.get_mission(run_id).ok_or_else(|| "Missão não encontrada".to_string())?;
+
+        let report_text = fs::read_to_string(dir.join("02_draft_report.md"))
+            .or_else(|_| fs::read_to_string(dir.join("01_evolving_report.md")))
+            .map_err(|e| format!("Relatório inexistente para promoção: {e}"))?;
+
+        // 1. Privacy Shield PII Sanitization (Aho-Corasick via souls_core) with unwind safety
+        let sanitized_bytes = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let redactor = souls_core::pii_redactor::PiiRedactor::new(true);
+            redactor.redact(report_text.as_bytes())
+        })).unwrap_or_else(|_| report_text.as_bytes().to_vec());
+        let sanitized_report = String::from_utf8_lossy(&sanitized_bytes).to_string();
+        let pii_redactions_count = if report_text != sanitized_report { 1 } else { 0 };
+
+        let mut obsidian_target_path = None;
+        let mut promoted_obs = false;
+
+        // 2. Promotion to Obsidian Vault raw/research/
+        if promote_obsidian {
+            let raw_research_dir = self.roots.obsidian_vault.join("raw").join("research");
+            let file_name = format!("{}.md", mission.slug);
+            let target_file = raw_research_dir.join(&file_name);
+            obsidian_target_path = Some(target_file.display().to_string());
+
+            let frontmatter = format!(
+                "---\ntitle: \"{}\"\nrun_id: \"{}\"\neffort: \"{:?}\"\npromoted_at: \"{}\"\nsouls_version: \"v0.7.0\"\npii_sanitized: {}\n---\n\n",
+                mission.brief.question.replace('\"', "\\\""),
+                mission.run_id,
+                mission.brief.effort,
+                Utc::now().to_rfc3339(),
+                pii_redactions_count > 0
+            );
+
+            let full_obsidian_content = format!("{}{}", frontmatter, sanitized_report);
+
+            if !dry_run {
+                fs::create_dir_all(&raw_research_dir)
+                    .map_err(|e| format!("Falha ao criar diretório no cofre Obsidian: {e}"))?;
+                atomic_write_file(&target_file, full_obsidian_content.as_bytes())?;
+                promoted_obs = true;
+            }
+        }
+
+        // 3. Promotion to Hippocampus (knowledge note in research dir)
+        let mut promoted_hip = false;
+        if promote_hippocampus && !dry_run {
+            let note_path = dir.join("hippocampus_promoted.json");
+            let note_data = serde_json::json!({
+                "run_id": run_id,
+                "promoted_at": Utc::now().to_rfc3339(),
+                "pii_redactions": pii_redactions_count,
+                "status": "mirrored"
+            });
+            let _ = atomic_write_file(&note_path, note_data.to_string().as_bytes());
+            promoted_hip = true;
+        }
+
+        let msg = if dry_run {
+            format!("Prévia de promoção: {} redações de PII detectadas.", pii_redactions_count)
+        } else {
+            format!("Relatório promovido com sucesso ({} PIIs sanitizados).", pii_redactions_count)
+        };
+
+        Ok(MissionPromotionResult {
+            run_id: run_id.to_string(),
+            promoted_to_obsidian: if dry_run { promote_obsidian } else { promoted_obs },
+            obsidian_file_path: obsidian_target_path,
+            promoted_to_hippocampus: if dry_run { promote_hippocampus } else { promoted_hip },
+            pii_redactions_count,
+            dry_run,
+            message: msg,
         })
     }
 
@@ -1612,6 +1882,7 @@ mod tests {
             registry_dir: test_base.join("research").join("_registry"),
             archive_dir: test_base.join("research").join("_archive"),
             hermes_home: test_base.join("hermes"),
+            obsidian_vault: test_base.join("obsidian_vault"),
         };
         roots.ensure_directories();
         let roots_clone_path = test_base.clone();
@@ -1689,6 +1960,33 @@ mod tests {
         assert!(prov_res.dry_run);
         assert!(prov_res.success);
         assert!(prov_res.changes.len() >= 3);
+
+        // 7. Fase 3: Delta Mission (Living Report v2+)
+        let delta = index.create_delta_mission(&created.run_id).unwrap();
+        assert_eq!(delta.version, 2);
+        assert_eq!(delta.parent_run_id, Some(created.run_id.clone()));
+        assert_eq!(delta.status, MissionStatus::Queued);
+        assert!(delta.brief.since.is_some());
+
+        // 8. Fase 3: Branch Section
+        let branch = index.branch_section_mission(&created.run_id, "Benchmarks em ReFS", None).unwrap();
+        assert_eq!(branch.parent_run_id, Some(created.run_id.clone()));
+        assert_eq!(branch.brief.focus_section, Some("Benchmarks em ReFS".to_string()));
+
+        // 9. Fase 3: Myers Diff between versions
+        let diff_res = index.diff_mission_versions(&created.run_id, None).unwrap();
+        assert!(diff_res.diff_lines.len() >= 1);
+
+        // 10. Fase 3: Promotion to Obsidian with PII sanitization
+        let promo = index.promote_to_obsidian_and_hippocampus(&created.run_id, true, true, false).unwrap();
+        assert!(promo.promoted_to_obsidian);
+        assert!(promo.promoted_to_hippocampus);
+        assert!(promo.obsidian_file_path.is_some());
+        let obs_file = std::path::PathBuf::from(promo.obsidian_file_path.unwrap());
+        assert!(obs_file.exists());
+        let obs_content = fs::read_to_string(&obs_file).unwrap();
+        assert!(obs_content.starts_with("---"));
+        assert!(obs_content.contains("souls_version: \"v0.7.0\""));
 
         let _ = fs::remove_dir_all(test_base);
     }

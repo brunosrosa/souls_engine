@@ -3258,5 +3258,114 @@ pub async fn research_hub_provision_handler(
     }
 }
 
+// ============================================================================
+// FASE 3 REST HANDLERS: DELTA, BRANCHING, DIFF & OBSIDIAN PROMOTION
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchRefreshRequest {
+    pub parent_run_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchBranchRequest {
+    pub parent_run_id: String,
+    pub heading_title: String,
+    pub custom_question: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchDiffQuery {
+    pub run_id: String,
+    pub compare_run_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchPromoteRequest {
+    pub run_id: String,
+    pub targets: Option<Vec<String>>,
+    pub dry_run: Option<bool>,
+}
+
+/// Spawns a Living Report delta refresh mission (v2+).
+pub async fn research_hub_refresh_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchRefreshRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    match state.research.create_delta_mission(&payload.parent_run_id) {
+        Ok(rec) => Json(json!({
+            "status": "success",
+            "message": "Nova versão viva (delta) enfileirada com sucesso",
+            "mission": rec
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Branches an autonomous sub-mission from a specific report heading.
+pub async fn research_hub_branch_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchBranchRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    match state.research.branch_section_mission(
+        &payload.parent_run_id,
+        &payload.heading_title,
+        payload.custom_question.as_deref(),
+    ) {
+        Ok(rec) => Json(json!({
+            "status": "success",
+            "message": format!("Seção '{}' ramificada com sucesso", payload.heading_title),
+            "mission": rec
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Computes Myers Diff between research versions.
+pub async fn research_hub_diff_handler(
+    State(state): State<AppState>,
+    Query(query): Query<ResearchDiffQuery>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+
+    match state.research.diff_mission_versions(&query.run_id, query.compare_run_id.as_deref()) {
+        Ok(diff) => Json(json!({
+            "status": "success",
+            "diff": diff
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+/// Promotes a verified research report to Obsidian Vault and Hippocampus.
+pub async fn research_hub_promote_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchPromoteRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let targets = payload.targets.unwrap_or_else(|| vec!["obsidian".to_string()]);
+    let promote_obsidian = targets.iter().any(|t| t == "obsidian");
+    let promote_hippocampus = targets.iter().any(|t| t == "hippocampus");
+    let dry_run = payload.dry_run.unwrap_or(true);
+
+    match state.research.promote_to_obsidian_and_hippocampus(
+        &payload.run_id,
+        promote_obsidian,
+        promote_hippocampus,
+        dry_run,
+    ) {
+        Ok(res) => Json(json!({
+            "status": "success",
+            "promotion": res
+        })),
+        Err(err) => Json(json!({ "status": "error", "message": err })),
+    }
+}
+
+
 
 
