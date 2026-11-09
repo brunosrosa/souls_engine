@@ -13,8 +13,10 @@
 //! - Fractional Bayesian updating via pseudo-observations with continuous rewards.
 
 pub mod bandit;
+pub mod cloud_provider;
 pub mod context;
 pub mod error;
+pub mod fallback;
 pub mod finops;
 pub mod metrics;
 pub mod pareto_bandit;
@@ -25,8 +27,12 @@ pub use bandit::{
     pack_gpu_telemetry, unpack_gpu_telemetry, OutcomeEvent, ParetoBanditRouter, ParetoWeights,
     RoutingDecision, LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS,
 };
+pub use cloud_provider::CloudProvider;
 pub use context::TaskContext;
 pub use error::RouterError;
+pub use fallback::{
+    CircuitBreakerState, CooldownManager, FallbackCandidate, FallbackChain, IncidentKind,
+};
 pub use metrics::{calculate_e3_metric, TaskOutcome, E3_EPSILON};
 pub use priors::{
     beta_variance, calculate_geometric_decay, current_timestamp_sec, decay_bayesian_prior,
@@ -591,6 +597,145 @@ mod tests {
         assert_eq!(retry_xhigh_rec.reasoning_effort, souls_protocol::ReasoningEffortLevel::Ultra);
         assert_eq!(retry_xhigh_rec.thinking_budget_tokens, 32768);
         assert!(retry_xhigh_rec.is_escalated_retry);
+    }
+
+    /// Gate 12: test_multi_cloud_provider_fallback_chain_under_429
+    /// Validates sub-150ms contingency fallback resolution when a cloud model suffers HTTP 429.
+    #[tokio::test]
+    async fn test_multi_cloud_provider_fallback_chain_under_429() {
+        let router = setup_test_router(45.0, 850).await;
+
+        // Register Groq and Bedrock cloud models
+        upsert_model(
+            router.pool(),
+            &ModelRecord {
+                model_id: "groq_llama_70b".to_string(),
+                provider_type: "CLOUD".to_string(),
+                vram_base_mb: 0,
+                kv_cache_cost_per_k: 0,
+                max_context_window: 128000,
+                specialty_tags: "[\"code\", \"fast\"]".to_string(),
+                score_lmarena: 1320,
+                cost_input_per_m: 0.59,
+                cost_output_per_m: 0.79,
+                is_active: true,
+                ema_latency_ms: 180,
+                success_rate_ema: 0.99,
+            },
+        )
+        .await
+        .unwrap();
+
+        upsert_model(
+            router.pool(),
+            &ModelRecord {
+                model_id: "bedrock_claude_sonnet".to_string(),
+                provider_type: "CLOUD".to_string(),
+                vram_base_mb: 0,
+                kv_cache_cost_per_k: 0,
+                max_context_window: 200000,
+                specialty_tags: "[\"code\", \"reasoning\"]".to_string(),
+                score_lmarena: 1450,
+                cost_input_per_m: 3.00,
+                cost_output_per_m: 15.00,
+                is_active: true,
+                ema_latency_ms: 600,
+                success_rate_ema: 0.99,
+            },
+        )
+        .await
+        .unwrap();
+
+        // Calibrate priors for code tasks
+        update_bayesian_prior(router.pool(), "tier3_cloud_deepseek", "code", 1.0, 1000).await.unwrap();
+        update_bayesian_prior(router.pool(), "groq_llama_70b", "code", 0.9, 1000).await.unwrap();
+        update_bayesian_prior(router.pool(), "bedrock_claude_sonnet", "code", 0.95, 1000).await.unwrap();
+
+        // 1. Quarantine DeepSeek with HTTP 429
+        router.record_incident("tier3_cloud_deepseek", IncidentKind::RateLimited429, Some(60));
+
+        let task = TaskContext::new("research_code_task", "sess_cloud", "code", 2000, 800)
+            .with_cached_tokens(1000);
+
+        // 2. Resolve fallback chain
+        let chain = router.resolve_fallback_chain(&task, 3).await.expect("Fallback chain resolution failed");
+
+        // Assert sub-150ms resolution SLA (< 150.0 ms)
+        assert!(chain.resolution_ms < 150.0, "Resolution took {:.2}ms (>150ms)", chain.resolution_ms);
+
+        // DeepSeek is quarantined, so primary arm MUST NOT be DeepSeek
+        assert_ne!(chain.primary.model_id, "tier3_cloud_deepseek");
+        assert!(!chain.primary.in_cooldown);
+
+        // Verify that DeepSeek is relegated into fallbacks or flagged with in_cooldown = true
+        let ds_entry = chain.fallbacks.iter().find(|c| c.model_id == "tier3_cloud_deepseek");
+        if let Some(ds) = ds_entry {
+            assert!(ds.in_cooldown);
+            assert!(ds.cooldown_remaining_secs.unwrap() > 0);
+        }
+
+        // 3. Clear quarantine via verified success
+        router.record_success("tier3_cloud_deepseek");
+        let (in_cd, _) = router.cooldown_manager().is_quarantined("tier3_cloud_deepseek");
+        assert!(!in_cd);
+    }
+
+    /// Gate 13: test_finops_budget_cap_filtering
+    /// Validates that tasks with a maximum budget cap exclude models whose projected cost exceeds the cap.
+    #[tokio::test]
+    async fn test_finops_budget_cap_filtering() {
+        let router = setup_test_router(45.0, 850).await;
+
+        // Task with strict $0.0001 budget cap
+        let strict_budget_task = TaskContext::new("budget_task", "sess_finops", "code", 5000, 2000)
+            .with_budget_cap(0.0001);
+
+        let chain = router.resolve_fallback_chain(&strict_budget_task, 3).await.unwrap();
+
+        // All candidates in chain must have projected_cost_usd <= 0.0001
+        assert!(chain.primary.projected_cost_usd <= 0.0001);
+        for fb in &chain.fallbacks {
+            assert!(fb.projected_cost_usd <= 0.0001);
+        }
+
+        // DeepSeek cost for 5000 in + 2000 out: (5000*0.27 + 2000*1.10)/1M = $0.00355 > $0.0001
+        // Thus DeepSeek must NOT appear in the candidate chain at all
+        assert_ne!(chain.primary.model_id, "tier3_cloud_deepseek");
+        assert!(!chain.fallbacks.iter().any(|c| c.model_id == "tier3_cloud_deepseek"));
+    }
+
+    /// Gate 14: test_prompt_caching_cost_impact_on_pareto_utility
+    /// Validates that prompt caching discounts significantly lower projected cost and elevate utility.
+    #[tokio::test]
+    async fn test_prompt_caching_cost_impact_on_pareto_utility() {
+        let router = setup_test_router(45.0, 850).await;
+
+        let task_no_cache = TaskContext::new("task_raw", "sess_cache", "code", 30_000, 10_000);
+        let task_with_cache = TaskContext::new("task_cached", "sess_cache", "code", 30_000, 10_000)
+            .with_cached_tokens(24_000); // 80% prompt cache hit
+
+        let chain_no_cache = router.resolve_fallback_chain(&task_no_cache, 5).await.unwrap();
+        let chain_with_cache = router.resolve_fallback_chain(&task_with_cache, 5).await.unwrap();
+
+        let ds_no_cache = chain_no_cache.fallbacks.iter().chain(std::iter::once(&chain_no_cache.primary))
+            .find(|c| c.model_id == "tier3_cloud_deepseek")
+            .unwrap();
+        let ds_with_cache = chain_with_cache.fallbacks.iter().chain(std::iter::once(&chain_with_cache.primary))
+            .find(|c| c.model_id == "tier3_cloud_deepseek")
+            .unwrap();
+
+        assert!(
+            ds_with_cache.projected_cost_usd < ds_no_cache.projected_cost_usd,
+            "Expected cached cost ({:.5}) < uncached cost ({:.5})",
+            ds_with_cache.projected_cost_usd,
+            ds_no_cache.projected_cost_usd
+        );
+        assert!(
+            ds_with_cache.utility_score > ds_no_cache.utility_score,
+            "Expected cached utility ({:.3}) > uncached utility ({:.3})",
+            ds_with_cache.utility_score,
+            ds_no_cache.utility_score
+        );
     }
 }
 

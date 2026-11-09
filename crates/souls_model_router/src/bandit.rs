@@ -16,6 +16,7 @@ use souls_protocol::DynamicReasoningRecommendation;
 
 use crate::context::TaskContext;
 use crate::error::RouterError;
+use crate::fallback::{CooldownManager, FallbackCandidate, FallbackChain, IncidentKind};
 use crate::metrics::{calculate_e3_metric, TaskOutcome};
 use crate::priors::{
     current_timestamp_sec, decay_bayesian_prior, ensure_router_tables, fetch_active_models,
@@ -123,6 +124,7 @@ pub struct ParetoBanditRouter {
     gpu_telemetry_atomic: Arc<AtomicU64>,
     weights: ParetoWeights,
     outcome_tx: tokio::sync::mpsc::Sender<OutcomeMsg>,
+    cooldown_manager: Arc<CooldownManager>,
 }
 
 impl ParetoBanditRouter {
@@ -134,6 +136,8 @@ impl ParetoBanditRouter {
     ) -> Self {
         let (outcome_tx, mut outcome_rx) = tokio::sync::mpsc::channel::<OutcomeMsg>(256);
         let pool_worker = pool.clone();
+        let cooldown_manager = Arc::new(CooldownManager::new());
+        let cooldown_worker = Arc::clone(&cooldown_manager);
 
         tokio::spawn(async move {
             while let Some(msg) = outcome_rx.recv().await {
@@ -141,6 +145,9 @@ impl ParetoBanditRouter {
                     OutcomeMsg::Event(event) => {
                         let now_sec = current_timestamp_sec();
                         let reward = event.outcome.fractional_reward();
+                        if event.outcome.success {
+                            cooldown_worker.record_success(&event.outcome.tier_name);
+                        }
                         if let Err(err) = update_bayesian_prior(
                             &pool_worker,
                             &event.outcome.tier_name,
@@ -175,6 +182,7 @@ impl ParetoBanditRouter {
             gpu_telemetry_atomic,
             weights,
             outcome_tx,
+            cooldown_manager,
         }
     }
 
@@ -230,6 +238,27 @@ impl ParetoBanditRouter {
     pub fn set_gpu_telemetry(&self, temp_c: f32, vram_allocated_mb: u32, zone: OperationalZone) {
         let packed = pack_gpu_telemetry(vram_allocated_mb, temp_c, zone);
         self.gpu_telemetry_atomic.store(packed, Ordering::Release);
+    }
+
+    /// Access the thread-safe CooldownManager handle.
+    pub fn cooldown_manager(&self) -> Arc<CooldownManager> {
+        Arc::clone(&self.cooldown_manager)
+    }
+
+    /// Records a provider incident (HTTP 429, 500, timeout) quarantining the model arm.
+    pub fn record_incident(
+        &self,
+        model_id: &str,
+        kind: IncidentKind,
+        custom_cooldown_secs: Option<u64>,
+    ) {
+        self.cooldown_manager
+            .record_incident(model_id, kind, custom_cooldown_secs);
+    }
+
+    /// Explicitly clears quarantine state for a recovered model arm.
+    pub fn record_success(&self, model_id: &str) {
+        self.cooldown_manager.record_success(model_id);
     }
 
     /// Re-evaluates and routes a task context to the optimal model arm.
@@ -317,18 +346,36 @@ impl ParetoBanditRouter {
                 }
             };
 
-            // 5. Projected cost calculation C_k(x_i)
-            let projected_cost_usd = if model.is_local() {
-                0.0
-            } else {
-                let cost_in = (task.estimated_input_tokens as f64 / 1_000_000.0) * model.cost_input_per_m;
-                let cost_out = (task.estimated_output_tokens as f64 / 1_000_000.0) * model.cost_output_per_m;
-                cost_in + cost_out
-            };
+            // 5. Projected cost calculation C_k(x_i) taking caching into account
+            let cached_in = task.estimated_cached_input_tokens.unwrap_or(0);
+            let projected_cost_usd = model.calculate_projected_cost(
+                task.estimated_input_tokens,
+                cached_in,
+                task.estimated_output_tokens,
+            );
 
-            // 6. Projected latency calculation \hat{L}_k(x_i)
+            if let Some(budget_cap) = task.max_budget_usd {
+                if projected_cost_usd > budget_cap {
+                    debug!(
+                        model_id = %model.model_id,
+                        projected_cost = projected_cost_usd,
+                        budget_cap,
+                        "Model excluded: projected cost exceeds task budget cap"
+                    );
+                    continue;
+                }
+            }
+
+            // 6. Projected latency calculation \hat{L}_k(x_i) with provider scaling factor
+            let provider = model.cloud_provider();
+            let latency_factor = provider.latency_scaling_factor();
             let projected_latency_ms = (model.ema_latency_ms as f64)
-                * (total_tokens as f64 / 1000.0).max(0.2);
+                * (total_tokens as f64 / 1000.0).max(0.2)
+                * latency_factor;
+
+            // 6.5 Circuit breaker quarantine check
+            let (in_cooldown, _remaining_cd) = self.cooldown_manager.is_quarantined(&model.model_id);
+            let cooldown_penalty = if in_cooldown { 100.0 } else { 0.0 };
 
             // 7. Scalarized utility calculation U(k | x_i)
             let utility = if barrier_phi.is_infinite() {
@@ -338,11 +385,12 @@ impl ParetoBanditRouter {
                     - (self.weights.w_cost * projected_cost_usd)
                     - (self.weights.w_latency * projected_latency_ms)
                     - (barrier_phi as f64)
+                    - cooldown_penalty
             };
 
             let rationale = format!(
-                "Arm {}: Q_hat={:.3}, Cost=${:.5}, Lat={:.1}ms, Phi={:.2} => U={:.3}",
-                model.model_id, sampled_quality, projected_cost_usd, projected_latency_ms, barrier_phi, utility
+                "Arm {}: Q_hat={:.3}, Cost=${:.5}, Lat={:.1}ms, Phi={:.2}, CD_pen={:.1} => U={:.3}",
+                model.model_id, sampled_quality, projected_cost_usd, projected_latency_ms, barrier_phi, cooldown_penalty, utility
             );
 
             if utility > highest_utility {
@@ -376,6 +424,139 @@ impl ParetoBanditRouter {
                 "All model arms blocked by thermodynamic barrier or context limits".to_string(),
             )),
         }
+    }
+
+    /// Evaluates all active models and builds a Pareto-optimal contingency fallback chain in <150ms.
+    pub async fn resolve_fallback_chain(
+        &self,
+        task: &TaskContext,
+        max_fallbacks: usize,
+    ) -> Result<FallbackChain, RouterError> {
+        let start = std::time::Instant::now();
+
+        // 1. Lock-free O(1) telemetry acquisition
+        let packed = self.gpu_telemetry_atomic.load(Ordering::Acquire);
+        let (vram_allocated_mb, gpu_temp_c, zone) = unpack_gpu_telemetry(packed);
+        let vram_free_mb = RTX_2060M_VRAM_TOTAL_MB.saturating_sub(vram_allocated_mb);
+
+        // 2. Fetch all active candidate models from SQLite
+        let active_models = fetch_active_models(&self.pool).await?;
+        if active_models.is_empty() {
+            return Err(RouterError::NoActiveCandidates(
+                "model_registry contains zero active models".to_string(),
+            ));
+        }
+
+        let total_tokens = task.total_projected_tokens();
+        let cached_in = task.estimated_cached_input_tokens.unwrap_or(0);
+        let mut candidates: Vec<FallbackCandidate> = Vec::new();
+        let mut rng = rand::thread_rng();
+
+        for model in active_models {
+            // Context window check
+            if task.is_context_exceeded(model.max_context_window) {
+                continue;
+            }
+
+            // FinOps cost check
+            let projected_cost_usd = model.calculate_projected_cost(
+                task.estimated_input_tokens,
+                cached_in,
+                task.estimated_output_tokens,
+            );
+
+            if let Some(budget_cap) = task.max_budget_usd {
+                if projected_cost_usd > budget_cap {
+                    continue;
+                }
+            }
+
+            // Thermodynamic barrier for local models
+            let barrier_phi: f32 = if model.is_gpu_accelerated() {
+                if total_tokens > LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS
+                    || zone == OperationalZone::Critical
+                    || vram_free_mb <= VRAM_FREE_CRITICAL_MB
+                    || gpu_temp_c >= THERMAL_CRITICAL_C
+                {
+                    f32::INFINITY
+                } else if zone == OperationalZone::Preventive
+                    || vram_free_mb <= VRAM_FREE_NOMINAL_MIN_MB
+                    || gpu_temp_c >= THERMAL_NOMINAL_MAX_C
+                {
+                    let vram_penalty = (1_400.0 - vram_free_mb as f32).max(0.0) / 600.0;
+                    let temp_penalty = (gpu_temp_c - 75.0).max(0.0) / 7.0;
+                    BARRIER_LAMBDA * vram_penalty + BARRIER_MU * temp_penalty
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            };
+
+            if barrier_phi.is_infinite() {
+                continue;
+            }
+
+            // Thompson sampling
+            let prior = fetch_prior(&self.pool, &model.model_id, &task.category).await?;
+            let sampled_quality = match Beta::new(prior.alpha, prior.beta) {
+                Ok(dist) => dist.sample(&mut rng),
+                Err(_) => (prior.alpha / (prior.alpha + prior.beta)).clamp(0.0, 1.0),
+            };
+
+            let provider = model.cloud_provider();
+            let latency_factor = provider.latency_scaling_factor();
+            let projected_latency_ms = (model.ema_latency_ms as f64)
+                * (total_tokens as f64 / 1000.0).max(0.2)
+                * latency_factor;
+
+            let (in_cooldown, remaining_cd) = self.cooldown_manager.is_quarantined(&model.model_id);
+            let cooldown_penalty = if in_cooldown { 100.0 } else { 0.0 };
+
+            let utility = (self.weights.w_quality * sampled_quality)
+                - (self.weights.w_cost * projected_cost_usd)
+                - (self.weights.w_latency * projected_latency_ms)
+                - (barrier_phi as f64)
+                - cooldown_penalty;
+
+            candidates.push(FallbackCandidate {
+                model_id: model.model_id,
+                provider,
+                tier_name: model.provider_type,
+                utility_score: utility,
+                projected_cost_usd,
+                projected_latency_ms,
+                in_cooldown,
+                cooldown_remaining_secs: remaining_cd,
+            });
+        }
+
+        if candidates.is_empty() {
+            return Err(RouterError::NoActiveCandidates(
+                "No viable model arms available for fallback chain".to_string(),
+            ));
+        }
+
+        // Sort by utility descending
+        candidates.sort_by(|a, b| {
+            b.utility_score
+                .partial_cmp(&a.utility_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let primary = candidates.remove(0);
+        let fallbacks_count = candidates.len().min(max_fallbacks);
+        let fallbacks = candidates.into_iter().take(fallbacks_count).collect();
+
+        let resolution_ms = start.elapsed().as_secs_f64() * 1000.0;
+
+        Ok(FallbackChain {
+            task_id: task.task_id.clone(),
+            primary,
+            fallbacks,
+            budget_ceiling_usd: task.max_budget_usd,
+            resolution_ms,
+        })
     }
 
     /// Asynchronously records task outcome feedback via non-blocking MPSC channel,

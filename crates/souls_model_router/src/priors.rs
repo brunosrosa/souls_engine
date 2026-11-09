@@ -4,6 +4,7 @@ use sqlx::{Pool, Row, Sqlite};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::instrument;
 
+use crate::cloud_provider::CloudProvider;
 use crate::error::RouterError;
 
 /// Canonical DDL initializing the two financial sovereignty tables in FrankenSQLite STRICT mode.
@@ -63,6 +64,29 @@ impl ModelRecord {
     #[inline]
     pub fn is_gpu_accelerated(&self) -> bool {
         self.is_local() && self.vram_base_mb > 0
+    }
+
+    /// Infers the CloudProvider classification for this model.
+    #[inline]
+    pub fn cloud_provider(&self) -> CloudProvider {
+        CloudProvider::from_model_id_and_type(&self.model_id, &self.provider_type)
+    }
+
+    /// Calculates projected FinOps cost taking into account cached input tokens and provider discounts.
+    pub fn calculate_projected_cost(
+        &self,
+        input_tokens: u32,
+        cached_input_tokens: u32,
+        output_tokens: u32,
+    ) -> f64 {
+        let provider = self.cloud_provider();
+        provider.calculate_effective_cost(
+            input_tokens,
+            cached_input_tokens,
+            output_tokens,
+            self.cost_input_per_m,
+            self.cost_output_per_m,
+        )
     }
 }
 
