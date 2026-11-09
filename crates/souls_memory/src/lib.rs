@@ -10,6 +10,7 @@ pub mod error;
 pub mod ladybug;
 pub mod lancedb;
 pub mod mpsc_bridge;
+pub mod research_cache;
 pub mod rrf;
 pub mod session_manager;
 pub mod snapshot;
@@ -30,6 +31,12 @@ pub use error::MemoryError;
 pub use ladybug::{LadybugOntologyGraph, OntologicalEdge, OntologicalNode};
 pub use lancedb::{get_vector_table_schema, LanceDbVectorStore, VECTOR_DIMENSION};
 pub use mpsc_bridge::{MemoryBridgeOp, MemoryMpscBridge};
+pub use research_cache::{
+    compute_passage_hash, compute_query_hash, get_epistemic_passage,
+    purge_expired_epistemic_passages, upsert_epistemic_passage, EpistemicPassageCache,
+    EpistemicPassageRecord, ResearchPassageMatch, DEFAULT_RESEARCH_CACHE_TTL_SECS,
+    RESEARCH_VECTORS_TABLE,
+};
 pub use rrf::{LexicalCandidate, RrfFusionEngine, UnifiedMatch, VectorCandidate};
 pub use session_manager::{
     HandoffPayloadRecord, SubAgentDiaryRecord, SubAgentManager, SubAgentSessionRecord,
@@ -162,6 +169,11 @@ impl SoulsMemoryStore {
     /// Accesses the LanceDB columnar vector store.
     pub fn lance_store(&self) -> &LanceDbVectorStore {
         &self.lance_store
+    }
+
+    /// Accesses an `EpistemicPassageCache` instance for deterministic research deduplication and vector retrieval.
+    pub fn research_cache(&self, default_ttl_secs: Option<i64>) -> EpistemicPassageCache {
+        EpistemicPassageCache::new(self.pool(), self.lance_store.clone(), default_ttl_secs)
     }
 
     /// Accesses the Chyros metabolism daemon.

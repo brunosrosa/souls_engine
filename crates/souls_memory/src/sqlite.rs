@@ -227,6 +227,24 @@ CREATE INDEX IF NOT EXISTS idx_thoughts_session_order
     ON socratic_thoughts (session_id, thought_number ASC);
 CREATE INDEX IF NOT EXISTS idx_thoughts_branch 
     ON socratic_thoughts (session_id, branch_id);
+
+-- 13. Epistemic Research Passages (Triadic Cache v0.8.0)
+CREATE TABLE IF NOT EXISTS epistemic_passages (
+    passage_hash TEXT PRIMARY KEY NOT NULL,
+    query_hash TEXT NOT NULL,
+    raw_url TEXT NOT NULL,
+    title TEXT NOT NULL,
+    passage_text TEXT NOT NULL,
+    bm25_score REAL NOT NULL DEFAULT 0.0,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_epistemic_passages_query
+    ON epistemic_passages (query_hash, expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_epistemic_passages_url
+    ON epistemic_passages (raw_url);
 "#;
 
 /// Configures and bootstraps an NT-safe FrankenSQLite connection pool with required PRAGMAs.

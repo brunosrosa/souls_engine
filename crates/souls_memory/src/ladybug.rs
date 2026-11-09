@@ -250,6 +250,18 @@ impl LadybugOntologyGraph {
         Ok(())
     }
 
+    /// Returns all outgoing ontological edges originating from `node_id`.
+    pub async fn get_neighbors(&self, node_id: &str) -> Vec<OntologicalEdge> {
+        let Some(idx) = self.index_map.get(node_id).map(|r| *r) else {
+            return Vec::new();
+        };
+
+        let g = self.graph.read().await;
+        g.edges_directed(idx, Direction::Outgoing)
+            .map(|edge_ref| edge_ref.weight().clone())
+            .collect()
+    }
+
     /// Computes the Blast Radius (all downstream affected nodes) starting from `start_node_id` via BFS.
     pub async fn calculate_blast_radius(
         &self,
