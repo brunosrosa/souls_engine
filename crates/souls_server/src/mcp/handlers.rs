@@ -51,6 +51,17 @@ pub async fn handle_route_subtask(
         .and_then(Value::as_bool)
         .unwrap_or(false);
 
+    let cached_tokens = args
+        .get("cached_tokens")
+        .or_else(|| args.get("cached_input_tokens"))
+        .and_then(Value::as_u64)
+        .unwrap_or(0) as u32;
+
+    let max_budget_opt = args
+        .get("max_budget_usd")
+        .or_else(|| args.get("max_cost_usd"))
+        .and_then(Value::as_f64);
+
     let mut task_ctx = TaskContext::new(
         format!("task_{:x}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()),
         "subagent_mcp",
@@ -61,6 +72,12 @@ pub async fn handle_route_subtask(
     .with_tools(requires_tools)
     .with_code_generation(requires_code, Some(5));
 
+    if cached_tokens > 0 {
+        task_ctx = task_ctx.with_cached_tokens(cached_tokens);
+    }
+    if let Some(budget) = max_budget_opt {
+        task_ctx = task_ctx.with_budget_cap(budget);
+    }
     if let Some(entropy) = entropy_opt {
         task_ctx = task_ctx.with_entropy(entropy);
     }
@@ -68,7 +85,7 @@ pub async fn handle_route_subtask(
         task_ctx = task_ctx.with_retry(true);
     }
 
-    // Execute route_task on dedicated thread to isolate local ThreadRng future
+    // Execute route_task and resolve_fallback_chain on dedicated thread to isolate local ThreadRng future
     let router = Arc::clone(&state.router);
     let (tx, rx) = oneshot::channel();
     std::thread::spawn(move || {
@@ -77,15 +94,18 @@ pub async fn handle_route_subtask(
             Err(_) => return,
         };
         let res = rt.block_on(async move {
-            router.route_task(&task_ctx).await
+            let decision = router.route_task(&task_ctx).await;
+            let fallback_chain = router.resolve_fallback_chain(&task_ctx, 3).await.ok();
+            (decision, fallback_chain)
         });
         let _ = tx.send(res);
     });
 
-    let decision = rx
+    let (decision_res, fallback_chain) = rx
         .await
-        .map_err(|_| McpDomainError::InternalEnginePanic)?
-        .map_err(|_| McpDomainError::VramThermalThrottled)?;
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+    let decision = decision_res.map_err(|_| McpDomainError::VramThermalThrottled)?;
 
     let packed = state.router.gpu_telemetry_atomic().load(Ordering::Acquire);
     let (vram_allocated_mb, gpu_temp_c, zone) = unpack_gpu_telemetry(packed);
@@ -130,7 +150,8 @@ pub async fn handle_route_subtask(
             "operational_zone": format!("{zone:?}"),
             "thermodynamic_barrier_phi": decision.thermodynamic_barrier_phi,
             "rationale": decision.rationale,
-            "reasoning_recommendation": decision.reasoning_recommendation
+            "reasoning_recommendation": decision.reasoning_recommendation,
+            "fallback_chain": fallback_chain
         },
         "isError": false
     }))

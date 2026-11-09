@@ -90,6 +90,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/research/scorecard", get(dashboard::research_hub_scorecard_handler))
         .route("/api/v1/research/settings", get(dashboard::research_hub_settings_get_handler).post(dashboard::research_hub_settings_post_handler))
         .route("/api/v1/research/skill-patch", post(dashboard::research_hub_skill_patch_handler))
+        .route("/api/v1/research/tier0/process", post(dashboard::research_tier0_process_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))

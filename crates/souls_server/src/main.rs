@@ -2875,4 +2875,35 @@ model:
         assert!(providers.iter().any(|p| p["id"] == "cerebras"));
         assert!(providers.iter().any(|p| p["id"] == "bedrock"));
     }
+
+    #[tokio::test]
+    async fn test_research_tier0_process_endpoint() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let raw_html = "<html><body><header>Noise</header><main><p>The Souls Engine uses BM25 and Minions architecture for high epistemic certainty.</p></main><footer>Footer noise</footer></body></html>";
+        let payload = serde_json::json!({
+            "url": "https://soulsengine.ai/research?utm_source=test",
+            "raw_html": raw_html,
+            "query_brief": "Minions architecture and BM25"
+        });
+
+        let req = Request::builder()
+            .uri("/api/v1/research/tier0/process")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(payload.to_string()))
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(val["status"], "success");
+        assert_eq!(val["canonical_url"], "soulsengine.ai/research");
+        assert_eq!(val["is_duplicate"], false);
+        assert!(val["clean_markdown_bytes"].as_u64().unwrap() > 0);
+    }
 }

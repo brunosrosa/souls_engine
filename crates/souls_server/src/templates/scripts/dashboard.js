@@ -1750,6 +1750,19 @@
 
         if (data.status === 'success') {
           const count = data.count || 0;
+          const badgeEl = document.getElementById('badge-subtab-fallback-count');
+          if (badgeEl) {
+            if (count === 0) {
+              badgeEl.innerText = 'Ativo';
+              badgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
+              badgeEl.style.color = 'var(--emerald)';
+            } else {
+              badgeEl.innerText = `${count} ⚠️`;
+              badgeEl.style.background = 'rgba(245, 158, 11, 0.2)';
+              badgeEl.style.color = 'var(--amber)';
+            }
+          }
+
           if (count === 0) {
             if (statusEl) {
               statusEl.innerText = '● 100% Nominal (0 Quarentenas)';

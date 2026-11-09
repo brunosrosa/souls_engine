@@ -3487,6 +3487,53 @@ pub async fn research_hub_skill_patch_handler(
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct Tier0ProcessRequest {
+    pub url: String,
+    pub raw_html: String,
+    pub query_brief: String,
+}
+
+/// Tier 0 Deterministic Zero-LLM Ingestion & BM25 Ranking Pipeline.
+pub async fn research_tier0_process_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<Tier0ProcessRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let mut dedup = souls_core::research::ResearchDedupRegistry::new();
+    let top_k = 5;
+    let res = souls_core::research::process_raw_html_passage(
+        &payload.raw_html,
+        &payload.url,
+        &payload.query_brief,
+        &mut dedup,
+        top_k,
+    );
+
+    let passages_json: Vec<serde_json::Value> = res
+        .top_passages
+        .into_iter()
+        .map(|p| {
+            json!({
+                "chunk_index": p.chunk_index,
+                "text": p.text,
+                "word_count": p.word_count,
+                "bm25_score": p.bm25_score
+            })
+        })
+        .collect();
+
+    Json(json!({
+        "status": "success",
+        "canonical_url": res.canonical_url,
+        "is_duplicate": res.is_duplicate,
+        "original_bytes": res.original_bytes,
+        "clean_markdown_bytes": res.clean_markdown_bytes,
+        "compression_ratio": res.compression_ratio,
+        "top_passages": passages_json
+    }))
+}
+
 // =========================================================================
 // MILESTONE v0.7.3: UNIVERSAL CLOUD DISPATCH GATEWAY & FALLBACK CHAINS
 // =========================================================================
