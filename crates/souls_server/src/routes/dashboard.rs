@@ -2292,6 +2292,7 @@ pub async fn post_config_handler(
             let parsed = parse_toml_to_json(&toml_to_write);
             Json(json!({
                 "status": "success",
+                "ok": true,
                 "message": "Configurações salvas com sucesso em souls_config.toml",
                 "path": p.to_string_lossy(),
                 "backup_path": backup_path.to_string_lossy(),
@@ -2302,6 +2303,8 @@ pub async fn post_config_handler(
             warn!("Failed to save souls_config.toml: {}", e);
             Json(json!({
                 "status": "error",
+                "ok": false,
+                "error": e.to_string(),
                 "message": e.to_string()
             }))
         }
@@ -2355,12 +2358,15 @@ pub async fn create_profile_handler(
             let created = profiles.iter().find(|p| p.id == id);
             Json(json!({
                 "status": "success",
+                "ok": true,
                 "message": format!("Perfil '{id}' gravado com sucesso!"),
                 "profile": created
             }))
         }
         Err(err) => Json(json!({
             "status": "error",
+            "ok": false,
+            "error": err.clone(),
             "message": err
         })),
     }
@@ -2374,14 +2380,19 @@ pub async fn delete_profile_handler(
     match crate::profiles::delete_profile(&profile_id, None) {
         Ok(true) => Json(json!({
             "status": "success",
+            "ok": true,
             "message": format!("Perfil '{profile_id}' removido com sucesso!")
         })),
         Ok(false) => Json(json!({
             "status": "not_found",
+            "ok": false,
+            "error": format!("Perfil '{profile_id}' não foi encontrado."),
             "message": format!("Perfil '{profile_id}' não foi encontrado.")
         })),
         Err(err) => Json(json!({
             "status": "error",
+            "ok": false,
+            "error": err.clone(),
             "message": err
         })),
     }

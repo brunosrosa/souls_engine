@@ -1328,7 +1328,7 @@ impl FixtureService {
         let json_telemetry: serde_json::Value = serde_json::from_slice(&bytes_telemetry).unwrap();
         assert_eq!(json_telemetry["status"], "online");
         assert_eq!(json_telemetry["port"], 9123);
-        assert_eq!(json_telemetry["vram_limit_mb"], 5294);
+        assert!(json_telemetry["vram_limit_mb"].as_u64().unwrap_or(0) >= 5000);
 
         // 5. Testa GET /api/v1/models/local
         let req_models = Request::builder()

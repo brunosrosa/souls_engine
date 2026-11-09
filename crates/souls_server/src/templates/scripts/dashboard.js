@@ -6792,7 +6792,7 @@
             body: JSON.stringify(prof)
           });
           const data = await res.json();
-          if (res.ok && data.status === 'ok') {
+          if (res.ok && (data.status === 'ok' || data.status === 'success' || data.ok)) {
             showToast(`Perfil de trabalho '${prof.name}' configurado com ${modelId}!`, "success");
             await fetchProfiles();
             selectProfilePreset(profileId);
@@ -6857,13 +6857,13 @@
           })
         });
         const data = await res.json();
-        if (res.ok && data.status === 'ok') {
+        if (res.ok && (data.status === 'ok' || data.status === 'success' || data.ok)) {
           showToast(`Perfil '${name}' criado com sucesso e salvo no souls_config.toml!`, "success");
           closeNewProfileModal();
           await fetchProfiles();
           selectProfilePreset(id);
         } else {
-          showToast(`Erro ao criar perfil: ${data.error || 'Falha desconhecida'}`, "error");
+          showToast(`Erro ao criar perfil: ${data.error || data.message || 'Falha desconhecida'}`, "error");
         }
       } catch (e) {
         showToast(`Erro de rede ao criar perfil: ${e.message}`, "error");
@@ -6878,12 +6878,12 @@
       try {
         const res = await fetch(`/api/v1/profiles/${profileId}`, { method: 'DELETE' });
         const data = await res.json();
-        if (res.ok && data.status === 'ok') {
+        if (res.ok && (data.status === 'ok' || data.status === 'success' || data.ok)) {
           showToast(`Perfil '${profileId}' removido com sucesso!`, "success");
           activePreset = 'orchestrator';
           await fetchProfiles();
         } else {
-          showToast(`Erro ao excluir perfil: ${data.error || 'Falha'}`, "error");
+          showToast(`Erro ao excluir perfil: ${data.error || data.message || 'Falha'}`, "error");
         }
       } catch (e) {
         showToast(`Erro de rede ao excluir perfil: ${e.message}`, "error");
@@ -7321,14 +7321,14 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
           body: JSON.stringify({ raw_toml: rawToml })
         });
         const data = await res.json();
-        if (res.ok && data.status === 'ok') {
+        if (res.ok && (data.status === 'ok' || data.status === 'success' || data.ok)) {
           showToast("Configurações gravadas com sucesso no souls_config.toml (.toml.bak criado)!", "success");
           hasUnsavedSettings = false;
           dismissUnsavedBanner();
           const editor = document.getElementById('raw-toml-editor');
           if (editor) editor.value = rawToml;
         } else {
-          showToast(`Erro ao gravar configurações: ${data.error || 'Falha desconhecida'}`, "error");
+          showToast(`Erro ao gravar configurações: ${data.error || data.message || 'Falha desconhecida'}`, "error");
         }
       } catch (e) {
         showToast(`Erro de rede ao salvar: ${e.message}`, "error");
@@ -7348,13 +7348,13 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
           body: JSON.stringify({ raw_toml: rawToml })
         });
         const data = await res.json();
-        if (res.ok && data.status === 'ok') {
+        if (res.ok && (data.status === 'ok' || data.status === 'success' || data.ok)) {
           showToast("Arquivo TOML salvo com sucesso e backup de segurança criado!", "success");
           hasUnsavedSettings = false;
           dismissUnsavedBanner();
           fetchConfigToml();
         } else {
-          showToast(`Erro ao salvar TOML: ${data.error || 'Sintaxe TOML inválida'}`, "error");
+          showToast(`Erro ao salvar TOML: ${data.error || data.message || 'Sintaxe TOML inválida'}`, "error");
         }
       } catch (e) {
         showToast(`Erro de rede ao salvar TOML: ${e.message}`, "error");
