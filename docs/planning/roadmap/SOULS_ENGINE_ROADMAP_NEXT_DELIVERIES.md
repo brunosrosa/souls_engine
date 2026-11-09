@@ -86,6 +86,7 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestone v0.7.0** | **Deep Research Hub & SSOT Control Plane** | **100% CONCLUÍDO** | **Deep Research Hub:** Aba `🔬 Pesquisa Profunda` (5 sub-abas: Nova Missão STORM, Missões Ativas SSE, Biblioteca viva/Myers Diff/Obsidian, Scorecard E³ + Domain Trust, Doctor & 1-Click Provisioning), SSOT ReFS puro, 4 tools MCP `research.*` (59 tools canônicas), 53/53 testes PASS. |
 | **Milestone v0.7.1** | **Tier 0 Determinístico Zero-LLM** | **100% CONCLUÍDO** | **souls_core::research:** Conversor streaming HTML->MD zero-allocation com blindagem UTF-8, chunker deslizante (~500-600 palavras c/ overlap de 80), normalizador de URLs e dedup SipHash 2-4, ranqueador lexical BM25 e esteira integrada de compressão (47/47 testes PASS). |
 | **Milestone v0.7.2** | **Tier 1 Operário Local & Protocolo MinionS** | **100% CONCLUÍDO** | **souls_inference_runtime::minions:** Protocolo MinionS para extração de claims epistêmicos, estatísticas e síntese atômica, saídas estruturadas com auto-cura JSON (`heal_json_response`) e orquestrador de lote com FinOps WDDM (fallback CPU AVX2 com zero spillover PCIe a 0 MB VRAM extra, 52/52 testes PASS). |
+| **Milestone v0.7.3** | **Universal Cloud Dispatch Gateway & Fallback Chains** | **100% CONCLUÍDO** | **souls_model_router + souls_llm_cloud_arena + souls_server:** Resolução de contingência em sub-150ms (`resolve_fallback_chain`), Circuit Breaker & Quarentena sob HTTP 429/500/timeout com auto-recuperação, FinOps Prompt Cache (DeepSeek, Groq, Cerebras, Together, Bedrock, Azure), catálogo multi-cloud canônico expandido e sub-aba visual `🛡️ Provedores & Fallback` no Dashboard (56/56 testes PASS). |
 
 ### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
@@ -208,10 +209,11 @@ Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem,
 * **Esquema Tipado `StructuredLocalOutput` & Auto-Cura JSON:** Extração determinística de afirmações epistêmicas (`EpistemicClaimOutput`), pontos de dados estatísticos (`StatisticDataPoint`) e sínteses parciais tipadas em Rust com autocorreção resiliente via `heal_json_response`.
 * **Conformidade FinOps WDDM & Zero Spillover PCIe:** Orquestrador com seleção de dispositivo em tempo real (`MinionBatchOrchestrator`) monitorando o `HardwareWatchdog`: caso a VRAM ultrapasse $4.800$ MB ou a GPU atinja $\ge 78^\circ\text{C}$, a inferência sofre desvio transparente para CPU com instruções AVX2 (`gpu_layers = 0`), garantindo 0 MB de VRAM adicional e zero estrangulamento PCIe no host (52/52 testes unitários e de integração PASS).
 
-#### 4. Versão v0.7.3: Universal Cloud Dispatch Gateway & Fallback Chains (`souls_llm_cloud_arena` & `souls_model_router`)
-* **Expansão Multi-Provedor Nativa:** Suporte com cálculo de cache hits para DeepSeek API (v3/r1), Groq, Cerebras, Together AI, Bedrock e Azure OpenAI.
-* **Fallback Chain Inteligente por Perfil:** Roteamento de contingência em sub-150ms sob erros HTTP 429 (rate-limit) ou 500 para o próximo modelo na Fronteira de Pareto.
-* **Sub-Aba `🌐 Provedores & Fallback`:** Gestão visual de chaves, latências PeakEWMA e custos na aba *⚡ Modelos & Arena*.
+#### 4. Versão v0.7.3: Universal Cloud Dispatch Gateway & Fallback Chains (`souls_llm_cloud_arena` & `souls_model_router` & `souls_server`) — **[100% CONCLUÍDO]**
+* **Expansão Multi-Provedor Nativa & Prompt Cache Engine:** Suporte com cálculo de cache hits para DeepSeek API (v3/r1 com 74% de desconto em prompt cache), Groq (LPU a 0.35x de latência), Cerebras (WSE a 0.30x de latência • 420+ TPS), Together AI, Bedrock (Claude 3.5 Sonnet / Nova) e Azure OpenAI (GPT-4o).
+* **Fallback Chain Inteligente por Perfil em Sub-150ms:** Roteamento de contingência em sub-150ms (`resolve_fallback_chain`) sob erros HTTP 429 (rate-limit), 500/503 (serviço indisponível) ou timeouts para o próximo modelo na Fronteira de Pareto.
+* **Circuit Breaker & Cooldown Manager:** Quarentena automática (60s para 429, 30s para 500/503, 15s para timeout) evitando que subagentes disparem contra provedores em saturação, com auto-recuperação por sucesso verificado ou reset manual via API/UI.
+* **Sub-Aba `🛡️ Provedores & Fallback` no Dashboard:** Monitoramento visual de circuit breaker em tempo real, cartões informativos de provedores cloud, tabela de quarentenas ativas com botão 1-clique de liberação e simulador interativo de resolução de cadeia com SLA <150ms (56/56 testes unitários e de integração PASS).
 
 ---
 
