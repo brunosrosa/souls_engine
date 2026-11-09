@@ -235,3 +235,24 @@ fn test_foreign_key_protection_against_unknown_models() {
     assert_eq!(resolver.try_resolve("mistralai/mistral-large-2407"), None);
     assert_eq!(resolver.try_resolve("cohere/command-r-plus"), None);
 }
+
+#[test]
+fn test_universal_cloud_gateway_canonical_resolution() {
+    let resolver = CanonicalResolver::new();
+
+    // DeepSeek V3 & R1
+    assert_eq!(resolver.resolve("deepseek-chat"), "deepseek/deepseek-chat");
+    assert_eq!(resolver.resolve("deepseek-v3"), "deepseek/deepseek-chat");
+    assert_eq!(resolver.resolve("deepseek-ai/deepseek-v3"), "deepseek/deepseek-chat");
+    assert_eq!(resolver.resolve("deepseek-reasoner"), "deepseek/deepseek-reasoner");
+    assert_eq!(resolver.resolve("deepseek-r1"), "deepseek/deepseek-reasoner");
+
+    // Groq & Cerebras Llama 3.3 70B
+    assert_eq!(resolver.resolve("groq/llama-3.3-70b-versatile"), "meta/llama-3.3-70b-instruct");
+    assert_eq!(resolver.resolve("cerebras/llama3.3-70b"), "meta/llama-3.3-70b-instruct");
+    assert_eq!(resolver.resolve("together/meta-llama/Llama-3.3-70B-Instruct-Turbo"), "meta/llama-3.3-70b-instruct");
+
+    // Bedrock & Azure
+    assert_eq!(resolver.resolve("bedrock/anthropic.claude-3-5-sonnet"), "anthropic/claude-3.5-sonnet");
+    assert_eq!(resolver.resolve("azure/gpt-4o"), "openai/gpt-4o");
+}

@@ -202,13 +202,17 @@ fn parse_price_value(val: Option<&serde_json::Value>) -> f64 {
 /// Estima throughput médio de mercado em TPS para modelos conhecidos.
 fn estimate_throughput(canonical_id: &str) -> f64 {
     let lower = canonical_id.to_lowercase();
-    if lower.contains("haiku") || lower.contains("flash") || lower.contains("mini") || lower.contains("luna") {
+    if lower.contains("cerebras") {
+        420.0
+    } else if lower.contains("groq") {
+        280.0
+    } else if lower.contains("haiku") || lower.contains("flash") || lower.contains("mini") || lower.contains("luna") {
         130.0
     } else if lower.contains("coder-32b") || lower.contains("sol") {
         95.0
-    } else if lower.contains("deepseek-v3") {
+    } else if lower.contains("deepseek-v3") || lower.contains("deepseek-chat") {
         85.0
-    } else if lower.contains("deepseek-r1") || lower.contains("astra") || lower.contains("opus") {
+    } else if lower.contains("deepseek-r1") || lower.contains("deepseek-reasoner") || lower.contains("astra") || lower.contains("opus") {
         45.0
     } else if lower.contains("405b") {
         35.0
