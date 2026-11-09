@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)  
-> **VERSÃO CONSOLIDADA:** v0.7.1 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
+> **VERSÃO CONSOLIDADA:** v0.7.3 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -87,6 +87,7 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestone v0.7.1** | **Tier 0 Determinístico Zero-LLM** | **100% CONCLUÍDO** | **souls_core::research:** Conversor streaming HTML->MD zero-allocation com blindagem UTF-8, chunker deslizante (~500-600 palavras c/ overlap de 80), normalizador de URLs e dedup SipHash 2-4, ranqueador lexical BM25 e esteira integrada de compressão (47/47 testes PASS). |
 | **Milestone v0.7.2** | **Tier 1 Operário Local & Protocolo MinionS** | **100% CONCLUÍDO** | **souls_inference_runtime::minions:** Protocolo MinionS para extração de claims epistêmicos, estatísticas e síntese atômica, saídas estruturadas com auto-cura JSON (`heal_json_response`) e orquestrador de lote com FinOps WDDM (fallback CPU AVX2 com zero spillover PCIe a 0 MB VRAM extra, 52/52 testes PASS). |
 | **Milestone v0.7.3** | **Universal Cloud Dispatch Gateway & Fallback Chains** | **100% CONCLUÍDO** | **souls_model_router + souls_llm_cloud_arena + souls_server:** Resolução de contingência em sub-150ms (`resolve_fallback_chain`), Circuit Breaker & Quarentena sob HTTP 429/500/timeout com auto-recuperação, FinOps Prompt Cache (DeepSeek, Groq, Cerebras, Together, Bedrock, Azure), catálogo multi-cloud canônico expandido e sub-aba visual `🛡️ Provedores & Fallback` no Dashboard (56/56 testes PASS). |
+| **Alfândega v0.7.x** | **Revisão Ampla, Hardening & Release Oficial** | **100% CONCLUÍDO** | **Inspeção de Alfândega:** 193/193 testes PASS no workspace, isolamento Axum de RNG thread-safety (`std::thread::spawn`), MCP `route_subtask` enriquecido com `fallback_chain`/`cached_tokens`/`max_budget_usd`, compilação Release MSVC LTO (114.4 MB), live smoke test sub-5ms e instalação operacional em `%LOCALAPPDATA%\SoulsEngine` via `tools/install_souls.ps1`. |
 
 ### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
@@ -125,17 +126,17 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┬──────────────────────────────────┬───────────────────────────────┤
 │ v0.5.0        │ Base Bare-Metal & UI Modular     │ [CONCLUÍDO] 11 Crates, ADR-012│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.6.0 (HOJE) │ Governança Visual & Skills Hub   │ [CONCLUÍDO] Skills + Personas │
+│ v0.6.0        │ Governança Visual & Skills Hub   │ [CONCLUÍDO] Skills + Personas │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.7.0        │ Deep Research Hub (Dashboard)    │ Aba UI + MCP Pull + FS SSOT   │
+│ v0.7.0        │ Deep Research Hub (Dashboard)    │ [CONCLUÍDO] Aba UI + MCP Pull │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.7.1        │ Tier 0 Determinístico Zero-LLM   │ BM25 + SipHash + HTML->MD     │
+│ v0.7.1        │ Tier 0 Determinístico Zero-LLM   │ [CONCLUÍDO] BM25 + SipHash    │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.7.2        │ Tier 1 Batch MinionS Silício     │ MinionS SLM + 0MB VRAM Extra  │
+│ v0.7.2        │ Tier 1 Batch MinionS Silício     │ [CONCLUÍDO] MinionS SLM 0MB   │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.7.3        │ Gateway Cloud Multi-Provedor     │ DeepSeek, Groq + Fallbacks    │
+│ v0.7.3        │ Gateway Cloud & Fallback Chains  │ [CONCLUÍDO] Sub-150ms + Quaran│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.8.0        │ Conectividade & Integrações      │ Google Universe + Obsidian DB │
+│ v0.8.0 (PRÓX) │ Conectividade & Integrações      │ Google Universe + Obsidian DB │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.0        │ Souls Anthropophagy 2.0          │ 4 Camadas, Blobs & 85+ Colunas│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
@@ -214,6 +215,35 @@ Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem,
 * **Fallback Chain Inteligente por Perfil em Sub-150ms:** Roteamento de contingência em sub-150ms (`resolve_fallback_chain`) sob erros HTTP 429 (rate-limit), 500/503 (serviço indisponível) ou timeouts para o próximo modelo na Fronteira de Pareto.
 * **Circuit Breaker & Cooldown Manager:** Quarentena automática (60s para 429, 30s para 500/503, 15s para timeout) evitando que subagentes disparem contra provedores em saturação, com auto-recuperação por sucesso verificado ou reset manual via API/UI.
 * **Sub-Aba `🛡️ Provedores & Fallback` no Dashboard:** Monitoramento visual de circuit breaker em tempo real, cartões informativos de provedores cloud, tabela de quarentenas ativas com botão 1-clique de liberação e simulador interativo de resolução de cadeia com SLA <150ms (56/56 testes unitários e de integração PASS).
+
+#### 5. Fechamento de Alfândega, Hardening & Instalação Oficial — **[100% CONCLUÍDO]**
+* **Auditoria Abrangente do Workspace (193/193 Testes PASS):** Validação estrita de contratos de dados em todas as 9 crates canônicas (`souls_core`, `souls_ast`, `souls_memory`, `souls_inference_runtime`, `souls_llm_inventory`, `souls_llm_local_arena`, `souls_model_router`, `souls_llm_cloud_arena`, `souls_server`). Zero regressões, zero warnings e integridade das 6 Linhas Vermelhas.
+* **Hardening de Concorrência Axum (RNG Thread-Safety):** Isolamento do `ThreadRng` do Bandit em `std::thread::spawn` com canal oneshot, garantindo conformidade estrita com o trait `Send` dos handlers do Axum.
+* **Enriquecimento MCP & Endpoints REST:**
+  - MCP `route_subtask`: inclusão da chave `fallback_chain` e suporte aos campos `cached_tokens` e `max_budget_usd`.
+  - Novos endpoints: `GET /api/v1/router/providers`, `GET/POST /api/v1/router/quarantines`, `POST /api/v1/router/fallback/chain` e `POST /api/v1/research/tier0/process`.
+  - Dashboard UI/UX: subaba *🛡️ Provedores & Fallback* com badge dinâmica de quarentenas e simulador em tempo real.
+* **Compilação Release & Setup Simbiótico:**
+  - Binário compilado com MSVC e LTO em 12m 46s (`114.4 MB`).
+  - Instalação oficial via `tools/install_souls.ps1` com identidade dupla (`souls_server.exe` e `souls_engine.exe`) em `%LOCALAPPDATA%\SoulsEngine\`.
+  - Smoke test ao vivo atestando resolução de fallback em `4.08 ms` e compressão determinística Tier 0 de `55.7%`.
+
+#### 6. Melhorias Mapeadas da Trilha Cognitiva (Backlog Ativo v0.7.x+)
+Com a entrega da infraestrutura básica do ciclo v0.7.x, as seguintes extensões estratégicas ficam formalmente mapeadas para manter a tração contínua nos próximos marcos:
+
+1. **Evoluções do Deep Research Hub (Trilha Cognitiva & Ingestão):**
+   - **Ingestão Bare-Metal de Documentos Ricos (PDF / EPUB / DOCX):** Implementação de parser determinístico no Tier 0 (`souls_core::research::pdf_extractor`) para extração direta de texto estruturado de PDFs locais sem gastar tokens com LLM nem invocar ferramentas externas.
+   - **Cache Epistêmico de Passagens no LadybugDB / LanceDB:** Persistência automática de passagens ranqueadas por BM25 no grafo L2/L3 com deduplicação semântica, permitindo que novas pesquisas sobre o mesmo domínio recuperem contextos instantaneamente sem nova raspagem web.
+   - **Pipeline STORM Multi-Agente com Debate Concorrente:** Orquestração de subagentes com personas divergentes que debatem hipóteses em grafo DAG antes da consolidação do relatório mestre.
+
+2. **Evoluções do Tier 1 MinionS & Silício Local:**
+   - **Streaming Sintático com Validação Incremental (SIMD JSON Parser):** Validação estrutural token-a-token em tempo real de `StructuredLocalOutput`, permitindo abortar prematuramente gerações fora de conformidade antes de consumir a janela máxima de tokens.
+   - **Buffer Pool Mapeado (`memmap2`) para Extração em Lote:** Compartilhamento de buffers de tensores mapeados entre tarefas atômicas consecutivas de MinionS, eliminando o overhead de repetidas syscalls Win32 de alocação de memória.
+
+3. **Evoluções do Universal Cloud Dispatch Gateway:**
+   - **Telemetria em Malha Fechada (Closed-Loop Feedback):** Captura contínua de latências reais (TTFT / TPS) e taxas de erro reais observadas pelo Hermes Agent, retroalimentando as priors bayesianas do `ParetoBandit` via endpoint REST dedicado.
+   - **Hedging Preemptivo (Latency Tail Mitigation):** Disparo assíncrono em background do segundo modelo da cadeia de fallback caso o nó primário não emita o primeiro token (TTFT) dentro de uma janela crítica (ex: 1.200 ms), mitigando picos de latência em tarefas urgentes.
+   - **Quarentena Adaptativa com Base em Headers de Rate Limit:** Parsing dinâmico dos headers HTTP `x-ratelimit-reset` e `retry-after` recebidos durante respostas HTTP 429 para programar a janela exata de liberação do Circuit Breaker, substituindo o temporizador fixo de 60 segundos.
 
 ---
 
@@ -446,7 +476,7 @@ flowchart TD
         Personas["Hermes Personas & Governance Inspector (souls_server)"]
     end
 
-    subgraph M070 ["Milestone v0.7.0 (Cognição & Gateway Universal)"]
+    subgraph M070 ["Milestone v0.7.x — CONCLUÍDO (Cognição & Gateway Universal)"]
         DeepResearch["Deep Research Nativo (Tier 0-3 / MinionS / IterResearch)"]
         MultiCloud["Universal Cloud Dispatch Gateway (DeepSeek, Groq, Bedrock)"]
     end
