@@ -16,6 +16,7 @@ pub mod fs;
 pub mod logging;
 pub mod panic;
 pub mod pii_redactor;
+pub mod research;
 pub mod sandbox;
 pub mod subprocess_guard;
 pub mod web;
@@ -42,4 +43,9 @@ pub use sandbox::{
 };
 pub use subprocess_guard::{SubprocessConfig, SubprocessGuard, SubprocessState};
 pub use web::{html_to_clean_markdown, parse_duckduckgo_html, WebSearchResult};
+pub use research::{
+    chunk_document, clean_html_to_markdown, hash_url, normalize_url, process_raw_html_passage,
+    rank_chunks, tokenize_lexical, ChunkerOptions, FilteredPassage, FilteredPassageResult,
+    HtmlCleanOptions, ResearchDedupRegistry, ScoredChunk, TextChunk,
+};
 

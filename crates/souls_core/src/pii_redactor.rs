@@ -84,11 +84,14 @@ impl PiiRedactor {
         while i < len {
             if let Some((pattern_len, is_prefix)) = match_pattern_at(&text[i..]) {
                 let start = i;
-                let end = if is_prefix {
+                let mut end = if is_prefix {
                     expand_match_boundary(text, start, start + pattern_len)
                 } else {
                     start + pattern_len
                 };
+                while end < len && !text.is_char_boundary(end) {
+                    end += 1;
+                }
 
                 let original = &text[start..end];
                 let token_id = hash_pii_token(original);
@@ -155,10 +158,11 @@ impl Default for PiiRedactor {
 /// Matches any canonical pattern at the prefix of slice.
 /// Returns (matched_length, needs_expansion_flag).
 fn match_pattern_at(slice: &str) -> Option<(usize, bool)> {
+    let slice_bytes = slice.as_bytes();
     for &pattern in CANONICAL_PII_PATTERNS {
-        if slice.len() >= pattern.len() {
-            let candidate = &slice[..pattern.len()];
-            if candidate.eq_ignore_ascii_case(pattern) {
+        let pat_bytes = pattern.as_bytes();
+        if slice_bytes.len() >= pat_bytes.len() {
+            if slice_bytes[..pat_bytes.len()].eq_ignore_ascii_case(pat_bytes) {
                 // If it ends with separator or whitespace, it's a prefix to expand
                 let ends_with_sep = pattern.ends_with(' ')
                     || pattern.ends_with(':')
