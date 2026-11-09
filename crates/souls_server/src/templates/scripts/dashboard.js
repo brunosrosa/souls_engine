@@ -1703,25 +1703,223 @@
       const panelInstalled = document.getElementById('panel-local-installed');
       const panelCloud = document.getElementById('panel-local-cloud');
       const panelHub = document.getElementById('panel-local-hub');
+      const panelFallback = document.getElementById('panel-local-fallback');
 
       if (subtab === 'installed') {
         if (panelInstalled) panelInstalled.style.display = 'block';
         if (panelCloud) panelCloud.style.display = 'none';
         if (panelHub) panelHub.style.display = 'none';
+        if (panelFallback) panelFallback.style.display = 'none';
         fetchLocalModels();
         fetchLocalArenaData();
       } else if (subtab === 'cloud') {
         if (panelInstalled) panelInstalled.style.display = 'none';
         if (panelCloud) panelCloud.style.display = 'block';
         if (panelHub) panelHub.style.display = 'none';
+        if (panelFallback) panelFallback.style.display = 'none';
         fetchCloudChampions();
       } else if (subtab === 'hub') {
         if (panelInstalled) panelInstalled.style.display = 'none';
         if (panelCloud) panelCloud.style.display = 'none';
         if (panelHub) panelHub.style.display = 'block';
+        if (panelFallback) panelFallback.style.display = 'none';
         fetchHardwareAndRecommendations();
         fetchInventoryDownloads();
         connectDownloadsSSE();
+      } else if (subtab === 'fallback') {
+        if (panelInstalled) panelInstalled.style.display = 'none';
+        if (panelCloud) panelCloud.style.display = 'none';
+        if (panelHub) panelHub.style.display = 'none';
+        if (panelFallback) panelFallback.style.display = 'block';
+        fetchFallbackQuarantines();
+        fetchFallbackProviders();
+      }
+    }
+
+    // ==========================================
+    // 3.1.5 UNIVERSAL CLOUD GATEWAY & FALLBACK (v0.7.3)
+    // ==========================================
+    async function fetchFallbackQuarantines() {
+      try {
+        const resp = await fetch('/api/v1/router/quarantines');
+        const data = await resp.json();
+        const statusEl = document.getElementById('circuit-breaker-status');
+        const detailEl = document.getElementById('circuit-breaker-detail');
+        const sectionEl = document.getElementById('quarantine-section');
+        const tbodyEl = document.getElementById('quarantine-tbody');
+
+        if (data.status === 'success') {
+          const count = data.count || 0;
+          if (count === 0) {
+            if (statusEl) {
+              statusEl.innerText = '● 100% Nominal (0 Quarentenas)';
+              statusEl.style.color = 'var(--emerald)';
+            }
+            if (detailEl) detailEl.innerText = 'Nenhum provedor sob rate limit (429) ou indisponibilidade (500).';
+            if (sectionEl) sectionEl.style.display = 'none';
+          } else {
+            if (statusEl) {
+              statusEl.innerText = `⚠️ ${count} Modelo(s) em Quarentena`;
+              statusEl.style.color = 'var(--amber)';
+            }
+            if (detailEl) detailEl.innerText = 'Desvio automático ativo para o próximo modelo da Fronteira de Pareto.';
+            if (sectionEl) sectionEl.style.display = 'block';
+            if (tbodyEl) {
+              tbodyEl.innerHTML = (data.active_quarantines || []).map(q => `
+                <tr>
+                  <td><code class="mono" style="color: var(--amber); font-weight: bold;">${q.model_id}</code></td>
+                  <td><span class="chip chip-amber" style="font-size: 0.72rem;">${q.incident}</span></td>
+                  <td>${q.remaining_secs}s restantes</td>
+                  <td>
+                    <button class="btn btn-sm btn-cyan" onclick="resetFallbackQuarantines('${q.model_id}')" style="padding: 2px 8px; font-size: 0.72rem;">
+                      <span>🔄</span> Resetar
+                    </button>
+                  </td>
+                </tr>
+              `).join('');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar quarentenas:', err);
+      }
+    }
+
+    async function resetFallbackQuarantines(modelId) {
+      try {
+        const resp = await fetch('/api/v1/router/quarantines/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model_id: modelId || 'all' })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+          showToast(res.message || 'Quarentenas resetadas', 'success');
+          fetchFallbackQuarantines();
+        } else {
+          showToast(res.message || 'Erro ao resetar quarentenas', 'error');
+        }
+      } catch (err) {
+        showToast('Falha na requisição de reset: ' + err, 'error');
+      }
+    }
+
+    async function fetchFallbackProviders() {
+      try {
+        const resp = await fetch('/api/v1/router/providers');
+        const data = await resp.json();
+        const gridEl = document.getElementById('fallback-providers-grid');
+        if (data.status === 'success' && gridEl) {
+          gridEl.innerHTML = (data.providers || []).map(p => `
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <strong style="color: var(--text-normal); font-size: 0.88rem;">${p.name}</strong>
+                  <span class="chip chip-cyan" style="font-size: 0.70rem;">${p.tier}</span>
+                </div>
+                <div style="font-size: 0.74rem; color: var(--text-muted); margin-bottom: 8px;">
+                  Modelos: <span style="color: var(--text-normal);">${(p.models || []).join(', ')}</span>
+                </div>
+                <div style="background: rgba(6, 182, 212, 0.08); padding: 8px; border-radius: 6px; font-size: 0.72rem; color: var(--cyan); margin-bottom: 6px;">
+                  💡 <strong>Cache:</strong> ${p.cache_discount}
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-muted);">
+                  ⚡ <strong>Latência:</strong> ${p.latency_factor}
+                </div>
+              </div>
+              <div style="margin-top: 10px; font-size: 0.72rem; color: var(--emerald); font-weight: bold;">
+                ● ${p.status}
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar provedores:', err);
+      }
+    }
+
+    async function simulateFallbackChain() {
+      const category = document.getElementById('sim-task-category').value;
+      const inputTokens = parseInt(document.getElementById('sim-input-tokens').value || '4000', 10);
+      const cachedTokens = parseInt(document.getElementById('sim-cached-tokens').value || '0', 10);
+      const budgetCapVal = document.getElementById('sim-budget-cap').value;
+      const budgetCap = budgetCapVal ? parseFloat(budgetCapVal) : null;
+
+      const payload = {
+        task_id: 'sim_' + Date.now(),
+        category,
+        estimated_input_tokens: inputTokens,
+        estimated_cached_input_tokens: cachedTokens,
+        estimated_output_tokens: 1000,
+        max_budget_usd: budgetCap,
+        max_fallbacks: 4
+      };
+
+      try {
+        const resp = await fetch('/api/v1/router/fallback/chain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        const resultsEl = document.getElementById('sim-chain-results');
+        const timeEl = document.getElementById('sim-resolution-time');
+        const cardsEl = document.getElementById('sim-chain-cards');
+
+        if (data.status === 'success') {
+          if (resultsEl) resultsEl.style.display = 'block';
+          if (timeEl) timeEl.innerText = `${data.resolution_ms.toFixed(2)} ms (SLA <150ms)`;
+
+          const p = data.primary;
+          let html = `
+            <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid var(--emerald); padding: 12px; border-radius: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span class="chip chip-emerald" style="font-size: 0.70rem; margin-right: 6px;">1º CANDIDATO PRINCIPAL</span>
+                  <strong style="color: var(--emerald); font-size: 0.9rem;">${p.model_id}</strong>
+                  <span style="font-size: 0.74rem; color: var(--text-muted); margin-left: 8px;">(Provedor: ${p.provider})</span>
+                </div>
+                <div style="font-size: 0.85rem; font-weight: bold; color: var(--emerald);">
+                  Utilidade U: ${p.utility_score.toFixed(3)}
+                </div>
+              </div>
+              <div style="display: flex; gap: 16px; font-size: 0.74rem; color: var(--text-muted); margin-top: 6px;">
+                <span>Custo Projetado: <strong style="color: var(--text-normal);">$${p.projected_cost_usd.toFixed(5)}</strong></span>
+                <span>Latência Projetada: <strong style="color: var(--text-normal);">${p.projected_latency_ms.toFixed(0)} ms</strong></span>
+                <span>Tier: <strong style="color: var(--text-normal);">${p.tier_name}</strong></span>
+              </div>
+            </div>
+          `;
+
+          (data.fallbacks || []).forEach((fb, idx) => {
+            const cdBadge = fb.in_cooldown ? `<span class="chip chip-amber" style="font-size: 0.68rem; margin-left: 6px;">QUARENTENA (${fb.cooldown_remaining_secs}s)</span>` : '';
+            html += `
+              <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-subtle); padding: 10px 12px; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span class="chip chip-purple" style="font-size: 0.70rem; margin-right: 6px;">${idx + 2}º FALLBACK</span>
+                    <strong style="color: var(--text-normal); font-size: 0.85rem;">${fb.model_id}</strong>
+                    ${cdBadge}
+                    <span style="font-size: 0.74rem; color: var(--text-muted); margin-left: 8px;">(Provedor: ${fb.provider})</span>
+                  </div>
+                  <div style="font-size: 0.8rem; color: var(--purple);">
+                    Utilidade U: ${fb.utility_score.toFixed(3)}
+                  </div>
+                </div>
+                <div style="display: flex; gap: 16px; font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+                  <span>Custo: $${fb.projected_cost_usd.toFixed(5)}</span>
+                  <span>Latência: ${fb.projected_latency_ms.toFixed(0)} ms</span>
+                </div>
+              </div>
+            `;
+          });
+
+          if (cardsEl) cardsEl.innerHTML = html;
+        } else {
+          showToast(data.message || 'Erro na simulação', 'error');
+        }
+      } catch (err) {
+        showToast('Falha na simulação: ' + err, 'error');
       }
     }
 

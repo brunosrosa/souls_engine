@@ -3487,6 +3487,229 @@ pub async fn research_hub_skill_patch_handler(
     }
 }
 
+// =========================================================================
+// MILESTONE v0.7.3: UNIVERSAL CLOUD DISPATCH GATEWAY & FALLBACK CHAINS
+// =========================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct FallbackChainRequest {
+    pub task_id: Option<String>,
+    pub category: Option<String>,
+    pub estimated_input_tokens: Option<u32>,
+    pub estimated_cached_input_tokens: Option<u32>,
+    pub estimated_output_tokens: Option<u32>,
+    pub max_budget_usd: Option<f64>,
+    pub max_fallbacks: Option<usize>,
+}
+
+/// Resolves a sub-150ms contingency fallback chain under the ParetoBandit model router.
+pub async fn router_fallback_chain_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<FallbackChainRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let task_id = payload.task_id.unwrap_or_else(|| {
+        format!(
+            "sim_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        )
+    });
+    let category = payload.category.unwrap_or_else(|| "code".to_string());
+    let est_in = payload.estimated_input_tokens.unwrap_or(4000);
+    let est_out = payload.estimated_output_tokens.unwrap_or(1000);
+    let cached_in = payload.estimated_cached_input_tokens.unwrap_or(0);
+    let max_fallbacks = payload.max_fallbacks.unwrap_or(4);
+
+    let mut task = souls_model_router::TaskContext::new(task_id, "dashboard_sim", category, est_in, est_out)
+        .with_cached_tokens(cached_in);
+
+    if let Some(budget) = payload.max_budget_usd {
+        task = task.with_budget_cap(budget);
+    }
+
+    let router = std::sync::Arc::clone(&state.router);
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    std::thread::spawn(move || {
+        let rt = match tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        {
+            Ok(r) => r,
+            Err(_) => return,
+        };
+        let res = rt.block_on(async move {
+            router.resolve_fallback_chain(&task, max_fallbacks).await
+        });
+        let _ = tx.send(res);
+    });
+
+    match rx.await {
+        Ok(Ok(chain)) => Json(json!({
+            "status": "success",
+            "task_id": chain.task_id,
+            "resolution_ms": chain.resolution_ms,
+            "budget_ceiling_usd": chain.budget_ceiling_usd,
+            "primary": chain.primary,
+            "fallbacks": chain.fallbacks,
+            "total_candidates": 1 + chain.fallbacks.len()
+        })),
+        Ok(Err(err)) => Json(json!({
+            "status": "error",
+            "message": format!("Falha na resolução da cadeia de fallback: {}", err)
+        })),
+        Err(_) => Json(json!({
+            "status": "error",
+            "message": "Thread worker channel dropped prematurely"
+        })),
+    }
+}
+
+/// Returns currently active circuit breaker quarantines / cooldowns.
+pub async fn router_quarantines_get_handler(
+    State(state): State<AppState>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let list = state.router.cooldown_manager().active_quarantines();
+    let items: Vec<Value> = list
+        .into_iter()
+        .map(|(model_id, remaining_secs, incident)| {
+            let incident_name = match incident {
+                souls_model_router::IncidentKind::RateLimited429 => "HTTP 429 (Rate Limit)",
+                souls_model_router::IncidentKind::ServerUnavailable500 => "HTTP 500/503 (Indisponível)",
+                souls_model_router::IncidentKind::Timeout => "Timeout (> SLA)",
+                souls_model_router::IncidentKind::NetworkError => "Erro de Rede",
+            };
+            json!({
+                "model_id": model_id,
+                "remaining_secs": remaining_secs,
+                "incident": incident_name,
+                "incident_code": format!("{:?}", incident)
+            })
+        })
+        .collect();
+
+    Json(json!({
+        "status": "success",
+        "active_quarantines": items,
+        "count": items.len()
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct QuarantineResetRequest {
+    pub model_id: Option<String>,
+}
+
+/// Resets circuit breaker quarantine for a specific model or all models.
+pub async fn router_quarantines_reset_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<QuarantineResetRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    if let Some(ref m_id) = payload.model_id {
+        if m_id == "all" {
+            let active = state.router.cooldown_manager().active_quarantines();
+            for (id, _, _) in active {
+                state.router.record_success(&id);
+            }
+        } else {
+            state.router.record_success(m_id);
+        }
+    } else {
+        let active = state.router.cooldown_manager().active_quarantines();
+        for (id, _, _) in active {
+            state.router.record_success(&id);
+        }
+    }
+
+    let remaining = state.router.cooldown_manager().active_quarantines();
+    Json(json!({
+        "status": "success",
+        "message": "Quarentenas do Circuit Breaker redefinidas com sucesso",
+        "active_quarantines_count": remaining.len()
+    }))
+}
+
+/// Returns the registry of supported multi-cloud providers, cache discounts, and latency multipliers.
+pub async fn router_providers_handler(
+    State(state): State<AppState>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let providers = json!([
+        {
+            "id": "deepseek",
+            "name": "DeepSeek API",
+            "models": ["deepseek-chat (V3)", "deepseek-reasoner (R1)"],
+            "cache_discount": "74% de desconto em prompt cache ($0.07/M vs $0.27/M)",
+            "latency_factor": "1.15x (Throughput ~85 tok/s)",
+            "status": "Pronto / Conectado",
+            "tier": "Cloud Tier 3"
+        },
+        {
+            "id": "groq",
+            "name": "Groq Cloud (LPU)",
+            "models": ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
+            "cache_discount": "0% (Throughput ultraveloz de silício LPU)",
+            "latency_factor": "0.35x (~3x mais rápido • 280 tok/s)",
+            "status": "Pronto / Conectado",
+            "tier": "Cloud Fast LPU"
+        },
+        {
+            "id": "cerebras",
+            "name": "Cerebras Inference",
+            "models": ["llama3.3-70b", "llama3.1-8b"],
+            "cache_discount": "0% (Wafer Scale Engine)",
+            "latency_factor": "0.30x (420+ tok/s)",
+            "status": "Pronto / Conectado",
+            "tier": "Cloud Fast WSE"
+        },
+        {
+            "id": "together",
+            "name": "Together AI",
+            "models": ["DeepSeek-V3", "Llama-3.3-70B-Turbo"],
+            "cache_discount": "0% (Pool redundante multi-datacenter)",
+            "latency_factor": "1.00x",
+            "status": "Pronto / Conectado",
+            "tier": "Cloud Multi-Model"
+        },
+        {
+            "id": "bedrock",
+            "name": "Amazon Bedrock",
+            "models": ["anthropic.claude-3-5-sonnet", "amazon.nova-pro"],
+            "cache_discount": "90% de desconto em prompt cache read (Claude)",
+            "latency_factor": "1.00x (Enterprise SLA)",
+            "status": "Pronto / Conectado",
+            "tier": "Cloud Enterprise"
+        },
+        {
+            "id": "azure",
+            "name": "Microsoft Azure OpenAI",
+            "models": ["gpt-4o", "gpt-4o-mini"],
+            "cache_discount": "50% de desconto em cached input",
+            "latency_factor": "1.00x (Enterprise SLA)",
+            "status": "Pronto / Conectado",
+            "tier": "Cloud Enterprise"
+        },
+        {
+            "id": "local",
+            "name": "Host Silicon (Bare-Metal)",
+            "models": ["Qwen 2.5 Coder 7B (dGPU)", "Llama 3.2 3B (CPU AVX2)"],
+            "cache_discount": "100% Grátis ($0.00 / Zero Silício)",
+            "latency_factor": "0.80x (Zero Latência de Rede)",
+            "status": "Nativo (RTX 2060m WDDM)",
+            "tier": "Silício Bare-Metal Host"
+        }
+    ]);
+
+    Json(json!({
+        "status": "success",
+        "providers": providers
+    }))
+}
+
 
 
 

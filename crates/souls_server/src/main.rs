@@ -2769,4 +2769,110 @@ model:
         let resp_archive = app.oneshot(archive_req).await.unwrap();
         assert_eq!(resp_archive.status(), StatusCode::OK);
     }
+
+    #[tokio::test]
+    async fn test_router_fallback_chain_endpoint() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let payload = serde_json::json!({
+            "task_id": "test_chain_sim",
+            "category": "code",
+            "estimated_input_tokens": 4000,
+            "estimated_cached_input_tokens": 2500,
+            "estimated_output_tokens": 1000,
+            "max_fallbacks": 3
+        });
+
+        let req = Request::builder()
+            .uri("/api/v1/router/fallback/chain")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(payload.to_string()))
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(val["status"], "success");
+        assert_eq!(val["task_id"], "test_chain_sim");
+        assert!(val["resolution_ms"].as_f64().unwrap() < 150.0);
+        assert!(val["primary"]["model_id"].is_string());
+        assert!(val["total_candidates"].as_u64().unwrap() >= 1);
+    }
+
+    #[tokio::test]
+    async fn test_router_quarantines_and_circuit_breaker_lifecycle_endpoint() {
+        let state = create_test_state().await;
+        let app = build_router(state.clone());
+
+        // 1. Manually place a model arm in quarantine
+        state.router.record_incident(
+            "tier0_onnx_cpu",
+            souls_model_router::IncidentKind::RateLimited429,
+            Some(60),
+        );
+
+        // 2. Query quarantines endpoint
+        let req_list = Request::builder()
+            .uri("/api/v1/router/quarantines")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp_list = app.clone().oneshot(req_list).await.unwrap();
+        assert_eq!(resp_list.status(), StatusCode::OK);
+
+        let list_bytes = to_bytes(resp_list.into_body(), usize::MAX).await.unwrap();
+        let list_val: serde_json::Value = serde_json::from_slice(&list_bytes).unwrap();
+
+        assert_eq!(list_val["status"], "success");
+        assert_eq!(list_val["count"], 1);
+        assert_eq!(list_val["active_quarantines"][0]["model_id"], "tier0_onnx_cpu");
+
+        // 3. Reset all quarantines
+        let req_reset = Request::builder()
+            .uri("/api/v1/router/quarantines")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::json!({ "model_id": "all" }).to_string()))
+            .unwrap();
+
+        let resp_reset = app.oneshot(req_reset).await.unwrap();
+        assert_eq!(resp_reset.status(), StatusCode::OK);
+
+        let reset_bytes = to_bytes(resp_reset.into_body(), usize::MAX).await.unwrap();
+        let reset_val: serde_json::Value = serde_json::from_slice(&reset_bytes).unwrap();
+
+        assert_eq!(reset_val["status"], "success");
+        assert_eq!(reset_val["active_quarantines_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn test_router_providers_catalog_endpoint() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let req = Request::builder()
+            .uri("/api/v1/router/providers")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(val["status"], "success");
+        let providers = val["providers"].as_array().unwrap();
+        assert!(providers.iter().any(|p| p["id"] == "deepseek"));
+        assert!(providers.iter().any(|p| p["id"] == "groq"));
+        assert!(providers.iter().any(|p| p["id"] == "cerebras"));
+        assert!(providers.iter().any(|p| p["id"] == "bedrock"));
+    }
 }
