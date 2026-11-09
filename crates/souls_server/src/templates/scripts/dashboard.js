@@ -650,35 +650,113 @@
     function humanizeModelName(id) {
       if (!id) return '--';
       const lower = id.toLowerCase();
-      if (lower.includes('qwen3-5-4b') || lower.includes('qwen2.5-coder-4b') || lower.includes('qwen3.5-coder')) return 'Qwen 2.5 Coder 4B';
-      if (lower.includes('arch-function')) return 'Arch Function Chat 3B';
-      if (lower.includes('smollm2-135m')) return 'SmolLM2 135M Reasoning';
-      if (lower.includes('phi-4-mini')) return 'Phi-4 Mini 3.8B';
+
+      // 1. Catálogo Físico e Especialistas Canônicos Locais
+      if (lower.includes('qwen3-5-4b-agentic-coder') || lower.includes('qwen3.5-4b-agentic-coder') || (lower.includes('qwen3-5-4b') && lower.includes('coder'))) return 'Qwen 3.5 4B Agentic Coder v4';
+      if (lower.includes('qwen3-5-4b-uncensored') || lower.includes('qwen3.5-4b-uncensored') || (lower.includes('qwen3-5-4b') && lower.includes('mtp')) || lower.includes('hauhaucs')) return 'Qwen 3.5 4B Uncensored MTP';
+      if (lower.includes('qwen3.8-4b') || lower.includes('qwen3-8-4b')) return 'Qwen 3.8 4B';
+      if (lower.includes('qwen4') || lower.includes('qwen-4')) return 'Qwen 4';
+      if (lower.includes('qwen3.7-flash') || lower.includes('qwen3-7-flash')) return 'Qwen 3.7 Flash';
       if (lower.includes('qwen2-5-vl-3b') || lower.includes('qwen2.5-vl-3b')) return 'Qwen 2.5 VL 3B Vision';
+      if (lower.includes('qwen2-5-coder-0-5b') || lower.includes('qwen2.5-coder-0.5b')) return 'Qwen 2.5 Coder 0.5B';
+      if (lower.includes('qwen2-5-coder-1-5b') || lower.includes('qwen2.5-coder-1.5b')) return 'Qwen 2.5 Coder 1.5B';
+      if (lower.includes('qwen2-5-coder-3b') || lower.includes('qwen2.5-coder-3b')) return 'Qwen 2.5 Coder 3B';
+      if (lower.includes('qwen2-5-coder-7b') || lower.includes('qwen2.5-coder-7b')) return 'Qwen 2.5 Coder 7B';
+      if (lower.includes('qwen2-5-coder-14b') || lower.includes('qwen2.5-coder-14b')) return 'Qwen 2.5 Coder 14B';
+      if (lower.includes('qwen2-5-coder-32b') || lower.includes('qwen2.5-coder-32b')) return 'Qwen 2.5 Coder 32B';
+      if (lower.includes('qwen2-5-0-5b') || lower.includes('qwen2.5-0.5b')) return 'Qwen 2.5 0.5B';
+      if (lower.includes('qwen2-5-7b') || lower.includes('qwen2.5-7b')) return 'Qwen 2.5 7B';
+
+      if (lower.includes('hermes-3-llama-3.2-3b') || lower.includes('hermes-3-llama-3-2-3b') || (lower.includes('hermes-3') && lower.includes('3.2-3b'))) return 'Hermes-3 Llama 3.2 3B';
+      if (lower.includes('hy-mt2-7b') || lower.includes('hy-mt2')) return 'Hy-MT2 7B (Hunyuan)';
+      if (lower.includes('nvidia-nemotron-3-nano-4b') || lower.includes('nemotron-3-nano-4b') || lower.includes('nemotron-nano-4b')) return 'NVIDIA Nemotron 3 Nano 4B';
+      if (lower.includes('phi-4-mini')) return 'Phi-4 Mini 3.8B';
+      if (lower.includes('arch-function')) return 'Arch Function Chat 3B';
+      if (lower.includes('smollm2-135m')) return 'SmolLM2 135M Reasoning 5K';
+      if (lower.includes('smollm2-360m')) return 'SmolLM2 360M Instruct';
+      if (lower.includes('temper-1-1-5b') || lower.includes('temper-1')) return 'Temper-1 1.5B';
+      if (lower.includes('xlam-2-1b') || lower.includes('xlam-2')) return 'xLAM-2 1B FC (Salesforce)';
+      if (lower.includes('mamba-codestral-7b')) return 'Mamba Codestral 7B';
+      if (lower.includes('gemma-4')) return 'Gemma 4 Ultra Uncensored';
+      if (lower.includes('nimbus-4b')) return 'Nimbus 4B';
+      if (lower.includes('bonsai-27b')) return 'Bonsai 27B';
+
+      // 2. Componentes Internos e Engines do Silício
       if (lower.includes('tiktoken-ccr')) return 'Tiktoken CCR Dehydrator';
       if (lower.includes('gitoxide')) return 'Gitoxide Frecency & AST';
       if (lower.includes('ladybug')) return 'LadybugDB Ontological Graph';
       if (lower.includes('nvml-barrier') || lower.includes('nvml-watchdog')) return 'NVML Physical Watchdog';
+
+      // 3. Modelos de Fronteira em Nuvem
       if (lower.includes('claude-opus-5.5') || lower.includes('claude-5.5-opus')) return 'Claude Opus 5.5';
       if (lower.includes('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
       if (lower.includes('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
       if (lower.includes('claude-3-5-haiku')) return 'Claude 3.5 Haiku';
       if (lower.includes('gpt-6.1-sol')) return 'GPT-6.1 Sol';
       if (lower.includes('gpt-6-astra') || lower.includes('gpt-astra')) return 'GPT-6 Astra';
-      if (lower.includes('qwen3.7-flash') || lower.includes('qwen3-7-flash')) return 'Qwen 3.7 Flash';
       if (lower.includes('deepseek-v4')) return 'DeepSeek-V4 Flash';
-      if (lower.includes('deepseek-chat')) return 'DeepSeek-V3 Chat';
+      if (lower.includes('deepseek-chat') || lower.includes('deepseek-v3')) return 'DeepSeek-V3 Chat';
       if (lower.includes('deepseek-r1')) return 'DeepSeek-R1 Reasoning';
       if (lower.includes('deepseek-coder')) return 'DeepSeek Coder';
+      if (lower.includes('gemini-2.5-pro')) return 'Gemini 2.5 Pro';
       if (lower.includes('gemini-2.0-flash')) return 'Gemini 2.0 Flash';
       if (lower.includes('o3-mini')) return 'OpenAI o3-mini';
       if (lower.includes('o1-mini')) return 'OpenAI o1-mini';
-      
-      // Fallback amigável caso seja do formato "provedor/nome-do-modelo"
-      if (id.includes('/')) {
-        const raw = id.split('/')[1] || id;
-        return raw.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+      // 4. Algoritmo Inteligente de Humanização de Fallback (sempre limpo, com Title Case e sem traços)
+      let clean = id;
+      if (clean.includes('/')) clean = clean.split('/').pop();
+      if (clean.includes('\\')) clean = clean.split('\\').pop();
+
+      // Remove extensão .gguf ou .bin
+      clean = clean.replace(/\.gguf$/i, '').replace(/\.bin$/i, '');
+
+      // Remove sufixos de quantização do final (-q4-k-m, -q8-0, .i1-q4_k_s, etc.)
+      clean = clean.replace(/[-_.](i\d+[-_])?q\d+([-_][a-z0-9]+)*$/i, '');
+      clean = clean.replace(/[-_.]f(16|32)$/i, '');
+      clean = clean.replace(/[-_.]instruct$/i, '');
+
+      const acronyms = {
+        'qwen': 'Qwen',
+        'llama': 'Llama',
+        'nvidia': 'NVIDIA',
+        'hermes': 'Hermes',
+        'nemotron': 'Nemotron',
+        'smollm': 'SmolLM',
+        'smollm2': 'SmolLM2',
+        'cot': 'CoT',
+        'mtp': 'MTP',
+        'fc': 'FC',
+        'vlm': 'VLM',
+        'vl': 'VL',
+        'ast': 'AST',
+        'mcp': 'MCP',
+        'gpt': 'GPT',
+        'claude': 'Claude',
+        'deepseek': 'DeepSeek',
+        'glm': 'GLM',
+        'kimi': 'Kimi',
+        'avx2': 'AVX2',
+        'cpu': 'CPU',
+        'dgpu': 'dGPU',
+        'gpu': 'GPU',
+        'ui': 'UI',
+        'api': 'API',
+        'ccr': 'CCR',
+        'nvml': 'NVML'
+      };
+
+      const words = clean.split(/[-_]+/).filter(Boolean);
+      if (words.length > 0) {
+        return words.map(w => {
+          const wLow = w.toLowerCase();
+          if (acronyms[wLow]) return acronyms[wLow];
+          if (/^\d+(\.\d+)?[bmk]$/i.test(wLow)) return wLow.toUpperCase();
+          if (/^v\d+(\.\d+)?$/i.test(wLow)) return wLow.toLowerCase();
+          return w.charAt(0).toUpperCase() + w.slice(1);
+        }).join(' ');
       }
+
       return id;
     }
 
@@ -957,6 +1035,9 @@
 
       if (t.includes('tier 3') || name.includes('vl') || name.includes('vision') || name.includes('multimodal')) {
         return { icon: '👁️', title: 'Multimodal Vision', color: '#fb7185' };
+      }
+      if ((name.includes('agentic') && name.includes('coder')) || (name.includes('coder') && name.includes('tool'))) {
+        return { icon: '💻', title: 'Agentic Coder', color: '#34d399' };
       }
       if (name.includes('function') || name.includes('tool') || name.includes('fc') || name.includes('xlam')) {
         return { icon: '🛠️', title: 'Tool Specialist', color: '#38bdf8' };
@@ -7906,9 +7987,11 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
 
       if (Array.isArray(localModelsList) && localModelsList.length > 0) {
         localModelsList.forEach(m => {
-          const id = m.name || m.model_name || m.id;
+          const id = m.model || m.name || m.model_name || m.id;
           if (id && !availableLocals.some(a => a.id.toLowerCase() === id.toLowerCase())) {
-            availableLocals.push({ id: id, name: `${id} (${m.size_gb || '?'} GB • Detectado)` });
+            const friendly = humanizeModelName(id);
+            const sizeStr = m.size_mb ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(1) + ' GB' : m.size_mb.toFixed(0) + ' MB') : '';
+            availableLocals.push({ id: id, name: `${friendly} (${sizeStr ? sizeStr + ' • ' : ''}Detectado)` });
           }
         });
       }

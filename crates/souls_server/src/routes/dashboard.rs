@@ -1254,13 +1254,66 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
         .connect(&format!("sqlite://{}", db_path.display()))
         .await
     {
+        // 1. Coletar primeiro os scores de homologação cognitiva (HardEval / CognitiveEval / AdvancedCognitive)
+        let mut cog_map: HashMap<String, f64> = HashMap::new();
         if let Ok(rows) = sqlx::query(
-            "SELECT model_id, file_path, COALESCE(tps, 0.0) as tps, COALESCE(ttft_ms, 0.0) as ttft_ms,
+            "SELECT model_id, file_path, benchmark_type, COALESCE(e3_score, 0.0) as e3_score
+             FROM arena_telemetry
+             WHERE e3_score > 0
+             ORDER BY id ASC"
+        )
+        .fetch_all(&pool)
+        .await
+        {
+            for r in rows {
+                let mid: Option<String> = r.try_get("model_id").ok();
+                let fpath: Option<String> = r.try_get("file_path").ok();
+                let b_type: String = r.try_get("benchmark_type").unwrap_or_default();
+                let e3: f64 = r.try_get("e3_score").unwrap_or(0.0);
+
+                let normalized_e3 = if e3 > 100.0 && b_type == "HardEval" {
+                    100.0
+                } else if e3 > 100.0 {
+                    (e3 / 25.0).clamp(1.0, 99.0)
+                } else {
+                    e3
+                };
+
+                let mut register_cog = |key: &str, score: f64| {
+                    let k_lower = key.to_lowercase();
+                    // Prioriza registros HardEval (escala 0-100)
+                    if let Some(&existing) = cog_map.get(&k_lower) {
+                        if existing <= 100.0 && score > 100.0 {
+                            return;
+                        }
+                    }
+                    cog_map.insert(k_lower.clone(), score);
+                    let clean = k_lower.replace(".gguf", "");
+                    cog_map.insert(clean.clone(), score);
+                    cog_map.insert(clean.replace('-', "_"), score);
+                    cog_map.insert(clean.replace('_', "-"), score);
+                };
+
+                if let Some(m_id) = mid {
+                    register_cog(&m_id, normalized_e3);
+                }
+                if let Some(fp) = fpath {
+                    if let Some(fname) = std::path::Path::new(&fp).file_name().and_then(|s| s.to_str()) {
+                        register_cog(fname, normalized_e3);
+                    }
+                }
+            }
+        }
+
+        // 2. Coletar métricas físicas reais no silício (HardwareProfile tem prioridade máxima sobre testes sintéticos)
+        if let Ok(rows) = sqlx::query(
+            "SELECT model_id, file_path, benchmark_type,
+                    COALESCE(tps, 0.0) as tps, COALESCE(ttft_ms, 0.0) as ttft_ms,
                     COALESCE(tpot_ms, 0.0) as tpot_ms, COALESCE(e3_score, 0.0) as e3_score,
                     COALESCE(created_at, '') as created_at
              FROM arena_telemetry
              WHERE tps > 0
-             ORDER BY id ASC"
+             ORDER BY CASE WHEN benchmark_type = 'HardwareProfile' THEN 10 ELSE 1 END ASC, id ASC"
         )
         .fetch_all(&pool)
         .await
@@ -1271,25 +1324,47 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                 let tps: f64 = r.try_get("tps").unwrap_or(0.0);
                 let ttft: f64 = r.try_get("ttft_ms").unwrap_or(0.0);
                 let tpot: f64 = r.try_get("tpot_ms").unwrap_or(if tps > 0.0 { 1000.0 / tps } else { 0.0 });
-                let e3: f64 = r.try_get("e3_score").unwrap_or(0.0);
+                let b_type: String = r.try_get("benchmark_type").unwrap_or_default();
+                let raw_e3: f64 = r.try_get("e3_score").unwrap_or(0.0);
                 let created: String = r.try_get("created_at").unwrap_or_default();
-                let entry = (tps, ttft, tpot, e3, created);
 
-                let register_keys = |key: &str, map: &mut HashMap<String, (f64, f64, f64, f64, String)>| {
+                let mut register_keys = |key: &str| {
                     let k_lower = key.to_lowercase();
-                    map.insert(k_lower.clone(), entry.clone());
+                    let final_e3 = cog_map.get(&k_lower).copied().unwrap_or(raw_e3);
+                    let clean_e3 = if final_e3 > 100.0 {
+                        (final_e3 / 25.0).clamp(1.0, 99.0)
+                    } else {
+                        final_e3
+                    };
+
+                    let entry = (tps, ttft, tpot, clean_e3, created.clone());
+
+                    // Preserva métricas físicas reais se o registro atual for teste sintético (ex: HardEval com tps=45.0)
+                    if let Some((ex_tps, ex_ttft, ex_tpot, _, _)) = arena_map.get(&k_lower) {
+                        if b_type != "HardwareProfile" && *ex_tps > 0.0 && (*ex_tps != 45.0 || tps == 45.0) {
+                            let preserved = (*ex_tps, *ex_ttft, *ex_tpot, clean_e3, created.clone());
+                            arena_map.insert(k_lower.clone(), preserved.clone());
+                            let clean = k_lower.replace(".gguf", "");
+                            arena_map.insert(clean.clone(), preserved.clone());
+                            arena_map.insert(clean.replace('-', "_"), preserved.clone());
+                            arena_map.insert(clean.replace('_', "-"), preserved);
+                            return;
+                        }
+                    }
+
+                    arena_map.insert(k_lower.clone(), entry.clone());
                     let clean = k_lower.replace(".gguf", "");
-                    map.insert(clean.clone(), entry.clone());
-                    map.insert(clean.replace('-', "_"), entry.clone());
-                    map.insert(clean.replace('_', "-"), entry.clone());
+                    arena_map.insert(clean.clone(), entry.clone());
+                    arena_map.insert(clean.replace('-', "_"), entry.clone());
+                    arena_map.insert(clean.replace('_', "-"), entry);
                 };
 
                 if let Some(m_id) = mid {
-                    register_keys(&m_id, &mut arena_map);
+                    register_keys(&m_id);
                 }
                 if let Some(fp) = fpath {
                     if let Some(fname) = std::path::Path::new(&fp).file_name().and_then(|s| s.to_str()) {
-                        register_keys(fname, &mut arena_map);
+                        register_keys(fname);
                     }
                 }
             }
