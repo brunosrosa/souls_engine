@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)  
-> **VERSÃO CONSOLIDADA:** v0.7.0 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
+> **VERSÃO CONSOLIDADA:** v0.7.1 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -84,6 +84,7 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestone v0.5.0** | **Modularização UI & SSOT Rust** | **100% CONCLUÍDO** | **ADR-012:** Monólito de 15k linhas decomposto em 25 componentes em `templates/` via `concat!(include_str!(...))` em `.rodata`. Unificação de dependências no root `Cargo.toml`. Teto de contexto dGPU dinâmico baseado em VRAM real. Revisão total das sub-abas de Settings (zero mocks). |
 | **Milestone v0.6.0** | **Skills Hub & Hermes Personas** | **100% CONCLUÍDO** | **Skills Hub:** Catálogo multi-ambiente, índice RAM 101k+, quarentena Zero-Trust, Auto-Fix seguro (`body_preserved_exact`) e Estúdio Forge. **Hermes Personas:** Aba dedicada `🎭 Personas`, Guardião de Privacidade & Coerência em 1 clique, cirurgia hierárquica YAML, Bancada Dupla (`Painel Rápido` + `SOUL.md`), Estúdio Criar/Clonar, Arquivamento e Comparador Myers Diff (48/48 testes PASS). |
 | **Milestone v0.7.0** | **Deep Research Hub & SSOT Control Plane** | **100% CONCLUÍDO** | **Deep Research Hub:** Aba `🔬 Pesquisa Profunda` (5 sub-abas: Nova Missão STORM, Missões Ativas SSE, Biblioteca viva/Myers Diff/Obsidian, Scorecard E³ + Domain Trust, Doctor & 1-Click Provisioning), SSOT ReFS puro, 4 tools MCP `research.*` (59 tools canônicas), 53/53 testes PASS. |
+| **Milestone v0.7.1** | **Tier 0 Determinístico Zero-LLM** | **100% CONCLUÍDO** | **souls_core::research:** Conversor streaming HTML->MD zero-allocation com blindagem UTF-8, chunker deslizante (~500-600 palavras c/ overlap de 80), normalizador de URLs e dedup SipHash 2-4, ranqueador lexical BM25 e esteira integrada de compressão (47/47 testes PASS). |
 
 ### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
@@ -194,11 +195,12 @@ Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem,
 * **Persistência Bare-Metal como SSOT no ReFS:** Estado contido em `Z:\souls_engine\.souls_data\research/{run_id}/` (zero DDL neste ciclo), com índice em RAM ultraveloz (`ResearchIndex`) e varredura de leases expirados.
 * **Ferramentas MCP de Pull para o Hermes:** Exposição das ferramentas canônicas do namespace `research.*` (`research_claim`, `research_event`, `research_steering`, `research_complete`) expandindo o catálogo oficial para **59 ferramentas canônicas** (53/53 testes unitários e de integração Axum PASS).
 
-#### 2. Versão v0.7.1: Tier 0 Determinístico Zero-LLM (`souls_core::research`)
-* **Conversão HTML para Markdown Zero-Allocation:** Motor de parsing de alta performance em Rust, limpando tags irrelevantes e ruídos de navegação diretamente na memória.
-* **Segmentação Deslizante (Chunking):** Divisão de documentos longos em blocos de ~600 palavras com overlap para consumo otimizado por SLMs.
-* **Filtro Lexical BM25 & SipHash Dedup:** Ranking de relevância de passagens sem custo de API/embeddings e desduplicação de URLs normalizados por SipHash.
-* **Ferramenta MCP `research_filter`:** Exposição do pipeline determinístico para uso pelos subagentes exploradores.
+#### 2. Versão v0.7.1: Tier 0 Determinístico Zero-LLM (`souls_core::research`) — **[100% CONCLUÍDO]**
+* **Conversão HTML para Markdown Zero-Allocation (`html_cleaner.rs`):** Motor de parsing streaming de alta performance em Rust, limpando tags irrelevantes (`<script>`, `<style>`, `<nav>`, `<footer>`, `<header>`, `<iframe>`, etc.) e ruídos de navegação diretamente na memória, com decodificação de entidades HTML e integridade UTF-8 sem mojibake.
+* **Segmentação Deslizante (`chunker.rs`):** Divisão de documentos longos em blocos de ~500 a 600 palavras com overlap de ~80 palavras para preservar contexto semântico entre passagens, acompanhado de offsets de caracteres e hash de integridade de 64 bits.
+* **Deduplicação Canônica SipHash 2-4 (`dedup.rs`):** Normalização agressiva de URLs (purga de tracking `utm_*`, `fbclid`, âncoras e esquemas) e cálculo de impressões digitais invariantes de conteúdo (`ResearchDedupRegistry`).
+* **Ranqueador Lexical Bare-Metal BM25 (`bm25.rs`):** Algoritmo Okapi BM25 rápido na CPU ($k_1 = 1.2$, $b = 0.75$) com tokenização sem stop-words em inglês/português, ranqueando passagens diretamente contra o *Briefing* da missão com 0 custo de tokens.
+* **Esteira Determinística Integrada (`process_raw_html_passage`):** Pipeline único conectando limpeza, deduplicação, segmentação e ranking com taxas de compressão de 60% a 90% (47/47 testes unitários PASS).
 
 #### 3. Versão v0.7.2: Tier 1 Operário Local & Protocolo MinionS (`souls_inference_runtime`)
 * **Execução Paralela MinionS em Lote:** Execução de tarefas atômicas de passo único em modelos locais de 3B a 8B (Qwen 2.5 Coder / Llama 3.2) via `llama.cpp` nativo.
