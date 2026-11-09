@@ -228,8 +228,17 @@ Expansão das capacidades analíticas fundamentais combinando cérebro em nuvem,
   - Instalação oficial via `tools/install_souls.ps1` com identidade dupla (`souls_server.exe` e `souls_engine.exe`) em `%LOCALAPPDATA%\SoulsEngine\`.
   - Smoke test ao vivo atestando resolução de fallback em `4.08 ms` e compressão determinística Tier 0 de `55.7%`.
 
-#### 6. Melhorias Mapeadas da Trilha Cognitiva (Backlog Ativo v0.7.x+)
-Com a entrega da infraestrutura básica do ciclo v0.7.x, as seguintes extensões estratégicas ficam formalmente mapeadas para manter a tração contínua nos próximos marcos:
+#### 6. Melhorias Mapeadas da Trilha Cognitiva (Backlog Ativo & Matriz de Fases)
+Com a entrega da infraestrutura básica do ciclo v0.7.x, as seguintes extensões estratégicas ficam formalmente mapeadas e distribuídas por prudência técnica e impacto imediato:
+
+| Melhoria Mapeada | Fase Canônica | Tipo de Esforço | Justificativa Arquitetural |
+|---|:---:|:---:|---|
+| **Ingestão Bare-Metal de PDFs (Tier 0)** | **Início da v0.8.0** | Engenharia Direta | Sem incerteza teórica; acelera a ingestão de fontes no Google Drive e curadoria local. |
+| **Cache Epistêmico de Passagens (L2/L3)** | **Início da v0.8.0** | Engenharia Direta | LanceDB/LadybugDB já operacionais; evita re-scraping web redundante entre pesquisas. |
+| **Quarentena Dinâmica via Headers HTTP** | **Início da v0.8.0** | Refinamento Cirúrgico | Leitura de `retry-after` no Axum/Reqwest substituindo janela fixa de 60s por SLA real. |
+| **Streaming SIMD de JSON & Buffer Pool mmap** | **v0.8.0+ / v0.9.0** | Otimização de Performance | Crucial sob alto volume de chamadas MinionS gerado pela automação tátil da v0.8.0. |
+| **Pipeline STORM Multi-Agente em DAG** | **Milestone v0.9.0** | Arquitetura de Enxame | Requer o microkernel Cordis e a orquestração de enxame de auto-evolução da v0.9.0. |
+| **Telemetria Fechada & Hedging Preemptivo** | **Milestone v0.9.0** | Calibração Estatística | Exige histórico e massa de dados de uso real no Hermes para evitar custos duplicados. |
 
 1. **Evoluções do Deep Research Hub (Trilha Cognitiva & Ingestão):**
    - **Ingestão Bare-Metal de Documentos Ricos (PDF / EPUB / DOCX):** Implementação de parser determinístico no Tier 0 (`souls_core::research::pdf_extractor`) para extração direta de texto estruturado de PDFs locais sem gastar tokens com LLM nem invocar ferramentas externas.
