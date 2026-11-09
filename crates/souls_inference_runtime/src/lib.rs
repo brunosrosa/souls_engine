@@ -15,6 +15,7 @@ pub mod gguf_mmap;
 pub mod healing;
 pub mod inference;
 pub mod llamacpp;
+pub mod minions;
 pub mod nvml;
 pub mod onnx;
 pub mod padder;
@@ -42,6 +43,10 @@ pub use inference::{
 pub use llamacpp::{
     LlamaBatchLayout, LlamaLogitProber, LogitProbingOutput,
     CANONICAL_VOCAB_PROJECTION_SIZE, ENTROPY_CIRCUIT_BREAKER_THRESHOLD,
+};
+pub use minions::{
+    EpistemicClaimOutput, MinionBatchOrchestrator, MinionDeviceTarget, MinionTask, MinionTaskKind,
+    StatisticDataPoint, StructuredLocalOutput, WDDM_MINIONS_SAFE_VRAM_CEILING_MB,
 };
 pub use nvml::{
     compute_thermodynamic_barrier, evaluate_operational_zone, GpuTelemetrySnapshot,

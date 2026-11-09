@@ -309,6 +309,7 @@ pub fn evaluate_operational_zone(
 }
 
 /// Hardware Watchdog managing NVML telemetry and EWMA smoothing.
+#[derive(Debug)]
 pub struct HardwareWatchdog {
     last_temp_c: f32,
     last_sample_time: Instant,
