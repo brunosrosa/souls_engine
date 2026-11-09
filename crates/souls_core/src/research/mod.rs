@@ -10,6 +10,7 @@ pub mod bm25;
 pub mod chunker;
 pub mod dedup;
 pub mod html_cleaner;
+pub mod pdf_extractor;
 
 pub use bm25::{rank_chunks, tokenize_lexical, ScoredChunk, DEFAULT_BM25_B, DEFAULT_BM25_K1};
 pub use chunker::{chunk_document, compute_text_hash, ChunkerOptions, TextChunk};
@@ -17,6 +18,10 @@ pub use dedup::{
     compute_content_fingerprint, hash_url, normalize_url, ResearchDedupRegistry,
 };
 pub use html_cleaner::{clean_html_to_markdown, HtmlCleanOptions};
+pub use pdf_extractor::{
+    extract_pdf_bytes, extract_pdf_file, process_raw_pdf_passage, PdfDocumentMetadata,
+    PdfExtractError, PdfExtractOptions, PdfExtractResult, PdfPageExtract,
+};
 
 /// Comprehensive summary result from the deterministic research filter pipeline.
 #[derive(Debug, Clone)]
