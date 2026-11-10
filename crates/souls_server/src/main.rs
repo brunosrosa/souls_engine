@@ -3140,4 +3140,106 @@ model:
         assert!(html_str.contains("Conexões &amp; CLIs") || html_str.contains("Conexões & CLIs"));
         assert!(html_str.contains("tab-connections"));
     }
+
+    #[tokio::test]
+    async fn test_google_bridge_and_notebooklm_routes() {
+        let temp_vault_dir = std::env::temp_dir().join(format!(
+            "souls_test_google_vault_{}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        let _ = std::fs::create_dir_all(&temp_vault_dir);
+        let temp_vault_path = temp_vault_dir.join("google_sessions.vault");
+        std::env::set_var("SOULS_GOOGLE_VAULT_PATH", &temp_vault_path);
+
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. GET /api/v1/google/session (unauthenticated)
+        let req_session = Request::builder()
+            .uri("/api/v1/google/session")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_session = app.clone().oneshot(req_session).await.unwrap();
+        assert_eq!(resp_session.status(), StatusCode::OK);
+        let bytes_session = to_bytes(resp_session.into_body(), usize::MAX).await.unwrap();
+        let val_session: serde_json::Value = serde_json::from_slice(&bytes_session).unwrap();
+        assert!(!val_session["is_authenticated"].as_bool().unwrap());
+
+        // 2. POST /api/v1/google/session (save credentials)
+        let save_payload = serde_json::json!({
+            "psid": "test_psid_token_1234567890",
+            "psidts": "test_psidts_token_abc",
+            "sapisid": "test_sapisid_xyz",
+            "csrf_token": "SNlM0e",
+            "account_email": "architect@souls.engine"
+        });
+        let req_save = Request::builder()
+            .uri("/api/v1/google/session")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(save_payload.to_string()))
+            .unwrap();
+        let resp_save = app.clone().oneshot(req_save).await.unwrap();
+        assert_eq!(resp_save.status(), StatusCode::OK);
+        let bytes_save = to_bytes(resp_save.into_body(), usize::MAX).await.unwrap();
+        let val_save: serde_json::Value = serde_json::from_slice(&bytes_save).unwrap();
+        assert_eq!(val_save["status"], "success");
+        assert_eq!(val_save["account_email"], "architect@souls.engine");
+
+        // 3. GET /api/v1/google/session (now authenticated)
+        let req_session2 = Request::builder()
+            .uri("/api/v1/google/session")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_session2 = app.clone().oneshot(req_session2).await.unwrap();
+        assert_eq!(resp_session2.status(), StatusCode::OK);
+        let bytes_session2 = to_bytes(resp_session2.into_body(), usize::MAX).await.unwrap();
+        let val_session2: serde_json::Value = serde_json::from_slice(&bytes_session2).unwrap();
+        assert!(val_session2["is_authenticated"].as_bool().unwrap());
+        assert_eq!(val_session2["account_email"], "architect@souls.engine");
+        assert!(val_session2["has_psid"].as_bool().unwrap());
+
+        // 4. POST /api/v1/google/workspace/link
+        let link_payload = serde_json::json!({
+            "local_path": "Z:\\souls_engine",
+            "drive_folder_id": "folder_abc_123",
+            "linked_document_id": "doc_xyz_456"
+        });
+        let req_link = Request::builder()
+            .uri("/api/v1/google/workspace/link")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(link_payload.to_string()))
+            .unwrap();
+        let resp_link = app.clone().oneshot(req_link).await.unwrap();
+        assert_eq!(resp_link.status(), StatusCode::OK);
+        let bytes_link = to_bytes(resp_link.into_body(), usize::MAX).await.unwrap();
+        let val_link: serde_json::Value = serde_json::from_slice(&bytes_link).unwrap();
+        assert_eq!(val_link["status"], "success");
+        assert_eq!(val_link["workspace"]["google_drive_folder_id"], "folder_abc_123");
+
+        // 5. POST /api/v1/google/jules/migrate (Jules to agy)
+        let jules_payload = serde_json::json!({
+            "command": "jules apply --branch=feat/perf",
+            "working_dir": "Z:\\souls_engine"
+        });
+        let req_jules = Request::builder()
+            .uri("/api/v1/google/jules/migrate")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(jules_payload.to_string()))
+            .unwrap();
+        let resp_jules = app.clone().oneshot(req_jules).await.unwrap();
+        assert_eq!(resp_jules.status(), StatusCode::OK);
+        let bytes_jules = to_bytes(resp_jules.into_body(), usize::MAX).await.unwrap();
+        let val_jules: serde_json::Value = serde_json::from_slice(&bytes_jules).unwrap();
+        assert!(val_jules["is_legacy_jules"].as_bool().unwrap());
+        assert_eq!(val_jules["migrated_cli"], "agy");
+
+        // Cleanup
+        std::env::remove_var("SOULS_GOOGLE_VAULT_PATH");
+        let _ = std::fs::remove_dir_all(&temp_vault_dir);
+    }
 }

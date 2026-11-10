@@ -16,6 +16,8 @@ async function fetchConnectionsData() {
       const data = await provRes.json();
       renderProviders(data.providers || []);
     }
+
+    checkGoogleSession();
   } catch (err) {
     console.error('Falha ao carregar conexões:', err);
   }
@@ -270,6 +272,163 @@ async function dispatchCliTask() {
     if (outputPre) outputPre.textContent = `Exceção: ${err.message}`;
   } finally {
     if (btn) btn.disabled = false;
+  }
+}
+
+// ==========================================
+// GOOGLE UNIVERSE & NOTEBOOKLM BRIDGE (v0.8.2)
+// ==========================================
+
+async function checkGoogleSession() {
+  try {
+    const res = await fetch('/api/v1/google/session');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const badge = document.getElementById('google-session-badge');
+    const emailEl = document.getElementById('google-account-email');
+    const psidEl = document.getElementById('google-masked-psid');
+    const csrfEl = document.getElementById('google-csrf-token');
+
+    if (badge) {
+      if (data.is_authenticated && !data.is_expired) {
+        badge.textContent = '✅ Sessão Ativa';
+        badge.style.background = 'rgba(34, 197, 94, 0.15)';
+        badge.style.color = '#22c55e';
+        badge.style.borderColor = '#22c55e';
+      } else if (data.is_expired) {
+        badge.textContent = '⚠️ Sessão Expirada';
+        badge.style.background = 'rgba(234, 179, 8, 0.15)';
+        badge.style.color = '#eab308';
+        badge.style.borderColor = '#eab308';
+      } else {
+        badge.textContent = '🔒 Desconectado';
+        badge.style.background = 'rgba(239, 68, 68, 0.15)';
+        badge.style.color = '#ef4444';
+        badge.style.borderColor = '#ef4444';
+      }
+    }
+
+    if (emailEl) emailEl.textContent = data.account_email || 'Nenhuma detectada';
+    if (psidEl) psidEl.textContent = data.masked_psid || (data.is_authenticated ? 'Configurado' : 'Não configurado');
+    if (csrfEl) csrfEl.textContent = data.csrf_token || 'SNlM0e';
+  } catch (err) {
+    console.error('Falha ao verificar sessão Google:', err);
+  }
+}
+
+async function saveGoogleSession() {
+  const psid = document.getElementById('google-psid-input')?.value?.trim();
+  const psidts = document.getElementById('google-psidts-input')?.value?.trim();
+  const sapisid = document.getElementById('google-sapisid-input')?.value?.trim();
+  const email = document.getElementById('google-email-input')?.value?.trim();
+
+  if (!psid) {
+    alert('Por favor informe ao menos o cookie __Secure-1PSID.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/v1/google/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        psid: psid || null,
+        psidts: psidts || null,
+        sapisid: sapisid || null,
+        account_email: email || null
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert('Credenciais salvas com sucesso no cofre encriptado GV1!');
+      checkGoogleSession();
+    } else {
+      alert('Erro ao salvar credenciais: ' + (data.message || 'Falha desconhecida'));
+    }
+  } catch (err) {
+    alert('Erro de rede: ' + err.message);
+  }
+}
+
+async function dispatchGoogleRpc() {
+  const rpcId = document.getElementById('google-rpc-select')?.value || 'QA9ei';
+  const argsRaw = document.getElementById('google-rpc-args-input')?.value || '[]';
+  const box = document.getElementById('google-bridge-output-box');
+  const pre = document.getElementById('google-bridge-output-pre');
+  const label = document.getElementById('google-bridge-status-label');
+
+  let argsJson = [];
+  try {
+    argsJson = JSON.parse(argsRaw);
+  } catch (e) {
+    alert('Argumentos devem ser um JSON válido (ex: ["valor"]).');
+    return;
+  }
+
+  if (box) box.style.display = 'block';
+  if (label) {
+    label.textContent = `Executando RPC ${rpcId}...`;
+    label.style.color = 'var(--purple)';
+  }
+  if (pre) pre.textContent = 'Enviando payload batchexecute ao backend do NotebookLM...';
+
+  try {
+    const res = await fetch('/api/v1/google/notebooklm/rpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rpc_id: rpcId,
+        arguments: argsJson
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.status === 'success') {
+      if (label) {
+        label.textContent = `RPC ${rpcId} Concluído com Sucesso`;
+        label.style.color = '#22c55e';
+      }
+      if (pre) pre.textContent = JSON.stringify(data.data || data, null, 2);
+    } else {
+      if (label) {
+        label.textContent = `Falha no RPC ${rpcId}`;
+        label.style.color = '#ef4444';
+      }
+      if (pre) pre.textContent = data.message || JSON.stringify(data, null, 2);
+    }
+  } catch (err) {
+    if (label) {
+      label.textContent = `Exceção de Rede no RPC`;
+      label.style.color = '#ef4444';
+    }
+    if (pre) pre.textContent = err.message;
+  }
+}
+
+async function testJulesMigration() {
+  const cmd = document.getElementById('jules-cmd-input')?.value || 'jules apply';
+  const box = document.getElementById('google-bridge-output-box');
+  const pre = document.getElementById('google-bridge-output-pre');
+  const label = document.getElementById('google-bridge-status-label');
+
+  if (box) box.style.display = 'block';
+  if (label) {
+    label.textContent = 'Roteador de Migração Jules ➔ agy';
+    label.style.color = 'var(--cyan)';
+  }
+
+  try {
+    const res = await fetch('/api/v1/google/jules/migrate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: cmd })
+    });
+    const data = await res.json();
+    if (pre) pre.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    if (pre) pre.textContent = `Erro ao testar migração: ${err.message}`;
   }
 }
 

@@ -5,6 +5,7 @@ pub mod chat;
 pub mod cloud;
 pub mod connections;
 pub mod dashboard;
+pub mod google;
 pub mod health;
 pub mod inventory;
 pub mod memory;
@@ -101,6 +102,12 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/connections/test", post(connections::test_provider_handler))
         .route("/api/v1/connections/clis", get(connections::list_clis_handler))
         .route("/api/v1/connections/cli/dispatch", post(connections::dispatch_cli_handler))
+        // Milestone v0.8.2: Google Universe Bridge & NotebookLM Reverse Engineering
+        .route("/api/v1/google/session", get(google::get_session_handler).post(google::save_session_handler))
+        .route("/api/v1/google/notebooklm/rpc", post(google::wiz_rpc_handler))
+        .route("/api/v1/google/workspace/status", get(google::workspace_status_handler))
+        .route("/api/v1/google/workspace/link", post(google::workspace_link_handler))
+        .route("/api/v1/google/jules/migrate", post(google::jules_migrate_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))

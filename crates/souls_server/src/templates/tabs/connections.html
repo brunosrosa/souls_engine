@@ -116,5 +116,116 @@
           </div>
         </div>
 
+        <!-- SEÇÃO 3: GOOGLE UNIVERSE & NOTEBOOKLM BRIDGE (v0.8.2) -->
+        <div class="card" style="padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.3rem;">🪐</span>
+              <h3 style="margin: 0; font-size: 1.15rem; color: #fff;">Google Universe & NotebookLM Bridge</h3>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="badge" id="google-session-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444;">
+                🔒 Desconectado
+              </span>
+              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--purple); border: 1px solid var(--purple);">
+                v0.8.2 Wiz Engine
+              </span>
+            </div>
+          </div>
+
+          <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0 0 16px 0; line-height: 1.4;">
+            Cofre local encriptado (<code style="color: var(--cyan);">google_sessions.vault</code>), emulação direta de 22 RPCs <code style="color: var(--purple);">batchexecute</code> para Deep Research, Studio e RAG soberano no Google NotebookLM, e migração transparente da frota legada do Jules para a Antigravity CLI (<code style="color: var(--cyan);">agy</code>).
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 20px;">
+            <!-- SUBCARD 1: COFRE DE SESSÃO GOOGLE -->
+            <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0; font-size: 0.95rem; color: var(--cyan); display: flex; align-items: center; gap: 6px;">
+                  <span>🔑</span> Cofre de Sessão Encriptado
+                </h4>
+                <button class="btn btn-secondary" onclick="checkGoogleSession()" style="font-size: 0.75rem; padding: 3px 8px;">
+                  Sondar Cofre
+                </button>
+              </div>
+
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.6;">
+                <div>Conta: <strong id="google-account-email" style="color: #fff;">Nenhuma detectada</strong></div>
+                <div>Status PSID: <span id="google-masked-psid" style="font-family: monospace; color: var(--cyan);">Não configurado</span></div>
+                <div>CSRF Token: <span id="google-csrf-token" style="font-family: monospace; color: #a3e635;">SNlM0e</span></div>
+              </div>
+
+              <!-- Form rápido de credenciais -->
+              <details style="margin-top: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <summary style="font-size: 0.8rem; color: var(--cyan); cursor: pointer; font-weight: 500;">
+                  Atualizar Cookies / Credenciais do Cofre
+                </summary>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                  <input id="google-psid-input" type="password" placeholder="__Secure-1PSID" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-size: 0.8rem;" />
+                  <input id="google-psidts-input" type="password" placeholder="__Secure-1PSIDTS" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-size: 0.8rem;" />
+                  <input id="google-sapisid-input" type="password" placeholder="SAPISID" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-size: 0.8rem;" />
+                  <input id="google-email-input" type="text" placeholder="Conta Google (ex: user@gmail.com)" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-size: 0.8rem;" />
+                  <button class="btn btn-primary" onclick="saveGoogleSession()" style="background: var(--purple); color: #fff; font-size: 0.8rem; font-weight: 600; padding: 6px 12px; margin-top: 4px;">
+                    🔒 Salvar no Cofre GV1
+                  </button>
+                </div>
+              </details>
+            </div>
+
+            <!-- SUBCARD 2: DISPATCHER WIZ RPC NOTEBOOKLM -->
+            <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 16px;">
+              <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: var(--purple); display: flex; align-items: center; gap: 6px;">
+                <span>⚡</span> Wiz RPC Engine (NotebookLM)
+              </h4>
+              <div style="margin-bottom: 8px;">
+                <label style="display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Ação / RPC Alvo:</label>
+                <select id="google-rpc-select" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 6px; padding: 6px 8px; font-size: 0.85rem;">
+                  <option value="QA9ei">QA9ei — Deep Research Autônomo</option>
+                  <option value="wXbhsf">wXbhsf — Criar / Editar Nota</option>
+                  <option value="orqRsd">orqRsd — Consulta RAG Evidenciada</option>
+                  <option value="R7cb6c">R7cb6c — Gerar Áudio / Mindmap Studio</option>
+                  <option value="s07Lfd">s07Lfd — Listar Notebooks da Conta</option>
+                </select>
+              </div>
+              <div style="margin-bottom: 8px;">
+                <label style="display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Payload / Argumentos (JSON):</label>
+                <textarea id="google-rpc-args-input" rows="2" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 6px; padding: 6px 8px; font-family: monospace; font-size: 0.8rem; box-sizing: border-box;">["Pesquisa Arquitetural Souls Engine"]</textarea>
+              </div>
+              <button class="btn btn-primary" onclick="dispatchGoogleRpc()" style="background: var(--purple); color: #fff; font-weight: 600; font-size: 0.82rem; padding: 6px 14px; width: 100%;">
+                ⚡ Executar RPC batchexecute
+              </button>
+            </div>
+
+            <!-- SUBCARD 3: DUAL-LAYER WORKSPACE & JULES MIGRATION -->
+            <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 16px;">
+              <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: #22c55e; display: flex; align-items: center; gap: 6px;">
+                <span>🔄</span> Dual Workspace & Migração Jules
+              </h4>
+              <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px;">
+                <div>Dev Drive ReFS: <strong style="color: #fff;">Z:\souls_engine</strong> (Block Cloning)</div>
+                <div>Status Jules: <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444; font-size: 0.7rem;">Descontinuado em 29/10/2026</span></div>
+                <div style="margin-top: 4px;">Destino: <strong style="color: var(--cyan);">Antigravity CLI (agy)</strong></div>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Comando Jules Legado:</label>
+                <input id="jules-cmd-input" type="text" value="jules apply --branch=feat/perf" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-family: monospace; font-size: 0.8rem; margin-bottom: 8px;" />
+                <button class="btn btn-secondary" onclick="testJulesMigration()" style="font-size: 0.78rem; width: 100%; padding: 5px 10px;">
+                  Verificar Roteamento agy
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONSOLE DE RESPOSTA RPC / MIGRAÇÃO -->
+          <div id="google-bridge-output-box" style="display: none; background: #06090e; border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span id="google-bridge-status-label" style="font-size: 0.85rem; font-weight: bold; color: var(--purple);">Resposta RPC:</span>
+              <button class="btn btn-secondary" onclick="document.getElementById('google-bridge-output-box').style.display='none'" style="font-size: 0.7rem; padding: 2px 6px;">Fechar</button>
+            </div>
+            <pre id="google-bridge-output-pre" style="margin: 0; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; color: #e2e8f0; white-space: pre-wrap; line-height: 1.4;"></pre>
+          </div>
+
+        </div>
+
       </div>
     </section>
