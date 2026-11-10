@@ -17,6 +17,7 @@ pub mod logging;
 pub mod panic;
 pub mod pii_redactor;
 pub mod research;
+pub mod harness;
 pub mod sandbox;
 pub mod subprocess_guard;
 pub mod web;
@@ -47,5 +48,9 @@ pub use research::{
     chunk_document, clean_html_to_markdown, hash_url, normalize_url, process_raw_html_passage,
     rank_chunks, tokenize_lexical, ChunkerOptions, FilteredPassage, FilteredPassageResult,
     HtmlCleanOptions, ResearchDedupRegistry, ScoredChunk, TextChunk,
+};
+pub use harness::{
+    detect_installed_clis, AgenticCliCommand, AgenticCliInfo, AgenticCliKind,
+    AgenticHarnessDispatcher, HarnessEvent, HarnessOutput,
 };
 
