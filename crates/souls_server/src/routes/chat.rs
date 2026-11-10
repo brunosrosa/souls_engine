@@ -293,6 +293,8 @@ async fn handle_sync_completion(
         latency_ms: elapsed_ms,
         tokens_input: prompt_tokens,
         tokens_output: completion_tokens,
+        is_rate_limit: false,
+        retry_after_secs: None,
     };
 
     let router = Arc::clone(&state.router);
@@ -493,6 +495,8 @@ async fn handle_streaming_completion(
             latency_ms: elapsed_ms,
             tokens_input: prompt_tokens,
             tokens_output: emitted_tokens,
+            is_rate_limit: false,
+            retry_after_secs: None,
         };
 
         if let Err(e) = router.record_outcome(&stream_cid, &outcome).await {

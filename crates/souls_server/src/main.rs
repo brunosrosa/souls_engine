@@ -2906,4 +2906,175 @@ model:
         assert_eq!(val["is_duplicate"], false);
         assert!(val["clean_markdown_bytes"].as_u64().unwrap() > 0);
     }
+
+    #[tokio::test]
+    async fn test_research_pdf_extraction_and_epistemic_cache_roundtrip() {
+        use lopdf::{dictionary, Document, Object, Stream};
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // Synthetic minimalist PDF binary matching test_synthetic_pdf_in_memory_extraction
+        let mut doc = Document::with_version("1.5");
+        let pages_id = doc.new_object_id();
+        let font_id = doc.add_object(dictionary! {
+            "Type" => "Font",
+            "Subtype" => "Type1",
+            "BaseFont" => "Helvetica",
+        });
+        let resources_id = doc.add_object(dictionary! {
+            "Font" => dictionary! {
+                "F1" => font_id,
+            },
+        });
+        let content = b"BT /F1 12 Tf 100 700 Td (Architecture Benchmark Report) Tj ET\nBT 100 650 Td (Model    TPS    Latency) Tj ET\nBT 100 630 Td (Qwen3.5  46.6   241ms) Tj ET";
+        let content_id = doc.add_object(Stream::new(dictionary! {}, content.to_vec()));
+        let page_id = doc.add_object(dictionary! {
+            "Type" => "Page",
+            "Parent" => pages_id,
+            "Contents" => content_id,
+            "Resources" => resources_id,
+            "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+        });
+        let pages = dictionary! {
+            "Type" => "Pages",
+            "Kids" => vec![page_id.into()],
+            "Count" => 1,
+        };
+        doc.objects.insert(pages_id, Object::Dictionary(pages));
+        let catalog_id = doc.add_object(dictionary! {
+            "Type" => "Catalog",
+            "Pages" => pages_id,
+        });
+        doc.trailer.set("Root", catalog_id);
+
+        let mut pdf_bytes = Vec::new();
+        doc.save_to(&mut pdf_bytes).unwrap();
+
+        // Standard base64 encoding
+        let mut b64 = String::new();
+        const CHARSET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        for chunk in pdf_bytes.chunks(3) {
+            let b0 = chunk[0];
+            let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
+            let b2 = if chunk.len() > 2 { chunk[2] } else { 0 };
+
+            b64.push(CHARSET[(b0 >> 2) as usize] as char);
+            b64.push(CHARSET[(((b0 & 0x03) << 4) | (b1 >> 4)) as usize] as char);
+            if chunk.len() > 1 {
+                b64.push(CHARSET[(((b1 & 0x0F) << 2) | (b2 >> 6)) as usize] as char);
+            } else {
+                b64.push('=');
+            }
+            if chunk.len() > 2 {
+                b64.push(CHARSET[(b2 & 0x3F) as usize] as char);
+            } else {
+                b64.push('=');
+            }
+        }
+
+        let payload = serde_json::json!({
+            "source_url": "https://spec.soulsengine.ai/v080.pdf",
+            "pdf_base64": b64,
+            "query_brief": "Qwen3.5 TPS"
+        });
+
+        // 1. Initial extraction: from_cache = false
+        let req1 = Request::builder()
+            .uri("/api/v1/research/extract-pdf")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(payload.to_string()))
+            .unwrap();
+
+        let resp1 = app.clone().oneshot(req1).await.unwrap();
+        assert_eq!(resp1.status(), StatusCode::OK);
+        let bytes1 = to_bytes(resp1.into_body(), usize::MAX).await.unwrap();
+        let val1: serde_json::Value = serde_json::from_slice(&bytes1).unwrap();
+        assert_eq!(val1["status"], "success");
+        assert_eq!(val1["from_cache"], false);
+        assert!(val1["clean_markdown_bytes"].as_u64().unwrap_or(0) > 0);
+
+        // 2. Second extraction with same URL: from_cache = true
+        let req2 = Request::builder()
+            .uri("/api/v1/research/extract-pdf")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(payload.to_string()))
+            .unwrap();
+
+        let resp2 = app.clone().oneshot(req2).await.unwrap();
+        assert_eq!(resp2.status(), StatusCode::OK);
+        let bytes2 = to_bytes(resp2.into_body(), usize::MAX).await.unwrap();
+        let val2: serde_json::Value = serde_json::from_slice(&bytes2).unwrap();
+        assert_eq!(val2["status"], "success");
+        assert_eq!(val2["from_cache"], true);
+
+        // 3. Cache lookup endpoint
+        let lookup_payload = serde_json::json!({
+            "url": "https://spec.soulsengine.ai/v080.pdf"
+        });
+        let req_lookup = Request::builder()
+            .uri("/api/v1/research/cache/lookup")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(lookup_payload.to_string()))
+            .unwrap();
+
+        let resp_lookup = app.clone().oneshot(req_lookup).await.unwrap();
+        assert_eq!(resp_lookup.status(), StatusCode::OK);
+        let bytes_lookup = to_bytes(resp_lookup.into_body(), usize::MAX).await.unwrap();
+        let val_lookup: serde_json::Value = serde_json::from_slice(&bytes_lookup).unwrap();
+        assert_eq!(val_lookup["status"], "hit");
+
+        // 4. Cache purge endpoint
+        let req_purge = Request::builder()
+            .uri("/api/v1/research/cache/purge")
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+        let resp_purge = app.clone().oneshot(req_purge).await.unwrap();
+        assert_eq!(resp_purge.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_router_dynamic_quarantine_incident_endpoint() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let payload = serde_json::json!({
+            "model_id": "deepseek/deepseek-chat",
+            "incident_kind": "429",
+            "headers": {
+                "retry-after": "180"
+            }
+        });
+
+        let req = Request::builder()
+            .uri("/api/v1/router/incident")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(payload.to_string()))
+            .unwrap();
+
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(val["status"], "success");
+        assert_eq!(val["effective_cooldown_secs"], 180);
+
+        // Verify active quarantines reflects the 180s quarantine
+        let req_q = Request::builder()
+            .uri("/api/v1/router/quarantines")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_q = app.oneshot(req_q).await.unwrap();
+        assert_eq!(resp_q.status(), StatusCode::OK);
+        let bytes_q = to_bytes(resp_q.into_body(), usize::MAX).await.unwrap();
+        let val_q: serde_json::Value = serde_json::from_slice(&bytes_q).unwrap();
+        assert_eq!(val_q["status"], "success");
+        assert_eq!(val_q["count"], 1);
+        assert_eq!(val_q["active_quarantines"][0]["model_id"], "deepseek/deepseek-chat");
+    }
 }

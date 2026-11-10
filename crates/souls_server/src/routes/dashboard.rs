@@ -3621,6 +3621,288 @@ pub async fn research_tier0_process_handler(
 }
 
 // =========================================================================
+// MILESTONE v0.8.0: NATIVE STREAMING PDF EXTRACTION & EPISTEMIC CACHE
+// =========================================================================
+
+/// Decodes base64 payload into raw binary bytes.
+fn decode_base64(input: &str) -> Option<Vec<u8>> {
+    let mut clean: Vec<u8> = input.bytes().filter(|b| !b.is_ascii_whitespace()).collect();
+    while clean.len() % 4 != 0 {
+        clean.push(b'=');
+    }
+    let mut out = Vec::with_capacity((clean.len() / 4) * 3);
+    let decode_byte = |b: u8| -> Option<u8> {
+        match b {
+            b'A'..=b'Z' => Some(b - b'A'),
+            b'a'..=b'z' => Some(b - b'a' + 26),
+            b'0'..=b'9' => Some(b - b'0' + 52),
+            b'+' | b'-' => Some(62),
+            b'/' | b'_' => Some(63),
+            b'=' => Some(0),
+            _ => None,
+        }
+    };
+    for chunk in clean.chunks_exact(4) {
+        let b0 = decode_byte(chunk[0])?;
+        let b1 = decode_byte(chunk[1])?;
+        let b2 = decode_byte(chunk[2])?;
+        let b3 = decode_byte(chunk[3])?;
+
+        out.push((b0 << 2) | (b1 >> 4));
+        if chunk[2] != b'=' {
+            out.push(((b1 & 0x0F) << 4) | (b2 >> 2));
+        }
+        if chunk[3] != b'=' {
+            out.push(((b2 & 0x03) << 6) | b3);
+        }
+    }
+    Some(out)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ExtractPdfRequest {
+    pub pdf_base64: Option<String>,
+    pub file_path: Option<String>,
+    pub query_brief: Option<String>,
+    pub source_url: Option<String>,
+    pub top_k: Option<usize>,
+}
+
+/// Extracts streaming pages and tables from PDF, checking EpistemicPassageCache before parsing.
+pub async fn research_extract_pdf_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ExtractPdfRequest>,
+) -> (axum::http::StatusCode, Json<Value>) {
+    let _guard = state.acquire_connection();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+
+    let source_url = payload
+        .source_url
+        .or_else(|| payload.file_path.clone())
+        .unwrap_or_else(|| "memory://anonymous.pdf".to_string());
+    let canonical_url = souls_core::research::normalize_url(&source_url);
+    let query_brief = payload.query_brief.unwrap_or_default();
+    let top_k = payload.top_k.unwrap_or(5);
+
+    let cache = state.memory.research_cache(None);
+
+    // 1. Fast Epistemic Cache Resolution
+    if let Ok(Some(cached_record)) = cache.lookup_by_url(&canonical_url, now).await {
+        return (
+            axum::http::StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "from_cache": true,
+                "canonical_url": cached_record.raw_url,
+                "title": cached_record.title,
+                "passage_hash": cached_record.passage_hash,
+                "top_passages": [{
+                    "chunk_index": 0,
+                    "text": cached_record.passage_text,
+                    "bm25_score": cached_record.bm25_score
+                }]
+            })),
+        );
+    }
+
+    // 2. Resolve PDF Bytes
+    let pdf_bytes = if let Some(ref base64_str) = payload.pdf_base64 {
+        match decode_base64(base64_str) {
+            Some(bytes) => bytes,
+            None => {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "status": "error",
+                        "message": "Base64 payload inválido para PDF"
+                    })),
+                );
+            }
+        }
+    } else if let Some(ref path_str) = payload.file_path {
+        let path = std::path::Path::new(path_str);
+        if let Err(e) = souls_core::fs::validate_refs_path(path) {
+            return (
+                axum::http::StatusCode::FORBIDDEN,
+                Json(json!({
+                    "status": "error",
+                    "message": format!("Caminho rejeitado pela governança Dev Drive ReFS: {e}")
+                })),
+            );
+        }
+        match std::fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                return (
+                    axum::http::StatusCode::NOT_FOUND,
+                    Json(json!({
+                        "status": "error",
+                        "message": format!("Falha ao ler arquivo PDF do disco: {e}")
+                    })),
+                );
+            }
+        }
+    } else {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Requisição deve informar 'pdf_base64' ou 'file_path'"
+            })),
+        );
+    };
+
+    // 3. Process PDF via souls_core tier 0 streaming pipeline
+    let mut dedup = souls_core::research::ResearchDedupRegistry::new();
+    let res = match souls_core::research::process_raw_pdf_passage(
+        &pdf_bytes,
+        &source_url,
+        &query_brief,
+        &mut dedup,
+        top_k,
+    ) {
+        Ok(r) => r,
+        Err(e) => {
+            return (
+                axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({
+                    "status": "error",
+                    "message": format!("Falha na extração do PDF: {e}")
+                })),
+            );
+        }
+    };
+
+    // 4. Cache extracted passages in EpistemicPassageCache
+    let doc_title = format!(
+        "PDF: {}",
+        std::path::Path::new(&source_url)
+            .file_name()
+            .and_then(|f| f.to_str())
+            .unwrap_or("document")
+    );
+
+    if res.top_passages.is_empty() {
+        let _ = cache
+            .cache_passage(
+                &query_brief,
+                &res.canonical_url,
+                &doc_title,
+                &source_url,
+                1.0,
+                now,
+                None,
+            )
+            .await;
+    } else {
+        for p in &res.top_passages {
+            let _ = cache
+                .cache_passage(
+                    &query_brief,
+                    &res.canonical_url,
+                    &doc_title,
+                    &p.text,
+                    p.bm25_score,
+                    now,
+                    None,
+                )
+                .await;
+        }
+    }
+
+    let passages_json: Vec<serde_json::Value> = res
+        .top_passages
+        .into_iter()
+        .map(|p| {
+            json!({
+                "chunk_index": p.chunk_index,
+                "text": p.text,
+                "word_count": p.word_count,
+                "bm25_score": p.bm25_score
+            })
+        })
+        .collect();
+
+    (
+        axum::http::StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "from_cache": false,
+            "canonical_url": res.canonical_url,
+            "is_duplicate": res.is_duplicate,
+            "original_bytes": res.original_bytes,
+            "clean_markdown_bytes": res.clean_markdown_bytes,
+            "compression_ratio": res.compression_ratio,
+            "total_chunks": res.total_chunks,
+            "top_passages": passages_json
+        })),
+    )
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResearchCacheLookupRequest {
+    pub url: Option<String>,
+    pub query: Option<String>,
+}
+
+pub async fn research_cache_lookup_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<ResearchCacheLookupRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+
+    let cache = state.memory.research_cache(None);
+
+    if let Some(ref url) = payload.url {
+        let canonical_url = souls_core::research::normalize_url(url);
+        if let Ok(Some(rec)) = cache.lookup_by_url(&canonical_url, now).await {
+            return Json(json!({
+                "status": "hit",
+                "record": rec
+            }));
+        }
+    } else if let Some(ref q) = payload.query {
+        if let Ok(records) = cache.lookup_by_query(q, now).await {
+            if !records.is_empty() {
+                return Json(json!({
+                    "status": "hit",
+                    "records": records
+                }));
+            }
+        }
+    }
+
+    Json(json!({
+        "status": "miss"
+    }))
+}
+
+pub async fn research_cache_purge_handler(
+    State(state): State<AppState>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+
+    let cache = state.memory.research_cache(None);
+    let count = cache.purge_expired(now).await.unwrap_or(0);
+
+    Json(json!({
+        "status": "success",
+        "purged_count": count
+    }))
+}
+
+// =========================================================================
 // MILESTONE v0.7.3: UNIVERSAL CLOUD DISPATCH GATEWAY & FALLBACK CHAINS
 // =========================================================================
 
@@ -3763,6 +4045,44 @@ pub async fn router_quarantines_reset_handler(
         "status": "success",
         "message": "Quarentenas do Circuit Breaker redefinidas com sucesso",
         "active_quarantines_count": remaining.len()
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RouterIncidentRequest {
+    pub model_id: String,
+    pub incident_kind: Option<String>,
+    pub headers: Option<std::collections::HashMap<String, String>>,
+    pub custom_cooldown_secs: Option<u64>,
+}
+
+/// Reports a provider incident with optional HTTP headers, applying dynamic quarantine.
+pub async fn router_incident_report_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<RouterIncidentRequest>,
+) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let kind = match payload.incident_kind.as_deref().unwrap_or("429") {
+        "500" | "502" | "503" | "504" => souls_model_router::IncidentKind::ServerUnavailable500,
+        "timeout" => souls_model_router::IncidentKind::Timeout,
+        "network" => souls_model_router::IncidentKind::NetworkError,
+        _ => souls_model_router::IncidentKind::RateLimited429,
+    };
+
+    let eff_cd = if let Some(headers) = payload.headers {
+        state.router.record_incident_with_headers(&payload.model_id, kind, headers)
+    } else {
+        let cd = payload.custom_cooldown_secs.unwrap_or_else(|| kind.default_cooldown_seconds());
+        state.router.record_incident(&payload.model_id, kind, Some(cd));
+        cd
+    };
+
+    Json(json!({
+        "status": "success",
+        "model_id": payload.model_id,
+        "incident_kind": format!("{:?}", kind),
+        "effective_cooldown_secs": eff_cd,
+        "message": format!("Modelo '{}' colocado em quarentena por {}s", payload.model_id, eff_cd)
     }))
 }
 

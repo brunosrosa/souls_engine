@@ -31,3 +31,4 @@ sqlx = { workspace = true }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
+lopdf = { version = "0.47.0", default-features = false }
