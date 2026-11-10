@@ -21,6 +21,7 @@ pub mod google_bridge;
 pub mod harness;
 pub mod sandbox;
 pub mod subprocess_guard;
+pub mod vision;
 pub mod web;
 
 pub use ansi_filter::{ansi_density, strip_ansi, strip_ansi_escapes};
@@ -57,5 +58,9 @@ pub use harness::{
 pub use google_bridge::{
     DualLayerWorkspace, GoogleSessionCredentials, GoogleSessionVault, JulesMigrationRouter,
     LegacyJulesCommand, WizRpcClient, WizRpcId, WizRpcPayload, WizRpcResponse,
+};
+pub use vision::{
+    parse_cdp_ax_tree, AXNode, AXNodeState, AXTreeCompressionMetrics, AXTreeSerializer,
+    ZERO_VLM_VRAM_CONSUMPTION_MB,
 };
 
