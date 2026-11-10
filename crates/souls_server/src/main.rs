@@ -3242,4 +3242,96 @@ model:
         std::env::remove_var("SOULS_GOOGLE_VAULT_PATH");
         let _ = std::fs::remove_dir_all(&temp_vault_dir);
     }
+
+    #[tokio::test]
+    async fn test_cognitive_vision_and_axtree_routes() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. GET /api/v1/vision/status
+        let req_status = Request::builder()
+            .uri("/api/v1/vision/status")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_status = app.clone().oneshot(req_status).await.unwrap();
+        assert_eq!(resp_status.status(), StatusCode::OK);
+        let bytes_status = to_bytes(resp_status.into_body(), usize::MAX).await.unwrap();
+        let val_status: serde_json::Value = serde_json::from_slice(&bytes_status).unwrap();
+        assert_eq!(val_status["vram_consumed_mb"], 0);
+        assert!(val_status["vlm_banned"].as_bool().unwrap());
+        assert_eq!(val_status["nominal_token_reduction_pct"], 71.0);
+
+        // 2. POST /api/v1/vision/axtree/serialize
+        let serialize_payload = serde_json::json!({
+            "cdp_nodes": [
+                {
+                    "nodeId": "1",
+                    "role": { "value": "Desktop" },
+                    "bounds": { "x": 0.0, "y": 0.0, "width": 1920.0, "height": 1080.0 },
+                    "childIds": ["2"]
+                },
+                {
+                    "nodeId": "2",
+                    "role": { "value": "Button" },
+                    "name": { "value": "Salvar" },
+                    "bounds": { "x": 100.0, "y": 100.0, "width": 80.0, "height": 30.0 },
+                    "properties": [
+                        { "name": "focused", "value": { "value": true } }
+                    ]
+                }
+            ],
+            "include_click_coords": true
+        });
+
+        let req_serialize = Request::builder()
+            .uri("/api/v1/vision/axtree/serialize")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serialize_payload.to_string()))
+            .unwrap();
+        let resp_serialize = app.clone().oneshot(req_serialize).await.unwrap();
+        assert_eq!(resp_serialize.status(), StatusCode::OK);
+        let bytes_serialize = to_bytes(resp_serialize.into_body(), usize::MAX).await.unwrap();
+        let val_serialize: serde_json::Value = serde_json::from_slice(&bytes_serialize).unwrap();
+        let lean = val_serialize["lean_text"].as_str().unwrap();
+        assert!(lean.contains("Button[Salvar](F) {click: (140, 115)}"));
+        assert_eq!(val_serialize["metrics"]["vram_consumed_mb"], 0);
+
+        // 3. POST /api/v1/vision/axtree/hit-test
+        let hit_payload = serde_json::json!({
+            "x": 140.0,
+            "y": 115.0,
+            "cdp_nodes": [
+                {
+                    "nodeId": "1",
+                    "role": { "value": "Desktop" },
+                    "bounds": { "x": 0.0, "y": 0.0, "width": 1920.0, "height": 1080.0 },
+                    "childIds": ["2"]
+                },
+                {
+                    "nodeId": "2",
+                    "role": { "value": "Button" },
+                    "name": { "value": "Salvar" },
+                    "bounds": { "x": 100.0, "y": 100.0, "width": 80.0, "height": 30.0 }
+                }
+            ]
+        });
+
+        let req_hit = Request::builder()
+            .uri("/api/v1/vision/axtree/hit-test")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(hit_payload.to_string()))
+            .unwrap();
+        let resp_hit = app.oneshot(req_hit).await.unwrap();
+        assert_eq!(resp_hit.status(), StatusCode::OK);
+        let bytes_hit = to_bytes(resp_hit.into_body(), usize::MAX).await.unwrap();
+        let val_hit: serde_json::Value = serde_json::from_slice(&bytes_hit).unwrap();
+        assert!(val_hit["hit"].as_bool().unwrap());
+        assert_eq!(val_hit["node_id"], "2");
+        assert_eq!(val_hit["lean_path"], "Desktop.Button[Salvar]");
+        assert_eq!(val_hit["click_coords"][0], 140.0);
+        assert_eq!(val_hit["click_coords"][1], 115.0);
+    }
 }

@@ -12,6 +12,7 @@ pub mod memory;
 pub mod models;
 pub mod sessions;
 pub mod switchboard;
+pub mod vision;
 
 use axum::routing::{get, post};
 use axum::Router;
@@ -108,6 +109,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/google/workspace/status", get(google::workspace_status_handler))
         .route("/api/v1/google/workspace/link", post(google::workspace_link_handler))
         .route("/api/v1/google/jules/migrate", post(google::jules_migrate_handler))
+        // Milestone v0.8.3: Cognitive Vision O(1) & AXTree LEAN (ADR-029)
+        .route("/api/v1/vision/status", get(vision::vision_status_handler))
+        .route("/api/v1/vision/axtree/serialize", post(vision::serialize_axtree_handler))
+        .route("/api/v1/vision/axtree/hit-test", post(vision::hit_test_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))
