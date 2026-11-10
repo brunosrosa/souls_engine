@@ -28,7 +28,9 @@ pub use bandit::{
     pack_gpu_telemetry, unpack_gpu_telemetry, OutcomeEvent, ParetoBanditRouter, ParetoWeights,
     RoutingDecision, LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS,
 };
-pub use cloud_provider::CloudProvider;
+pub use cloud_provider::{
+    get_canonical_frontier_providers, CloudProvider, FrontierModelSpec, FrontierProviderSpec,
+};
 pub use context::TaskContext;
 pub use error::RouterError;
 pub use circuit_breaker::{
