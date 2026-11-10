@@ -3,6 +3,7 @@
 pub mod arena;
 pub mod chat;
 pub mod cloud;
+pub mod connections;
 pub mod dashboard;
 pub mod health;
 pub mod inventory;
@@ -95,6 +96,11 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/research/cache/lookup", post(dashboard::research_cache_lookup_handler))
         .route("/api/v1/research/cache/purge", post(dashboard::research_cache_purge_handler))
         .route("/api/v1/router/incident", post(dashboard::router_incident_report_handler))
+        // Milestone v0.8.1: Global Connections & Agentic CLIs Endpoints
+        .route("/api/v1/connections/providers", get(connections::list_providers_handler))
+        .route("/api/v1/connections/test", post(connections::test_provider_handler))
+        .route("/api/v1/connections/clis", get(connections::list_clis_handler))
+        .route("/api/v1/connections/cli/dispatch", post(connections::dispatch_cli_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))

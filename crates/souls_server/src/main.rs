@@ -3077,4 +3077,67 @@ model:
         assert_eq!(val_q["count"], 1);
         assert_eq!(val_q["active_quarantines"][0]["model_id"], "deepseek/deepseek-chat");
     }
+
+    #[tokio::test]
+    async fn test_connections_providers_and_clis_endpoints() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. GET /api/v1/connections/providers
+        let req_prov = Request::builder()
+            .uri("/api/v1/connections/providers")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_prov = app.clone().oneshot(req_prov).await.unwrap();
+        assert_eq!(resp_prov.status(), StatusCode::OK);
+        let bytes_prov = to_bytes(resp_prov.into_body(), usize::MAX).await.unwrap();
+        let val_prov: serde_json::Value = serde_json::from_slice(&bytes_prov).unwrap();
+        assert_eq!(val_prov["status"], "success");
+        let providers = val_prov["providers"].as_array().unwrap();
+        assert!(providers.iter().any(|p| p["slug"] == "dashscope"));
+        assert!(providers.iter().any(|p| p["slug"] == "moonshot"));
+        assert!(providers.iter().any(|p| p["slug"] == "deepseek"));
+
+        // 2. GET /api/v1/connections/clis
+        let req_clis = Request::builder()
+            .uri("/api/v1/connections/clis")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_clis = app.clone().oneshot(req_clis).await.unwrap();
+        assert_eq!(resp_clis.status(), StatusCode::OK);
+        let bytes_clis = to_bytes(resp_clis.into_body(), usize::MAX).await.unwrap();
+        let val_clis: serde_json::Value = serde_json::from_slice(&bytes_clis).unwrap();
+        assert_eq!(val_clis["status"], "success");
+        let clis = val_clis["clis"].as_array().unwrap();
+        assert_eq!(clis.len(), 3);
+        assert!(clis.iter().any(|c| c["binary_name"] == "agy"));
+
+        // 3. POST /api/v1/connections/test
+        let test_payload = serde_json::json!({
+            "provider": "dashscope"
+        });
+        let req_test = Request::builder()
+            .uri("/api/v1/connections/test")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(test_payload.to_string()))
+            .unwrap();
+        let resp_test = app.clone().oneshot(req_test).await.unwrap();
+        assert_eq!(resp_test.status(), StatusCode::OK);
+
+        // 4. GET /dashboard includes Connections tab and scripts
+        let req_dash = Request::builder()
+            .uri("/dashboard")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let resp_dash = app.oneshot(req_dash).await.unwrap();
+        assert_eq!(resp_dash.status(), StatusCode::OK);
+        let bytes_dash = to_bytes(resp_dash.into_body(), usize::MAX).await.unwrap();
+        let html_str = String::from_utf8_lossy(&bytes_dash);
+        assert!(html_str.contains("Conexões &amp; CLIs") || html_str.contains("Conexões & CLIs"));
+        assert!(html_str.contains("tab-connections"));
+    }
 }

@@ -96,6 +96,10 @@
         if (typeof loadResearchHubMissions === 'function') {
           loadResearchHubMissions();
         }
+      } else if (tabId === 'tab-connections') {
+        if (typeof fetchConnectionsData === 'function') {
+          fetchConnectionsData();
+        }
       } else if (tabId === 'tab-settings') {
         fetchConfigToml();
         initSlidersMagneticSnap();
