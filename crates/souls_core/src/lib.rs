@@ -17,6 +17,7 @@ pub mod logging;
 pub mod panic;
 pub mod pii_redactor;
 pub mod research;
+pub mod google_bridge;
 pub mod harness;
 pub mod sandbox;
 pub mod subprocess_guard;
@@ -52,5 +53,9 @@ pub use research::{
 pub use harness::{
     detect_installed_clis, AgenticCliCommand, AgenticCliInfo, AgenticCliKind,
     AgenticHarnessDispatcher, HarnessEvent, HarnessOutput,
+};
+pub use google_bridge::{
+    DualLayerWorkspace, GoogleSessionCredentials, GoogleSessionVault, JulesMigrationRouter,
+    LegacyJulesCommand, WizRpcClient, WizRpcId, WizRpcPayload, WizRpcResponse,
 };
 
