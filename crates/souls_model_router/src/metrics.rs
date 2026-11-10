@@ -41,6 +41,12 @@ pub struct TaskOutcome {
     pub tokens_input: u32,
     /// Actual output tokens generated.
     pub tokens_output: u32,
+    /// Whether the outcome was a transient provider rate limit (HTTP 429) or quota exhaustion.
+    #[serde(default)]
+    pub is_rate_limit: bool,
+    /// Dynamic retry cooldown in seconds extracted from provider response headers.
+    #[serde(default)]
+    pub retry_after_secs: Option<u64>,
 }
 
 impl TaskOutcome {

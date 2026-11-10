@@ -13,6 +13,7 @@
 //! - Fractional Bayesian updating via pseudo-observations with continuous rewards.
 
 pub mod bandit;
+pub mod circuit_breaker;
 pub mod cloud_provider;
 pub mod context;
 pub mod error;
@@ -30,6 +31,9 @@ pub use bandit::{
 pub use cloud_provider::CloudProvider;
 pub use context::TaskContext;
 pub use error::RouterError;
+pub use circuit_breaker::{
+    extract_cooldown_from_headers, parse_ratelimit_reset, parse_retry_after, DynamicQuarantineConfig,
+};
 pub use fallback::{
     CircuitBreakerState, CooldownManager, FallbackCandidate, FallbackChain, IncidentKind,
 };
@@ -276,6 +280,8 @@ mod tests {
             latency_ms: 150.0,
             tokens_input: 400,
             tokens_output: 100,
+            is_rate_limit: false,
+            retry_after_secs: None,
         };
 
         router.record_outcome("task_test_e3", &outcome).await.unwrap();
@@ -347,6 +353,8 @@ mod tests {
             latency_ms: 300.0, // original was 120ms
             tokens_input: 500,
             tokens_output: 200,
+            is_rate_limit: false,
+            retry_after_secs: None,
         };
 
         router.record_outcome("task_ema", &outcome).await.unwrap();
@@ -502,6 +510,8 @@ mod tests {
                     latency_ms: 100.0,
                     tokens_input: 100,
                     tokens_output: 50,
+                    is_rate_limit: false,
+                    retry_after_secs: None,
                 };
                 r.record_outcome(&format!("conc_task_{i}"), &outcome)
                     .await

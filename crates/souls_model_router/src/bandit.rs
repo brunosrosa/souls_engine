@@ -144,6 +144,24 @@ impl ParetoBanditRouter {
                 match msg {
                     OutcomeMsg::Event(event) => {
                         let now_sec = current_timestamp_sec();
+
+                        // If transient provider rate limit, apply dynamic quarantine without damaging Bayesian prior (beta)
+                        if event.outcome.is_rate_limit {
+                            let cd = event.outcome.retry_after_secs.unwrap_or(60);
+                            cooldown_worker.record_incident(
+                                &event.outcome.tier_name,
+                                IncidentKind::RateLimited429,
+                                Some(cd),
+                            );
+                            info!(
+                                target: "souls_model_router::bandit",
+                                "Arm '{}' dynamically quarantined for {}s due to rate limit; Bayesian priors preserved.",
+                                event.outcome.tier_name,
+                                cd
+                            );
+                            continue;
+                        }
+
                         let reward = event.outcome.fractional_reward();
                         if event.outcome.success {
                             cooldown_worker.record_success(&event.outcome.tier_name);
@@ -254,6 +272,26 @@ impl ParetoBanditRouter {
     ) {
         self.cooldown_manager
             .record_incident(model_id, kind, custom_cooldown_secs);
+    }
+
+    /// Records a provider incident by inspecting HTTP response headers to compute dynamic quarantine.
+    pub fn record_incident_with_headers<I, K, V>(
+        &self,
+        model_id: &str,
+        kind: IncidentKind,
+        headers: I,
+    ) -> u64
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: AsRef<str>,
+        V: AsRef<str>,
+    {
+        self.cooldown_manager.record_incident_with_headers(
+            model_id,
+            kind,
+            headers,
+            current_timestamp_sec(),
+        )
     }
 
     /// Explicitly clears quarantine state for a recovered model arm.
@@ -375,7 +413,7 @@ impl ParetoBanditRouter {
 
             // 6.5 Circuit breaker quarantine check
             let (in_cooldown, _remaining_cd) = self.cooldown_manager.is_quarantined(&model.model_id);
-            let cooldown_penalty = if in_cooldown { 100.0 } else { 0.0 };
+            let cooldown_penalty = if in_cooldown { 10_000.0 } else { 0.0 };
 
             // 7. Scalarized utility calculation U(k | x_i)
             let utility = if barrier_phi.is_infinite() {
@@ -450,7 +488,6 @@ impl ParetoBanditRouter {
         let total_tokens = task.total_projected_tokens();
         let cached_in = task.estimated_cached_input_tokens.unwrap_or(0);
         let mut candidates: Vec<FallbackCandidate> = Vec::new();
-        let mut rng = rand::thread_rng();
 
         for model in active_models {
             // Context window check
@@ -497,12 +534,9 @@ impl ParetoBanditRouter {
                 continue;
             }
 
-            // Thompson sampling
+            // Expected quality E[Q] = alpha / (alpha + beta) for deterministic Pareto fallback ranking
             let prior = fetch_prior(&self.pool, &model.model_id, &task.category).await?;
-            let sampled_quality = match Beta::new(prior.alpha, prior.beta) {
-                Ok(dist) => dist.sample(&mut rng),
-                Err(_) => (prior.alpha / (prior.alpha + prior.beta)).clamp(0.0, 1.0),
-            };
+            let expected_quality = (prior.alpha / (prior.alpha + prior.beta)).clamp(0.0, 1.0);
 
             let provider = model.cloud_provider();
             let latency_factor = provider.latency_scaling_factor();
@@ -511,9 +545,9 @@ impl ParetoBanditRouter {
                 * latency_factor;
 
             let (in_cooldown, remaining_cd) = self.cooldown_manager.is_quarantined(&model.model_id);
-            let cooldown_penalty = if in_cooldown { 100.0 } else { 0.0 };
+            let cooldown_penalty = if in_cooldown { 10_000.0 } else { 0.0 };
 
-            let utility = (self.weights.w_quality * sampled_quality)
+            let utility = (self.weights.w_quality * expected_quality)
                 - (self.weights.w_cost * projected_cost_usd)
                 - (self.weights.w_latency * projected_latency_ms)
                 - (barrier_phi as f64)
@@ -537,11 +571,16 @@ impl ParetoBanditRouter {
             ));
         }
 
-        // Sort by utility descending
+        // Sort by health first (healthy models ahead of quarantined models), then by utility descending
         candidates.sort_by(|a, b| {
-            b.utility_score
-                .partial_cmp(&a.utility_score)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            match (a.in_cooldown, b.in_cooldown) {
+                (false, true) => std::cmp::Ordering::Less,
+                (true, false) => std::cmp::Ordering::Greater,
+                _ => b
+                    .utility_score
+                    .partial_cmp(&a.utility_score)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            }
         });
 
         let primary = candidates.remove(0);
