@@ -482,6 +482,12 @@
         }
       }
 
+      // Atualiza Versão do Engine na Topbar
+      if (data.version) {
+        const vEl = document.getElementById('top-engine-version');
+        if (vEl) vEl.innerText = `(${data.version})`;
+      }
+
       // Atualiza Master Brain & Topbar Preset
       if (data.master_brain) {
         const mb = data.master_brain;

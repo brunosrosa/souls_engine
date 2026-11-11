@@ -701,6 +701,7 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
 
     Json(json!({
         "status": "online",
+        "version": format!("v{}", env!("CARGO_PKG_VERSION")),
         "port": 9123,
         "uptime_secs": state.uptime_secs(),
         "active_connections": state.active_connections(),
