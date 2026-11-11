@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
-> **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)  
-> **VERSÃO CONSOLIDADA:** v0.7.3 (Novembro/2026) ➔ Meta Final: v1.0.0 Real  
+> **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)
+> **VERSÃO CONSOLIDADA:** v0.8.3 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -136,9 +136,15 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.7.3        │ Gateway Cloud & Fallback Chains  │ [CONCLUÍDO] Sub-150ms + Quaran│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.8.0 (PRÓX) │ Conectividade & Integrações      │ Google Universe + Obsidian DB │
+│ v0.8.0        │ Streaming PDF & Cache Epistêmico │ [CONCLUÍDO] Strict WAL + L3   │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.0        │ Souls Anthropophagy 2.0          │ 4 Camadas, Blobs & 85+ Colunas│
+│ v0.8.1        │ Gateways Globais & CLIs Agênticas│ [CONCLUÍDO] agy, claude, codex│
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.8.2        │ Google Universe & NotebookLM     │ [CONCLUÍDO] Wiz RPC + Cofre GV1│
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.8.3        │ Visão Cognitiva O(1) & AXTree    │ [CONCLUÍDO] LEAN 71% + 0MB VRAM│
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.9.0 (PRÓX) │ Souls Anthropophagy 2.0          │ 4 Camadas, Blobs & 85+ Colunas│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v1.0.0 REAL   │ Universalização & Distribuição   │ Auto-Tuning, Installer 1-Click│
 └───────────────┴──────────────────────────────────┴───────────────────────────────┘
