@@ -36,7 +36,7 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 "properties": {
                     "namespace": {
                         "type": "string",
-                        "enum": ["all", "code", "context", "memory", "think", "ops", "sys", "research"],
+                        "enum": ["all", "code", "context", "memory", "think", "ops", "sys", "research", "ui", "google"],
                         "description": "Namespace funcional para listar ferramentas."
                     },
                     "query": {
@@ -949,6 +949,71 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                     }
                 },
                 "required": ["run_id", "status"],
+                "additionalProperties": false
+            }),
+        },
+        // ui.* namespace (v0.8.3 Cognitive Vision O(1) & AXTree LEAN)
+        ToolMeta {
+            name: "ui_inspect",
+            namespace: "ui",
+            description: "Extrai e serializa a árvore de acessibilidade no formato LEAN dot-notation com 71% de redução de tokens e 0 MB VRAM.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "include_click_coords": { "type": "boolean", "default": true, "description": "Incluir coordenadas geométricas de clique" },
+                    "max_depth": { "type": "integer", "description": "Profundidade máxima de serialização da árvore" }
+                },
+                "additionalProperties": true
+            }),
+        },
+        ToolMeta {
+            name: "ui_interact",
+            namespace: "ui",
+            description: "Calcula coordenadas de clique centrais determinísticas e resolve o nó tátil sob o cursor.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "x": { "type": "number", "description": "Coordenada X na tela" },
+                    "y": { "type": "number", "description": "Coordenada Y na tela" }
+                },
+                "required": ["x", "y"],
+                "additionalProperties": true
+            }),
+        },
+        // google.* namespace (v0.8.2 Google Universe Bridge & NotebookLM)
+        ToolMeta {
+            name: "notebooklm_rpc",
+            namespace: "google",
+            description: "Executa uma chamada RPC batchexecute no Google NotebookLM (notas, deep research, RAG, studio audio).",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "rpc_id": { "type": "string", "description": "Identificador do RPC (ex: 'QA9ei', 'wXbhsf', 'orqRsd', 's07Lfd')" },
+                    "arguments": { "type": "array", "description": "Lista de argumentos em formato JSON para o payload" }
+                },
+                "required": ["rpc_id", "arguments"],
+                "additionalProperties": false
+            }),
+        },
+        // ops.* namespace (v0.8.1 Headless Agentic CLI Harness)
+        ToolMeta {
+            name: "agentic_dispatch",
+            namespace: "ops",
+            description: "Despacha tarefas em segundo plano para CLIs agênticas no host (agy, claude, codex) com rollback automático git restore.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "cli": { "type": "string", "enum": ["agy", "claude", "codex"], "description": "CLI agêntica de destino" },
+                    "prompt": { "type": "string", "description": "Instrução textual da tarefa de código" },
+                    "working_dir": { "type": "string", "description": "Diretório de trabalho (padrão: Z:\\souls_engine)" },
+                    "timeout_secs": { "type": "integer", "default": 300, "description": "Tempo limite em segundos" },
+                    "auto_restore": { "type": "boolean", "default": true, "description": "Reverter arquivos se o processo falhar" }
+                },
+                "required": ["cli", "prompt"],
                 "additionalProperties": false
             }),
         },

@@ -444,6 +444,156 @@ pub async fn dispatch_jsonrpc(
                     }
                 }
 
+                // DOMAIN 8: COGNITIVE VISION & AXTREE LEAN (v0.8.3 / ADR-029)
+                "ui_inspect" => {
+                    let mut serializer = souls_core::vision::AXTreeSerializer::new();
+                    if let Some(coords) = args.get("include_click_coords").and_then(Value::as_bool) {
+                        serializer = serializer.with_click_coords(coords);
+                    }
+                    if let Some(depth) = args.get("max_depth").and_then(Value::as_u64) {
+                        serializer = serializer.with_max_depth(depth as usize);
+                    }
+                    let tree = if let Some(cdp) = args.get("cdp_nodes").and_then(Value::as_array) {
+                        souls_core::vision::parse_cdp_ax_tree(cdp).unwrap_or(None)
+                    } else if let Some(tree_val) = args.get("tree") {
+                        serde_json::from_value::<souls_core::vision::AXNode>(tree_val.clone()).ok()
+                    } else {
+                        None
+                    };
+
+                    match tree {
+                        Some(root) => {
+                            let lean = serializer.serialize_to_lean(&root);
+                            let metrics = souls_core::vision::AXTreeSerializer::measure_lean_compression(&root).ok();
+                            Ok(json!({
+                                "status": "success",
+                                "lean_representation": lean,
+                                "vram_consumed_mb": souls_core::vision::ZERO_VLM_VRAM_CONSUMPTION_MB,
+                                "metrics": metrics
+                            }))
+                        }
+                        None => {
+                            Ok(json!({
+                                "status": "active",
+                                "architecture": "AXTree LEAN dot-notation (ADR-029)",
+                                "vram_consumed_mb": souls_core::vision::ZERO_VLM_VRAM_CONSUMPTION_MB,
+                                "nominal_reduction_pct": 71.0,
+                                "notice": "Pronto para receber árvore de acessibilidade do CDP ou Windows UI Automation"
+                            }))
+                        }
+                    }
+                }
+
+                "ui_interact" => {
+                    let x = args.get("x").and_then(Value::as_f64).unwrap_or(0.0);
+                    let y = args.get("y").and_then(Value::as_f64).unwrap_or(0.0);
+                    let tree = if let Some(cdp) = args.get("cdp_nodes").and_then(Value::as_array) {
+                        souls_core::vision::parse_cdp_ax_tree(cdp).unwrap_or(None)
+                    } else if let Some(tree_val) = args.get("tree") {
+                        serde_json::from_value::<souls_core::vision::AXNode>(tree_val.clone()).ok()
+                    } else {
+                        None
+                    };
+
+                    match tree {
+                        Some(root) => {
+                            match root.hit_test(x, y) {
+                                Some((node, lean_path)) => Ok(json!({
+                                    "hit": true,
+                                    "node_id": node.id,
+                                    "role": node.role,
+                                    "name": node.name,
+                                    "lean_path": lean_path,
+                                    "click_coords": node.click_point()
+                                })),
+                                None => Ok(json!({
+                                    "hit": false,
+                                    "message": "Nenhum nó sob as coordenadas fornecidas"
+                                }))
+                            }
+                        }
+                        None => Ok(json!({
+                            "hit": false,
+                            "click_coords": [x, y],
+                            "message": "Coordenadas registradas; nenhuma árvore de contexto fornecida"
+                        }))
+                    }
+                }
+
+                // DOMAIN 9: GOOGLE UNIVERSE & NOTEBOOKLM (v0.8.2)
+                "notebooklm_rpc" => {
+                    let rpc_id_str = match args.get("rpc_id").and_then(Value::as_str) {
+                        Some(id) => id,
+                        None => return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, JsonRpcError::new(-32602, "Missing rpc_id"))).unwrap_or_default()),
+                    };
+                    let rpc_args = args.get("arguments").cloned().unwrap_or(json!([]));
+                    let vault_path = crate::routes::google::resolve_google_vault_path();
+                    let creds = match souls_core::google_bridge::GoogleSessionVault::load(&vault_path) {
+                        Ok(Some(c)) if c.is_configured() => c,
+                        _ => return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, JsonRpcError::new(-32001, "Google session credentials not found in vault. Authenticate via Dashboard."))).unwrap_or_default()),
+                    };
+
+                    let rpc_id = match rpc_id_str.to_ascii_lowercase().as_str() {
+                        "wxbhsf" | "create_note" => souls_core::google_bridge::WizRpcId::CreateNote,
+                        "rlm1ne" | "read_notes" => souls_core::google_bridge::WizRpcId::ReadNotes,
+                        "izaodd" | "ingest_source" => souls_core::google_bridge::WizRpcId::IngestSource,
+                        "qa9ei" | "deep_research" => souls_core::google_bridge::WizRpcId::DeepResearch,
+                        "r7cb6c" | "studio_create" => souls_core::google_bridge::WizRpcId::StudioCreate,
+                        "yyryje" | "studio_status" => souls_core::google_bridge::WizRpcId::StudioStatus,
+                        "orqrsd" | "query_rag" => souls_core::google_bridge::WizRpcId::QueryRAG,
+                        "s07lfd" | "list_notebooks" => souls_core::google_bridge::WizRpcId::ListNotebooks,
+                        _ => souls_core::google_bridge::WizRpcId::Custom(rpc_id_str.to_string()),
+                    };
+
+                    let client = souls_core::google_bridge::WizRpcClient::new(creds);
+                    let payload = souls_core::google_bridge::WizRpcPayload::new(rpc_id, rpc_args);
+                    match client.execute(&payload).await {
+                        Ok(resp) => Ok(json!({
+                            "status": "success",
+                            "rpc_id": resp.rpc_id,
+                            "data": resp.payload,
+                            "raw_response": resp.raw_response
+                        })),
+                        Err(e) => Err(JsonRpcError::new(-32000, format!("Wiz RPC failed: {e}"))),
+                    }
+                }
+
+                // DOMAIN 10: AGENTIC HARNESS DISPATCH (v0.8.1)
+                "agentic_dispatch" => {
+                    let cli_str = match args.get("cli").and_then(Value::as_str) {
+                        Some(c) => c,
+                        None => return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, JsonRpcError::new(-32602, "Missing cli parameter"))).unwrap_or_default()),
+                    };
+                    let prompt = match args.get("prompt").and_then(Value::as_str) {
+                        Some(p) => p,
+                        None => return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, JsonRpcError::new(-32602, "Missing prompt parameter"))).unwrap_or_default()),
+                    };
+                    let kind = match cli_str.to_ascii_lowercase().as_str() {
+                        "agy" | "antigravity" => souls_core::harness::AgenticCliKind::Antigravity,
+                        "claude" | "claudecode" => souls_core::harness::AgenticCliKind::ClaudeCode,
+                        "codex" => souls_core::harness::AgenticCliKind::Codex,
+                        other => souls_core::harness::AgenticCliKind::Custom(other.to_string()),
+                    };
+                    let cwd = args.get("working_dir")
+                        .and_then(Value::as_str)
+                        .map(std::path::PathBuf::from)
+                        .unwrap_or_else(|| std::path::PathBuf::from(r"Z:\souls_engine"));
+                    let timeout = args.get("timeout_secs").and_then(Value::as_u64).unwrap_or(300);
+                    let auto_restore = args.get("auto_restore").and_then(Value::as_bool).unwrap_or(true);
+
+                    let cmd = souls_core::harness::AgenticCliCommand::new(kind, prompt, cwd)
+                        .with_timeout_secs(timeout)
+                        .with_auto_restore(auto_restore);
+
+                    match souls_core::harness::AgenticHarnessDispatcher::dispatch(&cmd).await {
+                        Ok(output) => Ok(json!({
+                            "status": "success",
+                            "output": output
+                        })),
+                        Err(e) => Err(JsonRpcError::new(-32000, format!("Agentic dispatch error: {e}"))),
+                    }
+                }
+
                 other => {
                     // Check if known canonical tool
                     let tools = get_canonical_tools();

@@ -47,7 +47,7 @@ function renderClis(clis) {
     const versionDisplay = cli.version ? `v${cli.version}` : (isInst ? 'v1.x' : '--');
     const pathDisplay = cli.resolved_path ? cli.resolved_path : 'Não encontrada no PATH';
 
-    const modesBadges = (cli.supported_modes || []).map(m => 
+    const modesBadges = (cli.supported_modes || []).map(m =>
       `<span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: #cbd5e1; font-family: monospace;">${m}</span>`
     ).join(' ');
 
