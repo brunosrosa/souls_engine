@@ -18,15 +18,9 @@ const toast = (msg, type = 'info') => {
   else console.log(`[${type}] ${msg}`);
 };
 
-const appConfirm = async (msg, opts = {}) => {
-  if (window.appConfirm) return await window.appConfirm(msg, opts);
-  return window.confirm(msg);
-};
-
-const appPrompt = async (msg, defaultVal = '', opts = {}) => {
-  if (window.appPrompt) return await window.appPrompt(msg, defaultVal, opts);
-  return window.prompt(msg, defaultVal);
-};
+// appConfirm and appPrompt are provided globally by dashboard.js (window.appConfirm, window.appPrompt)
+const getAppConfirm = () => window.appConfirm || window.confirm;
+const getAppPrompt = () => window.appPrompt || window.prompt;
 
 function filterLibraryMissions() {
   const query = (document.getElementById('input-filter-library')?.value || '').toLowerCase().trim();
