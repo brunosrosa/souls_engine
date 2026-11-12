@@ -8,6 +8,7 @@ fn test_agnostic_profiling_across_gpu_scales() {
     let gpu_4gb = HardwareDiagnostic {
         has_dedicated_gpu: true,
         gpu_name: "GTX 1650".to_string(),
+        cpu_name: "Intel Core i5".to_string(),
         vram_total_mb: 4096,
         vram_free_mb: 3200,
         vram_safe_usable_mb: 3246, // 4096 - 850
@@ -32,6 +33,7 @@ fn test_agnostic_profiling_across_gpu_scales() {
     let gpu_12gb = HardwareDiagnostic {
         has_dedicated_gpu: true,
         gpu_name: "RTX 4070".to_string(),
+        cpu_name: "AMD Ryzen 7".to_string(),
         vram_total_mb: 12288,
         vram_free_mb: 11000,
         vram_safe_usable_mb: 10813, // 12288 - 1475 (12%)
@@ -52,6 +54,7 @@ fn test_agnostic_profiling_across_gpu_scales() {
     let cpu_only = HardwareDiagnostic {
         has_dedicated_gpu: false,
         gpu_name: "None (CPU Execution)".to_string(),
+        cpu_name: "Intel Core i9".to_string(),
         vram_total_mb: 0,
         vram_free_mb: 0,
         vram_safe_usable_mb: 0,

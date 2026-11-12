@@ -12,6 +12,7 @@ use tracing::info;
 pub struct HardwareDiagnostic {
     pub has_dedicated_gpu: bool,
     pub gpu_name: String,
+    pub cpu_name: String,
     pub vram_total_mb: u64,
     pub vram_free_mb: u64,
     pub vram_safe_usable_mb: u64,
@@ -29,6 +30,7 @@ impl Default for HardwareDiagnostic {
         Self {
             has_dedicated_gpu: false,
             gpu_name: "CPU Host".to_string(),
+            cpu_name: "CPU Host".to_string(),
             vram_total_mb: 0,
             vram_free_mb: 0,
             vram_safe_usable_mb: 0,
@@ -84,6 +86,77 @@ fn query_system_ram_mb() -> (u64, u64) {
     (32_768, 24_000)
 }
 
+static CPU_BRAND_CACHE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// Detects the host CPU brand string via Windows Registry with safe fallbacks and caching.
+///
+/// Query order:
+/// 1. Windows Registry: `HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0\ProcessorNameString` via safe `reg` command.
+/// 2. Host environment variable: `PROCESSOR_IDENTIFIER`.
+/// 3. Synthetic architecture description: `Host CPU (XC/YT • AVX2)`.
+pub fn detect_cpu_brand_string(
+    cores_phys: usize,
+    cores_log: usize,
+    has_avx2: bool,
+    has_avx512: bool,
+) -> String {
+    CPU_BRAND_CACHE
+        .get_or_init(|| {
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                let mut cmd = std::process::Command::new("reg");
+                cmd.args([
+                    "query",
+                    r"HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0",
+                    "/v",
+                    "ProcessorNameString",
+                ]);
+                cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+                if let Ok(output) = cmd.output() {
+                    if output.status.success() {
+                        if let Ok(text) = String::from_utf8(output.stdout) {
+                            for line in text.lines() {
+                                if let Some(pos) = line.find("REG_SZ") {
+                                    let raw = line[pos + 6..].trim();
+                                    let cleaned = raw
+                                        .replace("(R)", "")
+                                        .replace("(TM)", "")
+                                        .split('@')
+                                        .next()
+                                        .unwrap_or(raw)
+                                        .split_whitespace()
+                                        .collect::<Vec<_>>()
+                                        .join(" ");
+                                    if !cleaned.is_empty() {
+                                        return cleaned;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let Ok(ident) = std::env::var("PROCESSOR_IDENTIFIER") {
+                let trimmed = ident.trim();
+                if !trimmed.is_empty() {
+                    return trimmed.to_string();
+                }
+            }
+
+            let ext = if has_avx512 {
+                "AVX-512"
+            } else if has_avx2 {
+                "AVX2"
+            } else {
+                "x64"
+            };
+            format!("Host CPU ({}C/{}T • {})", cores_phys, cores_log, ext)
+        })
+        .clone()
+}
+
 /// Probes the host system and builds an agnostic hardware diagnostic.
 pub fn probe_hardware() -> HardwareDiagnostic {
     let (host_ram_total_mb, host_ram_available_mb) = query_system_ram_mb();
@@ -117,18 +190,31 @@ pub fn probe_hardware() -> HardwareDiagnostic {
         // On Windows with WDDM, OS reserves ~850MB, or ~12% of VRAM
         let reserved = 850.max((total as f64 * 0.12) as u64);
         let safe = total.saturating_sub(reserved);
-        (
-            "NVIDIA GeForce Dedicated".to_string(),
-            total,
-            free,
-            safe,
-        )
+        let name = if !snap.gpu_name.trim().is_empty() {
+            snap.gpu_name.clone()
+        } else {
+            "NVIDIA Dedicated GPU".to_string()
+        };
+        (name, total, free, safe)
     } else {
-        ("None (CPU Execution)".to_string(), 0, 0, 0)
+        let name = if !snap.gpu_name.trim().is_empty() && snap.gpu_name != "None (CPU Execution)" {
+            snap.gpu_name.clone()
+        } else {
+            "CPU Host Mode (Sem dGPU NVIDIA)".to_string()
+        };
+        (name, 0, 0, 0)
     };
+
+    let cpu_name = detect_cpu_brand_string(
+        cpu_cores_physical,
+        cpu_cores_logical,
+        has_avx2,
+        has_avx512,
+    );
 
     info!(
         gpu = %gpu_name,
+        cpu = %cpu_name,
         vram_total = vram_total_mb,
         vram_safe = vram_safe_usable_mb,
         host_ram_total = host_ram_total_mb,
@@ -140,6 +226,7 @@ pub fn probe_hardware() -> HardwareDiagnostic {
     HardwareDiagnostic {
         has_dedicated_gpu,
         gpu_name,
+        cpu_name,
         vram_total_mb,
         vram_free_mb,
         vram_safe_usable_mb,
@@ -246,6 +333,7 @@ mod tests {
         let diag = HardwareDiagnostic {
             has_dedicated_gpu: true,
             gpu_name: "RTX Test".to_string(),
+            cpu_name: "Test CPU".to_string(),
             vram_total_mb: 6144,
             vram_free_mb: 5000,
             vram_safe_usable_mb: 5294,
@@ -275,9 +363,29 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_cpu_brand_string() {
+        let brand = detect_cpu_brand_string(8, 16, true, false);
+        assert!(!brand.is_empty(), "CPU brand string should not be empty");
+        assert!(!brand.contains("(R)"), "CPU brand should strip (R)");
+        assert!(!brand.contains("(TM)"), "CPU brand should strip (TM)");
+    }
+
+    #[test]
     fn test_probe_hardware() {
         let diag = probe_hardware();
+        println!(
+            "PROBED HARDWARE: cpu_name='{}', gpu_name='{}'",
+            diag.cpu_name, diag.gpu_name
+        );
         assert!(diag.host_ram_total_mb > 0);
         assert!(diag.cpu_cores_logical > 0);
+        assert!(!diag.cpu_name.is_empty(), "CPU name must be populated");
+        assert_ne!(diag.cpu_name, "None");
+        assert!(!diag.gpu_name.is_empty(), "GPU name must be populated");
+        // Verify real GPU name is preserved instead of the discarded string "NVIDIA GeForce Dedicated"
+        assert_ne!(
+            diag.gpu_name, "NVIDIA GeForce Dedicated",
+            "Must preserve real GPU name instead of discarded static placeholder"
+        );
     }
 }

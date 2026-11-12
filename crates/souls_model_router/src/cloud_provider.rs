@@ -38,6 +38,8 @@ pub enum CloudProvider {
     Gemini,
     /// OpenRouter aggregator.
     OpenRouter,
+    /// Nous Research Portal (Hermes 3, Deephermes).
+    NousPortal,
     /// Host silicon (RTX 2060m or CPU AVX2).
     LocalSilicon,
     /// Custom or self-hosted endpoint.
@@ -84,6 +86,8 @@ impl CloudProvider {
             Self::Gemini
         } else if lower.starts_with("openrouter/") {
             Self::OpenRouter
+        } else if lower.starts_with("nous/") || lower.contains("deephermes") || lower.contains("hermes-3") {
+            Self::NousPortal
         // 2. Keyword heuristic matching
         } else if lower.contains("deepseek") {
             Self::DeepSeek
@@ -139,6 +143,7 @@ impl CloudProvider {
             "anthropic" => Some(Self::Anthropic),
             "gemini" | "google" => Some(Self::Gemini),
             "openrouter" => Some(Self::OpenRouter),
+            "nous" | "nousportal" | "nous_portal" | "nousresearch" => Some(Self::NousPortal),
             "local" | "localsilicon" | "host" => Some(Self::LocalSilicon),
             _ => None,
         }
@@ -163,6 +168,7 @@ impl CloudProvider {
             Self::Anthropic => "anthropic",
             Self::Gemini => "gemini",
             Self::OpenRouter => "openrouter",
+            Self::NousPortal => "nous",
             Self::LocalSilicon => "local",
             Self::Custom(_) => "custom",
         }
@@ -187,6 +193,7 @@ impl CloudProvider {
             Self::Anthropic => "Anthropic",
             Self::Gemini => "Google Gemini",
             Self::OpenRouter => "OpenRouter",
+            Self::NousPortal => "Nous Research Portal",
             Self::LocalSilicon => "Host Local Silicon (RTX 2060m / AVX2)",
             Self::Custom(_) => "Custom Endpoint",
         }
@@ -211,6 +218,7 @@ impl CloudProvider {
             Self::Anthropic => "https://api.anthropic.com/v1",
             Self::Gemini => "https://generativelanguage.googleapis.com/v1beta",
             Self::OpenRouter => "https://openrouter.ai/api/v1",
+            Self::NousPortal => "https://inference-api.nousresearch.com/v1",
             Self::LocalSilicon => "http://127.0.0.1:9123/v1",
             Self::Custom(_) => "",
         }
@@ -235,6 +243,7 @@ impl CloudProvider {
             Self::Anthropic => "ANTHROPIC_API_KEY",
             Self::Gemini => "GEMINI_API_KEY",
             Self::OpenRouter => "OPENROUTER_API_KEY",
+            Self::NousPortal => "NOUS_API_KEY",
             Self::LocalSilicon => "",
             Self::Custom(_) => "CUSTOM_API_KEY",
         }
@@ -561,6 +570,281 @@ pub fn get_canonical_frontier_providers() -> Vec<FrontierProviderSpec> {
                 },
             ],
         },
+        // 7. Groq LPU (Ultra-Low Latency)
+        FrontierProviderSpec {
+            provider: CloudProvider::Groq,
+            name: CloudProvider::Groq.display_name().to_string(),
+            base_url: CloudProvider::Groq.default_base_url().to_string(),
+            auth_header_env: CloudProvider::Groq.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::Groq.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::Groq.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "groq/llama-3.3-70b-versatile".to_string(),
+                    display_name: "Groq Llama 3.3 70B Versatile".to_string(),
+                    context_window: 131_072,
+                    cost_input_per_m: 0.59,
+                    cost_output_per_m: 0.79,
+                    supports_cache: false,
+                    supports_tools: true,
+                    recommended_task: "fast".to_string(),
+                    score_lmarena: 1290,
+                },
+                FrontierModelSpec {
+                    model_id: "groq/llama-3.1-8b-instant".to_string(),
+                    display_name: "Groq Llama 3.1 8B Instant".to_string(),
+                    context_window: 131_072,
+                    cost_input_per_m: 0.05,
+                    cost_output_per_m: 0.08,
+                    supports_cache: false,
+                    supports_tools: true,
+                    recommended_task: "fast".to_string(),
+                    score_lmarena: 1200,
+                },
+            ],
+        },
+        // 8. Cerebras Wafer-Scale (Ultra High Throughput)
+        FrontierProviderSpec {
+            provider: CloudProvider::Cerebras,
+            name: CloudProvider::Cerebras.display_name().to_string(),
+            base_url: CloudProvider::Cerebras.default_base_url().to_string(),
+            auth_header_env: CloudProvider::Cerebras.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::Cerebras.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::Cerebras.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "cerebras/llama-3.3-70b".to_string(),
+                    display_name: "Cerebras Llama 3.3 70B".to_string(),
+                    context_window: 131_072,
+                    cost_input_per_m: 0.60,
+                    cost_output_per_m: 0.60,
+                    supports_cache: false,
+                    supports_tools: true,
+                    recommended_task: "fast".to_string(),
+                    score_lmarena: 1290,
+                },
+            ],
+        },
+        // 9. Together AI
+        FrontierProviderSpec {
+            provider: CloudProvider::Together,
+            name: CloudProvider::Together.display_name().to_string(),
+            base_url: CloudProvider::Together.default_base_url().to_string(),
+            auth_header_env: CloudProvider::Together.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::Together.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::Together.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "meta-llama/Llama-3.3-70B-Instruct-Turbo".to_string(),
+                    display_name: "Together Llama 3.3 70B Turbo".to_string(),
+                    context_window: 131_072,
+                    cost_input_per_m: 0.88,
+                    cost_output_per_m: 0.88,
+                    supports_cache: false,
+                    supports_tools: true,
+                    recommended_task: "general".to_string(),
+                    score_lmarena: 1285,
+                },
+            ],
+        },
+        // 10. Amazon Bedrock
+        FrontierProviderSpec {
+            provider: CloudProvider::Bedrock,
+            name: CloudProvider::Bedrock.display_name().to_string(),
+            base_url: CloudProvider::Bedrock.default_base_url().to_string(),
+            auth_header_env: CloudProvider::Bedrock.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::Bedrock.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::Bedrock.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0".to_string(),
+                    display_name: "Bedrock Claude 3.5 Sonnet v2".to_string(),
+                    context_window: 200_000,
+                    cost_input_per_m: 3.00,
+                    cost_output_per_m: 15.00,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "code".to_string(),
+                    score_lmarena: 1370,
+                },
+            ],
+        },
+        // 11. Microsoft Azure OpenAI
+        FrontierProviderSpec {
+            provider: CloudProvider::AzureOpenAI,
+            name: CloudProvider::AzureOpenAI.display_name().to_string(),
+            base_url: CloudProvider::AzureOpenAI.default_base_url().to_string(),
+            auth_header_env: CloudProvider::AzureOpenAI.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::AzureOpenAI.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::AzureOpenAI.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "azure/gpt-4o".to_string(),
+                    display_name: "Azure OpenAI GPT-4o".to_string(),
+                    context_window: 128_000,
+                    cost_input_per_m: 2.50,
+                    cost_output_per_m: 10.00,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "agentic".to_string(),
+                    score_lmarena: 1360,
+                },
+            ],
+        },
+        // 12. OpenAI Official
+        FrontierProviderSpec {
+            provider: CloudProvider::OpenAI,
+            name: CloudProvider::OpenAI.display_name().to_string(),
+            base_url: CloudProvider::OpenAI.default_base_url().to_string(),
+            auth_header_env: CloudProvider::OpenAI.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::OpenAI.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::OpenAI.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "openai/gpt-4o".to_string(),
+                    display_name: "OpenAI GPT-4o".to_string(),
+                    context_window: 128_000,
+                    cost_input_per_m: 2.50,
+                    cost_output_per_m: 10.00,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "agentic".to_string(),
+                    score_lmarena: 1360,
+                },
+                FrontierModelSpec {
+                    model_id: "openai/o3-mini".to_string(),
+                    display_name: "OpenAI o3-mini".to_string(),
+                    context_window: 200_000,
+                    cost_input_per_m: 1.10,
+                    cost_output_per_m: 4.40,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "reasoning".to_string(),
+                    score_lmarena: 1350,
+                },
+            ],
+        },
+        // 13. Anthropic Official
+        FrontierProviderSpec {
+            provider: CloudProvider::Anthropic,
+            name: CloudProvider::Anthropic.display_name().to_string(),
+            base_url: CloudProvider::Anthropic.default_base_url().to_string(),
+            auth_header_env: CloudProvider::Anthropic.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::Anthropic.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::Anthropic.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "anthropic/claude-3-7-sonnet".to_string(),
+                    display_name: "Claude 3.7 Sonnet".to_string(),
+                    context_window: 200_000,
+                    cost_input_per_m: 3.00,
+                    cost_output_per_m: 15.00,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "code".to_string(),
+                    score_lmarena: 1380,
+                },
+                FrontierModelSpec {
+                    model_id: "anthropic/claude-3-5-haiku".to_string(),
+                    display_name: "Claude 3.5 Haiku".to_string(),
+                    context_window: 200_000,
+                    cost_input_per_m: 0.80,
+                    cost_output_per_m: 4.00,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "fast".to_string(),
+                    score_lmarena: 1260,
+                },
+            ],
+        },
+        // 14. Google Gemini Official
+        FrontierProviderSpec {
+            provider: CloudProvider::Gemini,
+            name: CloudProvider::Gemini.display_name().to_string(),
+            base_url: CloudProvider::Gemini.default_base_url().to_string(),
+            auth_header_env: CloudProvider::Gemini.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::Gemini.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::Gemini.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "google/gemini-2.0-flash-001".to_string(),
+                    display_name: "Google Gemini 2.0 Flash".to_string(),
+                    context_window: 1_048_576,
+                    cost_input_per_m: 0.10,
+                    cost_output_per_m: 0.40,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "fast".to_string(),
+                    score_lmarena: 1300,
+                },
+                FrontierModelSpec {
+                    model_id: "google/gemini-2.5-pro".to_string(),
+                    display_name: "Google Gemini 2.5 Pro".to_string(),
+                    context_window: 2_097_152,
+                    cost_input_per_m: 1.25,
+                    cost_output_per_m: 5.00,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "reasoning".to_string(),
+                    score_lmarena: 1375,
+                },
+            ],
+        },
+        // 15. OpenRouter Aggregator
+        FrontierProviderSpec {
+            provider: CloudProvider::OpenRouter,
+            name: CloudProvider::OpenRouter.display_name().to_string(),
+            base_url: CloudProvider::OpenRouter.default_base_url().to_string(),
+            auth_header_env: CloudProvider::OpenRouter.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::OpenRouter.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::OpenRouter.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "openrouter/auto".to_string(),
+                    display_name: "OpenRouter Auto Router".to_string(),
+                    context_window: 128_000,
+                    cost_input_per_m: 1.00,
+                    cost_output_per_m: 3.00,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "general".to_string(),
+                    score_lmarena: 1300,
+                },
+            ],
+        },
+        // 16. Nous Research Portal (Hermes Agent Native)
+        FrontierProviderSpec {
+            provider: CloudProvider::NousPortal,
+            name: CloudProvider::NousPortal.display_name().to_string(),
+            base_url: CloudProvider::NousPortal.default_base_url().to_string(),
+            auth_header_env: CloudProvider::NousPortal.auth_header_env().to_string(),
+            default_cache_discount: CloudProvider::NousPortal.default_cache_discount_ratio(),
+            latency_factor: CloudProvider::NousPortal.latency_scaling_factor(),
+            models: vec![
+                FrontierModelSpec {
+                    model_id: "nous/hermes-3-llama-3.1-405b".to_string(),
+                    display_name: "Nous Hermes 3 405B".to_string(),
+                    context_window: 131_072,
+                    cost_input_per_m: 1.50,
+                    cost_output_per_m: 3.00,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "agentic".to_string(),
+                    score_lmarena: 1335,
+                },
+                FrontierModelSpec {
+                    model_id: "nous/deephermes-3-llama-3-8b-preview".to_string(),
+                    display_name: "DeepHermes 3 8B Preview".to_string(),
+                    context_window: 131_072,
+                    cost_input_per_m: 0.15,
+                    cost_output_per_m: 0.30,
+                    supports_cache: true,
+                    supports_tools: true,
+                    recommended_task: "reasoning".to_string(),
+                    score_lmarena: 1250,
+                },
+            ],
+        },
     ]
 }
 
@@ -688,7 +972,7 @@ mod tests {
     #[test]
     fn test_canonical_frontier_providers_specs() {
         let providers = get_canonical_frontier_providers();
-        assert_eq!(providers.len(), 6);
+        assert_eq!(providers.len(), 16);
 
         let dashscope = providers.iter().find(|p| p.provider == CloudProvider::AlibabaDashScope).unwrap();
         assert_eq!(dashscope.auth_header_env, "DASHSCOPE_API_KEY");

@@ -1150,7 +1150,7 @@ fn extract_anchored_paths(soul_clean: &str) -> Vec<AnchoredPathRef> {
         }
     }
 
-    // Find anchored absolute vault root if any (e.g. `C:\Users\...\Obisidian DB\`)
+    // Find anchored absolute vault root if any (e.g. `C:\Users\...\Obsidian DB\`)
     let vault_root: Option<PathBuf> = raw_candidates.iter().find_map(|p| {
         if p.contains(":\\") || p.contains(":/") {
             let pb = PathBuf::from(p);

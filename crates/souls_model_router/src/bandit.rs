@@ -326,6 +326,15 @@ impl ParetoBanditRouter {
         let total_tokens = task.total_projected_tokens();
 
         for model in active_models {
+            // Check authentication credentials for cloud models
+            if !model.is_auth_available() {
+                debug!(
+                    model_id = %model.model_id,
+                    "Model excluded: no active authentication credentials found in environment"
+                );
+                continue;
+            }
+
             // Check max context window of model
             if task.is_context_exceeded(model.max_context_window) {
                 debug!(
@@ -490,6 +499,11 @@ impl ParetoBanditRouter {
         let mut candidates: Vec<FallbackCandidate> = Vec::new();
 
         for model in active_models {
+            // Check authentication credentials for cloud models
+            if !model.is_auth_available() {
+                continue;
+            }
+
             // Context window check
             if task.is_context_exceeded(model.max_context_window) {
                 continue;

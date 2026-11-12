@@ -1223,7 +1223,11 @@
     async function archiveCurrentPersona() {
       const slug = personasHubState.activeSlug;
       if (!slug || slug === 'default') return;
-      const ok = window.confirm(
+      const ok = window.appConfirm ? await window.appConfirm(
+        `Deseja arquivar temporariamente a Persona "${slug}"?\n\n` +
+        `Todas as conversas, configurações e memórias dela ficarão guardadas em segurança e você poderá reativá-la com 1 clique na aba "Histórico & Comparar".`,
+        { title: 'Arquivar Persona', icon: '📦', confirmText: 'Arquivar com Segurança' }
+      ) : window.confirm(
         `Deseja arquivar temporariamente a Persona "${slug}"?\n\n` +
         `Todas as conversas, configurações e memórias dela ficarão guardadas em segurança e você poderá reativá-la com 1 clique na aba "Histórico & Comparar".`
       );

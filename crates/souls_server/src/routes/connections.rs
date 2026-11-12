@@ -278,7 +278,7 @@ pub async fn dispatch_cli_handler(
 }
 
 /// Masks sensitive API keys showing only the first 4 and last 4 characters.
-fn mask_api_key(key: &str) -> Option<String> {
+pub fn mask_api_key(key: &str) -> Option<String> {
     let trimmed = key.trim();
     if trimmed.is_empty() {
         return None;
@@ -289,4 +289,93 @@ fn mask_api_key(key: &str) -> Option<String> {
     let prefix = &trimmed[..4];
     let suffix = &trimmed[trimmed.len() - 4..];
     Some(format!("{}...{}", prefix, suffix))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SaveCredentialRequest {
+    pub key: String,
+    pub value: String,
+}
+
+/// Atomically saves an API key / credential into runtime env, `.souls_data/credentials.env`
+/// and `%LOCALAPPDATA%\hermes\.env` without breaking other environment variables.
+pub fn save_credential_atomic(key: &str, value: &str) -> Result<String, String> {
+    let clean_key = key.trim();
+    let clean_val = value.trim();
+
+    if clean_key.is_empty() {
+        return Err("O nome da variável de ambiente não pode ser vazio.".to_string());
+    }
+
+    // 1. Atualiza no processo atual
+    std::env::set_var(clean_key, clean_val);
+
+    // 2. Persiste em Z:\souls_engine\.souls_data\credentials.env
+    let data_dir = crate::resolve_data_dir();
+    let _ = std::fs::create_dir_all(&data_dir);
+    let souls_env_file = data_dir.join("credentials.env");
+    let _ = upsert_env_line(&souls_env_file, clean_key, clean_val);
+
+    // 3. Persiste em %LOCALAPPDATA%\hermes\.env se diretório existir
+    let local_appdata = std::env::var("LOCALAPPDATA")
+        .or_else(|_| std::env::var("USERPROFILE").map(|p| format!(r"{}\AppData\Local", p)))
+        .unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Local".to_string());
+    let hermes_dir = std::path::PathBuf::from(local_appdata).join("hermes");
+    if hermes_dir.exists() {
+        let hermes_env_file = hermes_dir.join(".env");
+        let _ = upsert_env_line(&hermes_env_file, clean_key, clean_val);
+    }
+
+    let masked = mask_api_key(clean_val).unwrap_or_else(|| "********".to_string());
+    info!(key = %clean_key, masked = %masked, "Credencial de API persistida com sucesso");
+    Ok(masked)
+}
+
+fn upsert_env_line(path: &std::path::Path, key: &str, value: &str) -> Result<(), String> {
+    let mut lines = Vec::new();
+    let mut found = false;
+    if path.exists() {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with(&format!("{key}=")) || trimmed.starts_with(&format!("export {key}=")) {
+                    lines.push(format!("{key}={value}"));
+                    found = true;
+                } else {
+                    lines.push(line.to_string());
+                }
+            }
+        }
+    }
+    if !found {
+        lines.push(format!("{key}={value}"));
+    }
+    let content = lines.join("\n") + "\n";
+    std::fs::write(path, content.as_bytes())
+        .map_err(|e| format!("Falha ao gravar arquivo de ambiente: {e}"))?;
+    Ok(())
+}
+
+/// POST /api/v1/system/credentials/save
+pub async fn save_credential_handler(
+    Json(payload): Json<SaveCredentialRequest>,
+) -> impl IntoResponse {
+    match save_credential_atomic(&payload.key, &payload.value) {
+        Ok(masked) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "status": "success",
+                "key": payload.key,
+                "masked": masked,
+                "message": format!("Chave '{}' salva e ativada com sucesso.", payload.key)
+            })),
+        ),
+        Err(e) => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "status": "error",
+                "message": e
+            })),
+        ),
+    }
 }

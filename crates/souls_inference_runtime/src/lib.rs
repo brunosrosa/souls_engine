@@ -50,7 +50,8 @@ pub use minions::{
 };
 pub use nvml::{
     compute_thermodynamic_barrier, evaluate_operational_zone, GpuTelemetrySnapshot,
-    HardwareWatchdog, OperationalZone, RTX_2060M_VRAM_TOTAL_MB,
+    HardwareSnapshot, HardwareWatchdog, OperationalZone, RTX_2060M_VRAM_TOTAL_MB,
+    simulated_rtx2060m_snapshot,
 };
 pub use onnx::{
     ClassificationLabel, ClassificationOutput, OrtClassifierEngine, OrtSessionBuilder,

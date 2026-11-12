@@ -86,25 +86,59 @@ pub struct GpuTelemetrySnapshot {
     pub barrier_phi: f32,
 }
 
+/// Canonical alias for GpuTelemetrySnapshot unifying terminology across crates.
+pub type HardwareSnapshot = GpuTelemetrySnapshot;
+
+impl GpuTelemetrySnapshot {
+    /// Captures the current hardware state via `HardwareWatchdog::new().snapshot()`.
+    #[must_use]
+    pub fn capture() -> Self {
+        HardwareWatchdog::new().snapshot()
+    }
+}
+
 impl Default for GpuTelemetrySnapshot {
     fn default() -> Self {
         Self {
-            gpu_name: "NVIDIA GeForce RTX 2060".to_string(),
+            gpu_name: "CPU Host Mode (Sem dGPU NVIDIA)".to_string(),
             cpu_name: query_host_cpu_name(),
-            gpu_temp_c: 45.0,
-            projected_temp_c: 45.0,
-            vram_allocated_mb: 850,
-            vram_free_mb: 5_294,
-            vram_total_mb: RTX_2060M_VRAM_TOTAL_MB,
+            gpu_temp_c: 0.0,
+            projected_temp_c: 0.0,
+            vram_allocated_mb: 0,
+            vram_free_mb: 0,
+            vram_total_mb: 0,
             fan_speed_pct: 0,
             cpu_fan_rpm: 0,
             gpu_fan_rpm: 0,
-            power_usage_w: 15.0,
+            power_usage_w: 0.0,
             temp_ewma_rate: 0.0,
-            vram_ewma_mb: 850.0,
+            vram_ewma_mb: 0.0,
             operational_zone: OperationalZone::Nominal,
             barrier_phi: 0.0,
         }
+    }
+}
+
+/// Returns a simulated snapshot for an NVIDIA GeForce RTX 2060m (6GB GDDR6) under nominal conditions.
+/// Exclusively intended for testing and baseline simulation.
+#[must_use]
+pub fn simulated_rtx2060m_snapshot() -> HardwareSnapshot {
+    HardwareSnapshot {
+        gpu_name: "NVIDIA GeForce RTX 2060".to_string(),
+        cpu_name: query_host_cpu_name(),
+        gpu_temp_c: 45.0,
+        projected_temp_c: 45.0,
+        vram_allocated_mb: 850,
+        vram_free_mb: 5_294,
+        vram_total_mb: RTX_2060M_VRAM_TOTAL_MB,
+        fan_speed_pct: 0,
+        cpu_fan_rpm: 0,
+        gpu_fan_rpm: 0,
+        power_usage_w: 15.0,
+        temp_ewma_rate: 0.0,
+        vram_ewma_mb: 850.0,
+        operational_zone: OperationalZone::Nominal,
+        barrier_phi: 0.0,
     }
 }
 
@@ -403,15 +437,15 @@ impl HardwareWatchdog {
                     let vram_total_mb = mem
                         .as_ref()
                         .map(|m| (m.total / (1024 * 1024)) as u32)
-                        .unwrap_or(RTX_2060M_VRAM_TOTAL_MB);
+                        .unwrap_or(0);
                     let vram_free_mb = mem
                         .as_ref()
                         .map(|m| (m.free / (1024 * 1024)) as u32)
-                        .unwrap_or(5_294);
+                        .unwrap_or(0);
                     let vram_allocated_mb = mem
                         .as_ref()
                         .map(|m| (m.used / (1024 * 1024)) as u32)
-                        .unwrap_or(850);
+                        .unwrap_or(0);
 
                     let fan = device.fan_speed(0).unwrap_or(0);
                     let (cpu_fan_rpm, gpu_fan_rpm) = query_asus_atkacpi_fans_rpm();
@@ -420,8 +454,14 @@ impl HardwareWatchdog {
                         .map(|p| p as f32 / 1000.0)
                         .unwrap_or(15.0);
 
-                    let zone = evaluate_operational_zone(temp, temp, vram_free_mb);
-                    let barrier = compute_thermodynamic_barrier(temp, vram_free_mb, "Tier 1");
+                    let (zone, barrier) = if vram_total_mb == 0 {
+                        (OperationalZone::Nominal, 0.0)
+                    } else {
+                        (
+                            evaluate_operational_zone(temp, temp, vram_free_mb),
+                            compute_thermodynamic_barrier(temp, vram_free_mb, "Tier 1"),
+                        )
+                    };
 
                     info!("NVML Hardware Watchdog initialized successfully on dGPU ({gpu_name} / {cpu_name}).");
                     (
@@ -484,8 +524,13 @@ impl HardwareWatchdog {
         let projected_temp_c = gpu_temp_c + (3.0 * self.temp_ewma_rate);
 
         let vram_free_mb = vram_total_mb.saturating_sub(vram_allocated_mb);
-        let zone = evaluate_operational_zone(gpu_temp_c, projected_temp_c, vram_free_mb);
-        let barrier = compute_thermodynamic_barrier(gpu_temp_c, vram_free_mb, "Tier 1");
+        let (zone, barrier) = if vram_total_mb == 0 {
+            (OperationalZone::Nominal, 0.0)
+        } else {
+            let z = evaluate_operational_zone(gpu_temp_c, projected_temp_c, vram_free_mb);
+            let b = compute_thermodynamic_barrier(gpu_temp_c, vram_free_mb, "Tier 1");
+            (z, b)
+        };
 
         self.last_temp_c = gpu_temp_c;
         self.last_sample_time = Instant::now();
@@ -538,7 +583,7 @@ impl HardwareWatchdog {
                     let vram_total_mb = mem
                         .as_ref()
                         .map(|m| (m.total / (1024 * 1024)) as u32)
-                        .unwrap_or(RTX_2060M_VRAM_TOTAL_MB);
+                        .unwrap_or(self.current_snapshot.vram_total_mb);
                     let vram_allocated_mb = mem
                         .as_ref()
                         .map(|m| (m.used / (1024 * 1024)) as u32)
@@ -573,7 +618,8 @@ impl HardwareWatchdog {
 
     /// Checks if Tier 1 local GPU inference is safe to run.
     pub fn is_gpu_safe(&self) -> bool {
-        self.current_snapshot.operational_zone != OperationalZone::Critical
+        self.current_snapshot.vram_total_mb > 0
+            && self.current_snapshot.operational_zone != OperationalZone::Critical
             && !self.current_snapshot.barrier_phi.is_infinite()
     }
 
@@ -679,8 +725,24 @@ mod tests {
         let mut watchdog = HardwareWatchdog::new();
         // Force fail-soft
         watchdog.nvml_available = false;
+        watchdog.current_snapshot = GpuTelemetrySnapshot::default();
 
         let snapshot = watchdog.sample_once();
+        assert_eq!(snapshot.gpu_name, "CPU Host Mode (Sem dGPU NVIDIA)");
+        assert_eq!(snapshot.vram_total_mb, 0);
+        assert_eq!(snapshot.vram_free_mb, 0);
+        assert_eq!(snapshot.vram_allocated_mb, 0);
+        assert!(!watchdog.is_gpu_safe());
+    }
+
+    #[test]
+    fn test_simulated_rtx2060m_snapshot() {
+        let snapshot = simulated_rtx2060m_snapshot();
+        assert_eq!(snapshot.gpu_name, "NVIDIA GeForce RTX 2060");
+        assert_eq!(snapshot.vram_total_mb, RTX_2060M_VRAM_TOTAL_MB);
+        assert_eq!(snapshot.vram_total_mb, 6_144);
+        assert_eq!(snapshot.vram_free_mb, 5_294);
+        assert_eq!(snapshot.vram_allocated_mb, 850);
         assert!(snapshot.vram_total_mb >= 5_000);
         assert!(snapshot.vram_free_mb > 0);
     }

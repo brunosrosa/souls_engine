@@ -20,18 +20,18 @@ pub mod registry;
 
 // Re-export canonical types and functions
 pub use catalog::{
-    delete_model_file, inspect_gguf_file, resolve_canonical_models_dir, scan_local_models,
-    LocalModelMeta, ModelFormat,
+    delete_model_file, inspect_gguf_file, parse_model_params_from_name,
+    resolve_canonical_models_dir, scan_local_models, LocalModelMeta, ModelFormat,
 };
 pub use checksum::{compute_file_sha256, verify_file_sha256, IncrementalSha256};
 pub use downloader::{DownloadItem, DownloadManager, DownloadState};
 pub use error::InventoryError;
 pub use hf_client::{extract_quant_tag, HfModelFile, HfSearchResult, HuggingFaceClient};
 pub use profiler::{
-    estimate_kv_cache_mb, estimate_throughput_tps, evaluate_model_fit, probe_hardware,
-    HardwareDiagnostic, HardwareFit,
+    detect_cpu_brand_string, estimate_kv_cache_mb, estimate_throughput_tps, evaluate_model_fit,
+    probe_hardware, HardwareDiagnostic, HardwareFit,
 };
 pub use registry::{
-    get_curated_catalog, get_recommended_triad, BenchmarkExpectation, HuggingFaceModelItem,
-    QuantizationVariant, RecommendedTriad,
+    get_curated_catalog, get_recommended_triad, get_recommended_triad_from_models,
+    BenchmarkExpectation, HuggingFaceModelItem, QuantizationVariant, RecommendedTriad,
 };

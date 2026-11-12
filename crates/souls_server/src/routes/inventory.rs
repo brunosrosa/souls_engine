@@ -19,6 +19,37 @@ use souls_llm_inventory::{
     resolve_canonical_models_dir, scan_local_models,
 };
 
+fn derive_gpu_architecture(gpu_name: &str) -> &'static str {
+    let upper = gpu_name.to_uppercase();
+    if upper.contains("SEM DGPU") || upper.contains("CPU HOST") || upper.contains("NONE (CPU") {
+        "Host CPU / iGPU"
+    } else if upper.contains("LOVELACE")
+        || upper.contains("ADA GENERATION")
+        || upper.contains("RTX 40")
+        || upper.split_whitespace().any(|w| w.trim_matches(|c: char| !c.is_alphanumeric()) == "ADA")
+    {
+        "Ada Lovelace"
+    } else if upper.contains("BLACKWELL") || upper.contains("RTX 50") || upper.contains("B200") || upper.contains("B100") {
+        "Blackwell"
+    } else if upper.contains("RTX 30") || upper.contains("AMPERE") {
+        "Ampere"
+    } else if upper.contains("RTX 20") || upper.contains("GTX 16") || upper.contains("TURING") {
+        "Turing"
+    } else if upper.contains("VOLTA") || upper.contains("TITAN V") {
+        "Volta"
+    } else if upper.contains("PASCAL") || upper.contains("GTX 10") {
+        "Pascal"
+    } else if upper.contains("RTX") || upper.contains("GTX") || upper.contains("NVIDIA") || upper.contains("CUDA") {
+        "NVIDIA CUDA"
+    } else if upper.contains("RADEON") || upper.contains("AMD") {
+        "AMD ROCm / RDNA"
+    } else if upper.contains("APPLE") || upper.contains("M1") || upper.contains("M2") || upper.contains("M3") || upper.contains("M4") {
+        "Apple Silicon"
+    } else {
+        "Host CPU / iGPU"
+    }
+}
+
 fn enrich_hardware_diagnostic(diag: souls_llm_inventory::HardwareDiagnostic) -> Value {
     let mut val = serde_json::to_value(&diag).unwrap_or_else(|_| json!({}));
     if let Some(obj) = val.as_object_mut() {
@@ -34,7 +65,7 @@ fn enrich_hardware_diagnostic(diag: souls_llm_inventory::HardwareDiagnostic) -> 
             } else if usable_mb >= 7_000.0 {
                 (16_384, "(até 32k c/ KV Q4)", format!("Baseado em {:.2} GB úteis: seguro p/ 7B (8k FP16 / 16k Q4); subagentes em fila.", usable_gb))
             } else if usable_mb >= 4_500.0 {
-                // Nossa dGPU RTX 2060m (~5.17 GB úteis sob WDDM)
+                // dGPU intermediária (~5.17 GB úteis sob WDDM)
                 (16_384, "(até 32k c/ KV Q4)", format!("Baseado em {:.2} GB úteis: seguro p/ 3B (16k-32k) e 7B c/ KV Q4 (4k-8k FP16). Sessões curtas evitam spillover PCIe.", usable_gb))
             } else {
                 (8_192, "(até 16k c/ KV Q4)", format!("Baseado em {:.2} GB úteis: recomendado 3B Q4_K_M com sessões enxutas.", usable_gb))
@@ -45,14 +76,40 @@ fn enrich_hardware_diagnostic(diag: souls_llm_inventory::HardwareDiagnostic) -> 
             (usable_gb, 4.0, 2.0, 8_192, "(AVX2 Offload)", "Execução via CPU Host AVX2. Sessões contidas para manter latência aceitável.".to_string())
         };
 
-        if diag.has_dedicated_gpu {
-            obj.insert("gpu_name".to_string(), json!("NVIDIA GeForce RTX 2060 (Turing TU106 • CC 7.5)"));
-            obj.insert("gpu_architecture".to_string(), json!("Turing TU106"));
-            obj.insert("gpu_compute_capability".to_string(), json!("7.5"));
-            obj.insert("gpu_details".to_string(), json!("1.920 CUDA Cores • 240 Tensor Cores (FP16/INT8)"));
-        }
-        obj.insert("cpu_name".to_string(), json!(format!("Intel Core i9-9980HK ({} Cores / {} Threads)", diag.cpu_cores_physical, diag.cpu_cores_logical)));
-        obj.insert("cpu_instructions_extended".to_string(), json!("AVX2 • FMA • BMI2 • SSE4.2 • AES-NI"));
+        let (gpu_arch, gpu_cc, gpu_details) = if diag.has_dedicated_gpu {
+            let arch = derive_gpu_architecture(&diag.gpu_name);
+            let (cc, details) = match arch {
+                "Blackwell" => ("10.0", "NVIDIA Blackwell GPU • 5th Gen Tensor Cores"),
+                "Ada Lovelace" => ("8.9", "NVIDIA Ada GPU • 4th Gen Tensor Cores"),
+                "Ampere" => ("8.6", "NVIDIA Ampere GPU • 3rd Gen Tensor Cores"),
+                "Turing" => ("7.5", "NVIDIA Turing GPU • 2nd Gen Tensor Cores"),
+                "Volta" => ("7.0", "NVIDIA Volta GPU • 1st Gen Tensor Cores"),
+                "Pascal" => ("6.1", "NVIDIA Pascal GPU • CUDA Cores"),
+                "NVIDIA CUDA" => ("CUDA", "NVIDIA CUDA Acceleration"),
+                "AMD ROCm / RDNA" => ("RDNA", "AMD ROCm Acceleration"),
+                "Apple Silicon" => ("Metal", "Apple Silicon Unified Memory / Metal"),
+                _ => ("Generic", "GPU Compute Acceleration"),
+            };
+            (arch, cc, details)
+        } else {
+            ("Host CPU / iGPU", "N/A", "Host Execution")
+        };
+
+        obj.insert("gpu_architecture".to_string(), json!(gpu_arch));
+        obj.insert("gpu_compute_capability".to_string(), json!(gpu_cc));
+        obj.insert("gpu_details".to_string(), json!(gpu_details));
+
+        let base_cpu = if diag.cpu_name.trim().is_empty() { "Host CPU" } else { diag.cpu_name.trim() };
+        obj.insert("cpu_name".to_string(), json!(format!("{} ({} Cores / {} Threads)", base_cpu, diag.cpu_cores_physical, diag.cpu_cores_logical)));
+
+        let cpu_instructions_extended = if diag.has_avx512 {
+            "AVX-512 • AVX2 • FMA • BMI2 • SSE4.2 • AES-NI"
+        } else if diag.has_avx2 {
+            "AVX2 • FMA • BMI2 • SSE4.2 • AES-NI"
+        } else {
+            "x86-64 • SSE4.2 • Basic Vector Extensions"
+        };
+        obj.insert("cpu_instructions_extended".to_string(), json!(cpu_instructions_extended));
         obj.insert("weights_budget_gb".to_string(), json!(weights_gb));
         obj.insert("kv_cache_budget_gb".to_string(), json!(kv_gb));
         obj.insert("context_ceiling_tokens".to_string(), json!(ceiling_tokens));
@@ -168,11 +225,12 @@ pub async fn inventory_repo_files_handler(
             let files_with_fit: Vec<Value> = files
                 .into_iter()
                 .map(|f| {
+                    let (total_params, _, _) = souls_llm_inventory::parse_model_params_from_name(&f.file_name, Some(f.size_bytes));
                     let fit = souls_llm_inventory::evaluate_model_fit(
                         &diag,
                         f.size_bytes,
                         8192,
-                        3_000_000_000,
+                        total_params,
                     );
                     json!({
                         "file_name": f.file_name,
@@ -343,4 +401,112 @@ pub async fn inventory_download_stream_handler(
     });
 
     Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(10)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use souls_llm_inventory::HardwareDiagnostic;
+
+    #[test]
+    fn test_derive_gpu_architecture_mappings() {
+        assert_eq!(derive_gpu_architecture("NVIDIA GeForce RTX 5090"), "Blackwell");
+        assert_eq!(derive_gpu_architecture("Blackwell B200"), "Blackwell");
+        assert_eq!(derive_gpu_architecture("NVIDIA GeForce RTX 4090"), "Ada Lovelace");
+        assert_eq!(derive_gpu_architecture("RTX 4080 Mobile (Ada)"), "Ada Lovelace");
+        assert_eq!(derive_gpu_architecture("NVIDIA GeForce RTX 3080 Ti"), "Ampere");
+        assert_eq!(derive_gpu_architecture("NVIDIA GeForce RTX 2060"), "Turing");
+        assert_eq!(derive_gpu_architecture("GeForce GTX 1660 Ti"), "Turing");
+        assert_eq!(derive_gpu_architecture("NVIDIA TITAN V"), "Volta");
+        assert_eq!(derive_gpu_architecture("GeForce GTX 1080"), "Pascal");
+        assert_eq!(derive_gpu_architecture("NVIDIA CUDA Device"), "NVIDIA CUDA");
+        assert_eq!(derive_gpu_architecture("AMD Radeon RX 7900 XTX"), "AMD ROCm / RDNA");
+        assert_eq!(derive_gpu_architecture("Apple M3 Max"), "Apple Silicon");
+        assert_eq!(derive_gpu_architecture("Intel UHD Graphics"), "Host CPU / iGPU");
+        assert_eq!(derive_gpu_architecture("CPU Host Mode (Sem dGPU NVIDIA)"), "Host CPU / iGPU");
+        assert_eq!(derive_gpu_architecture("Microsoft Basic Display Adapter"), "Host CPU / iGPU");
+        assert_eq!(derive_gpu_architecture("NVIDIA GeForce RTX 3080 Display Adapter"), "Ampere");
+        assert_eq!(derive_gpu_architecture("NVIDIA GeForce RTX 2060 Display Adapter"), "Turing");
+        assert_eq!(derive_gpu_architecture("AMD Radeon RX 7900 Display Adapter"), "AMD ROCm / RDNA");
+        assert_eq!(derive_gpu_architecture("NVIDIA RTX 4000 Ada Generation"), "Ada Lovelace");
+        assert_eq!(derive_gpu_architecture("AMD Radeon (Adaptive Sync)"), "AMD ROCm / RDNA");
+        assert_eq!(derive_gpu_architecture("NVIDIA RTX 5000 Ada Generation"), "Ada Lovelace");
+        assert_eq!(derive_gpu_architecture("NVIDIA RTX 500 Ada Generation Laptop GPU"), "Ada Lovelace");
+    }
+
+    #[test]
+    fn test_enrich_hardware_diagnostic_preserves_real_names() {
+        let diag = HardwareDiagnostic {
+            has_dedicated_gpu: true,
+            gpu_name: "NVIDIA GeForce RTX 4070".to_string(),
+            cpu_name: "AMD Ryzen 9 7950X".to_string(),
+            vram_total_mb: 12288,
+            vram_free_mb: 10000,
+            vram_safe_usable_mb: 9500,
+            host_ram_total_mb: 65536,
+            host_ram_available_mb: 48000,
+            host_ram_safe_usable_mb: 32000,
+            cpu_cores_physical: 16,
+            cpu_cores_logical: 32,
+            has_avx2: true,
+            has_avx512: true,
+        };
+
+        let enriched = enrich_hardware_diagnostic(diag);
+        assert_eq!(enriched["gpu_name"], "NVIDIA GeForce RTX 4070");
+        assert_eq!(enriched["gpu_architecture"], "Ada Lovelace");
+        assert_eq!(enriched["gpu_compute_capability"], "8.9");
+        assert_eq!(enriched["cpu_name"], "AMD Ryzen 9 7950X (16 Cores / 32 Threads)");
+        assert!(enriched["cpu_instructions_extended"].as_str().unwrap().contains("AVX-512"));
+    }
+
+    #[test]
+    fn test_enrich_hardware_diagnostic_cpu_only() {
+        let diag = HardwareDiagnostic {
+            has_dedicated_gpu: false,
+            gpu_name: "None (CPU Execution)".to_string(),
+            cpu_name: "Intel Core i7-12700H".to_string(),
+            vram_total_mb: 0,
+            vram_free_mb: 0,
+            vram_safe_usable_mb: 0,
+            host_ram_total_mb: 32768,
+            host_ram_available_mb: 20000,
+            host_ram_safe_usable_mb: 16000,
+            cpu_cores_physical: 14,
+            cpu_cores_logical: 20,
+            has_avx2: true,
+            has_avx512: false,
+        };
+
+        let enriched = enrich_hardware_diagnostic(diag);
+        assert_eq!(enriched["gpu_name"], "None (CPU Execution)");
+        assert_eq!(enriched["gpu_architecture"], "Host CPU / iGPU");
+        assert_eq!(enriched["gpu_compute_capability"], "N/A");
+        assert_eq!(enriched["cpu_name"], "Intel Core i7-12700H (14 Cores / 20 Threads)");
+        assert!(enriched["cpu_instructions_extended"].as_str().unwrap().contains("AVX2"));
+        assert!(!enriched["cpu_instructions_extended"].as_str().unwrap().contains("AVX-512"));
+    }
+
+    #[test]
+    fn test_repo_files_fit_uses_dynamic_params() {
+        let diag = probe_hardware();
+
+        // 0.5B model file (~400 MB)
+        let (params_0_5b, _, _) = souls_llm_inventory::parse_model_params_from_name(
+            "qwen2-5-coder-0-5b-instruct-q4_k_m.gguf",
+            Some(400_000_000),
+        );
+        assert_eq!(params_0_5b, 500_000_000);
+        let fit_0_5b = souls_llm_inventory::evaluate_model_fit(&diag, 400_000_000, 8192, params_0_5b);
+        assert!(matches!(fit_0_5b, souls_llm_inventory::HardwareFit::OptimalVram));
+
+        // 70B model file (~40 GB)
+        let (params_70b, _, _) = souls_llm_inventory::parse_model_params_from_name(
+            "Llama-3.3-70B-Instruct-Q4_K_M.gguf",
+            Some(40_000_000_000),
+        );
+        assert_eq!(params_70b, 70_000_000_000);
+        let fit_70b = souls_llm_inventory::evaluate_model_fit(&diag, 40_000_000_000, 8192, params_70b);
+        assert!(!matches!(fit_70b, souls_llm_inventory::HardwareFit::OptimalVram));
+    }
 }

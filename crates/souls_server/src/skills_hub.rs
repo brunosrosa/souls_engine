@@ -2189,6 +2189,9 @@ pub fn sync_skill_to_targets(
     let snap = record_skill_snapshot(roots, &clean_slug, &clean_content, reason)?;
     let sha256 = compute_normalized_lf_sha256(&clean_content);
 
+    // Auto-discard from quarantine if present upon successful synchronization
+    let _ = discard_quarantine_item(roots, &clean_slug);
+
     info!(
         slug = %clean_slug,
         targets = ?targets,
@@ -3290,6 +3293,39 @@ pub fn list_quarantine_items(roots: &SkillsHubRoots) -> Vec<QuarantineItem> {
     items
 }
 
+/// Discards a specific quarantined skill package by slug, safely removing its folder and metadata.
+pub fn discard_quarantine_item(roots: &SkillsHubRoots, slug: &str) -> Result<bool, String> {
+    let clean_slug = normalize_skill_slug(slug);
+    let target_dir = roots.quarantine_dir().join(&clean_slug);
+    if target_dir.exists() {
+        fs::remove_dir_all(&target_dir)
+            .map_err(|e| format!("Falha ao descartar pacote de quarentena '{clean_slug}': {e}"))?;
+        info!(slug = %clean_slug, "Item de quarentena descartado com sucesso");
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+/// Clears all packages currently retained in `.souls_data/skills_hub/quarantine/`.
+pub fn clear_all_quarantine_items(roots: &SkillsHubRoots) -> Result<usize, String> {
+    let q_dir = roots.quarantine_dir();
+    if !q_dir.exists() {
+        return Ok(0);
+    }
+    let mut count = 0;
+    let rd = fs::read_dir(&q_dir).map_err(|e| format!("Falha ao listar diretório de quarentena: {e}"))?;
+    for entry in rd.flatten() {
+        if entry.path().is_dir() {
+            if fs::remove_dir_all(entry.path()).is_ok() {
+                count += 1;
+            }
+        }
+    }
+    info!(cleared_count = count, "Fila de quarentena limpa na totalidade");
+    Ok(count)
+}
+
 // ============================================================================
 // TRI-ENGINE AGENTIC SKILLS FORGE & AUTO-HEALER
 // ============================================================================
@@ -4369,5 +4405,35 @@ Minimal body.\n";
         );
         assert_eq!(ver_total, 1);
         assert_eq!(ver_items[0].name, "mcp-builder");
+    }
+
+    #[test]
+    fn test_quarantine_discard_and_clear_lifecycle() {
+        let env = TempHubEnv::new("quarantine_discard");
+        let roots = &env.roots;
+        let q_dir = roots.quarantine_dir();
+        std::fs::create_dir_all(&q_dir).unwrap();
+
+        // 1. Cria 2 itens na quarentena
+        let item1_dir = q_dir.join("test-item-1");
+        std::fs::create_dir_all(&item1_dir).unwrap();
+        std::fs::write(item1_dir.join("SKILL.md"), "test 1").unwrap();
+        std::fs::write(item1_dir.join("quarantine_meta.json"), "{}").unwrap();
+
+        let item2_dir = q_dir.join("test-item-2");
+        std::fs::create_dir_all(&item2_dir).unwrap();
+        std::fs::write(item2_dir.join("SKILL.md"), "test 2").unwrap();
+        std::fs::write(item2_dir.join("quarantine_meta.json"), "{}").unwrap();
+
+        // 2. Descarta o item 1
+        let discarded = discard_quarantine_item(roots, "test-item-1").unwrap();
+        assert!(discarded);
+        assert!(!item1_dir.exists());
+        assert!(item2_dir.exists());
+
+        // 3. Limpa toda a quarentena
+        let cleared = clear_all_quarantine_items(roots).unwrap();
+        assert_eq!(cleared, 1);
+        assert!(!item2_dir.exists());
     }
 }

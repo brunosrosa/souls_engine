@@ -37,17 +37,17 @@ pub struct ModelsListResponse {
     pub data: Vec<ModelItem>,
 }
 
-/// Seeds canonical local models if none are active in SQLite.
+/// Seeds canonical local and frontier cloud models into SQLite model_registry.
 pub async fn ensure_canonical_models_seeded(
     pool: &sqlx::Pool<sqlx::Sqlite>,
 ) -> Result<(), souls_model_router::error::RouterError> {
     ensure_router_tables(pool).await?;
     let active = fetch_active_models(pool).await?;
-    if active.len() >= 10 {
+    if active.len() >= 25 {
         return Ok(());
     }
 
-    info!("Cold-start or sparse registry detected in model_registry: seeding canonical local model arms.");
+    info!("Cold-start or sparse registry detected in model_registry: seeding canonical local and cloud frontier arms.");
 
     // 1. Seed base generic arms
     let _ = upsert_model(
@@ -130,6 +130,16 @@ pub async fn ensure_canonical_models_seeded(
             },
         )
         .await;
+    }
+
+    // 3. Seed canonical frontier cloud models
+    let frontier_providers = souls_model_router::cloud_provider::get_canonical_frontier_providers();
+    for prov in frontier_providers {
+        for m_spec in prov.models {
+            let mut record = m_spec.to_model_record(&prov.provider);
+            record.is_active = record.is_auth_available();
+            let _ = upsert_model(pool, &record).await;
+        }
     }
 
     Ok(())

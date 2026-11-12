@@ -414,6 +414,16 @@ pub struct ReadinessCheckItem {
     pub category: String,
     pub status: String, // "ok", "warn", "error"
     pub details: String,
+    #[serde(default)]
+    pub is_required: bool,
+    #[serde(default)]
+    pub is_free: bool,
+    #[serde(default)]
+    pub pricing_tag: String,
+    #[serde(default)]
+    pub dashboard_url: Option<String>,
+    #[serde(default)]
+    pub env_var: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1850,6 +1860,11 @@ pub fn run_research_doctor(roots: &ResearchRoots) -> ResearchDoctorReport {
         category: "Ambiente".to_string(),
         status: if hh_exists { "ok" } else { "warn" }.to_string(),
         details: format!("Caminho: {}", roots.hermes_home.display()),
+        is_required: true,
+        is_free: true,
+        pricing_tag: "Sistema".to_string(),
+        dashboard_url: None,
+        env_var: None,
     });
     if hh_exists {
         ok_count += 1;
@@ -1868,6 +1883,11 @@ pub fn run_research_doctor(roots: &ResearchRoots) -> ResearchDoctorReport {
         } else {
             "Não encontrado (será provisionado)".to_string()
         },
+        is_required: true,
+        is_free: true,
+        pricing_tag: "Configuração".to_string(),
+        dashboard_url: None,
+        env_var: None,
     });
     if has_config {
         ok_count += 1;
@@ -1892,6 +1912,11 @@ pub fn run_research_doctor(roots: &ResearchRoots) -> ResearchDoctorReport {
         } else {
             "Rotas ausentes ou parciais em delegation.backends.profile_routes".to_string()
         },
+        is_required: true,
+        is_free: true,
+        pricing_tag: "Subagentes".to_string(),
+        dashboard_url: None,
+        env_var: None,
     });
     if has_fast_scout && has_verifier {
         ok_count += 1;
@@ -1911,6 +1936,11 @@ pub fn run_research_doctor(roots: &ResearchRoots) -> ResearchDoctorReport {
         } else {
             "Perfis ainda não provisionados no Hermes".to_string()
         },
+        is_required: true,
+        is_free: true,
+        pricing_tag: "Subagentes".to_string(),
+        dashboard_url: None,
+        env_var: None,
     });
     if profiles_ok {
         ok_count += 1;
@@ -1929,35 +1959,86 @@ pub fn run_research_doctor(roots: &ResearchRoots) -> ResearchDoctorReport {
         } else {
             "Pendente de provisionamento em 1 clique".to_string()
         },
+        is_required: true,
+        is_free: true,
+        pricing_tag: "Skill".to_string(),
+        dashboard_url: None,
+        env_var: None,
     });
     if has_skill {
         ok_count += 1;
     }
 
-    // 6. Search Providers Env Vars
+    // 6. Search Providers (Native DuckDuckGo Lite + External Frontier Search)
     let mut active_providers = Vec::new();
+
+    // 6.0 Nativo Souls Engine (Tier 0 - 100% Grátis e Local)
+    checks.push(ReadinessCheckItem {
+        id: "duckduckgo_lite".to_string(),
+        label: "DuckDuckGo Lite (Nativo Souls)".to_string(),
+        category: "Buscadores".to_string(),
+        status: "ok".to_string(),
+        details: "Ativo nativamente no Souls Engine sem exigir nenhuma chave de API".to_string(),
+        is_required: false,
+        is_free: true,
+        pricing_tag: "100% Grátis & Nativo".to_string(),
+        dashboard_url: None,
+        env_var: None,
+    });
+    active_providers.push("DuckDuckGo Lite (Nativo)".to_string());
+    ok_count += 1;
+
     let providers = [
-        ("Tavily Search API", "TAVILY_API_KEY"),
-        ("Exa AI Search API", "EXA_API_KEY"),
-        ("Brave Search API", "BRAVE_API_KEY"),
-        ("Linkup Deep API", "LINKUP_API_KEY"),
+        (
+            "Tavily AI Search",
+            "TAVILY_API_KEY",
+            true,
+            "Tier Grátis (1.000 req/mês)",
+            "https://app.tavily.com/sign-in",
+        ),
+        (
+            "Exa Neural Search",
+            "EXA_API_KEY",
+            true,
+            "Tier Grátis ($10 créditos)",
+            "https://dashboard.exa.ai",
+        ),
+        (
+            "Brave Search API",
+            "BRAVE_API_KEY",
+            true,
+            "Tier Grátis (2.000 req/mês)",
+            "https://brave.com/search/api/",
+        ),
+        (
+            "Linkup Deep Web",
+            "LINKUP_API_KEY",
+            false,
+            "Pré-pago / Opcional",
+            "https://linkup.so",
+        ),
     ];
 
-    for (label, var_name) in providers {
+    for (label, var_name, is_free, pricing_tag, dash_url) in providers {
         let is_set = std::env::var(var_name).is_ok();
         if is_set {
             active_providers.push(label.to_string());
         }
         checks.push(ReadinessCheckItem {
             id: var_name.to_lowercase(),
-            label: format!("Chave {}", label),
+            label: label.to_string(),
             category: "Buscadores".to_string(),
             status: if is_set { "ok" } else { "warn" }.to_string(),
             details: if is_set {
-                format!("Definida no ambiente (${{{}}})", var_name)
+                format!("Configurada no ambiente (${var_name})")
             } else {
-                format!("Não encontrada no ambiente (${{{}}})", var_name)
+                format!("Opcional • Não configurada (${var_name})")
             },
+            is_required: false,
+            is_free,
+            pricing_tag: pricing_tag.to_string(),
+            dashboard_url: Some(dash_url.to_string()),
+            env_var: Some(var_name.to_string()),
         });
         if is_set {
             ok_count += 1;
@@ -1972,6 +2053,11 @@ pub fn run_research_doctor(roots: &ResearchRoots) -> ResearchDoctorReport {
         category: "Storage".to_string(),
         status: if data_ok { "ok" } else { "error" }.to_string(),
         details: format!("Raiz: {}", roots.research_dir.display()),
+        is_required: true,
+        is_free: true,
+        pricing_tag: "Storage".to_string(),
+        dashboard_url: None,
+        env_var: None,
     });
     if data_ok {
         ok_count += 1;

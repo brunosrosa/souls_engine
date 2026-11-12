@@ -10,6 +10,10 @@ use tracing::info;
 
 use crate::state::AppState;
 use souls_llm_cloud_arena::TaskProfileKind;
+use souls_llm_inventory::{
+    get_recommended_triad_from_models, probe_hardware, resolve_canonical_models_dir,
+    scan_local_models,
+};
 
 /// Canonical Master Brain / Worker Profile representation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,6 +49,29 @@ pub struct ProfileTriadSummary {
     pub quality_leader: Option<TriadModelItem>,
     pub best_value: Option<TriadModelItem>,
     pub ultra_low_cost: Option<TriadModelItem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub leader: Option<TriadModelItem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub best: Option<TriadModelItem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub low: Option<TriadModelItem>,
+}
+
+impl ProfileTriadSummary {
+    pub fn from_items(
+        quality_leader: Option<TriadModelItem>,
+        best_value: Option<TriadModelItem>,
+        ultra_low_cost: Option<TriadModelItem>,
+    ) -> Self {
+        Self {
+            leader: quality_leader.clone(),
+            best: best_value.clone(),
+            low: ultra_low_cost.clone(),
+            quality_leader,
+            best_value,
+            ultra_low_cost,
+        }
+    }
 }
 
 /// Detalhes de um modelo integrante da Tríade.
@@ -79,7 +106,11 @@ pub fn resolve_hermes_config_path() -> PathBuf {
         return PathBuf::from(override_path);
     }
     let local_appdata = std::env::var("LOCALAPPDATA")
-        .unwrap_or_else(|_| "C:\\Users\\rosas\\AppData\\Local".to_string());
+        .or_else(|_| std::env::var("USERPROFILE").map(|p| format!(r"{}\AppData\Local", p)))
+        .unwrap_or_else(|_| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "C:\\Users\\Default".to_string());
+            format!(r"{}\AppData\Local", home)
+        });
     PathBuf::from(local_appdata)
         .join("hermes")
         .join("config.yaml")
@@ -139,34 +170,74 @@ pub fn resolve_triad_for_category(
 
     // Se for local bare-metal
     if cat_lower == "local" || cat_lower == "local_sovereign" {
-        return ProfileTriadSummary {
-            quality_leader: Some(TriadModelItem {
-                canonical_id: "qwen2.5-coder-7b-instruct-q4_k_m.gguf".to_string(),
-                provider: "local_silicon".to_string(),
-                composite_score: 85.0,
-                blended_cost: 0.0,
-                roi_index: 9999.0,
-                desc: "100% no silício da NVIDIA RTX 2060m. Custo $0.00 e zero tráfego externo."
-                    .to_string(),
-            }),
-            best_value: Some(TriadModelItem {
-                canonical_id: "deepseek-r1-distill-qwen-7b-q4_k_m.gguf".to_string(),
-                provider: "local_silicon".to_string(),
-                composite_score: 86.2,
-                blended_cost: 0.0,
-                roi_index: 9999.0,
-                desc: "Pensamento analítico local na GPU física sem sair da partição Dev Drive."
-                    .to_string(),
-            }),
-            ultra_low_cost: Some(TriadModelItem {
-                canonical_id: "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf".to_string(),
-                provider: "local_silicon".to_string(),
-                composite_score: 74.0,
-                blended_cost: 0.0,
-                roi_index: 9999.0,
-                desc: "Ultra-leve para execução instantânea na CPU AVX2 ou GPU.".to_string(),
-            }),
+        let diag = probe_hardware();
+        let root = resolve_canonical_models_dir();
+        let installed_models = scan_local_models(&root, &diag).unwrap_or_default();
+        let triad = get_recommended_triad_from_models(&diag, &installed_models);
+
+        let hw_target = if diag.has_dedicated_gpu && !diag.gpu_name.is_empty() {
+            format!("dGPU {}", diag.gpu_name)
+        } else if diag.has_avx2 {
+            "CPU Host (AVX2)".to_string()
+        } else {
+            "CPU Host".to_string()
         };
+
+        let map_item = |item: &souls_llm_inventory::HuggingFaceModelItem, default_score: f64, role_desc: &str| -> TriadModelItem {
+            let canonical_id = item.local_file_path.clone().unwrap_or_else(|| {
+                item.variants
+                    .first()
+                    .map(|v| v.file_name.clone())
+                    .unwrap_or_else(|| item.model_name.clone())
+            });
+
+            let score = item
+                .benchmark_scores
+                .coding_score
+                .or(item.benchmark_scores.mmlu_score)
+                .or(item.benchmark_scores.ifeval_score)
+                .map(|s| s as f64)
+                .unwrap_or(default_score);
+
+            let status_prefix = if item.is_installed {
+                "Instalado localmente no silício"
+            } else {
+                "Recomendado para o silício"
+            };
+
+            let desc = format!("{} ({}). {}. Custo $0.00.", status_prefix, hw_target, role_desc);
+
+            TriadModelItem {
+                canonical_id,
+                provider: "local_silicon".to_string(),
+                composite_score: score,
+                blended_cost: 0.0,
+                roi_index: 9999.0,
+                desc,
+            }
+        };
+
+        let ql = map_item(
+            &triad.tier1_coder,
+            88.0,
+            "Líder de qualidade para tarefas complexas e código",
+        );
+        let bv = map_item(
+            &triad.tier05_socratico,
+            86.2,
+            "Pensamento deliberativo e raciocínio analítico",
+        );
+        let ulc = map_item(
+            &triad.tier0_velocista,
+            75.0,
+            "Ultra-leve para triagem e ferramentas ágeis",
+        );
+
+        return ProfileTriadSummary::from_items(
+            Some(ql),
+            Some(bv),
+            Some(ulc),
+        );
     }
 
     let kind = match cat_lower.as_str() {
@@ -178,38 +249,37 @@ pub fn resolve_triad_for_category(
     };
 
     if let Some(rep) = reports.iter().find(|r| r.profile == kind) {
-        return ProfileTriadSummary {
-            quality_leader: rep.quality_leader.as_ref().map(|c| TriadModelItem {
-                canonical_id: c.canonical_id.clone(),
-                provider: c.provider.clone(),
-                composite_score: c.composite_score,
-                blended_cost: c.blended_cost,
-                roi_index: c.roi_index,
-                desc: "Líder de qualidade no ranking da Cloud Arena.".to_string(),
-            }),
-            best_value: rep.best_value.as_ref().map(|c| TriadModelItem {
-                canonical_id: c.canonical_id.clone(),
-                provider: c.provider.clone(),
-                composite_score: c.composite_score,
-                blended_cost: c.blended_cost,
-                roi_index: c.roi_index,
-                desc: "Ponto ótimo da curva de Pareto com máximo ROI.".to_string(),
-            }),
-            ultra_low_cost: rep.ultra_low_cost.as_ref().map(|c| TriadModelItem {
-                canonical_id: c.canonical_id.clone(),
-                provider: c.provider.clone(),
-                composite_score: c.composite_score,
-                blended_cost: c.blended_cost,
-                roi_index: c.roi_index,
-                desc: "Tarifa ultrabaixa e resposta rápida.".to_string(),
-            }),
-        };
+        let ql = rep.quality_leader.as_ref().map(|c| TriadModelItem {
+            canonical_id: c.canonical_id.clone(),
+            provider: c.provider.clone(),
+            composite_score: c.composite_score,
+            blended_cost: c.blended_cost,
+            roi_index: c.roi_index,
+            desc: "Líder de qualidade no ranking da Cloud Arena.".to_string(),
+        });
+        let bv = rep.best_value.as_ref().map(|c| TriadModelItem {
+            canonical_id: c.canonical_id.clone(),
+            provider: c.provider.clone(),
+            composite_score: c.composite_score,
+            blended_cost: c.blended_cost,
+            roi_index: c.roi_index,
+            desc: "Ponto ótimo da curva de Pareto com máximo ROI.".to_string(),
+        });
+        let ulc = rep.ultra_low_cost.as_ref().map(|c| TriadModelItem {
+            canonical_id: c.canonical_id.clone(),
+            provider: c.provider.clone(),
+            composite_score: c.composite_score,
+            blended_cost: c.blended_cost,
+            roi_index: c.roi_index,
+            desc: "Tarifa ultrabaixa e resposta rápida.".to_string(),
+        });
+        return ProfileTriadSummary::from_items(ql, bv, ulc);
     }
 
     // Fallbacks empíricos calibrados caso a Cloud Arena ainda esteja inicializando
     match kind {
-        TaskProfileKind::Coding => ProfileTriadSummary {
-            quality_leader: Some(TriadModelItem {
+        TaskProfileKind::Coding => ProfileTriadSummary::from_items(
+            Some(TriadModelItem {
                 canonical_id: "anthropic/claude-3-7-sonnet".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 96.0,
@@ -217,7 +287,7 @@ pub fn resolve_triad_for_category(
                 roi_index: 32.0,
                 desc: "Líder de SWE-bench Verified e refatoração arquitetural.".to_string(),
             }),
-            best_value: Some(TriadModelItem {
+            Some(TriadModelItem {
                 canonical_id: "qwen/qwen-2.5-coder-32b-instruct".to_string(),
                 provider: "openrouter".to_string(),
                 composite_score: 90.8,
@@ -226,7 +296,7 @@ pub fn resolve_triad_for_category(
                 desc: "Vanguarda em Rust, Python e testes com excelente custo-benefício."
                     .to_string(),
             }),
-            ultra_low_cost: Some(TriadModelItem {
+            Some(TriadModelItem {
                 canonical_id: "deepseek/deepseek-chat".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 89.5,
@@ -234,9 +304,9 @@ pub fn resolve_triad_for_category(
                 roi_index: 639.3,
                 desc: "Desempenho sólido em engenharia por apenas $0.14 por milhão.".to_string(),
             }),
-        },
-        TaskProfileKind::Reasoning => ProfileTriadSummary {
-            quality_leader: Some(TriadModelItem {
+        ),
+        TaskProfileKind::Reasoning => ProfileTriadSummary::from_items(
+            Some(TriadModelItem {
                 canonical_id: "openai/o3-mini-high".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 97.4,
@@ -245,7 +315,7 @@ pub fn resolve_triad_for_category(
                 desc: "Máximo raciocínio formal, provas matemáticas e auditoria de segurança."
                     .to_string(),
             }),
-            best_value: Some(TriadModelItem {
+            Some(TriadModelItem {
                 canonical_id: "deepseek/deepseek-r1".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 95.8,
@@ -254,7 +324,7 @@ pub fn resolve_triad_for_category(
                 desc: "Raciocínio aberto de fronteira por uma fração do preço comercial."
                     .to_string(),
             }),
-            ultra_low_cost: Some(TriadModelItem {
+            Some(TriadModelItem {
                 canonical_id: "qwen/qwq-32b-preview".to_string(),
                 provider: "openrouter".to_string(),
                 composite_score: 92.1,
@@ -262,9 +332,9 @@ pub fn resolve_triad_for_category(
                 roi_index: 511.7,
                 desc: "Cadeia de pensamento analítica acessível e de baixo consumo.".to_string(),
             }),
-        },
-        TaskProfileKind::Fast => ProfileTriadSummary {
-            quality_leader: Some(TriadModelItem {
+        ),
+        TaskProfileKind::Fast => ProfileTriadSummary::from_items(
+            Some(TriadModelItem {
                 canonical_id: "anthropic/claude-3-5-haiku".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 86.5,
@@ -272,7 +342,7 @@ pub fn resolve_triad_for_category(
                 roi_index: 108.1,
                 desc: "Alta precisão em comandos rápidos com baixíssima latência.".to_string(),
             }),
-            best_value: Some(TriadModelItem {
+            Some(TriadModelItem {
                 canonical_id: "google/gemini-2.0-flash".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 88.0,
@@ -281,7 +351,7 @@ pub fn resolve_triad_for_category(
                 desc: "Velocidade impressionante de geração e suporte a contexto longo."
                     .to_string(),
             }),
-            ultra_low_cost: Some(TriadModelItem {
+            Some(TriadModelItem {
                 canonical_id: "meta-llama/llama-3.2-3b-instruct".to_string(),
                 provider: "openrouter".to_string(),
                 composite_score: 78.0,
@@ -289,9 +359,9 @@ pub fn resolve_triad_for_category(
                 roi_index: 1300.0,
                 desc: "Triagem imediata e comandos pontuais por centavos de dólar.".to_string(),
             }),
-        },
-        _ => ProfileTriadSummary {
-            quality_leader: Some(TriadModelItem {
+        ),
+        _ => ProfileTriadSummary::from_items(
+            Some(TriadModelItem {
                 canonical_id: "anthropic/claude-3-7-sonnet".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 94.2,
@@ -299,7 +369,7 @@ pub fn resolve_triad_for_category(
                 roi_index: 31.4,
                 desc: "Líder técnico absoluto em compreensão geral e orquestração.".to_string(),
             }),
-            best_value: Some(TriadModelItem {
+            Some(TriadModelItem {
                 canonical_id: "deepseek/deepseek-chat".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 91.5,
@@ -307,7 +377,7 @@ pub fn resolve_triad_for_category(
                 roi_index: 653.6,
                 desc: "97% do desempenho do Claude por 1/20 do valor ($0.14/1M).".to_string(),
             }),
-            ultra_low_cost: Some(TriadModelItem {
+            Some(TriadModelItem {
                 canonical_id: "google/gemini-2.0-flash".to_string(),
                 provider: "nous".to_string(),
                 composite_score: 88.0,
@@ -315,7 +385,7 @@ pub fn resolve_triad_for_category(
                 roi_index: 880.0,
                 desc: "Ultra-rápido com latência sub-segundo e custo irrisório.".to_string(),
             }),
-        },
+        ),
     }
 }
 
@@ -590,7 +660,7 @@ pub async fn get_available_profiles(state: &AppState) -> Vec<MasterBrainProfile>
         configured_profiles.push(MasterBrainProfile {
             id: "local_sovereign".to_string(),
             name: "Local Sovereign 💻".to_string(),
-            description: "100% no silício físico da GPU RTX 2060m e CPU AVX2. Soberania absoluta e custo zero ($0.00).".to_string(),
+            description: "100% no silício físico local (GPU/CPU AVX2). Soberania absoluta e custo zero ($0.00).".to_string(),
             role: "subagent".to_string(),
             arena_category: "local".to_string(),
             target_model: "qwen3.5-coder-3b-instruct".to_string(),
@@ -967,15 +1037,25 @@ terminal:
         assert!(triad_coding.best_value.is_some());
         assert!(triad_coding.ultra_low_cost.is_some());
         assert_eq!(
-            triad_coding.quality_leader.unwrap().canonical_id,
+            triad_coding.quality_leader.as_ref().unwrap().canonical_id,
             "anthropic/claude-3-7-sonnet"
         );
+        assert_eq!(triad_coding.leader, triad_coding.quality_leader);
+        assert_eq!(triad_coding.best, triad_coding.best_value);
+        assert_eq!(triad_coding.low, triad_coding.ultra_low_cost);
 
         let triad_local = resolve_triad_for_category("local", &[]);
         assert_eq!(
-            triad_local.quality_leader.unwrap().provider,
+            triad_local.quality_leader.as_ref().unwrap().provider,
             "local_silicon"
         );
-        assert_eq!(triad_local.best_value.unwrap().blended_cost, 0.0);
+        assert_eq!(triad_local.best_value.as_ref().unwrap().blended_cost, 0.0);
+        assert_eq!(triad_local.leader, triad_local.quality_leader);
+        assert_eq!(triad_local.best, triad_local.best_value);
+        assert_eq!(triad_local.low, triad_local.ultra_low_cost);
+
+        // Verify dynamic hardware string: must not contain static RTX 2060m
+        let desc = &triad_local.quality_leader.as_ref().unwrap().desc;
+        assert!(!desc.contains("RTX 2060m"), "Hardware string should be dynamic, but was: {}", desc);
     }
 }

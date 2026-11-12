@@ -964,7 +964,11 @@
     }
 
     async function confirmAndDeleteSkill(slug) {
-      const ok = window.confirm(
+      const ok = window.appConfirm ? await window.appConfirm(
+        `Deseja realmente excluir a habilidade "${slug}" dos seus ambientes?\n\n` +
+        `Fique tranquilo: uma cópia automática de segurança será guardada no Histórico caso precise recuperá-la depois.`,
+        { title: 'Excluir Habilidade', icon: '🗑️', confirmText: 'Excluir com Backup', danger: true }
+      ) : window.confirm(
         `Deseja realmente excluir a habilidade "${slug}" dos seus ambientes?\n\n` +
         `Fique tranquilo: uma cópia automática de segurança será guardada no Histórico caso precise recuperá-la depois.`
       );
@@ -1322,7 +1326,12 @@
         pillsBox.innerHTML = items.map(i => {
           const active = i.slug === item.slug ? 'active' : '';
           const vIcon = i.scan_report?.verdict === 'dangerous' ? '🛑' : (i.scan_report?.verdict === 'caution' ? '⚠️' : '✓');
-          return `<button class="subtab-btn ${active}" style="padding:5px 11px; font-size:0.75rem;" onclick="selectQuarantineItem('${escapeSkillsHtml(i.slug)}')">${vIcon} ${escapeSkillsHtml(i.slug)}</button>`;
+          return `
+            <div class="subtab-btn ${active}" style="padding:4px 9px; font-size:0.75rem; display:inline-flex; align-items:center; gap:6px;">
+              <span style="cursor:pointer;" onclick="selectQuarantineItem('${escapeSkillsHtml(i.slug)}')">${vIcon} ${escapeSkillsHtml(i.slug)}</span>
+              <span style="opacity:0.6; cursor:pointer; font-weight:700; padding: 0 3px;" onclick="event.stopPropagation(); discardQuarantineSkill('${escapeSkillsHtml(i.slug)}')" title="Descartar da quarentena">✕</span>
+            </div>
+          `;
         }).join('');
       }
 
@@ -1415,10 +1424,62 @@
         }
         showSkillsToast(`"${item.slug}" instalada com sucesso em ${targets.length} ambiente(s)!`, 'success');
         await fetchInstalledSkills(false);
+        await fetchQuarantineList();
         runMarketplaceSearch(skillsHubState.marketplaceOffset);
       } catch (err) {
         console.error('Erro em approveAndInstallQuarantineItem:', err);
         showSkillsToast('Erro ao concluir instalação.', 'error');
+      }
+    }
+
+    async function discardQuarantineSkill(slug) {
+      if (!slug) return;
+      try {
+        const res = await fetch('/api/v1/skills/quarantine/discard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          showSkillsToast(`Habilidade "${slug}" descartada da fila com sucesso.`, 'info');
+          await fetchQuarantineList();
+          await fetchInstalledSkills(false);
+        } else {
+          showSkillsToast(data.message || 'Falha ao descartar habilidade.', 'error');
+        }
+      } catch (err) {
+        console.error('Erro em discardQuarantineSkill:', err);
+        showSkillsToast('Erro de conexão ao descartar da fila.', 'error');
+      }
+    }
+
+    async function discardActiveQuarantineSkill() {
+      const slug = skillsHubState.activeQuarantineSlug;
+      if (!slug) {
+        showSkillsToast('Nenhuma habilidade selecionada na fila.', 'warning');
+        return;
+      }
+      await discardQuarantineSkill(slug);
+    }
+
+    async function clearAllQuarantineSkills() {
+      try {
+        const res = await fetch('/api/v1/skills/quarantine/clear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          showSkillsToast(`Fila de quarentena limpa (${data.cleared_count || 0} item(ns) removido(s)).`, 'info');
+          await fetchQuarantineList();
+          await fetchInstalledSkills(false);
+        } else {
+          showSkillsToast(data.message || 'Falha ao limpar fila de quarentena.', 'error');
+        }
+      } catch (err) {
+        console.error('Erro em clearAllQuarantineSkills:', err);
+        showSkillsToast('Erro de conexão ao limpar fila.', 'error');
       }
     }
 

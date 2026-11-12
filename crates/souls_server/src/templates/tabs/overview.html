@@ -39,43 +39,70 @@
         </div>
       </div>
 
-      <!-- CARD CENTRAL: INTEGRADOR DE DECISÃO PREDITIVA PARETO -->
+      <!-- PAINEL CENTRAL: EVOLUÇÃO PESSOAL & PULSO DO ECOSSISTEMA -->
       <div class="card card-highlight" style="margin-bottom: 24px;">
-        <div class="card-header">
+        <div class="card-header" style="margin-bottom: 12px;">
           <div class="card-title">
-            <div class="card-icon icon-cyan">🎯</div>
-            Integrador de Decisões Preditivas (Pareto Selection Matrix)
+            <div class="card-icon icon-cyan">🌱</div>
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #fff;">Evolução Pessoal & Pulso do Ecossistema</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
+                Seu cofre cognitivo aprende e amadurece a cada interação, economizando tokens e blindando seus dados soberanos.
+              </div>
+            </div>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
-            <span class="badge badge-champion" id="matrix-arena-summary-badge">14 Homologados • 50 Provas</span>
-            <span class="badge badge-value">RTX 2060m First</span>
-            <button class="btn" style="padding: 4px 10px; font-size: 0.72rem;" onclick="fetchRouterMatrix()" title="Recarregar matriz empírica do Heuristic Vault">
-              <span>🔄</span> Sincronizar Matriz
+            <span class="badge badge-champion" id="pulse-level-badge">Nível 2 — Curadoria Ativa</span>
+            <button class="btn btn-sm" onclick="fetchEcosystemPulse()" title="Sincronizar métricas de evolução">
+              <span>🔄</span> Atualizar
             </button>
           </div>
         </div>
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px;">
-          Mapeamento real de roteamento alimentado pelo <strong>Heuristic Vault (SQLite STRICT)</strong> e pelos perfis do Hermes: subagentes e tarefas de suporte priorizam o silício local bare-metal a <strong>custo zero ($0.00)</strong>, escalando para o perfil Cloud apenas sob alta entropia ou estouro de raio de impacto.
-        </p>
 
-        <div class="table-container">
-          <table class="arena-table">
-            <thead>
-              <tr>
-                <th style="min-width: 200px;">Capacidade / Perfil Cognitivo</th>
-                <th style="min-width: 210px;">Local Default (Silício $0 • Medido)</th>
-                <th style="min-width: 200px;">Cloud Fallback (Perfil Ativo)</th>
-                <th>Regra de Decisão do ParetoBandit</th>
-                <th class="text-center" style="width: 170px;">Status & Ações</th>
-              </tr>
-            </thead>
-            <tbody id="integrator-tbody">
-              <!-- Preenchido via API /api/v1/router/matrix -->
-              <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted);">Carregando matriz preditiva...</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- 4 KPIS DE ALTO IMPACTO HUMANO -->
+        <div class="stat-row" style="margin-top: 0; margin-bottom: 16px;">
+          <div class="stat-box" style="flex: 1; min-width: 180px;" title="Nível cognitivo do ecossistema pessoal">
+            <div class="stat-lbl">📈 Nível de Maturidade</div>
+            <div class="stat-num" id="pulse-evolution-score" style="color: var(--cyan); font-size: 1.15rem;">Nível 3 &bull; 65/100</div>
+            <div id="pulse-evolution-sub" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">Ecossistema Aumentado</div>
+          </div>
+          <div class="stat-box" style="flex: 1; min-width: 180px;" title="Economia consolidada em dólares">
+            <div class="stat-lbl">💰 Economia FinOps Total</div>
+            <div class="stat-num" id="pulse-finops-saved" style="color: var(--green); font-size: 1.15rem;">$14.20 USD</div>
+            <div id="pulse-cache-eff" style="font-size: 0.68rem; color: var(--green); margin-top: 4px;">88.4% via Cache & Silício Local</div>
+          </div>
+          <div class="stat-box" style="flex: 1; min-width: 180px;" title="Total de entidades e fatos catalogados">
+            <div class="stat-lbl">🧠 Conhecimento Soberano</div>
+            <div class="stat-num" id="pulse-entities-count" style="color: var(--purple); font-size: 1.15rem;">158 Fatos / Nós</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">Cofre Seguro (Zero Vazamento)</div>
+          </div>
+          <div class="stat-box" style="flex: 1; min-width: 180px;" title="Estado das acelerações e provedores">
+            <div class="stat-lbl">⚡ Prontidão de Hardware</div>
+            <div class="stat-num" id="pulse-hw-readiness" style="color: #38bdf8; font-size: 1.15rem;">Nominal / Pronto</div>
+            <div id="pulse-providers-active" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">Provedores Conectados</div>
+          </div>
+        </div>
+
+        <!-- AÇÕES RÁPIDAS EM 1 CLIQUE -->
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Ações Rápidas do Produto:</span>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-sm btn-cyan" onclick="switchTab('tab-research')" title="Iniciar pesquisa de mercado ou técnica">
+              <span>🔬</span> Nova Pesquisa Profunda
+            </button>
+            <button class="btn btn-sm" onclick="switchTab('tab-personas')" title="Ajustar tom e diretrizes do agente">
+              <span>🎭</span> Personalizar Persona
+            </button>
+            <button class="btn btn-sm" onclick="switchTab('tab-skills')" title="Explorar ou aprovar habilidades">
+              <span>🧩</span> Gerenciar Habilidades
+            </button>
+            <button class="btn btn-sm" onclick="switchTab('tab-local')" title="Testar velocidade do silício">
+              <span>⚡</span> Modelos & Arena
+            </button>
+            <button class="btn btn-sm btn-secondary" onclick="switchTab('tab-connections')" title="Configurar chaves de API e CLIs">
+              <span>🔌</span> Conexões & Chaves
+            </button>
+          </div>
         </div>
       </div>
 

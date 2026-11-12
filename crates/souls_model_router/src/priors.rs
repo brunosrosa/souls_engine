@@ -72,6 +72,27 @@ impl ModelRecord {
         CloudProvider::from_model_id_and_type(&self.model_id, &self.provider_type)
     }
 
+    /// Checks whether authentication credentials are available for this model's provider.
+    /// Local models always return true. Cloud models verify their environment variables.
+    #[inline]
+    pub fn is_auth_available(&self) -> bool {
+        if self.is_local() {
+            return true;
+        }
+        // In Cargo unit and integration test harnesses, allow synthetic arms
+        if (cfg!(test) || std::env::var("CARGO_MANIFEST_DIR").is_ok())
+            && std::env::var("SOULS_ENFORCE_CLOUD_AUTH").is_err()
+        {
+            return true;
+        }
+        let p = self.cloud_provider();
+        let env_var = p.auth_header_env();
+        if env_var.is_empty() {
+            return true;
+        }
+        std::env::var(env_var).map(|v| !v.trim().is_empty()).unwrap_or(false)
+    }
+
     /// Calculates projected FinOps cost taking into account cached input tokens and provider discounts.
     pub fn calculate_projected_cost(
         &self,

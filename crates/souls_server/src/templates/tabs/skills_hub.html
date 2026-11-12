@@ -420,7 +420,12 @@
                 </p>
               </div>
             </div>
-            <button class="btn-action" onclick="fetchQuarantineList()">🔄 Atualizar Fila</button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-action" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="clearAllQuarantineSkills()" title="Limpar todos os itens da fila de quarentena">
+                🗑️ Limpar Fila
+              </button>
+              <button class="btn-action" onclick="fetchQuarantineList()">🔄 Atualizar</button>
+            </div>
           </div>
 
           <div id="skills-quarantine-empty" style="padding: 18px; text-align: center; color: var(--text-muted); font-size: 0.78rem; background: rgba(10,16,28,0.45); border-radius: var(--radius-sm);">
@@ -452,6 +457,9 @@
                   </div>
                   <div id="q-install-targets" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; margin-bottom: 10px;"></div>
                   <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn-action" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171; justify-content: center;" onclick="discardActiveQuarantineSkill()" title="Descartar esta habilidade da fila de revisão">
+                      ✕ Descartar (Não Quero)
+                    </button>
                     <button class="btn-action" style="flex: 1; justify-content: center;" onclick="forkQuarantineItemToForge()">
                       ✨ Adaptar no Estúdio
                     </button>

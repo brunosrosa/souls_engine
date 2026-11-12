@@ -23,7 +23,7 @@ pub struct RunBenchmarkPayload {
     pub engine: Option<String>,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SpeculativeCompanionInfo {
     pub status: String,
     pub companion_id: Option<String>,
@@ -31,16 +31,45 @@ pub struct SpeculativeCompanionInfo {
     pub reason: String,
 }
 
-/// Resolves the speculative drafting eligibility and companion model for a given target model.
-pub fn resolve_speculative_companion(
-    model: &souls_llm_local_arena::domain::model::ModelDescriptor,
-    all_models: &[souls_llm_local_arena::domain::model::ModelDescriptor],
-) -> SpeculativeCompanionInfo {
-    let mid = model.model_id.to_lowercase();
-    let name = model.name.to_lowercase();
+fn is_sub1b_or_draft_tag(s: &str) -> bool {
+    let s_lower = s.to_lowercase();
+    s_lower.contains("0.5b")
+        || s_lower.contains("0-5b")
+        || s_lower.contains("0_5b")
+        || s_lower.contains("135m")
+        || s_lower.contains("360m")
+        || s_lower.contains("draft")
+}
 
-    // 1. Native MTP check
-    if mid.contains("mtp") || name.contains("mtp") {
+/// Core resolution logic accepting raw parameters for reuse across arena and dashboard.
+pub fn resolve_speculative_companion_parts(
+    mid: &str,
+    name: &str,
+    size_mb: f64,
+    is_vlm: bool,
+    candidates: &[(String, String)], // Vec of (model_id, display_name)
+) -> SpeculativeCompanionInfo {
+    let mid_lower = mid.to_lowercase();
+    let name_lower = name.to_lowercase();
+
+    // 1. Isenção Multimodal (VisionExempt)
+    let is_multimodal = is_vlm
+        || mid_lower.contains("vl")
+        || name_lower.contains("vl")
+        || mid_lower.contains("vision")
+        || name_lower.contains("vision");
+
+    if is_multimodal {
+        return SpeculativeCompanionInfo {
+            status: "VisionExempt".to_string(),
+            companion_id: None,
+            recommended_companion: None,
+            reason: "Modelos multimodais de visão operam com encoder visual dedicado sem draft de texto.".to_string(),
+        };
+    }
+
+    // 2. Native MTP check
+    if mid_lower.contains("mtp") || name_lower.contains("mtp") {
         return SpeculativeCompanionInfo {
             status: "NativeMtp".to_string(),
             companion_id: Some("Embedded-MTP-Heads".to_string()),
@@ -49,14 +78,10 @@ pub fn resolve_speculative_companion(
         };
     }
 
-    // 2. Sub-1B check (< 600MB or explicit 135M / 360M / 0.5B tags)
-    let is_sub1b = model.size_mb < 600.0
-        || mid.contains("135m")
-        || mid.contains("360m")
-        || mid.contains("0.5b")
-        || name.contains("135m")
-        || name.contains("360m")
-        || name.contains("0.5b");
+    // 3. Sub-1B check (< 600MB or explicit 135M / 360M / 0.5B tags with hyphens, dots, underscores)
+    let is_sub1b = (size_mb > 0.0 && size_mb < 600.0)
+        || is_sub1b_or_draft_tag(&mid_lower)
+        || is_sub1b_or_draft_tag(&name_lower);
 
     if is_sub1b {
         return SpeculativeCompanionInfo {
@@ -67,46 +92,89 @@ pub fn resolve_speculative_companion(
         };
     }
 
-    // 3. Family-based draft resolution for models >= 1B
-    if mid.contains("qwen") || name.contains("qwen") {
-        let draft = all_models.iter().find(|m| {
-            let m_mid = m.model_id.to_lowercase();
-            let m_name = m.name.to_lowercase();
-            (m_mid.contains("qwen") || m_name.contains("qwen"))
-                && (m_mid.contains("0.5b") || m_name.contains("0.5b") || m_mid.contains("draft") || m_name.contains("draft"))
-        });
+    // 4. Qwen Family Resolution
+    let is_qwen = mid_lower.contains("qwen") || name_lower.contains("qwen");
+    if is_qwen {
+        let is_qwen3 = mid_lower.contains("qwen3")
+            || mid_lower.contains("qwen-3")
+            || mid_lower.contains("qwen_3")
+            || name_lower.contains("qwen3")
+            || name_lower.contains("qwen-3")
+            || name_lower.contains("qwen_3");
 
-        if let Some(d) = draft {
-            return SpeculativeCompanionInfo {
-                status: "PairedAvailable".to_string(),
-                companion_id: Some(d.model_id.clone()),
-                recommended_companion: Some("Qwen2.5-Coder-0.5B-Instruct".to_string()),
-                reason: format!("Par rascunho compatível detectado: {}", d.name),
-            };
+        if is_qwen3 {
+            // Modelos Qwen 3/3.5 usam NativeMtp ou draft da própria geração Qwen 3, nunca Qwen2.5!
+            let qwen3_draft = candidates.iter().find(|(c_mid, c_name)| {
+                let cm = c_mid.to_lowercase();
+                let cn = c_name.to_lowercase();
+                let is_c_q3 = cm.contains("qwen3") || cm.contains("qwen-3") || cm.contains("qwen_3")
+                    || cn.contains("qwen3") || cn.contains("qwen-3") || cn.contains("qwen_3");
+                is_c_q3 && (is_sub1b_or_draft_tag(&cm) || is_sub1b_or_draft_tag(&cn))
+            });
+
+            if let Some(d) = qwen3_draft {
+                return SpeculativeCompanionInfo {
+                    status: "PairedAvailable".to_string(),
+                    companion_id: Some(d.0.clone()),
+                    recommended_companion: Some("Qwen3-Draft".to_string()),
+                    reason: format!("Par rascunho compatível detectado: {}", d.1),
+                };
+            } else {
+                return SpeculativeCompanionInfo {
+                    status: "NativeMtp".to_string(),
+                    companion_id: Some("Embedded-MTP-Heads".to_string()),
+                    recommended_companion: None,
+                    reason: "Modelo Qwen 3/3.5 com predição especulativa nativa (Native MTP).".to_string(),
+                };
+            }
         } else {
-            return SpeculativeCompanionInfo {
-                status: "CompanionMissing".to_string(),
-                companion_id: None,
-                recommended_companion: Some("Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf".to_string()),
-                reason: "Requer par draft Qwen 0.5B instalado (disponível no Hub)".to_string(),
-            };
+            // Qwen 2 / 2.5
+            let draft = candidates.iter().find(|(c_mid, c_name)| {
+                let cm = c_mid.to_lowercase();
+                let cn = c_name.to_lowercase();
+                let is_c_qwen = (cm.contains("qwen") || cn.contains("qwen"))
+                    && !(cm.contains("qwen3") || cm.contains("qwen-3") || cm.contains("qwen_3")
+                        || cn.contains("qwen3") || cn.contains("qwen-3") || cn.contains("qwen_3"));
+                is_c_qwen && (is_sub1b_or_draft_tag(&cm) || is_sub1b_or_draft_tag(&cn))
+            });
+
+            if let Some(d) = draft {
+                return SpeculativeCompanionInfo {
+                    status: "PairedAvailable".to_string(),
+                    companion_id: Some(d.0.clone()),
+                    recommended_companion: Some("Qwen2.5-Coder-0.5B-Instruct".to_string()),
+                    reason: format!("Par rascunho compatível detectado: {}", d.1),
+                };
+            } else {
+                return SpeculativeCompanionInfo {
+                    status: "CompanionMissing".to_string(),
+                    companion_id: None,
+                    recommended_companion: Some("Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf".to_string()),
+                    reason: "Requer par draft Qwen 0.5B instalado (disponível no Hub)".to_string(),
+                };
+            }
         }
     }
 
-    if mid.contains("llama") || name.contains("llama") {
-        let draft = all_models.iter().find(|m| {
-            let m_mid = m.model_id.to_lowercase();
-            let m_name = m.name.to_lowercase();
-            (m_mid.contains("llama") || m_name.contains("llama"))
-                && (m_mid.contains("1b") || m_name.contains("1b") || m_mid.contains("draft"))
+    // 5. Llama Family Resolution
+    let is_llama = mid_lower.contains("llama") || name_lower.contains("llama");
+    if is_llama {
+        let draft = candidates.iter().find(|(c_mid, c_name)| {
+            let cm = c_mid.to_lowercase();
+            let cn = c_name.to_lowercase();
+            let is_c_llama = cm.contains("llama") || cn.contains("llama");
+            let is_c_draft = cm.contains("1b") || cm.contains("1-b") || cm.contains("1_b")
+                || cn.contains("1b") || cn.contains("1-b") || cn.contains("1_b")
+                || cm.contains("draft") || cn.contains("draft");
+            is_c_llama && is_c_draft
         });
 
         if let Some(d) = draft {
             return SpeculativeCompanionInfo {
                 status: "PairedAvailable".to_string(),
-                companion_id: Some(d.model_id.clone()),
+                companion_id: Some(d.0.clone()),
                 recommended_companion: Some("Llama-3.2-1B-Instruct".to_string()),
-                reason: format!("Par rascunho compatível detectado: {}", d.name),
+                reason: format!("Par rascunho compatível detectado: {}", d.1),
             };
         } else {
             return SpeculativeCompanionInfo {
@@ -124,6 +192,25 @@ pub fn resolve_speculative_companion(
         recommended_companion: None,
         reason: "Nenhum modelo rascunho compatível com o mesmo vocabulário encontrado no inventário.".to_string(),
     }
+}
+
+/// Resolves the speculative drafting eligibility and companion model for a given target model.
+pub fn resolve_speculative_companion(
+    model: &souls_llm_local_arena::domain::model::ModelDescriptor,
+    all_models: &[souls_llm_local_arena::domain::model::ModelDescriptor],
+) -> SpeculativeCompanionInfo {
+    let candidates: Vec<(String, String)> = all_models
+        .iter()
+        .map(|m| (m.model_id.clone(), m.name.clone()))
+        .collect();
+
+    resolve_speculative_companion_parts(
+        &model.model_id,
+        &model.name,
+        model.size_mb,
+        model.has_mmproj,
+        &candidates,
+    )
 }
 
 /// GET /api/v1/arena/models
@@ -524,6 +611,12 @@ pub async fn arena_run_benchmark_handler(
                         "message": format!("Modelo '{}' é sub-1B e está isento de aceleração especulativa: {}", model.model_id, spec_info.reason)
                     }))
                 }
+                "VisionExempt" => {
+                    Json(json!({
+                        "status": "error",
+                        "message": format!("Modelo '{}' é multimodal (visão) e está isento de aceleração especulativa por texto: {}", model.model_id, spec_info.reason)
+                    }))
+                }
                 "CompanionMissing" => {
                     Json(json!({
                         "status": "error",
@@ -675,5 +768,129 @@ pub async fn arena_sync_handler(State(state): State<AppState>) -> Json<Value> {
             "status": "error",
             "message": format!("Failed to sync Hermes hardlinks: {}", e)
         })),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_speculative_companion_vlm_vision_exempt() {
+        let candidates = vec![
+            ("qwen2.5-coder-0.5b-instruct".to_string(), "Qwen2.5-Coder-0.5B-Instruct".to_string()),
+        ];
+
+        // Case 1: has_mmproj is true
+        let res1 = resolve_speculative_companion_parts(
+            "custom-model",
+            "Custom Model",
+            2500.0,
+            true,
+            &candidates,
+        );
+        assert_eq!(res1.status, "VisionExempt");
+        assert!(res1.reason.contains("multimodais de visão"));
+
+        // Case 2: "vl" in name / mid
+        let res2 = resolve_speculative_companion_parts(
+            "qwen2-5-vl-3b",
+            "Qwen2.5-VL-3B-Instruct",
+            3000.0,
+            false,
+            &candidates,
+        );
+        assert_eq!(res2.status, "VisionExempt");
+
+        // Case 3: "vision" in name / mid
+        let res3 = resolve_speculative_companion_parts(
+            "minicpm-vision",
+            "MiniCPM Vision 2.6",
+            5000.0,
+            false,
+            &candidates,
+        );
+        assert_eq!(res3.status, "VisionExempt");
+    }
+
+    #[test]
+    fn test_resolve_speculative_companion_sub1b_variants() {
+        let candidates = vec![];
+
+        // Small size < 600MB
+        let res1 = resolve_speculative_companion_parts(
+            "some-model",
+            "Some Model",
+            500.0,
+            false,
+            &candidates,
+        );
+        assert_eq!(res1.status, "Sub1bExempt");
+
+        // Explicit 0.5b, 0-5b, 0_5b with size >= 600MB
+        for tag in &["0.5b", "0-5b", "0_5b", "135m", "360m"] {
+            let res = resolve_speculative_companion_parts(
+                &format!("test-model-{}", tag),
+                &format!("Test Model {}", tag),
+                800.0,
+                false,
+                &candidates,
+            );
+            assert_eq!(res.status, "Sub1bExempt", "Failed for tag: {}", tag);
+        }
+    }
+
+    #[test]
+    fn test_resolve_speculative_companion_qwen3_native_mtp_not_qwen25() {
+        // Only Qwen 2.5 draft candidate available
+        let candidates = vec![
+            ("qwen2.5-coder-0.5b-instruct".to_string(), "Qwen2.5-Coder-0.5B-Instruct".to_string()),
+        ];
+
+        let res = resolve_speculative_companion_parts(
+            "qwen3-5-4b-agentic-coder-v4",
+            "Qwen3.5-4B-Agentic-Coder-V4",
+            3000.0,
+            false,
+            &candidates,
+        );
+        // Must NOT pair with Qwen 2.5! Must return NativeMtp
+        assert_eq!(res.status, "NativeMtp");
+        assert_eq!(res.companion_id, Some("Embedded-MTP-Heads".to_string()));
+        assert!(res.reason.contains("Native MTP"));
+
+        // If a real Qwen 3 draft candidate is present, pair with it
+        let candidates_with_q3 = vec![
+            ("qwen2.5-coder-0.5b-instruct".to_string(), "Qwen2.5-Coder-0.5B-Instruct".to_string()),
+            ("qwen3-draft-0.5b".to_string(), "Qwen3-Draft-0.5B-GGUF".to_string()),
+        ];
+        let res2 = resolve_speculative_companion_parts(
+            "qwen3-5-4b-agentic-coder-v4",
+            "Qwen3.5-4B-Agentic-Coder-V4",
+            3000.0,
+            false,
+            &candidates_with_q3,
+        );
+        assert_eq!(res2.status, "PairedAvailable");
+        assert_eq!(res2.companion_id, Some("qwen3-draft-0.5b".to_string()));
+        assert!(res2.reason.contains("Qwen3-Draft-0.5B-GGUF"));
+    }
+
+    #[test]
+    fn test_resolve_speculative_companion_qwen25_paired_with_hyphenated_draft() {
+        let candidates = vec![
+            ("qwen2-5-coder-0-5b-instruct-q4-k-m".to_string(), "Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf".to_string()),
+        ];
+
+        let res = resolve_speculative_companion_parts(
+            "qwen2.5-coder-7b-instruct",
+            "Qwen2.5-Coder-7B-Instruct",
+            4500.0,
+            false,
+            &candidates,
+        );
+        assert_eq!(res.status, "PairedAvailable");
+        assert_eq!(res.companion_id, Some("qwen2-5-coder-0-5b-instruct-q4-k-m".to_string()));
+        assert!(res.reason.contains("Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf"));
     }
 }

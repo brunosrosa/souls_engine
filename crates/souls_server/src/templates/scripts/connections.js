@@ -201,7 +201,7 @@ async function dispatchCliTask() {
 
   const prompt = promptInput ? promptInput.value.trim() : '';
   if (!prompt) {
-    alert('Por favor informe o prompt da tarefa agêntica antes de despachar.');
+    if (window.showToast) window.showToast('Por favor informe o prompt da tarefa agêntica antes de despachar.', 'warning');
     return;
   }
 
@@ -324,7 +324,7 @@ async function saveGoogleSession() {
   const email = document.getElementById('google-email-input')?.value?.trim();
 
   if (!psid) {
-    alert('Por favor informe ao menos o cookie __Secure-1PSID.');
+    if (window.showToast) window.showToast('Por favor informe ao menos o cookie __Secure-1PSID.', 'warning');
     return;
   }
 
@@ -342,13 +342,13 @@ async function saveGoogleSession() {
 
     const data = await res.json();
     if (res.ok) {
-      alert('Credenciais salvas com sucesso no cofre encriptado GV1!');
+      if (window.showToast) window.showToast('Credenciais salvas com sucesso no cofre encriptado GV1!', 'success');
       checkGoogleSession();
     } else {
-      alert('Erro ao salvar credenciais: ' + (data.message || 'Falha desconhecida'));
+      if (window.showToast) window.showToast('Erro ao salvar credenciais: ' + (data.message || 'Falha desconhecida'), 'error');
     }
   } catch (err) {
-    alert('Erro de rede: ' + err.message);
+    if (window.showToast) window.showToast('Erro de rede: ' + err.message, 'error');
   }
 }
 
@@ -363,7 +363,7 @@ async function dispatchGoogleRpc() {
   try {
     argsJson = JSON.parse(argsRaw);
   } catch (e) {
-    alert('Argumentos devem ser um JSON válido (ex: ["valor"]).');
+    if (window.showToast) window.showToast('Argumentos devem ser um JSON válido (ex: ["valor"]).', 'error');
     return;
   }
 

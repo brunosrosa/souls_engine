@@ -13,6 +13,31 @@ let currentResearchMissions = [];
 let selectedMissionDetail = null;
 let researchSseSource = null;
 
+const toast = (msg, type = 'info') => {
+  if (window.showToast) window.showToast(msg, type);
+  else console.log(`[${type}] ${msg}`);
+};
+
+const appConfirm = async (msg, opts = {}) => {
+  if (window.appConfirm) return await window.appConfirm(msg, opts);
+  return window.confirm(msg);
+};
+
+const appPrompt = async (msg, defaultVal = '', opts = {}) => {
+  if (window.appPrompt) return await window.appPrompt(msg, defaultVal, opts);
+  return window.prompt(msg, defaultVal);
+};
+
+function filterLibraryMissions() {
+  const query = (document.getElementById('input-filter-library')?.value || '').toLowerCase().trim();
+  const rows = document.querySelectorAll('.library-mission-row');
+  rows.forEach(r => {
+    const text = (r.textContent || '').toLowerCase();
+    r.style.display = (!query || text.includes(query)) ? '' : 'none';
+  });
+}
+window.filterLibraryMissions = filterLibraryMissions;
+
 // ============================================================================
 // SUBTAB SWITCHER
 // ============================================================================
@@ -72,7 +97,7 @@ function applyResearchTemplate(tplKey) {
 async function generateResearchDraftPlan() {
   const qInput = document.getElementById('input-research-question');
   if (!qInput || !qInput.value.trim()) {
-    alert('Por favor, informe a pergunta central da pesquisa.');
+    toast('Por favor, informe a pergunta central da pesquisa.', 'warning');
     return;
   }
 
@@ -88,11 +113,11 @@ async function generateResearchDraftPlan() {
     if (data.status === 'success') {
       renderEditableBrief(data.brief, data.finops);
     } else {
-      alert('Erro ao gerar plano: ' + (data.message || 'Desconhecido'));
+      toast('Erro ao gerar plano: ' + (data.message || 'Desconhecido'), 'error');
     }
   } catch (err) {
     console.error('Falha ao gerar plano de pesquisa:', err);
-    alert('Erro de comunicação com o souls_server.');
+    toast('Erro de comunicação com o souls_server.', 'error');
   }
 }
 
@@ -172,7 +197,7 @@ function renderEditableBrief(brief, finops) {
 async function submitNewResearchMission(queueImmediately) {
   const qInput = document.getElementById('input-research-question');
   if (!qInput || !qInput.value.trim()) {
-    alert('Informe a pergunta da pesquisa.');
+    toast('Informe a pergunta da pesquisa.', 'warning');
     return;
   }
 
@@ -225,17 +250,17 @@ async function submitNewResearchMission(queueImmediately) {
         cmdText.innerText = data.command_hint || `/deep-research ${mission.run_id}`;
       }
 
-      alert(queueImmediately ? 'Missão enfileirada com sucesso para o Hermes Agent!' : 'Rascunho salvo com sucesso!');
+      toast(queueImmediately ? 'Missão enfileirada com sucesso para o Hermes Agent!' : 'Rascunho salvo com sucesso!', 'success');
       loadResearchHubMissions();
       if (queueImmediately) {
         switchResearchSubtab('active');
       }
     } else {
-      alert('Erro ao criar missão: ' + (data.message || 'Desconhecido'));
+      toast('Erro ao criar missão: ' + (data.message || 'Desconhecido'), 'error');
     }
   } catch (err) {
     console.error('Falha ao submeter missão:', err);
-    alert('Erro de comunicação com o souls_server.');
+    toast('Erro de comunicação com o souls_server.', 'error');
   }
 }
 
@@ -243,7 +268,7 @@ function copyResearchCommand() {
   const cmdText = document.getElementById('text-copy-command');
   if (cmdText && cmdText.innerText) {
     navigator.clipboard.writeText(cmdText.innerText);
-    alert('Comando copiado para a área de transferência! Cole no chat do Hermes Agent.');
+    toast('Comando copiado para a área de transferência! Cole no chat do Hermes Agent.', 'success');
   }
 }
 
@@ -448,12 +473,18 @@ function copyReportMarkdown() {
   const el = document.getElementById('text-report-markdown');
   if (el) {
     navigator.clipboard.writeText(el.innerText);
-    alert('Relatório copiado em formato Markdown!');
+    toast('Relatório copiado em formato Markdown!', 'success');
   }
 }
 
 async function cancelResearchMission(run_id) {
-  if (!confirm(`Deseja realmente cancelar a missão ${run_id}?`)) return;
+  const ok = await appConfirm(`Deseja realmente cancelar a missão ${run_id}?`, {
+    title: 'Cancelar Missão',
+    icon: '⏹️',
+    confirmText: 'Sim, Cancelar',
+    danger: true
+  });
+  if (!ok) return;
   try {
     const res = await fetch('/api/v1/research/mission/cancel', {
       method: 'POST',
@@ -462,10 +493,10 @@ async function cancelResearchMission(run_id) {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      alert('Missão cancelada.');
+      toast('Missão cancelada com sucesso.', 'info');
       loadResearchHubMissions();
     } else {
-      alert('Erro: ' + data.message);
+      toast('Erro: ' + data.message, 'error');
     }
   } catch (err) {
     console.error('Falha ao cancelar missão:', err);
@@ -473,7 +504,12 @@ async function cancelResearchMission(run_id) {
 }
 
 async function archiveResearchMission(run_id) {
-  if (!confirm(`Deseja arquivar com segurança a missão ${run_id} para .souls_data/research/_archive/?`)) return;
+  const ok = await appConfirm(`Deseja arquivar com segurança a missão ${run_id} para .souls_data/research/_archive/?`, {
+    title: 'Arquivar Missão de Pesquisa',
+    icon: '📦',
+    confirmText: 'Arquivar com Segurança'
+  });
+  if (!ok) return;
   try {
     const res = await fetch('/api/v1/research/mission/archive', {
       method: 'POST',
@@ -482,12 +518,12 @@ async function archiveResearchMission(run_id) {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      alert('Missão arquivada.');
+      toast('Missão arquivada com sucesso.', 'success');
       loadResearchHubMissions();
       const viewer = document.getElementById('box-library-viewer');
       if (viewer) viewer.innerHTML = '<div style="text-align:center; padding:60px; color:#64748b;">Missão arquivada.</div>';
     } else {
-      alert('Erro: ' + data.message);
+      toast('Erro: ' + data.message, 'error');
     }
   } catch (err) {
     console.error('Falha ao arquivar missão:', err);
@@ -522,28 +558,89 @@ async function loadResearchDoctorReport() {
         }
       }
 
-      listEl.innerHTML = doc.checks.map(c => `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; border:1px solid #1e293b; padding:10px 14px; border-radius:6px;">
-          <div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <span style="font-size:0.85rem; font-weight:600; color:#f8fafc;">${escapeHtml(c.label)}</span>
-              <span class="badge" style="font-size:0.65rem;">${c.category}</span>
+      listEl.innerHTML = doc.checks.map((c, idx) => {
+        const hasEnv = Boolean(c.env_var);
+        const pricingBadge = c.pricing_tag ? `<span class="badge" style="font-size:0.65rem; background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.25);">${escapeHtml(c.pricing_tag)}</span>` : '';
+        const dashBtn = c.dashboard_url ? `<a href="${c.dashboard_url}" target="_blank" rel="noopener noreferrer" class="btn" style="padding:3px 8px; font-size:0.72rem; text-decoration:none; display:inline-flex; align-items:center; gap:3px; color:var(--cyan); border-color:rgba(6,182,212,0.3);" title="Abrir painel para gerar a chave">↗ Obter Chave</a>` : '';
+        const configBtn = hasEnv ? `<button class="btn" style="padding:3px 8px; font-size:0.72rem; display:inline-flex; align-items:center; gap:3px;" onclick="toggleDoctorKeyInput(${idx})">🔑 ${c.status === 'ok' ? 'Alterar' : 'Configurar'}</button>` : '';
+
+        return `
+          <div style="background:#0f172a; border:1px solid #1e293b; padding:10px 14px; border-radius:6px; margin-bottom:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <span style="font-size:0.85rem; font-weight:600; color:#f8fafc;">${escapeHtml(c.label)}</span>
+                  <span class="badge" style="font-size:0.65rem;">${c.category}</span>
+                  ${pricingBadge}
+                </div>
+                <div style="font-size:0.75rem; color:#94a3b8; margin-top:3px;">${escapeHtml(c.details)}</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                ${dashBtn}
+                ${configBtn}
+                <div>
+                  ${c.status === 'ok'
+                    ? '<span style="color:#10b981; font-weight:700; font-size:0.85rem;">✓ Ativo</span>'
+                    : c.status === 'warn'
+                    ? '<span style="color:#facc15; font-weight:700; font-size:0.85rem;">⚠️ Opcional</span>'
+                    : '<span style="color:#ef4444; font-weight:700; font-size:0.85rem;">✕ Pendente</span>'}
+                </div>
+              </div>
             </div>
-            <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">${escapeHtml(c.details)}</div>
+            ${hasEnv ? `
+              <div id="doctor-key-row-${idx}" style="display:none; margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); gap:6px; align-items:center;">
+                <input type="password" id="doctor-key-val-${idx}" class="setting-input" style="flex:1; font-size:0.75rem; padding:4px 8px;" placeholder="Cole aqui sua chave (${c.env_var})...">
+                <button class="btn btn-green" style="padding:4px 10px; font-size:0.75rem;" onclick="saveDoctorKey('${c.env_var}', ${idx})">Salvar Chave</button>
+                <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="toggleDoctorKeyInput(${idx})">Cancelar</button>
+              </div>
+            ` : ''}
           </div>
-          <div>
-            ${c.status === 'ok'
-              ? '<span style="color:#10b981; font-weight:700; font-size:0.85rem;">✓ OK</span>'
-              : c.status === 'warn'
-              ? '<span style="color:#facc15; font-weight:700; font-size:0.85rem;">⚠️ Atenção</span>'
-              : '<span style="color:#ef4444; font-weight:700; font-size:0.85rem;">✕ Erro</span>'}
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
   } catch (err) {
     console.error('Falha no diagnóstico doctor:', err);
     listEl.innerHTML = '<div style="color:#ef4444; font-size:0.8rem; padding:10px;">Falha ao carregar relatório do Doctor.</div>';
+  }
+}
+
+function toggleDoctorKeyInput(idx) {
+  const row = document.getElementById(`doctor-key-row-${idx}`);
+  if (row) {
+    const isHidden = row.style.display === 'none' || !row.style.display;
+    row.style.display = isHidden ? 'flex' : 'none';
+    if (isHidden) {
+      const input = document.getElementById(`doctor-key-val-${idx}`);
+      if (input) input.focus();
+    }
+  }
+}
+
+async function saveDoctorKey(keyName, idx) {
+  const input = document.getElementById(`doctor-key-val-${idx}`);
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) {
+    toast('Digite ou cole a chave de API antes de salvar.', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/v1/system/credentials/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: keyName, value: val })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      toast(`Chave para '${keyName}' configurada e ativada com sucesso!`, 'success');
+      await loadResearchDoctorReport();
+    } else {
+      toast(data.message || 'Falha ao salvar credencial.', 'error');
+    }
+  } catch (e) {
+    console.error('Erro ao salvar credencial:', e);
+    toast('Erro de conexão ao salvar credencial.', 'error');
   }
 }
 
@@ -597,8 +694,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // IN-FLIGHT STEERING & OPERATOR INTERVENTION (Fase 2)
 // ============================================================================
 
-function openMissionSteeringModal(run_id) {
-  const directive = prompt(`[STEERING EM VOO — ${run_id}]\nDigite a diretriz a ser injetada para os subagentes nesta ronda:\n(Ex: "Ignore discussões sobre Mac/Linux; foque estritamente em Windows 11 ReFS")`);
+async function openMissionSteeringModal(run_id) {
+  const directive = await appPrompt(
+    `[STEERING EM VOO — ${run_id}]\nDigite a diretriz a ser injetada para os subagentes nesta ronda:\n(Ex: "Ignore discussões sobre Mac/Linux; foque estritamente em Windows 11 ReFS")`,
+    '',
+    { title: 'Injetar Diretriz (Steering)', icon: '🧭', submitText: 'Injetar Diretriz' }
+  );
   if (directive === null) return;
 
   sendMissionSteering(run_id, { directive: directive.trim() || undefined });
@@ -619,13 +720,13 @@ async function sendMissionSteering(run_id, options = {}) {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      alert('Comando de steering enviado com sucesso!');
+      toast('Comando de steering enviado com sucesso!', 'success');
       loadResearchHubMissions();
       if (selectedMissionDetail && selectedMissionDetail.mission.run_id === run_id) {
         inspectMissionDetail(run_id);
       }
     } else {
-      alert('Erro ao enviar steering: ' + (data.message || 'Desconhecido'));
+      toast('Erro ao enviar steering: ' + (data.message || 'Desconhecido'), 'error');
     }
   } catch (err) {
     console.error('Falha ao enviar steering:', err);
@@ -643,7 +744,7 @@ async function inspectEpistemicReport(run_id) {
     if (data.status === 'success') {
       renderEpistemicViewer(data.report, run_id);
     } else {
-      alert('Relatório ainda não finalizado: ' + (data.message || ''));
+      toast('Relatório ainda não finalizado: ' + (data.message || ''), 'warning');
     }
   } catch (err) {
     console.error('Falha ao obter relatório epistêmico:', err);
@@ -797,7 +898,11 @@ function renderProvisioningBox(result) {
 // ============================================================================
 
 async function openRefreshDeltaModal(run_id) {
-  if (!confirm(`Deseja lançar uma nova versão viva (Delta v2+) para a pesquisa ${run_id}?\nO Hermes reaproveitará o acervo de fontes e buscará atualizações e fatos recentes.`)) return;
+  const ok = await appConfirm(
+    `Deseja lançar uma nova versão viva (Delta v2+) para a pesquisa ${run_id}?\nO Hermes reaproveitará o acervo de fontes e buscará atualizações e fatos recentes.`,
+    { title: 'Lançar Versão Delta (v2+)', icon: '🔄', confirmText: 'Criar Delta' }
+  );
+  if (!ok) return;
 
   try {
     const res = await fetch('/api/v1/research/mission/refresh', {
@@ -807,11 +912,11 @@ async function openRefreshDeltaModal(run_id) {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      alert(`Versão Delta criada e enfileirada: ${data.mission.run_id}`);
+      toast(`Versão Delta criada e enfileirada: ${data.mission.run_id}`, 'success');
       loadResearchHubMissions();
       switchResearchSubtab('active');
     } else {
-      alert('Erro: ' + (data.message || 'Falha ao criar delta'));
+      toast('Erro: ' + (data.message || 'Falha ao criar delta'), 'error');
     }
   } catch (err) {
     console.error('Falha ao atualizar delta:', err);
@@ -819,10 +924,18 @@ async function openRefreshDeltaModal(run_id) {
 }
 
 async function openBranchSectionModal(run_id) {
-  const heading = prompt(`[RAMIFICAR SEÇÃO — ${run_id}]\nDigite o título ou heading do tópico que deseja aprofundar de forma autônoma:\n(Ex: "Mapeamento empírico de latência no ReFS")`);
+  const heading = await appPrompt(
+    `[RAMIFICAR SEÇÃO — ${run_id}]\nDigite o título ou heading do tópico que deseja aprofundar de forma autônoma:\n(Ex: "Mapeamento empírico de latência no ReFS")`,
+    '',
+    { title: 'Ramificar Seção de Pesquisa', icon: '🌿', submitText: 'Avançar' }
+  );
   if (!heading || !heading.trim()) return;
 
-  const customQ = prompt(`Pergunta específica para este subagente (ou deixe em branco para derivar automaticamente):`);
+  const customQ = await appPrompt(
+    `Pergunta específica para este subagente (ou deixe em branco para derivar automaticamente):`,
+    '',
+    { title: 'Pergunta da Ramificação', icon: '❓', submitText: 'Criar Missão' }
+  );
 
   try {
     const res = await fetch('/api/v1/research/mission/branch', {
@@ -836,11 +949,11 @@ async function openBranchSectionModal(run_id) {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      alert(`Missão ramificada criada e enfileirada com sucesso: ${data.mission.run_id}`);
+      toast(`Missão ramificada criada e enfileirada com sucesso: ${data.mission.run_id}`, 'success');
       loadResearchHubMissions();
       switchResearchSubtab('active');
     } else {
-      alert('Erro: ' + (data.message || 'Falha ao ramificar missão'));
+      toast('Erro: ' + (data.message || 'Falha ao ramificar missão'), 'error');
     }
   } catch (err) {
     console.error('Falha ao ramificar:', err);
@@ -877,7 +990,7 @@ async function openDiffModal(run_id) {
         </div>
       `;
     } else {
-      alert('Erro ao calcular diff: ' + (data.message || ''));
+      toast('Erro ao calcular diff: ' + (data.message || ''), 'error');
     }
   } catch (err) {
     console.error('Falha ao carregar diff:', err);
@@ -885,7 +998,11 @@ async function openDiffModal(run_id) {
 }
 
 async function promoteReportModal(run_id) {
-  if (!confirm(`Deseja promover este relatório verificado para o Cofre Obsidian e Hipocampo L3?\nO Privacy Shield higienizará localmente quaisquer dados sensíveis (PII) antes de persistir.`)) return;
+  const ok = await appConfirm(
+    `Deseja promover este relatório verificado para o Cofre Obsidian e Hipocampo L3?\nO Privacy Shield higienizará localmente quaisquer dados sensíveis (PII) antes de persistir.`,
+    { title: 'Promover Relatório', icon: '🏛️', confirmText: 'Promover com Privacy Shield' }
+  );
+  if (!ok) return;
 
   try {
     const res = await fetch('/api/v1/research/promote', {
@@ -900,10 +1017,10 @@ async function promoteReportModal(run_id) {
     const data = await res.json();
     if (data.status === 'success') {
       const p = data.promotion;
-      alert(`Relatório promovido com sucesso!\n- Obsidian: ${p.obsidian_file_path || 'raw/research/'}\n- PIIs Higienizados: ${p.pii_redactions_count}\n- Hipocampo L3: Espelhado`);
+      toast(`Relatório promovido com sucesso!\n- Obsidian: ${p.obsidian_file_path || 'raw/research/'}\n- PIIs Higienizados: ${p.pii_redactions_count}`, 'success');
       inspectMissionDetail(run_id);
     } else {
-      alert('Erro na promoção: ' + (data.message || ''));
+      toast('Erro na promoção: ' + (data.message || ''), 'error');
     }
   } catch (err) {
     console.error('Falha ao promover relatório:', err);
@@ -996,7 +1113,7 @@ async function addNewDomainTrust() {
   const domain = input.value.trim();
   const tier = select.value;
   if (!domain) {
-    alert('Digite o domínio a ser cadastrado (ex: arxiv.org)');
+    toast('Digite o domínio a ser cadastrado (ex: arxiv.org)', 'warning');
     return;
   }
 
@@ -1011,7 +1128,7 @@ async function addNewDomainTrust() {
       input.value = '';
       loadDomainTrustLedger();
     } else {
-      alert('Erro: ' + (data.message || 'Falha ao cadastrar'));
+      toast('Erro: ' + (data.message || 'Falha ao cadastrar'), 'error');
     }
   } catch (err) {
     console.error('Falha ao adicionar domínio:', err);
@@ -1030,7 +1147,7 @@ async function changeDomainTier(domain, tier) {
       loadDomainTrustLedger();
       loadResearchScorecard();
     } else {
-      alert('Erro: ' + (data.message || 'Falha ao atualizar'));
+      toast('Erro: ' + (data.message || 'Falha ao atualizar'), 'error');
     }
   } catch (err) {
     console.error('Falha ao alterar tier:', err);
@@ -1038,11 +1155,23 @@ async function changeDomainTier(domain, tier) {
 }
 
 async function openClaimFeedbackModal(run_id) {
-  const stmt = prompt(`[AVALIAÇÃO DE AFIRMAÇÃO — ${run_id}]\nDigite o trecho ou afirmação que deseja avaliar:`);
+  const stmt = await appPrompt(`[AVALIAÇÃO DE AFIRMAÇÃO — ${run_id}]\nDigite o trecho ou afirmação que deseja avaliar:`, '', {
+    title: 'Avaliar Afirmação',
+    icon: '⚖️',
+    submitText: 'Próximo'
+  });
   if (!stmt || !stmt.trim()) return;
 
-  const dom = prompt(`Domínio associado à fonte (opcional, ex: github.com ou spam.com):`);
-  const ratingStr = prompt(`Classificação:\n1 = 👍 Correto / Conforme\n2 = ⚠️ Disputado / Inconclusivo\n3 = ❌ Alucinação / Falso`);
+  const dom = await appPrompt(`Domínio associado à fonte (opcional, ex: github.com ou spam.com):`, '', {
+    title: 'Domínio da Fonte',
+    icon: '🌐',
+    submitText: 'Próximo'
+  });
+  const ratingStr = await appPrompt(
+    `Classificação:\n1 = 👍 Correto / Conforme\n2 = ⚠️ Disputado / Inconclusivo\n3 = ❌ Alucinação / Falso`,
+    '1',
+    { title: 'Classificação Epistêmica', icon: '📊', submitText: 'Registrar' }
+  );
 
   let rating = 'accurate';
   if (ratingStr === '2') rating = 'disputed';
@@ -1064,11 +1193,11 @@ async function openClaimFeedbackModal(run_id) {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      alert('Feedback registrado! O ledger de reputação e métricas E3 foram atualizados.');
+      toast('Feedback registrado! O ledger de reputação e métricas E3 foram atualizados.', 'success');
       loadResearchScorecard();
       loadDomainTrustLedger();
     } else {
-      alert('Erro: ' + (data.message || 'Falha ao registrar feedback'));
+      toast('Erro: ' + (data.message || 'Falha ao registrar feedback'), 'error');
     }
   } catch (err) {
     console.error('Falha ao enviar feedback:', err);
@@ -1090,7 +1219,7 @@ async function generateSkillPatchProposal() {
       contentEl.innerText = p.patch_preview;
       box.style.display = 'block';
     } else {
-      alert('Erro ao gerar proposta: ' + (data.message || ''));
+      toast('Erro ao gerar proposta: ' + (data.message || ''), 'error');
     }
   } catch (err) {
     console.error('Falha ao gerar auto-patch:', err);
@@ -1143,9 +1272,9 @@ async function saveResearchSettings() {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      alert('Configurações do Research Hub salvas com sucesso!');
+      toast('Configurações do Research Hub salvas com sucesso!', 'success');
     } else {
-      alert('Erro ao salvar configurações: ' + (data.message || ''));
+      toast('Erro ao salvar configurações: ' + (data.message || ''), 'error');
     }
   } catch (err) {
     console.error('Falha ao salvar configurações:', err);

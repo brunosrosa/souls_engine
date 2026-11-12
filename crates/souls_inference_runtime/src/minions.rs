@@ -37,7 +37,7 @@ impl MinionDeviceTarget {
     #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
-            MinionDeviceTarget::DGpu => "dGPU (RTX 2060m)",
+            MinionDeviceTarget::DGpu => "dGPU (CUDA Accelerated)",
             MinionDeviceTarget::CpuAvx2 => "CPU Host (AVX2)",
         }
     }
@@ -150,6 +150,11 @@ impl MinionBatchOrchestrator {
 
         let guard = self.watchdog.lock().unwrap_or_else(|p| p.into_inner());
         let snapshot = guard.snapshot();
+
+        // 0. If no dedicated GPU is present (0 MB VRAM), redirect to CPU AVX2
+        if snapshot.vram_total_mb == 0 {
+            return MinionDeviceTarget::CpuAvx2;
+        }
 
         // 1. If NVML reports GPU is in Preventive or Critical zone, divert to CPU AVX2
         if snapshot.operational_zone != OperationalZone::Nominal {
@@ -476,5 +481,18 @@ mod tests {
         assert_eq!(results.len(), 2);
         assert!(results[0].is_ok());
         assert!(results[1].is_ok());
+    }
+
+    #[test]
+    fn test_minion_device_target_display_string() {
+        assert_eq!(MinionDeviceTarget::DGpu.as_str(), "dGPU (CUDA Accelerated)");
+        assert_eq!(MinionDeviceTarget::CpuAvx2.as_str(), "CPU Host (AVX2)");
+    }
+
+    #[test]
+    fn test_minion_hardware_target_resolution_zero_vram() {
+        let orch = MinionBatchOrchestrator::new();
+        orch.watchdog.lock().unwrap().record_sample(45.0, 0, 0, 1.0);
+        assert_eq!(orch.resolve_device_target(), MinionDeviceTarget::CpuAvx2);
     }
 }

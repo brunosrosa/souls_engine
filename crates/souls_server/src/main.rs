@@ -664,7 +664,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 59, "Full mode must expose all 59 canonical tools (55 baseline + 4 research.*)");
+        assert_eq!(tools_full.len(), 63, "Full mode must expose all 63 canonical tools (55 baseline + 4 research.* + 4 level 1 tools)");
     }
 
     #[tokio::test]
@@ -2057,7 +2057,7 @@ model:
         let json_h: serde_json::Value = serde_json::from_slice(&bytes_h).unwrap();
         assert_eq!(json_h["status"], "healthy");
         assert_eq!(json_h["total_skills"], 15);
-        assert_eq!(json_h["total_tools"], 59);
+        assert_eq!(json_h["total_tools"], 63);
 
         // 2. GET /api/v1/switchboard/skills
         let req_skills = Request::builder()
@@ -2874,6 +2874,63 @@ model:
         assert!(providers.iter().any(|p| p["id"] == "groq"));
         assert!(providers.iter().any(|p| p["id"] == "cerebras"));
         assert!(providers.iter().any(|p| p["id"] == "bedrock"));
+    }
+
+    #[tokio::test]
+    async fn test_system_pulse_endpoint() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        let req = Request::builder()
+            .uri("/api/v1/system/pulse")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(val["status"], "success");
+        assert!(val["pulse"]["evolution_level"].as_str().is_some());
+        assert!(val["pulse"]["finops_savings_usd"].as_str().is_some());
+        assert!(val["pulse"]["epistemic_health_pct"].as_f64().is_some());
+    }
+
+    #[tokio::test]
+    async fn test_system_storage_provision_and_vault_validate_endpoints() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Test storage provision
+        let req1 = Request::builder()
+            .uri("/api/v1/system/storage/provision")
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp1 = app.clone().oneshot(req1).await.unwrap();
+        assert_eq!(resp1.status(), StatusCode::OK);
+        let b1 = to_bytes(resp1.into_body(), usize::MAX).await.unwrap();
+        let val1: serde_json::Value = serde_json::from_slice(&b1).unwrap();
+        assert_eq!(val1["status"], "success");
+        assert_eq!(val1["provisioned_count"], 6);
+
+        // 2. Test vault validate
+        let req2 = Request::builder()
+            .uri("/api/v1/system/vault/validate")
+            .method("POST")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp2 = app.oneshot(req2).await.unwrap();
+        assert_eq!(resp2.status(), StatusCode::OK);
+        let b2 = to_bytes(resp2.into_body(), usize::MAX).await.unwrap();
+        let val2: serde_json::Value = serde_json::from_slice(&b2).unwrap();
+        assert_eq!(val2["status"], "success");
+        assert_eq!(val2["is_valid"], true);
     }
 
     #[tokio::test]
