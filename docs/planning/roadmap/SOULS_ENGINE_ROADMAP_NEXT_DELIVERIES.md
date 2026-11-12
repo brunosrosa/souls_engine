@@ -362,6 +362,10 @@ flowchart LR
    - Criação automática de tarefas atômicas e planos de implementação (`implementation_plan.md`) na fila de trabalho dos agentes.
    - Os agentes de codificação recebem o plano fatiado e executam a absorção da funcionalidade para dentro do Souls Engine seguindo estritamente a Regra da Crate Única e TDD.
 
+#### 3. Calm Mode & Proteção de Foco Neuro-Inclusivo (TDAH / 2e)
+* **Silêncio Operacional:** Subagentes de pesquisa pesada não disparam notificações incessantes nem popups que fragmentem o foco do usuário.
+* **Relatório Central em Evolução (`01_evolving_report.md`):** O progresso é escrito continuamente em disco e refletido no Dashboard via pulso discreto. O agente só notifica nos marcos de entrega ou quando exige decisão humana irreversível.
+
 ---
 
 ### MILESTONE v0.9.2: SOULS EVOLUTIVE HARNESS (AUTO-EVOLUÇÃO CONTÍNUA & CORDIS KERNEL)
@@ -391,6 +395,14 @@ Em vez de reescrever ingenuamente o system prompt a cada falha, o sistema partic
 #### 3. Microkernel Reversível de Processos Mentais (DeepSeek Cordis)
 * **Efeitos Reversíveis LIFO (`ctx.effect`):** Cada alteração possui operação inversa computável em pilha LIFO. Se a telemetria acusar regressão, o runtime reverte instantaneamente sem reiniciar o daemon (`fiber.dispose()`).
 * **Coefeitos Reativos (`inject`):** Serviços externos declarados como coefeitos isolados para falhas parciais graciosas.
+
+#### 4. Invalidação JIT de Conflitos em Tempo Real (TencentDB Tombstone Pattern)
+* **Eliminação Imediata de Alucinações Conflitantes:** Ao registrar novas preferências ou fatos que contradizem memórias anteriores no LadybugDB (L2), o fato antigo recebe imediatamente a marcação de **Tombstone (`status = 'superseded'`)**.
+* **Zero Espera Noturna:** A contradição é neutralizada no exato turno da conversa, impedindo que o modelo volte a alucinar informações desautorizadas pelo operador.
+
+#### 5. Cristalização Automática de Skills (*The Ralph Loop*)
+* **Aprendizado Permanente:** Quando um subagente resolve um problema complexo sob o ciclo *tentativa ➔ erro ➔ traceback ➔ correção* e atinge alta eficiência na métrica $E^3$, o módulo de metacognição sintetiza automaticamente uma nova **Skill Parametrizada (`SKILL.md` + scripts)**.
+* **Promoção via Quarentena:** A skill gerada é depositada na Quarentena do **Skills Hub** para aprovação do operador em 1 clique, evitando que o agente reaprenda tarefas difíceis do zero.
 
 ---
 
@@ -507,6 +519,13 @@ Transformação do NotebookLM de um serviço invisível em uma **Janela de Vidro
 * **Aproveitamento da Assinatura Google One / Gemini Advanced:**
   - Invocação das **Gems personalizadas** já criadas pelo usuário no Gemini Web (`gemini.google.com/app`) através do payload posicional de 69 elementos do protocolo `StreamGenerate`.
   - **Custo R$ 0,00 de Tokens:** Acesso aos modelos de raciocínio de ponta (Gemini 2.5 Pro / 3.0 Pro) com janela de 1 milhão de tokens coberta pela assinatura pessoal do usuário, eliminando gastos em dólares no Google Cloud / Vertex AI.
+
+#### 5. Agent Inbox & Paradigma BMAD (Branch, Mutate, Approve, Diff)
+* **Zero Alterações Silenciosas:** Nenhum subagente de background altera arquivos de trabalho ou envia mensagens externas sem autorização.
+* **Aprovação Visual em Myers Diff:** Propostas de mutação são enfileiradas na sub-aba **`📥 Agent Inbox`** do Dashboard com exibição de diff semântico.
+* **Governança por Blast Radius:**
+  - Ações de risco nulo (leitura, resumos, rascunhos locais): aprovadas automaticamente (**HOTL — Human-On-The-Loop**).
+  - Ações de impacto estrutural (edição de código, exclusões no Drive, envio de emails): travadas por **Slider de Confirmação com Gravity Lock** (**HITL — Human-in-the-Loop**).
 
 ---
 
@@ -688,6 +707,29 @@ Para manter o padrão de excelência de especificação técnica e blindar o pro
   - Re-hidratação transparente da sessão em memória ao visitar domínios recorrentes, pulando popups de consentimento e reduzindo fricção de rede sem comprometer credenciais sensíveis.
 * **Entregáveis Esperados:**
   - Módulo `souls_core::session_vault` acoplado ao motor de navegação leve.
+
+#### Deep Research 10: Rust-Native RLM Engine (Recursive Language Models em Rust Bare-Metal para SLMs Locais)
+* **Contexto & Justificativa Técnica:**
+  - SLMs locais (3B a 8B de parâmetros) sofrem de colapso cognitivo em janelas longas (>8k/16k tokens) decorrente do fenômeno *Context Rot* / *Lost-in-the-Middle*.
+  - O paper do MIT CSAIL (Alex L. Zhang) propôs RLMs operando dentro de um REPL Python. Em um ambiente de sistemas bare-metal, **o Python é um gargalo desnecessário**: uma implementação em **Rust puro** é 10x a 50x mais rápida, tem zero GIL e roda com pegada de RAM minúscula.
+* **Mecânica em Rust Bare-Metal:**
+  - O corpus massivo (milhões de tokens de código ou logs) reside em RAM como buffers mapeados contíguos (`memmap2`).
+  - O SLM raiz (*root LM*) nunca lê o texto inteiro; ele executa garras cirúrgicas:
+    1. *Peeking:* Lê apenas os primeiros N bytes para inspecionar a topologia.
+    2. *Grepping:* Aplica o motor DFA de regex ultrarrápido do Rust (`regex` crate) para isolar regiões de interesse em sub-milissegundo.
+    3. *Partition-Map/Reduce:* Dispara chamadas recursivas paralelas para SLMs locais via pool Tokio sobre fragmentos estritos (<1.000 tokens), mantendo 98%+ de acurácia com custo ínfimo.
+* **Entregáveis Esperados:**
+  - Crate ou módulo `souls_core::rlm_engine` habilitando ingestão ilimitada de contexto em SLMs locais.
+
+### 5.3 Ideações Registradas para o Backlog Pós-v1.0.0 (v1.1+)
+Mapeadas a partir do acervo do Canon V7 para preservação histórica e avaliação futura:
+1. **ParetoBandit Primal-Dual com Multiplicador de Lagrange $\lambda_t$ Dinâmico:** Adaptação contínua de taxas de desvio com convergência estocástica (requer escala massiva de chamadas).
+2. **Escada Furtiva Claw Completa (Camoufox / Xvfb Virtual / Tesseract OCR):** Emulação pesada de ambientes gráficos para resolução de desafios WAF de borda.
+3. **Pilar de Finanças Pessoais Soberanas & Open Finance BR:**
+   - Conector com *Actual Budget* (método de envelopes) e *bankstatementparser* para leitura de extratos locais e telemetria de Pix via webhooks do Tasker.
+   - *Bitcoin Research Kit (BRK)* em Rust: leitura on-chain direto do Bitcoin Core local (Múltiplo de Puell, Risco de Reserva) para estratégias DCA.
+4. **AutoScientists & Torneios ELO (Bradley-Terry):** Torneios de debate entre agentes em grafo DAG para ranqueamento automatizado de hipóteses científicas e código.
+5. **Orquestração Assíncrona estilo Symphony (Codex Spec):** Desacoplamento entre sessões interativas e ciclo de vida de tickets em Kanban/Linear com gestão autônoma de PRs e CI.
 
 ---
 
