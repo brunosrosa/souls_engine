@@ -113,7 +113,9 @@ Cruzamento do draft [`docs/reference/lembretes.txt`](file:///Z:/souls_engine/doc
 | **#5 Deep Research Engine** | Capability/Tool base de pesquisa profunda em árvore com síntese e fontes | **GAP IDENTIFICADO** | **Milestone v0.7.0** ➔ Ref.: [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/docs/reference/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md). |
 | **#6 Gateway Cloud Multi-Provedor** | Universalizar despacho de subagentes para além de OpenAI/Claude/Gemini | **GAP IDENTIFICADO** | **Milestone v0.7.0** (DeepSeek API, Groq, Together, Bedrock). |
 | **#7 Google Universe Bridge** | Ferramentas MCP para Google Docs, Sheets, Drive, Calendar e Gmail | **GAP IDENTIFICADO** | **Milestone v0.8.0** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
-| **#8 & #10 Souls Anthropophagy 2.0** | Ingestão mecânica (Blobs) ➔ Essências ➔ Enxame (85+ colunas) ➔ Auto-Evolução | **GAP IDENTIFICADO** | **Milestone v0.9.0** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
+| **#8 Souls Anthropophagy** | Ingestão mecânica de repositórios ➔ Essências ➔ Janela de Vidro (85+ colunas Google Sheets) ➔ Deep Analysis & Backlog de Implementação | **GAP IDENTIFICADO** | **Milestone v0.9.1** ➔ Ref.: `_donor/souls_mc_anthropophagy` e `Ideação Curadoria de Contexto Souls MC.md`. |
+| **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **GAP IDENTIFICADO** | **Milestone v0.9.2** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
+| **#11 Percepção Multimodal Híbrida** | AXTree O(1) + On-Demand Snapshots (Canvas/Figma) + Áudio Soberano Local na CPU i9 (0 MB VRAM) | **GAP IDENTIFICADO** | **Milestone v0.9.3** ➔ Ref.: Arquitetura Híbrida de Grounding & FinOps. |
 | **#9 Universal Installer & Hardware Adaptability** | Instalador zero-atrito, piso mínimo na 2060m adaptável a qualquer hardware | **GAP IDENTIFICADO** | **Milestone v1.0.0** (Universal Installer & Release Oficial). |
 
 ---
@@ -146,7 +148,13 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.8.3        │ Visão Cognitiva O(1) & AXTree    │ [CONCLUÍDO] LEAN 71% + 0MB VRAM│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.0 (PRÓX) │ Souls Anthropophagy 2.0          │ 4 Camadas, Blobs & 85+ Colunas│
+│ v0.9.0        │ Maturidade & Cockpit de Evolução │ [CONCLUÍDO] Dark UI + Multi-Cl│
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.9.1 (PRÓX) │ Souls Anthropophagy (Repo Miner) │ 85+ Colunas Google Sheets SSOT│
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.9.2        │ Souls Evolutive Harness (Harness)│ Cordis Kernel, Catnap Protocol│
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.9.3        │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v1.0.0 REAL   │ Universalização & Distribuição   │ Auto-Tuning, Installer 1-Click│
 └───────────────┴──────────────────────────────────┴───────────────────────────────┘
@@ -313,15 +321,55 @@ Abertura do ecossistema para a vida pessoal e profissional do operador através 
 
 ---
 
-### MILESTONE v0.9.0: SOULS ANTHROPOPHAGY 2.0 & ENXAME DE AUTO-EVOLUÇÃO
+### MILESTONE v0.9.1: SOULS ANTHROPOPHAGY (PIPELINE DE CANIBALIZAÇÃO & JANELA DE VIDRO GOOGLE SHEETS)
+
+> **Documentos de Referência Arquiteturais SSOT:**  
+> 📄 `_donor/souls_mc_anthropophagy` (Código Doador Canônico: `ssot_injector.rs`, `repo_heuristics`, 82/84 colunas)  
+> 📄 [Ideação Curadoria de Contexto Souls MC.md](file:///Z:/souls_engine/docs/reference/%5BRefinamento%5D%20Ideação%20Curadoria%20de%20Contexto%20Souls%20MC.md)
+
+O **Souls Anthropophagy** é o radar ativo e esteira industrial de **canibalização inteligente** de código e conceitos de repositórios open-source externos catalogados pelo operador. O objetivo é absorver o estado da arte de projetos externos sem duplicar slop nem reinventar a roda.
+
+```mermaid
+flowchart LR
+    A["Repositórios Externos (Links / GitHub / Pastas)"] -->|1. Ingestão Mecânica| B["souls_ast (AST / Tree-sitter / Myers)"]
+    B -->|2. Heurísticas & Essências| C["Janela de Vidro (Google Sheets 85+ Colunas)"]
+    C -->|3. Status de Aprovação & Filtro Humano| D["Fila de Deep Analysis"]
+    D -->|4. Síntese de Backlog| E["PRs Cirúrgicos / ADRs para o Souls Engine"]
+```
+
+#### 1. A Linhagem das 85+ Colunas e a "Janela de Vidro" (Google Sheets SSOT)
+* **Origem Canônica (`ssot_injector.rs`):** A tabela de 85+ colunas (82 canônicas + metadados de ciclo de vida) é a interface de auditoria humana entre o motor Rust e o operador, servindo como uma **"Janela de Vidro" (Glass Window)** em tempo real no Google Workspace.
+* **Governança por Gatilhos de Status:** Em vez de executar pipelines cegos e caros, o status de cada repositório na planilha funciona como o orquestrador dos sub-processos de hidratação:
+  - `NOVO / CATALOGADO`: Apenas metadados básicos (URL, estrelas, licença).
+  - `RAW_INGESTED`: Código baixado e decomposto em AST/blobs pelo `souls_ast`.
+  - `ESSENCES_EXTRACTED`: Resumo arquitetural e heurísticas das 85+ colunas preenchidas automaticamente.
+  - `APROVADO_PARA_ANALISE`: O operador humano revisa na planilha e altera o status para autorizar o próximo passo. Linhas marcadas como `IGNORAR / DESCARTADO` são puladas permanentemente.
+  - `DEEP_ANALYZED`: Dossiê de transplante gerado pelo enxame de agentes com mapeamento de componentes canibalizáveis.
+  - `INTEGRADO / FECHADO`: Capacidade absorvida pelo Souls Engine via PR ou Skill.
+
+#### 2. Os 3 Processos Sequenciais de Canibalização
+1. **Processo 1: Ingestão Mecânica & Heurísticas (Tier 0 Zero-LLM):**
+   - Clonagem leve de repositórios na Dev Drive `Z:\souls_engine\.souls_data\raw_repos\`.
+   - Extração via Tree-sitter dos grafos de chamadas, complexidade ciclomática, densidade de testes e dependências.
+   - Povoamento automático das 85 colunas na planilha do Google Workspace via API REST / Google Universe Bridge.
+2. **Processo 2: Deep Analysis & Dossiê de Canibalização:**
+   - Para os itens com status aprovado pelo operador na planilha, subagentes especializados analisam as camadas internas do projeto-alvo, identificando padrões de design, algoritmos e armadilhas documentadas.
+   - Geração de um dossiê técnico estruturado (`CANIBALIZATION_BRIEF.md`) com árvore de dependências e estimativa de esforço.
+3. **Processo 3: Backlog de Tarefas & Transplante Cirúrgico:**
+   - Criação automática de tarefas atômicas e planos de implementação (`implementation_plan.md`) na fila de trabalho dos agentes.
+   - Os agentes de codificação recebem o plano fatiado e executam a absorção da funcionalidade para dentro do Souls Engine seguindo estritamente a Regra da Crate Única e TDD.
+
+---
+
+### MILESTONE v0.9.2: SOULS EVOLUTIVE HARNESS (AUTO-EVOLUÇÃO CONTÍNUA & CORDIS KERNEL)
 
 > **Documento de Referência Arquitetural SSOT:**  
 > 📄 [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md)
 
-Transformação do módulo de antropofagia em um pipeline estruturado de auto-otimização recursiva inspirado no Google Harness², no microkernel reversível Cordis do DeepSeek e na telemetria hemisférica.
+O **Souls Evolutive Harness** é o framework de **auto-avaliação e benchmarking interno** do ecossistema, inspirado no Google Harness² e no microkernel reversível Cordis do DeepSeek. Ele atua sobre os componentes operacionais do próprio Souls Engine e do Hermes Agent.
 
-#### 1. Mapeamento dos 8 Componentes Editáveis (`c1` a `c8`) no Souls Engine
-Em vez de reescrever ingenuamente o system prompt a cada falha, o Souls Engine particiona sua anatomia operacional em 8 componentes sob governança estrita:
+#### 1. Mapeamento dos 8 Componentes Editáveis (`c1` a `c8`)
+Em vez de reescrever ingenuamente o system prompt a cada falha, o sistema particiona sua anatomia operacional em 8 componentes sob governança estrita:
 1. **`c1` System Prompt:** Essência e voz da alma (`SOUL.md` / `core.md`). **Camada Constitucional Fixada:** protegida por hash SHA-256 e fail-closed contra edições utilitaristas.
 2. **`c2` Guardrails:** Filtros inibitórios e regras negativas ("nunca faça X"). Bipartido: guardrails operacionais contra repetições são auto-otimizáveis; tabus de segurança são imutáveis.
 3. **`c3` Memory:** Memória de trabalho e fatos verificados. Higienização por evidência: expurgo de suposições não comprovadas e retenção estrita de fatos.
@@ -332,21 +380,56 @@ Em vez de reescrever ingenuamente o system prompt a cada falha, o Souls Engine p
 8. **`c8` Plugins / Hooks:** Middleware de ciclo de vida montado via microkernel reversível.
 
 #### 2. O Ciclo de Cochilo e Consolidação Subconsciente (*The Cognitive Catnap Protocol*)
-* **Consolidação em Brechas de Ociosidade (Zero Gargalo Noturno):** Em vez de depender de uma rotina em lote monolítica que exige o computador ligado de madrugada (o que criaria um gargalo imenso e falharia se a máquina estivesse desligada), a consolidação opera em regime de **Micro-Cochilos Cognitivos (*Catnaps*)**.
-* **Detecção Reativa de Inatividade do Host:** Monitora o estado de ociosidade do Windows 11 via Win32 (`GetLastInputInfo`), verificando CPU < 15%, GPU ociosa (<5% e <50°C) e ausência de requisições ativas no Hermes. Ao registrar de 3 a 5 minutos de inatividade, o daemon entra furtivamente em modo de cochilo.
-* **Micro-Lotes Atômicos Fatiados:** O trabalho é decomposto em passos curtos e idempotentes: audita 1 trajetória recente de subagente, higieniza 5 a 10 nós no grafo LadybugDB, aplica Langevin decay em um pequeno lote de memórias efêmeras ou avalia 1 mutação de skill via Propose–Probe–Compose em sandbox.
-* **Preempção Instantânea com Zero-Lag:** No exato milissegundo em que o usuário retoma o teclado/mouse ou um novo prompt chega ao Hermes (`pre_llm_call`), o cochilo é imediatamente interrompido/pausado. O cursor de progresso é salvo no SQLite STRICT e todo o silício é liberado instantaneamente, garantindo zero engasgos (*zero hitching/freeze*) na experiência do operador.
-* **Sondagem em Sombra (*Shadow Probing*):** Reexecuta turnos problemáticos em sandbox isolada, comparando o arnês base contra candidatos para comprovar se uma edição eliminou falhas reais antes de compor a melhoria.
+* **Consolidação em Brechas de Ociosidade (Zero Gargalo Noturno):** Supera o modelo arcaico de rotinas noturnas (que falhariam com o PC desligado). Opera em **Micro-Cochilos Ociosos**: detecta brechas de inatividade do usuário no Windows 11 (`GetLastInputInfo`, CPU < 15%, GPU < 5% e < 50°C, zero prompts ativos no Hermes).
+* **Micro-Lotes Atômicos Fatiados:** Audita 1 trajetória de subagente, higieniza 5 nós no LadybugDB ou roda 1 teste Propose-Probe-Compose em sandbox.
+* **Preempção Instantânea com Zero-Lag (0 ms):** Ao menor movimento do mouse, teclado ou novo prompt no Hermes, o cochilo é interrompido imediatamente, o cursor é salvo no SQLite STRICT e o silício é liberado para o usuário sem travamentos.
+* **Sondagem em Sombra (*Shadow Probing*):** Reexecuta turnos com falha em sandbox comparando o arnês base contra o mutante para comprovar melhoria real antes de aceitar qualquer alteração.
 
 #### 3. Microkernel Reversível de Processos Mentais (DeepSeek Cordis)
-* **Efeitos Reversíveis LIFO (`ctx.effect`):** Cada skill ou hook auto-gerado possui uma operação inversa computável em uma pilha LIFO. Se a telemetria detectar degradação após uma evolução, o runtime desfaz as alterações instantaneamente sem reiniciar o daemon (`fiber.dispose()`).
-* **Coefeitos Reativos (`inject`):** Serviços externos (MCPs, voz, APIs) são declarados como coefeitos; se um serviço cair, os processos dependentes entram em pausa graciosa sem quebrar a consciência textual do agente.
+* **Efeitos Reversíveis LIFO (`ctx.effect`):** Cada alteração possui operação inversa computável em pilha LIFO. Se a telemetria acusar regressão, o runtime reverte instantaneamente sem reiniciar o daemon (`fiber.dispose()`).
+* **Coefeitos Reativos (`inject`):** Serviços externos declarados como coefeitos isolados para falhas parciais graciosas.
 
-#### 4. O Pipeline Antropofágico em 4 Camadas & Tabela de 85+ Colunas
-* **1. Raw Blueprints & Blobs:** Ingestão mecânica de novos repositórios de harnesses (Git / AST / Tree-sitter) salvos em SQLite.
-* **2. Essences & Dehydration:** Destilação semântica de algoritmos e padrões (economia de 85% de tokens).
-* **3. Swarm Critical Analysis:** Enxame avaliando o repositório contra a Matriz Ontológica de 85+ Colunas (arquitetura, concorrência, pegada de memória, licença e sinergia).
-* **4. Continuous Evolution Pipeline:** Geração automática de ADRs, contratos de transplante e PRs cirúrgicos para o Souls Engine.
+---
+
+### MILESTONE v0.9.3: PERCEPÇÃO MULTIMODAL HÍBRIDA & GROUNDING DE INTERFACE
+
+> **Documentos de Referência Arquiteturais SSOT:**  
+> 📄 [Arquitetura Agente Rust Bare-Metal (Navegação e Parsing O(1)).md](file:///Z:/souls_engine/docs/reference/%5BUPDATE%5D%20%5BDEPENDENCIES%5D%20Arquitetura%20Agente%20Rust%20Bare-Metal%20(Navega%C3%A7%C3%A3o%20e%20Parsing%20O(1)).md)  
+> 📄 [ADR-029: Visão Cognitiva O(1) via Árvore de Acessibilidade (AXTree)](file:///Z:/souls_engine/docs/decisions/adrs/ADR-029-axtree-accessibility-vision.md)
+
+Desmistificação técnica definitiva dos domínios de **Visão de Tela** e **Processamento de Áudio**, equilibrando soberania bare-metal, latência e custo financeiro (FinOps).
+
+#### 1. A Realidade da Visão: AXTree O(1) vs On-Demand Screenshots vs Streaming Contínuo
+* **O Padrão Soberano — Visão Cognitiva $\mathcal{O}(1)$ via AXTree (95% dos Casos):**
+  - Consumo de **0 MB de VRAM** e **0 tokens de imagem**.
+  - Latência sub-5ms: lê diretamente a árvore de acessibilidade do Windows (`windows-sys` UIA) e do Chrome/Edge (`Accessibility.getFullAXTree` via CDP).
+  - Fornece texto semântico estruturado, rótulos, estados e coordenadas vetoriais exatas de clique $(X, Y)$ serializadas no formato LEAN (redução de 71% de tokens).
+* **Quando o AXTree NÃO é Suficiente (Cenários Reais que Exigem Pixels):**
+  1. *Superfícies Gráficas / Canvas / WebGL:* Ferramentas visuais (Figma, Canva, Miro, Blender), editores de nós, gráficos renderizados via `<canvas>` (Tableau, Grafana) e PDFs escaneados como imagem, onde o AXTree reporta apenas um bloco genérico vazio sem filhos.
+  2. *Auditoria Estética & QA Visual de Layout:* Verificar quebra visual de CSS, contraste de cores, alinhamentos finos e sobreposição de z-index ("o botão está visualmente desalinhado ou feio?"), julgamento impossível via árvore textual.
+  3. *Ambientes Remotos / Virtualizados:* Sessões de RDP, VNC, TeamViewer, AnyDesk ou máquinas virtuais onde a acessibilidade local não penetra no sistema operacional convidado.
+* **Por que Streaming Contínuo (30 FPS DXGI/WebRTC) é um Anti-Padrão Tóxico:**
+  - Enviar 30 quadros por segundo para modelos de visão na nuvem consome gigabytes de banda, aquece a GPU desnecessariamente e custaria centenas de dólares por dia em tokens multimais.
+  - **A Solução Canônica: Captura Sob Demanda (*On-Demand Visual Snapshot*):** O agente opera 95% do tempo via AXTree O(1). Quando e apenas quando encontra um elemento Canvas, ou quando o usuário pede explicitamente uma análise estética, ele invoca uma ferramenta de screenshot pontual em sub-50ms via DXGI, analisa a imagem estática e descarta o buffer.
+
+#### 2. Áudio Soberano Local (CPU i9) + Cérebro Plugável vs Gemini Live
+* **Pipeline de Áudio 100% Local (Soberania Bare-Metal, 0 MB VRAM, CPU AVX2):**
+  - **VAD (Voice Activity Detection):** Silero VAD v5 com latência < 30ms e *barge-in* instantâneo (interrompe a fala do agente no milissegundo em que o usuário começa a falar).
+  - **STT (Speech-to-Text):** SenseVoiceSmall rodando localmente na CPU i9 com geração de tags emocionais e de tom (`<HAPPY>`, `<ANGRY>`), convertendo voz em texto em sub-150ms.
+  - **TTS (Text-to-Speech):** Kokoro-82M (pt-BR) não-autoregressivo na CPU (< 100ms para sintetizar a resposta) com áudio natural e zero risco de alucinação ou loop.
+* **O "Cérebro Complementar" Desacoplado:**
+  - A voz do usuário vira texto localmente; esse texto é despachado em streaming para **qualquer modelo LLM** (seja um modelo local no silício ou qualquer LLM de ponta na nuvem como Claude 3.7 Sonnet, DeepSeek V3/R1 ou GPT-4o).
+  - A resposta textual gerada em streaming pelo cérebro é convertida em fala pelo Kokoro local em tempo real.
+  - **Custo Operacional:** STT e TTS custam **R$ 0,00** (processamento puramente local). O custo de inteligência é apenas o valor padrão de tokens de texto da LLM escolhida (frações de centavos por interação).
+* **Comparativo Crítico: Nossa Arquitetura vs Gemini Live:**
+
+| Dimensão de Comparação | Nossa Arquitetura Local + Cérebro Plugável | Gemini Live API (Sessão WebRTC Multimodal) |
+| :--- | :--- | :--- |
+| **Consumo de VRAM** | **0 MB** (Silero + SenseVoice + Kokoro na CPU AVX2) | **0 MB** (Processamento na nuvem da Google) |
+| **Custo por Hora** | **Centavos** (Apenas tokens de texto do cérebro LLM) | **$3,60 a $7,20 / hora** (Cobrado por minuto aberto de áudio/vídeo) |
+| **Privacidade da Voz** | **100% Soberana** (Apenas o texto filtrado vai para a nuvem) | **Zero Soberania** (Áudio bruto de microfone transmitido continuamente) |
+| **Barge-in / Interrupção** | **Sub-30ms** (Silero VAD local no kernel) | Depende da latência de rede e WebRTC (150–400ms) |
+| **Aprisionamento (Lock-in)**| **Zero** (Troca de cérebro a qualquer momento sem mudar áudio) | **Total** (Preso à API e regras de conteúdo da Google) |
 
 ---
 
@@ -418,20 +501,20 @@ A análise dos três estudos de referência revelou padrões arquiteturais inéd
 
 Para manter o padrão de excelência de especificação técnica e blindar o projeto contra premissas redundantes ou "slop" de mercado, foram consolidados quatro cadernos de pesquisa aprofundada com direcionamento cirúrgico para embasar as futuras implementações:
 
-#### Deep Research 1: Real-Time Multimodal Grounding & Gemini Live Protocol (WebRTC / WebSockets via `webrtc-rs` e Captura Zero-Copy de Tela)
+#### Deep Research 1: Grounding Visual Híbrido sob Demanda & FinOps de Visão (AXTree O(1) + Fast DXGI Snapshots para Áreas Gráficas / Canvas)
 * **Contexto & Justificativa Técnica:**
-  - A interface de voz conversacional e síntese com o usuário já está consolidada no Hermes Agent Desktop em CPU Host (`SenseVoiceSmall` + `Kokoro-82M` com 0 MB de VRAM). O Souls Engine é um daemon 100% headless (Linha Vermelha 1) e não atua como tocador de áudio interativo.
-  - A lacuna real a ser investigada reside na **percepção multimodal contínua em tempo real**: como o Souls Engine pode atuar como um *relay bare-metal de ultra-baixa latência*, transmitindo fluxos de vídeo/tela e áudio ambiente capturados no host diretamente para a **Gemini Live API** (e futuros VLMs de borda via streaming WebRTC/WebSocket), permitindo raciocínio visual-espacial contínuo durante sessões de codificação e pesquisa.
+  - O streaming contínuo de tela a 30 FPS (WebRTC/WebSockets contínuos) foi formalmente rechaçado como anti-padrão tóxico e desperdício de recursos: aloca continuamente tensores ou banda de rede, aquece a GPU e gera contas de centenas de dólares por dia em tokens na nuvem (ou $3,60–$7,20/h no Gemini Live).
+  - O padrão oficial consolidado do Souls Engine é a **Visão Cognitiva $\mathcal{O}(1)$ via AXTree** (95% dos casos, 0 MB VRAM, 0 tokens de imagem).
+  - A lacuna técnica que este caderno investiga é o **Grounding Visual Híbrido sob Demanda (On-Demand Visual Snapshot)**:
+    1. *Detecção Heurística de Necessidade de Pixel:* Como o agente detecta automaticamente que a janela ativa é uma superfície gráfica (Figma, Canva, Miro, Blender, `<canvas>`, WebGL ou PDF escaneado) ou que a tarefa é de QA estético de CSS/Layout, disparando a captura sob demanda.
+    2. *Captura Relâmpago DXGI em Sub-50ms:* Captura do quadro isolado via DirectX Desktop Duplication API (DXGI) direto na RAM Host (zero passagem por disco e zero alocação de VRAM).
+    3. *Compressão Adaptativa em RAM:* Compressão enxuta em WebP/JPEG na CPU com corte cirúrgico da região de interesse (ROI) antes de enviar para a API de visão da LLM prescrita pelo ParetoBandit.
 * **Desafio Bare-Metal & Hardware (RTX 2060m):**
-  - Captura de frames de tela em Windows 11 via DirectX Desktop Duplication API (DXGI) sem sobrecarregar a dGPU e sem alocar tensores VRAM.
-  - Conversão e empacotamento zero-copy de frames em tracks de vídeo WebRTC nativos em Rust (`webrtc-rs`) ou WebSocket framing (`tokio-tungstenite`).
-  - Sincronização de relógio de socket (*clock skew*) e bufferização adaptativa de jitter para manter a latência de ponta a ponta abaixo de 250 ms.
-* **Metodologia & Benchmarking Proposto:**
-  - Medição de consumo de CPU, FPS de captura (10 a 30 FPS adaptativos), jitter de rede e descarte de quadros em conexões instáveis.
-  - Validação da coexistência térmica com inferência de LLM na CPU e GPU.
+  - Isolamento de handles DXGI e liberação imediata de buffers (`AcquireNextFrame` / `ReleaseFrame`) para evitar vazamento de memória WDDM.
+  - Mitigação de latência: pipeline completo (detecção ➔ captura DXGI ➔ recorte ROI ➔ WebP na RAM) em menos de 60 ms.
 * **Entregáveis Esperados:**
-  - ADR formalizando o contrato de streaming multimodal do Souls Engine.
-  - Especificação da crate interna ou módulo `souls_core::multimodal_stream` e ferramenta MCP `gemini_live_stream`.
+  - ADR formalizando a política de On-Demand Visual Snapshotting vs AXTree.
+  - Ferramenta MCP `screen_inspect_region` e `screen_capture_canvas` consumindo 0 VRAM adicional.
 
 #### Deep Research 2: LadybugDB High-Density Scaling & Catnap Pruning (petgraph RAM Footprint vs Mapped B-Tree sob Carga de 100k+ Nós & Langevin Decay)
 * **Contexto & Justificativa Técnica:**
