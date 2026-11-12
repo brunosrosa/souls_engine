@@ -550,8 +550,8 @@ Para manter o padrão de excelência de especificação técnica e blindar o pro
 
 #### Deep Research 4: Cross-Platform Bare-Metal Storage & File-System Virtualization (NTFS vs ReFS vs APFS vs ext4 & Defender Evasion)
 * **Contexto & Justificativa Técnica:**
-  - No ambiente de desenvolvimento, o Souls Engine aproveita o Dev Drive ReFS (`Z:\`) com *Performance Mode* nativo do Defender e *Block Cloning*. Em máquinas de produção de usuários comuns, a instalação padrão operará sobre NTFS comercial (Windows 11), ext4/btrfs (Linux) ou APFS (macOS).
-  - É imperativo garantir que o FrankenSQLite STRICT WAL e o LanceDB alcancem paridade de IOPS e imunidade contra bloqueios (`os error 5` / `database is locked`) em qualquer partição comercial.
+  - **Clarificação Canônica de Produção vs Desenvolvimento:** A unidade Dev Drive ReFS (`Z:\souls_engine`) é uma infraestrutura exclusiva da máquina de desenvolvimento do Arquiteto. Em máquinas de produção de usuários finais, **o Souls Engine opera obrigatoriamente sobre NTFS comercial padrão do Windows 11** (ou ext4/btrfs no Linux, APFS no macOS). Nenhuma funcionalidade de produção pode depender ou assumir a existência de ReFS.
+  - É imperativo garantir que o FrankenSQLite STRICT WAL e o LanceDB alcancem paridade de IOPS e imunidade contra bloqueios (`os error 5` / `database is locked`) em qualquer partição comercial NTFS sem exigir ReFS.
 * **Desafio Bare-Metal & I/O de Baixo Nível:**
   - Compensação da ausência de Block Cloning no NTFS: adoção do comando online `VACUUM INTO 'snapshot.db'` ou hardlinks idempotentes para snapshots sem congelamento de transações.
   - Validação das diretivas de tunings do SQLite (`PRAGMA synchronous = NORMAL;`, `PRAGMA mmap_size = 268435456;`, `PRAGMA temp_store = MEMORY;`) sob rajadas de escrita no NTFS.
@@ -560,6 +560,57 @@ Para manter o padrão de excelência de especificação técnica e blindar o pro
   - Benchmark comparativo de throughput de leitura vetorial e inserção SQLite (10.000 transações concorrentes) em NTFS sem exclusão vs NTFS com exclusão Defender vs ReFS.
 * **Entregáveis Esperados:**
   - Matriz de calibração de I/O em runtime que aplica dinamicamente os melhores PRAGMAs com base no sistema de arquivos detectado pelo motor no boot.
+
+#### Deep Research 5: Motores de Navegação Headless em Rust (Obscura vs Moli vs BrowserOxide) & Auto-Update Atômico
+* **Contexto & Justificativa Técnica:**
+  - Agentes dependem historicamente de Chromium completo (Playwright/Puppeteer), consumindo 300-500 MB de RAM por aba e demorando segundos para inicializar, ou de fetch estático (Tier 0) que quebra diante de SPAs modernas (React, Vue, Next.js).
+  - Investigação da nova geração de motores headless leves em Rust com V8 embutido:
+    1. *Obscura (`h4ckf0r0day/obscura`):* Suporte nativo a CDP e MCP, conversão DOM para Markdown, ~70 MB binário e 30-40 MB RAM.
+    2. *Moli:* Motor sem loop de renderização de 60 FPS, combinando `html5ever`, `Stylo` (Servo CSS) e `Taffy`.
+    3. *BrowserOxide (`deno_core` / V8):* Foco extremo em evasão anti-bot com BoringSSL TLS e fingerprints JA4 limpos.
+* **Desafio Bare-Metal & Auto-Update:**
+  - **Esteira de Auto-Update no Windows sem Travar o Daemon:** O Windows NT bloqueia a exclusão ou sobrescrita de binários `.exe` em execução (`Access Denied`). Investigação da técnica canônica *Atomic Rename-to-Replace* (`MoveFileExW`): renomeia `souls_engine.exe` para `.old`, baixa `.new`, move `.new` para o nome oficial e faz graceful restart durante um *Cognitive Catnap*.
+  - Gestão de ciclo de vida de sidecars: como o Souls Engine audita, baixa e atualiza binários auxiliares (como o Obscura) sem intervenção do usuário.
+* **Entregáveis Esperados:**
+  - ADR formalizando a escolha do motor headless leve para navegação SPA no Tier 0.
+  - Módulo `souls_core::updater` com rotina atômica de auto-update e verificação criptográfica SHA-256.
+
+#### Deep Research 6: Win32 Job Objects & Process Supervisor Bare-Metal (Eliminação de Zumbis e Contenção de Recursos)
+* **Contexto & Justificativa Técnica:**
+  - Agentes autônomos executam ferramentas de terminal de longa duração (`npm install`, compilações, testes, scripts Python). Quando o comando atinge timeout ou a tarefa é abortada, processos filhos órfãos frequentemente continuam rodando no Windows (`node.exe`, `python.exe`), devorando CPU e travando portas TCP.
+* **Desafio Bare-Metal Win32:**
+  - Encapsular cada execução de processo filho em um **Windows Job Object** (`CreateJobObjectW` via `windows-sys`).
+  - Configurar a flag `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`: quando o Souls Engine fechar o handle do Job, o kernel do Windows elimina instantaneamente toda a árvore de processos filhos, garantindo **zero processos zumbis**.
+  - Imposição de tetos rígidos de memória máxima e afinidade de CPU por processo executado por agentes.
+* **Entregáveis Esperados:**
+  - Crate ou módulo `souls_core::process_supervisor` blindando execuções de comandos locais.
+
+#### Deep Research 7: Fatiador Colunar Zero-Copy para Dados Estruturados em RAM (CSV, Parquet, XLSX sem LLM)
+* **Contexto & Justificativa Técnica:**
+  - Ao analisar tabelas grandes (planilhas de 50-200 MB, CSVs pesados, logs analíticos), agentes comuns gastam milhares de tokens tentando ler linhas brutas no prompt ou falham por estouro de contexto.
+* **Desafio Bare-Metal & FinOps:**
+  - Motor de processamento colunar baseado em `arrow2` ou `polars` em Rust no Tier 0 determinístico.
+  - O agente submete consultas analíticas estruturadas (ex: agregações, filtros e contagens) que rodam em sub-10ms na CPU com zero alocação de LLM, retornando para a LLM apenas o extrato semântico consolidado de poucas linhas.
+* **Entregáveis Esperados:**
+  - Ferramenta MCP `data_query_structured` para fatiamento de dados volumosos com custo zero de tokens.
+
+#### Deep Research 8: In-Memory Headless LSP & Grafo de Símbolos Cross-File para Refatoração $\mathcal{O}(1)$
+* **Contexto & Justificativa Técnica:**
+  - O `souls_ast` realiza outline e slices por arquivo via Tree-sitter. Contudo, em refatorações amplas (renomear structs, alterar contratos de traits em múltiplos arquivos), agentes ainda recorrem a buscas textuais burras (`grep`), gerando alucinações e erros de compilação.
+* **Desafio Bare-Metal:**
+  - Construção de um índice de referências cruzadas em memória (usando o grafo L2 do LadybugDB persistido no SQLite) mapeando declarações e usos de símbolos entre todas as crates.
+  - O agente consulta: *"Quem implementa este trait ou chama esta função em todo o repositório?"* e obtém a lista exata de offsets e arquivos para alteração atômica em passo único.
+* **Entregáveis Esperados:**
+  - Ferramenta MCP `ast_find_references` e `ast_rename_symbol_atomic`.
+
+#### Deep Research 9: Local Session Vault & Cookies Re-Hydration para Redução de Rate-Limits e Popups
+* **Contexto & Justificativa Técnica:**
+  - Navegações repetidas de subagentes em sites técnicos enfrentam popups de cookies da LGPD/GDPR, banners de login e rate-limits por nova sessão.
+* **Desafio Bare-Metal & Privacidade:**
+  - Armazenamento criptografado de cookies de sessão legítima no SQLite STRICT (`session_vault.db`).
+  - Re-hidratação transparente da sessão em memória ao visitar domínios recorrentes, pulando popups de consentimento e reduzindo fricção de rede sem comprometer credenciais sensíveis.
+* **Entregáveis Esperados:**
+  - Módulo `souls_core::session_vault` acoplado ao motor de navegação leve.
 
 ---
 
@@ -581,19 +632,38 @@ flowchart TD
         MultiCloud["Universal Cloud Dispatch Gateway (DeepSeek, Groq, Bedrock)"]
     end
 
-    subgraph M080 ["Milestone v0.8.0 (Conectividade & Memória)"]
-        GoogleBridge["Google Universe MCP Bridge (Wiz RPC, Jules, clasp, chaser-oxide)"]
-        ObsidianDrip["Esteira Contínua The 30-Minute Drip (Privacy Shield)"]
+    subgraph M080 ["Milestone v0.8.x — CONCLUÍDO (Streaming PDF, Gateways & AXTree)"]
+        PDFStreaming["Streaming PDF & Strict WAL (souls_memory)"]
+        AgentCLIs["Gateways Globais & CLIs Agênticas (agy, claude, codex)"]
+        AXTreeVision["Visão Cognitiva O(1) via AXTree (LEAN 71% / 0 MB VRAM)"]
     end
 
-    subgraph M090 ["Milestone v0.9.0 (Engenharia Reversa & Auto-Evolução)"]
-        Anthropophagy["Souls Anthropophagy 2.0 (8 Componentes c1-c8 / Cordis LIFO)"]
-        EvolutionDash["Dashboard de Análise Crítica e Auto-Harness (85+ Colunas)"]
+    subgraph M090 ["Milestone v0.9.0 — CONCLUÍDO (Maturidade & Cockpit de Evolução)"]
+        HardwareAgno["Dynamic NVML & Hardware Agnostic"]
+        MultiCloud16["Unificação dos 16 Provedores Canônicos"]
+        PersonalPulse["Cockpit de Evolução Pessoal & Zero Placebos"]
     end
 
-    subgraph M100 ["Milestone v1.0.0 (Universalização & Distribuição)"]
-        AutoTuning["Universal Hardware Profiler (Agnóstico a Silício)"]
-        Installer["One-Click Installer (setup.ps1 + Auto-Bootstrap)"]
+    subgraph M091 ["Milestone v0.9.1 — PRÓXIMA (Souls Anthropophagy)"]
+        Anthropophagy["Souls Anthropophagy (Ingestão de Repos & AST)"]
+        GlassWindow["Janela de Vidro (Google Sheets 85+ Colunas SSOT)"]
+        DeepAnalysis["Fila de Deep Analysis & Backlog de PRs"]
+    end
+
+    subgraph M092 ["Milestone v0.9.2 (Souls Evolutive Harness)"]
+        CordisKernel["DeepSeek Cordis Reversible Microkernel"]
+        CatnapProtocol["The Cognitive Catnap Protocol (0ms Preempt)"]
+        ShadowProbing["Shadow Probing (Propose-Probe-Compose)"]
+    end
+
+    subgraph M093 ["Milestone v0.9.3 (Percepção Multimodal Híbrida)"]
+        HybridVision["AXTree O(1) + On-Demand DXGI Snapshots"]
+        SovereignAudio["Áudio Soberano Local (Silero + SenseVoice + Kokoro)"]
+    end
+
+    subgraph M100 ["Milestone v1.0.0 (Universalização & Distribuição Pública)"]
+        AutoTuning["Universal Hardware Profiler (NTFS / ReFS / AVX2)"]
+        Installer["One-Click Installer (setup.ps1 + Defender Exclusions)"]
         DecomDonor["Descomissionamento Definitivo do _donor/"]
     end
 
@@ -601,12 +671,21 @@ flowchart TD
     v050 --> Personas
     SkillsHub --> DeepResearch
     Personas --> MultiCloud
-    DeepResearch --> GoogleBridge
-    MultiCloud --> GoogleBridge
-    GoogleBridge --> ObsidianDrip
-    ObsidianDrip --> Anthropophagy
-    Anthropophagy --> EvolutionDash
-    EvolutionDash --> AutoTuning
+    DeepResearch --> PDFStreaming
+    MultiCloud --> AgentCLIs
+    PDFStreaming --> AXTreeVision
+    AXTreeVision --> HardwareAgno
+    HardwareAgno --> MultiCloud16
+    MultiCloud16 --> PersonalPulse
+    PersonalPulse --> Anthropophagy
+    Anthropophagy --> GlassWindow
+    GlassWindow --> DeepAnalysis
+    DeepAnalysis --> CordisKernel
+    CordisKernel --> CatnapProtocol
+    CatnapProtocol --> ShadowProbing
+    ShadowProbing --> HybridVision
+    HybridVision --> SovereignAudio
+    SovereignAudio --> AutoTuning
     AutoTuning --> Installer
     Installer --> DecomDonor
 ```
