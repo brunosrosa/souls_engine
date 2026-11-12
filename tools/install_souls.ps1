@@ -1,4 +1,4 @@
-# tools/install_souls.ps1 — Script Mestre de Instalação, Setup e Simbiose do Souls Engine v7
+﻿# tools/install_souls.ps1 — Script Mestre de Instalação, Setup e Simbiose do Souls Engine v7
 # Governança: Linhas Vermelhas 1 e 4 do AGENTS.md, ADR-003, ADR-005
 
 [CmdletBinding()]
@@ -60,13 +60,13 @@ Write-Host "  ✓ Estrutura de persistência em $soulsDataDir verificada." -Fore
 # ============================================================================
 Write-Host "`n[2/5] Verificando binários de produção (Release)..." -ForegroundColor Cyan
 
-$releaseTargetDir = "Z:\souls_engine\target\release"
-if (-not (Test-Path $releaseTargetDir)) {
-    $releaseTargetDir = "Z:\souls_engine\target\x86_64-pc-windows-msvc\release"
-}
-$serverExeSource = Join-Path $releaseTargetDir "souls_server.exe"
+$candidates = @(
+    "Z:\souls_engine\target\x86_64-pc-windows-msvc\release\souls_server.exe",
+    "Z:\souls_engine\target\release\souls_server.exe"
+)
+$serverExeSource = $candidates | Where-Object { Test-Path $_ } | Sort-Object { (Get-Item $_).LastWriteTime } -Descending | Select-Object -First 1
 
-if (-not (Test-Path $serverExeSource) -and -not $SkipBuild) {
+if (-not $serverExeSource -and -not $SkipBuild) {
     Write-Host "  -> Compilando binário nativo release com MSVC (cargo build --release -p souls_server)..." -ForegroundColor Yellow
     Push-Location "Z:\souls_engine"
     try {
@@ -78,14 +78,7 @@ if (-not (Test-Path $serverExeSource) -and -not $SkipBuild) {
     } finally {
         Pop-Location
     }
-}
-
-# Localiza novamente após build
-if (-not (Test-Path $serverExeSource)) {
-    $alt = "Z:\souls_engine\target\x86_64-pc-windows-msvc\release\souls_server.exe"
-    if (Test-Path $alt) {
-        $serverExeSource = $alt
-    }
+    $serverExeSource = $candidates | Where-Object { Test-Path $_ } | Sort-Object { (Get-Item $_).LastWriteTime } -Descending | Select-Object -First 1
 }
 
 if (-not (Test-Path $serverExeSource)) {
