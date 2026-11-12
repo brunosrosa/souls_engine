@@ -721,15 +721,38 @@ Para manter o padrão de excelência de especificação técnica e blindar o pro
 * **Entregáveis Esperados:**
   - Crate ou módulo `souls_core::rlm_engine` habilitando ingestão ilimitada de contexto em SLMs locais.
 
-### 5.3 Ideações Registradas para o Backlog Pós-v1.0.0 (v1.1+)
-Mapeadas a partir do acervo do Canon V7 para preservação histórica e avaliação futura:
-1. **ParetoBandit Primal-Dual com Multiplicador de Lagrange $\lambda_t$ Dinâmico:** Adaptação contínua de taxas de desvio com convergência estocástica (requer escala massiva de chamadas).
-2. **Escada Furtiva Claw Completa (Camoufox / Xvfb Virtual / Tesseract OCR):** Emulação pesada de ambientes gráficos para resolução de desafios WAF de borda.
-3. **Pilar de Finanças Pessoais Soberanas & Open Finance BR:**
-   - Conector com *Actual Budget* (método de envelopes) e *bankstatementparser* para leitura de extratos locais e telemetria de Pix via webhooks do Tasker.
-   - *Bitcoin Research Kit (BRK)* em Rust: leitura on-chain direto do Bitcoin Core local (Múltiplo de Puell, Risco de Reserva) para estratégias DCA.
-4. **AutoScientists & Torneios ELO (Bradley-Terry):** Torneios de debate entre agentes em grafo DAG para ranqueamento automatizado de hipóteses científicas e código.
-5. **Orquestração Assíncrona estilo Symphony (Codex Spec):** Desacoplamento entre sessões interativas e ciclo de vida de tickets em Kanban/Linear com gestão autônoma de PRs e CI.
+### 5.3 Catálogo Canônico de Ideações para o Backlog Pós-v1.0.0 (v1.1+)
+Mapeadas e preservadas formalmente a partir do acervo do **Canon V7 (256 Fontes)** para estruturação e refinamento após a consolidação da versão 1.0.0:
+
+#### 1. Governança Cognitiva & Inteligência Sistêmica Avançada
+1. **ParetoBandit Primal-Dual com Multiplicador de Lagrange $\lambda_t$ Dinâmico:** Adaptação contínua e estocástica de taxas de desvio orçamentário para escalas massivas de chamadas diárias.
+2. **AutoScientists & Torneios ELO (Modelo Bradley-Terry):** Torneios de debate pairwise e ranqueamento automático de hipóteses científicas e qualidade de código gerado.
+3. **Logit Probing na CPU em <150 µs:** Execução exclusiva do forward-pass (prefill) em SLM leve local, inspecionando probabilidades brutas dos tokens ("Sim"/"Não") para disparar Interrupção Socrática perante alta ambiguidade sem gerar texto.
+4. **Orquestração Assíncrona estilo Symphony (OpenAI Codex Spec):** Desacoplamento entre sessões interativas e o ciclo de vida de tickets em gerenciadores de estado (Linear/Kanban), com agentes gerenciando branches, rebases e CI sem alternância de terminais pelo operador.
+
+#### 2. Saúde, Fisiologia Circadiana & Ergonomia Neuro-Inclusiva (TDAH / 2e)
+5. **Variação Circadiana da Interface (Twilight Mode vs. Dawn Mode):**
+   - *Twilight Mode (Noite):* Terminal acústico de áudio em fundo OLED preto absoluto (`oklch 0.12`), com purga total do espectro azul para preservar a melatonina.
+   - *Dawn Mode (07:00):* Materialização visual do diário noturno em Grafo de Conhecimento com 3 classes de nós: Vermelho (Problemas), Laranja (Premissas Rompidas em *Double-Loop Learning*) e Verde (Ações Práticas na Agenda).
+6. **Atraso Sintético Biomecânico (Stealth Assessment & Wu Wei):** Monitoramento passivo de digitação acelerada e cliques erráticos (marcadores de ansiedade ou hiperfoco desregulado), introduzindo um atrito intencional de 800 ms a 1.500 ms na UI para forçar a desaceleração do ritmo respiratório.
+7. **Focus Rack (Limite Estrito de 5 Slots em CSS Grid 2D):** Contenção física de impulsos dopaminérgicos em perfis neurodivergentes; o sistema bloqueia visualmente a abertura de uma 6ª tarefa concorrente, exigindo arquivar ou delegar antes de acumular caos executivo.
+8. **Monitoramento de Carga Alostática Vocal via eGeMAPS:** Análise de biomarcadores de voz na CPU (jitter, shimmer, flutuações de pitch e achatamento espectral), chaveando automaticamente entre Modo Sparring, Modo Descompressão e Silêncio Compassivo.
+9. **Digital Twin Simulation Canvas ("Cadeira Vazia" da Gestalt em 3D):** Ensaio de conversas difíceis e mediação de conflitos interpessoais; a IA instancia o avatar da outra pessoa e executa rotação esférica de câmera em 180° (*Role-Switch*), forçando o usuário a responder sob a perspectiva do outro antes da reunião real.
+10. **Âncoras de Carreira (Edgar Schein) Integradas ao Filtro Heurístico:** Mapeamento de âncoras inegociáveis do operador (como Autonomia ou Criatividade); tarefas de agentes que violem essas âncoras são sinalizadas com atrito visual antes da execução.
+
+#### 3. Interfaces Espaciais Tácteis & GenUI de Segunda Ordem
+11. **Protocolo GenUI / MCP Apps (Extensão `ext-apps` via `srcdoc` em iframe sandbox):** Geração dinâmica de mini-aplicativos interativos (gráficos, planilhas, simuladores) com comunicação bidirecional com o backend Rust via `postMessage`.
+12. **World-Interaction Observer Passivo:** Captura inteligente de compromissos e tarefas mencionadas informalmente no chat comum, sugerindo inclusão no Google Calendar com 1 clique sem burocracia.
+13. **Data & Spreadsheet Canvas:** Interface tabular de alta velocidade com engine de fórmulas executada em Rust/WASM, onde agentes locais higienizam grandes massas de dados estruturados.
+
+#### 4. Segurança Militar & Finanças Descentralizadas Soberanas
+14. **Jaula de Sandboxing em 3 Camadas no Windows 11:**
+    - Camada 1: Scripts rápidos em Wasmtime (WASI 0.3) em <5 ms.
+    - Camada 2: Binários do host confinados em Low-Privilege AppContainer (LPAC) via `windows-sys`.
+    - Camada 3: Código de terceiros ou pacotes suspeitos executados em Windows Sandbox descartável (Hyper-V via `.wsb`) montado como Somente-Leitura.
+15. **Sincronização Soberana P2P via Iroh (Zero-Cloud):** Sincronização direta de ponta a ponta (E2EE) entre as máquinas do usuário sem depender de servidores centrais de terceiros.
+16. **Pilar de Finanças Pessoais Soberanas & Open Finance BR:** Integração local com *Actual Budget* (método de envelopes), leitura de extratos locais e telemetria de Pix via webhooks do Tasker, aliado ao *Bitcoin Research Kit (BRK)* em Rust conectado ao Bitcoin Core local.
+17. **Escada Furtiva Claw Completa:** Emulação avançada de ambientes gráficos (Camoufox, Xvfb virtual e Tesseract OCR) para raspagens de extrema complexidade com resolução de desafios WAF de borda.
 
 ---
 
