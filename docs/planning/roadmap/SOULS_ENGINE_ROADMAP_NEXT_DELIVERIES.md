@@ -89,7 +89,8 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestone v0.7.3** | **Universal Cloud Dispatch Gateway & Fallback Chains** | **100% CONCLUÍDO** | **souls_model_router + souls_llm_cloud_arena + souls_server:** Resolução de contingência em sub-150ms (`resolve_fallback_chain`), Circuit Breaker & Quarentena sob HTTP 429/500/timeout com auto-recuperação, FinOps Prompt Cache (DeepSeek, Groq, Cerebras, Together, Bedrock, Azure), catálogo multi-cloud canônico expandido e sub-aba visual `🛡️ Provedores & Fallback` no Dashboard (56/56 testes PASS). |
 | **Alfândega v0.7.x** | **Revisão Ampla, Hardening & Release Oficial** | **100% CONCLUÍDO** | **Inspeção de Alfândega:** 193/193 testes PASS no workspace, isolamento Axum de RNG thread-safety (`std::thread::spawn`), MCP `route_subtask` enriquecido com `fallback_chain`/`cached_tokens`/`max_budget_usd`, compilação Release MSVC LTO (114.4 MB), live smoke test sub-5ms e instalação operacional em `%LOCALAPPDATA%\SoulsEngine` via `tools/install_souls.ps1`. |
 | **Milestones v0.8.0 ➔ v0.8.3** | **Streaming PDF, Gateways Globais & Visão Cognitiva O(1)** | **100% CONCLUÍDO** | PDF Streaming nativo em SQLite STRICT WAL, integração de gateways de CLIs agênticas (`agy`, `claude`, `codex`), reverse-engineering do NotebookLM (Google Universe Bridge / GV1), e visão AXTree O(1) sem alocação de VRAM. |
-| **Milestone v0.9.0** | **Maturidade de Produto, Precision Dark UI, Unificação Multi-Cloud & Personal Evolution Hub** | **100% CONCLUÍDO** | **v0.9.0 Oficial:** Agnosticismo real de hardware (Dynamic NVML / zero `%USER%` hardcoded), parser MoE inteligente (30B-A3B, 8x7B, 8x22B), ciclo completo de quarentena de skills (`Limpar Fila` e `Descartar Não Quero`), Doctor 2.0 com cofre atômico de credenciais, unificação dos 16 provedores canônicos no ParetoBandit/Arena/Subagentes, Design System Precision Dark com 0 alerts/confirms bloqueantes, Cockpit de Evolução Pessoal & Pulso do Ecossistema no Overview, purga definitiva de placebos e 100% das 175 funções onclick implementadas (296/296 testes PASS). |
+| **Milestone v0.9.0** | **SSOT de Modelos, Cockpit de Evolução, Quarentena & Unificação Multi-Cloud** | **100% CONCLUÍDO** | **v0.9.0 Oficial:** Agnosticismo real de hardware no backend (Dynamic NVML / profiler CPU Brand / zero `%USER%` hardcoded em Rust), parser MoE inteligente (`30B-A3B`, `8x7B`, `8x22B`), ciclo de quarentena de skills com endpoints de descarte/limpeza (`/discard` e `/clear`), Doctor 2.0 com cofre atômico de credenciais persistente (`/credentials/save`), unificação dos 16 provedores canônicos no ParetoBandit/Arena/Subagentes, Cockpit de Evolução Pessoal com 4 KPIs e ações rápidas no Overview, modais nativos `appConfirm`/`appPrompt` e resolução de todos os 175 onclicks (296/296 testes PASS). A purga profunda de inline styles e ícones SVG foi formalmente decomposta para a Milestone v0.9.5 dedicada de Design System. |
+| **Milestone v0.9.5** | **Precision Dark UI, Ícones Vetoriais SVG & Purga de Estilos Inline** | **PROGRAMADO** | Purga massiva dos 3.070 atributos `style="..."` inline nos templates, sistema unificado de ícones vetoriais SVG (substituindo emojis de sistema), eliminação dos 30+ hardcodings de hardware residual no front-end, gavetas `<details class="lab-drawer">` para os 6 simuladores e garantia de CLS = 0 (Zero Layout Shift). |
 
 ### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
@@ -158,6 +159,8 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 │ v0.9.3        │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.4        │ Google Personal & Life Hub       │ Workspace, NotebookLM UI, Keep│
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.9.5        │ Precision Dark UI & SVG Icons    │ Purga 3k inline styles + Labs │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v1.0.0 REAL   │ Universalização & Distribuição   │ Auto-Tuning, Installer 1-Click│
 └───────────────┴──────────────────────────────────┴───────────────────────────────┘
@@ -526,6 +529,65 @@ Transformação do NotebookLM de um serviço invisível em uma **Janela de Vidro
 * **Governança por Blast Radius:**
   - Ações de risco nulo (leitura, resumos, rascunhos locais): aprovadas automaticamente (**HOTL — Human-On-The-Loop**).
   - Ações de impacto estrutural (edição de código, exclusões no Drive, envio de emails): travadas por **Slider de Confirmação com Gravity Lock** (**HITL — Human-in-the-Loop**).
+
+---
+
+### MILESTONE v0.9.5: PRECISION DARK DESIGN SYSTEM, ÍCONES VETORIAIS SVG & PURGA DE DÍVIDA DE FRONTEND
+
+A consolidação estética e ergonômica definitiva da interface do usuário (Single Page Application headless servida na porta `:9123`), elevando o acabamento visual do Dashboard para o nível de produtos como Linear, Raycast e Vercel, e liquidando 100% da dívida técnica residual de front-end do `implementation_plan.md`:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                   DECOMPOSIÇÃO CANÔNICA DA MILESTONE v0.9.5                            │
+├───────────────┬──────────────────────┬────────────────────────┬────────────────────────┤
+│ Sub-Fase      │ Escopo de Domínio    │ Componentes Alvo       │ Entrega Principal      │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.5-A      │ Purga Inline Styles  │ styles.css & templates │ 3.070 styles -> Classes│
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.5-B      │ Ícones Vetoriais SVG │ components/modals.html │ 100% Emojis -> SVG Duot│
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.5-C      │ Limpeza de Hardware  │ templates/ & scripts/  │ 0 RTX/i9 fixos na UI   │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.5-D      │ Gavetas de Lab (6)   │ tabs/ & settings/      │ Simuladores em Details │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.5-E      │ A2UI / CLS Zero      │ dashboard.js & layouts │ Zero Shift & Ergonomia │
+└───────────────┴──────────────────────┴────────────────────────┴────────────────────────┘
+```
+
+#### 1. Purga Massiva de 3.070 Atributos `style="..."` Inline (`styles.css` Canônico)
+* **Eliminação de CSS Inline:** Mapeamento e substituição integral dos 3.070 atributos `style="..."` espalhados pelas 8 abas e 9 sub-abas de Settings por classes de utilidade e componentes canônicos definidos no `styles.css`.
+* **Design Tokens do Precision Dark UI:**
+  - Paleta base de alto contraste `oklch`: fundo profundo OLED (`#0a0d14` / `oklch 0.12 0.01 250`), cards neutros com elevação sutil (`#101520` / bordas `rgba(255,255,255,0.07)`), acentos em ciano elétrico (`#00f0ff`), verde esmeralda (`#10b981`), roxo orquídea (`#a855f7`) e âmbar preventivo (`#f59e0b`).
+  - Escala rigorosa de espaçamento em base 4px/8px (`gap-1` a `gap-6`, `p-2` a `p-6`).
+  - Tipografia unificada em 5 níveis estritos com anti-aliasing subpixel forçado (`Inter` / `JetBrains Mono`).
+
+#### 2. Sistema Canônico de Ícones Vetoriais SVG (Fim dos Emojis de Sistema)
+* **Substituição de Emojis Crus:** Eliminação definitiva de emojis do Windows (`🧠`, `🌱`, `📌`, `⚙️`, `📈`, `💰`, `⚡`, `🔬`, `🎭`, `🧩`, `🧪`, `🎮`, `🌡️`, `🔒`, `🔄`) que renderizam de forma discrepante, cortada ou infantil entre navegadores e sistemas operacionais.
+* **Sprite Vetorial SVG / Componente Iconográfico:** Biblioteca de ícones SVG monocromáticos e duotone de 16px, 20px e 24px com traço fino (stroke 1.5px/1.75px), integrados ao compilador de templates em Rust via `include_str!("assets/icons.svg")`.
+
+#### 3. Expurgo Definitivo dos 30+ Hardcodings de Hardware e Caminhos Pessoais no Front-end
+* **Agnosticismo Total na Apresentação Visual:**
+  - Varredura e erradicação de todas as menções estáticas a `"RTX 2060m"`, `"Intel Core i9-9980HK"`, `"5.294 MB"` e `"Dev Drive Z:\"` nos textos descritivos de `local_models.html`, `overview.html`, `subtab_finops.html`, `subtab_router.html` e `dashboard.js`.
+  - Toda menção a hardware deve ser vinculada reativamente aos dados reais retornados por `/api/v1/telemetry` e `/api/v1/system/pulse` (exibindo dinamicamente o modelo exato da GPU ou CPU instalada na máquina do usuário, seja uma RTX 4070, Apple Silicon ou CPU host sem dGPU).
+  - Remoção de caminhos absolutos pessoais de teste (`C:\Users\rosas\...`), substituídos pela interpolação de diretórios providos dinamicamente pela API de telemetria.
+
+#### 4. Gavetas de Laboratório para os 6 Simuladores Técnicos (`<details class="lab-drawer">`)
+* **Isolamento de Jargão Técnico:**
+  - Os 6 simuladores de baixo nível:
+    1. *Simulador de Carga & Barreira NVML* (`subtab_finops.html`)
+    2. *Simulador de Recall Híbrido RRF & Grafo LadybugDB* (`subtab_memory.html`)
+    3. *Simulador de Confinamento & Proteção Sandbox* (`subtab_sandbox.html`)
+    4. *Simulador de Entropia & Deliberação Socrática* (`subtab_reasoning.html`)
+    5. *Simulador de Despacho Pareto em Tempo Real* (`subtab_router.html`)
+    6. *Simulador de Contingência & Resolução de Cadeia* (`local_models.html`)
+  - Serão recolhidos para dentro do componente de gaveta colapsável `<details class="lab-drawer">` com cabeçalho discreto `🧪 Diagnóstico & Laboratório Avançado` (fechado por padrão).
+* **Foco Centrado no Humano:** As telas de primeiro nível ficam 100% limpas para o fluxo de valor do usuário comum (acompanhar evolução pessoal, gerenciar assistentes, disparar pesquisas e conectar ferramentas), sem poluição de testes de estresse físicos ou matemáticos.
+
+#### 5. Ergonomia, A2UI e Zero Layout Shift (CLS = 0)
+* **Renderização Sem Saltos Visuais:** Dimensionamento explícito de containers (reservando espaço vertical para cards dinâmicos) para garantir Cumulative Layout Shift nulo durante a conexão SSE de telemetria e o carregamento assíncrono dos modelos.
+* **Micro-Interações Táteis de Configuração:**
+  - Sincronização em duas vias entre os sliders/toggles das sub-abas de Settings e o arquivo `souls_config.toml`.
+  - Salva em background com micro-animação de confirmação visual ("Salvo instantaneamente"), eliminando qualquer lag perceptível ou sensação de controle placebo.
 
 ---
 
