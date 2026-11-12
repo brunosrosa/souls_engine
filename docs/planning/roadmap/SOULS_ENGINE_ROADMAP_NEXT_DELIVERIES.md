@@ -116,6 +116,7 @@ Cruzamento do draft [`docs/reference/lembretes.txt`](file:///Z:/souls_engine/doc
 | **#8 Souls Anthropophagy** | Ingestão mecânica de repositórios ➔ Essências ➔ Janela de Vidro (85+ colunas Google Sheets) ➔ Deep Analysis & Backlog de Implementação | **GAP IDENTIFICADO** | **Milestone v0.9.1** ➔ Ref.: `_donor/souls_mc_anthropophagy` e `Ideação Curadoria de Contexto Souls MC.md`. |
 | **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **GAP IDENTIFICADO** | **Milestone v0.9.2** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
 | **#11 Percepção Multimodal Híbrida** | AXTree O(1) + On-Demand Snapshots (Canvas/Figma) + Áudio Soberano Local na CPU i9 (0 MB VRAM) | **GAP IDENTIFICADO** | **Milestone v0.9.3** ➔ Ref.: Arquitetura Híbrida de Grounding & FinOps. |
+| **#12 Google Personal & Life Hub** | Workspace (Gmail/Agenda/Docs/Sheets), Gemini Notebooks UI no Dashboard, Keep, Contacts, Maps e Gems Web | **GAP IDENTIFICADO** | **Milestone v0.9.4** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
 | **#9 Universal Installer & Hardware Adaptability** | Instalador zero-atrito, piso mínimo na 2060m adaptável a qualquer hardware | **GAP IDENTIFICADO** | **Milestone v1.0.0** (Universal Installer & Release Oficial). |
 
 ---
@@ -155,6 +156,8 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 │ v0.9.2        │ Souls Evolutive Harness (Harness)│ Cordis Kernel, Catnap Protocol│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.3        │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.9.4        │ Google Personal & Life Hub       │ Workspace, NotebookLM UI, Keep│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v1.0.0 REAL   │ Universalização & Distribuição   │ Auto-Tuning, Installer 1-Click│
 └───────────────┴──────────────────────────────────┴───────────────────────────────┘
@@ -433,6 +436,80 @@ Desmistificação técnica definitiva dos domínios de **Visão de Tela** e **Pr
 
 ---
 
+### MILESTONE v0.9.4: GOOGLE PERSONAL & LIFE HUB (WORKSPACE, NOTEBOOKLM UI & ROTINAS PESSOAIS)
+
+> **Documentos de Referência Arquiteturais SSOT:**  
+> 📄 [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md)  
+> 📄 `crates/souls_server/src/routes/google.rs` e `crates/souls_core/src/google_bridge/`
+
+A consagração do Souls Engine como o **cérebro de produtividade e vida pessoal do usuário**, rompendo definitivamente a "miopia de infraestrutura" e entregando valor real e direto na rotina diária (emails, agenda, finanças, documentos e mídias).
+
+```mermaid
+flowchart TD
+    subgraph DashboardSPA ["Dashboard SPA (:9123)"]
+        UI_Notebooks["📚 Sub-aba Gemini Notebooks (Galeria & Player de Áudio)"]
+        UI_Workspace["📂 Sub-aba Google Life Hub (Drive, Agenda & Finanças)"]
+    end
+
+    subgraph SoulsGoogleEngine ["souls_server & souls_core (Google Sovereign Bridge)"]
+        Vault["Cofre Seguro de Sessões & OAuth2"]
+        WizClient["Wiz RPC Client (batchexecute & StreamGenerate)"]
+        WorkClient["Google Workspace REST & Batch Connector"]
+    end
+
+    subgraph GoogleServices ["Superfícies Pessoais do Google"]
+        G_NLM["Gemini Notebooks (Podcasts / Mapas / RAG)"]
+        G_Work["Docs / Sheets / Slides / Drive"]
+        G_Life["Gmail / Calendar / Keep / Tasks / Contacts / Maps / YouTube"]
+        G_Gems["Gems Personalizadas (Custo R$ 0,00 / Google One)"]
+    end
+
+    UI_Notebooks --> WizClient
+    UI_Workspace --> WorkClient
+    Vault --> WizClient
+    Vault --> WorkClient
+    WizClient --> G_NLM
+    WizClient --> G_Gems
+    WorkClient --> G_Work
+    WorkClient --> G_Life
+```
+
+#### 1. Google Workspace Sovereign Hub (Gestão Diária de Vida & Trabalho)
+* **Gmail com Triagem Cognitiva:**
+  - Leitura semântica de caixas de entrada, classificação de prioridades em tempo real e geração de rascunhos inteligentes com aprovação em 1 clique (`sendUpdates: none` por padrão para segurança).
+  - Triagem em lote de emails antigos/spam via chamadas nativas de `bulk_operations`.
+* **Google Calendar Proativo:**
+  - Inspeção contínua da agenda pessoal, identificação de blocos livres para foco profundo e agendamento de reuniões sem conflitos.
+* **Google Docs, Sheets & Slides Operáveis:**
+  - **Sheets:** Extração analítica de planilhas de finanças e despesas pessoais, cálculos agregados e projeções orçamentárias.
+  - **Docs:** Composição cirúrgica via bloco de rascunho endereçável por linhas (`manage_scratchpad`), evitando reescrever documentos inteiros.
+  - **Slides:** Geração automática de apresentações visuais de 5 a 15 slides baseadas em relatórios de pesquisa ou briefings do usuário.
+
+#### 2. Sub-Aba Visual `📚 Gemini Notebooks` no Dashboard SPA
+Transformação do NotebookLM de um serviço invisível em uma **Janela de Vidro interativa** para o usuário no Web Dashboard:
+* **Galeria Visual de Notebooks:** Cards interativos exibindo todos os cadernos da conta Google com contagem de notas, fontes e data de modificação.
+* **Explorador de Fontes do Caderno:** Visualização dos PDFs, links web, documentos do Drive e vídeos do YouTube indexados em cada caderno, com botão para adicionar novas fontes ou forçar sincronização (`FLmJqe`).
+* **Estúdio de Criação & Player de Áudio Embutido:**
+  - Disparo em 1 clique da geração de **Audio Overviews (Podcasts de IA com duas vozes)**, Mapas Mentais conceituais hierárquicos, FAQs e Guias de Estudo.
+  - **Player de áudio nativo integrado no Dashboard** para escutar os resumos de áudio gerados diretamente na interface web sem precisar abrir o navegador externo.
+
+#### 3. Superfícies de Rotina Pessoal (Keep, Tasks, Contacts, Maps & YouTube)
+* **Google Keep & Tasks (Memória de Trabalho de Bolso):**
+  - O Obsidian é a memória profunda L3; o Google Keep atua como o *Scratchpad Relâmpago*: listas de compras, ideias efêmeras capturadas no celular e recados rápidos sincronizados com a memória de trabalho do agente.
+* **Google Contacts (People API / CRM Pessoal):**
+  - Mapeamento do grafo social do usuário: aniversários de amigos/família, telefones, empresas e histórico de interações quando uma pessoa for mencionada em conversas ou emails.
+* **Google Maps & Directions API (Consciência de Deslocamento):**
+  - Cruzamento do trânsito em tempo real com os compromissos do Google Calendar: *"Você tem reunião médica às 15h; devido a congestionamento na rota, você precisa sair às 14h15."*
+* **YouTube Data & Transcripts (Pesquisa Multimídia em Segundos):**
+  - Ingestão instantânea de transcrições e legendas de vídeos longos, tutoriais de tecnologia e podcasts do YouTube, sintetizando o conteúdo central em segundos sem o usuário perder horas assistindo ao vídeo.
+
+#### 4. Conector de Gems do Google Gemini (FinOps & Custo Zero de API)
+* **Aproveitamento da Assinatura Google One / Gemini Advanced:**
+  - Invocação das **Gems personalizadas** já criadas pelo usuário no Gemini Web (`gemini.google.com/app`) através do payload posicional de 69 elementos do protocolo `StreamGenerate`.
+  - **Custo R$ 0,00 de Tokens:** Acesso aos modelos de raciocínio de ponta (Gemini 2.5 Pro / 3.0 Pro) com janela de 1 milhão de tokens coberta pela assinatura pessoal do usuário, eliminando gastos em dólares no Google Cloud / Vertex AI.
+
+---
+
 ### MILESTONE v1.0.0 REAL: UNIVERSALIZAÇÃO, AUTO-TUNING & DISTRIBUIÇÃO PÚBLICA
 
 A consagração do Souls Engine como um produto final robusto, instalável em qualquer máquina Windows 11 com o mínimo de atrito.
@@ -621,7 +698,6 @@ Para assegurar uma esteira de entrega limpa e sem regressões (em estrita obedi�
 ```mermaid
 flowchart TD
     v050["v0.5.0: Base Consolidada (UI Modular + SSOT Rust)"]
-    
     subgraph M060 ["Milestone v0.6.0 — CONCLUÍDO (Governança Visual & Agentes)"]
         SkillsHub["Skills Hub & Forge (souls_server)"]
         Personas["Hermes Personas & Governance Inspector (souls_server)"]
@@ -661,6 +737,12 @@ flowchart TD
         SovereignAudio["Áudio Soberano Local (Silero + SenseVoice + Kokoro)"]
     end
 
+    subgraph M094 ["Milestone v0.9.4 (Google Personal & Life Hub)"]
+        GoogleLife["Workspace Soberano (Gmail / Agenda / Docs / Sheets)"]
+        NLMDashboard["Gemini Notebooks Hub Visual (Player de Áudio & Studio)"]
+        PersonalLife["Rotinas Pessoais (Keep / Tasks / Contacts / Maps / YouTube / Gems)"]
+    end
+
     subgraph M100 ["Milestone v1.0.0 (Universalização & Distribuição Pública)"]
         AutoTuning["Universal Hardware Profiler (NTFS / ReFS / AVX2)"]
         Installer["One-Click Installer (setup.ps1 + Defender Exclusions)"]
@@ -685,7 +767,10 @@ flowchart TD
     CatnapProtocol --> ShadowProbing
     ShadowProbing --> HybridVision
     HybridVision --> SovereignAudio
-    SovereignAudio --> AutoTuning
+    SovereignAudio --> GoogleLife
+    GoogleLife --> NLMDashboard
+    NLMDashboard --> PersonalLife
+    PersonalLife --> AutoTuning
     AutoTuning --> Installer
     Installer --> DecomDonor
 ```
