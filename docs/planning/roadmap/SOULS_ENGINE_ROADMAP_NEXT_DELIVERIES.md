@@ -113,11 +113,12 @@ Cruzamento do draft [`docs/reference/lembretes.txt`](file:///Z:/souls_engine/doc
 | **#4 Perfis do Hermes** | Inspecionar/editar `AGENTS.md`, `SOUL.md` e configs dos perfis no Dashboard | **CONCLUÍDO (v0.6.0)** | Concluído em `souls_server`: Aba `🎭 Personas`, Guardião de Privacidade & Coerência em 1 clique, Bancada Dupla, Estúdio Criar/Clonar e Comparador Myers Diff. |
 | **#5 Deep Research Engine** | Capability/Tool base de pesquisa profunda em árvore com síntese e fontes | **GAP IDENTIFICADO** | **Milestone v0.7.0** ➔ Ref.: [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/docs/reference/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md). |
 | **#6 Gateway Cloud Multi-Provedor** | Universalizar despacho de subagentes para além de OpenAI/Claude/Gemini | **GAP IDENTIFICADO** | **Milestone v0.7.0** (DeepSeek API, Groq, Together, Bedrock). |
-| **#7 Google Universe Bridge** | Ferramentas MCP para Google Docs, Sheets, Drive, Calendar e Gmail | **GAP IDENTIFICADO** | **Milestone v0.8.0** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
-| **#8 Souls Anthropophagy** | Ingestão mecânica de repositórios ➔ Essências ➔ Janela de Vidro (85+ colunas Google Sheets) ➔ Deep Analysis & Backlog de Implementação | **GAP IDENTIFICADO** | **Milestone v0.9.1** ➔ Ref.: `_donor/souls_mc_anthropophagy` e `Ideação Curadoria de Contexto Souls MC.md`. |
-| **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **GAP IDENTIFICADO** | **Milestone v0.9.2** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
+| **#13 Precision Dark UI & SVG Icons** | Purga de 3.070 inline styles, ícones SVG, gavetas de simuladores e eliminação de hardware fixo na UI | **GAP IDENTIFICADO** | **Milestone v0.9.1** (Maturidade Visual, Design System Canônico & Zero Layout Shift). |
+| **#12 Google Personal & Life Hub** | Workspace (Gmail/Agenda/Docs/Sheets), Gemini Notebooks UI no Dashboard, Keep, Contacts, Maps e Gems Web | **GAP IDENTIFICADO** | **Milestone v0.9.2** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
 | **#11 Percepção Multimodal Híbrida** | AXTree O(1) + On-Demand Snapshots (Canvas/Figma) + Áudio Soberano Local na CPU i9 (0 MB VRAM) | **GAP IDENTIFICADO** | **Milestone v0.9.3** ➔ Ref.: Arquitetura Híbrida de Grounding & FinOps. |
-| **#12 Google Personal & Life Hub** | Workspace (Gmail/Agenda/Docs/Sheets), Gemini Notebooks UI no Dashboard, Keep, Contacts, Maps e Gems Web | **GAP IDENTIFICADO** | **Milestone v0.9.4** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
+| **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **GAP IDENTIFICADO** | **Milestone v0.9.4** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
+| **#8 Souls Anthropophagy** | Ingestão mecânica de repositórios ➔ Essências ➔ Janela de Vidro (85+ colunas Google Sheets) ➔ Deep Analysis & Backlog de Implementação | **GAP IDENTIFICADO** | **Milestone v0.9.5** ➔ Ref.: `_donor/souls_mc_anthropophagy` e `Ideação Curadoria de Contexto Souls MC.md`. |
+| **#14 Revisões & Refinamentos** | Baterias de testes integrados, correções de feedback real, refinamentos de UX e novas funcionalidades pré-v1 | **BACKLOG ATIVO** | **Milestones v0.9.6 a v0.9.9** (Ciclo de Estabilização & Hardening Contínuo). |
 | **#9 Universal Installer & Hardware Adaptability** | Instalador zero-atrito, piso mínimo na 2060m adaptável a qualquer hardware | **GAP IDENTIFICADO** | **Milestone v1.0.0** (Universal Installer & Release Oficial). |
 
 ---
@@ -150,17 +151,19 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.8.3        │ Visão Cognitiva O(1) & AXTree    │ [CONCLUÍDO] LEAN 71% + 0MB VRAM│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.0        │ Maturidade & Cockpit de Evolução │ [CONCLUÍDO] Dark UI + Multi-Cl│
+│ v0.9.0        │ SSOT Modelos, Pulse & Multi-Cloud│ [CONCLUÍDO] Backend + Cockpit │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.1 (PRÓX) │ Souls Anthropophagy (Repo Miner) │ 85+ Colunas Google Sheets SSOT│
+│ v0.9.1 (PRÓX) │ Precision Dark UI & SVG Icons    │ Purga 3k inline styles + Labs │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.2        │ Souls Evolutive Harness (Harness)│ Cordis Kernel, Catnap Protocol│
+│ v0.9.2        │ Google Personal & Life Hub       │ Workspace, NotebookLM UI, Keep│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.3        │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.4        │ Google Personal & Life Hub       │ Workspace, NotebookLM UI, Keep│
+│ v0.9.4        │ Souls Evolutive Harness (Harness)│ Cordis Kernel, Catnap Protocol│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.5        │ Precision Dark UI & SVG Icons    │ Purga 3k inline styles + Labs │
+│ v0.9.5        │ Souls Anthropophagy (Repo Miner) │ 85+ Colunas Google Sheets SSOT│
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.9.6–v0.9.9 │ Revisões, Refinos & Hardening    │ Correções, Backlog & Feedback │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v1.0.0 REAL   │ Universalização & Distribuição   │ Auto-Tuning, Installer 1-Click│
 └───────────────┴──────────────────────────────────┴───────────────────────────────┘
@@ -327,131 +330,66 @@ Abertura do ecossistema para a vida pessoal e profissional do operador através 
 
 ---
 
-### MILESTONE v0.9.1: SOULS ANTHROPOPHAGY (PIPELINE DE CANIBALIZAÇÃO & JANELA DE VIDRO GOOGLE SHEETS)
+### MILESTONE v0.9.1: PRECISION DARK DESIGN SYSTEM, ÍCONES VETORIAIS SVG & PURGA DE DÍVIDA DE FRONTEND
 
-> **Documentos de Referência Arquiteturais SSOT:**  
-> 📄 `_donor/souls_mc_anthropophagy` (Código Doador Canônico: `ssot_injector.rs`, `repo_heuristics`, 82/84 colunas)  
-> 📄 [Ideação Curadoria de Contexto Souls MC.md](file:///Z:/souls_engine/docs/reference/%5BRefinamento%5D%20Ideação%20Curadoria%20de%20Contexto%20Souls%20MC.md)
+A consolidação estética e ergonômica definitiva da interface do usuário (Single Page Application headless servida na porta `:9123`), elevando o acabamento visual do Dashboard para o nível de produtos como Linear, Raycast e Vercel, e liquidando 100% da dívida técnica residual de front-end do `implementation_plan.md`:
 
-O **Souls Anthropophagy** é o radar ativo e esteira industrial de **canibalização inteligente** de código e conceitos de repositórios open-source externos catalogados pelo operador. O objetivo é absorver o estado da arte de projetos externos sem duplicar slop nem reinventar a roda.
-
-```mermaid
-flowchart LR
-    A["Repositórios Externos (Links / GitHub / Pastas)"] -->|1. Ingestão Mecânica| B["souls_ast (AST / Tree-sitter / Myers)"]
-    B -->|2. Heurísticas & Essências| C["Janela de Vidro (Google Sheets 85+ Colunas)"]
-    C -->|3. Status de Aprovação & Filtro Humano| D["Fila de Deep Analysis"]
-    D -->|4. Síntese de Backlog| E["PRs Cirúrgicos / ADRs para o Souls Engine"]
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                   DECOMPOSIÇÃO CANÔNICA DA MILESTONE v0.9.1                            │
+├───────────────┬──────────────────────┬────────────────────────┬────────────────────────┤
+│ Sub-Fase      │ Escopo de Domínio    │ Componentes Alvo       │ Entrega Principal      │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.1-A      │ Purga Inline Styles  │ styles.css & templates │ 3.070 styles -> Classes│
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.1-B      │ Ícones Vetoriais SVG │ components/modals.html │ 100% Emojis -> SVG Duot│
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.1-C      │ Limpeza de Hardware  │ templates/ & scripts/  │ 0 RTX/i9 fixos na UI   │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.1-D      │ Gavetas de Lab (6)   │ tabs/ & settings/      │ Simuladores em Details │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.1-E      │ A2UI / CLS Zero      │ dashboard.js & layouts │ Zero Shift & Ergonomia │
+└───────────────┴──────────────────────┴────────────────────────┴────────────────────────┘
 ```
 
-#### 1. A Linhagem das 85+ Colunas e a "Janela de Vidro" (Google Sheets SSOT)
-* **Origem Canônica (`ssot_injector.rs`):** A tabela de 85+ colunas (82 canônicas + metadados de ciclo de vida) é a interface de auditoria humana entre o motor Rust e o operador, servindo como uma **"Janela de Vidro" (Glass Window)** em tempo real no Google Workspace.
-* **Governança por Gatilhos de Status:** Em vez de executar pipelines cegos e caros, o status de cada repositório na planilha funciona como o orquestrador dos sub-processos de hidratação:
-  - `NOVO / CATALOGADO`: Apenas metadados básicos (URL, estrelas, licença).
-  - `RAW_INGESTED`: Código baixado e decomposto em AST/blobs pelo `souls_ast`.
-  - `ESSENCES_EXTRACTED`: Resumo arquitetural e heurísticas das 85+ colunas preenchidas automaticamente.
-  - `APROVADO_PARA_ANALISE`: O operador humano revisa na planilha e altera o status para autorizar o próximo passo. Linhas marcadas como `IGNORAR / DESCARTADO` são puladas permanentemente.
-  - `DEEP_ANALYZED`: Dossiê de transplante gerado pelo enxame de agentes com mapeamento de componentes canibalizáveis.
-  - `INTEGRADO / FECHADO`: Capacidade absorvida pelo Souls Engine via PR ou Skill.
+#### 1. Purga Massiva de 3.070 Atributos `style="..."` Inline (`styles.css` Canônico)
+* **Eliminação de CSS Inline:** Mapeamento e substituição integral dos 3.070 atributos `style="..."` espalhados pelas 8 abas e 9 sub-abas de Settings por classes de utilidade e componentes canônicos definidos no `styles.css`.
+* **Design Tokens do Precision Dark UI:**
+  - Paleta base de alto contraste `oklch`: fundo profundo OLED (`#0a0d14` / `oklch 0.12 0.01 250`), cards neutros com elevação sutil (`#101520` / bordas `rgba(255,255,255,0.07)`), acentos em ciano elétrico (`#00f0ff`), verde esmeralda (`#10b981`), roxo orquídea (`#a855f7`) e âmbar preventivo (`#f59e0b`).
+  - Escala rigorosa de espaçamento em base 4px/8px (`gap-1` a `gap-6`, `p-2` a `p-6`).
+  - Tipografia unificada em 5 níveis estritos com anti-aliasing subpixel forçado (`Inter` / `JetBrains Mono`).
 
-#### 2. Os 3 Processos Sequenciais de Canibalização
-1. **Processo 1: Ingestão Mecânica & Heurísticas (Tier 0 Zero-LLM):**
-   - Clonagem leve de repositórios na Dev Drive `Z:\souls_engine\.souls_data\raw_repos\`.
-   - Extração via Tree-sitter dos grafos de chamadas, complexidade ciclomática, densidade de testes e dependências.
-   - Povoamento automático das 85 colunas na planilha do Google Workspace via API REST / Google Universe Bridge.
-2. **Processo 2: Deep Analysis & Dossiê de Canibalização:**
-   - Para os itens com status aprovado pelo operador na planilha, subagentes especializados analisam as camadas internas do projeto-alvo, identificando padrões de design, algoritmos e armadilhas documentadas.
-   - Geração de um dossiê técnico estruturado (`CANIBALIZATION_BRIEF.md`) com árvore de dependências e estimativa de esforço.
-3. **Processo 3: Backlog de Tarefas & Transplante Cirúrgico:**
-   - Criação automática de tarefas atômicas e planos de implementação (`implementation_plan.md`) na fila de trabalho dos agentes.
-   - Os agentes de codificação recebem o plano fatiado e executam a absorção da funcionalidade para dentro do Souls Engine seguindo estritamente a Regra da Crate Única e TDD.
+#### 2. Sistema Canônico de Ícones Vetoriais SVG (Fim dos Emojis de Sistema)
+* **Substituição de Emojis Crus:** Eliminação definitiva de emojis do Windows (`🧠`, `🌱`, `📌`, `⚙️`, `📈`, `💰`, `⚡`, `🔬`, `🎭`, `🧩`, `🧪`, `🎮`, `🌡️`, `🔒`, `🔄`) que renderizam de forma discrepante, cortada ou infantil entre navegadores e sistemas operacionais.
+* **Sprite Vetorial SVG / Componente Iconográfico:** Biblioteca de ícones SVG monocromáticos e duotone de 16px, 20px e 24px com traço fino (stroke 1.5px/1.75px), integrados ao compilador de templates em Rust via `include_str!("assets/icons.svg")`.
 
-#### 3. Calm Mode & Proteção de Foco Neuro-Inclusivo (TDAH / 2e)
-* **Silêncio Operacional:** Subagentes de pesquisa pesada não disparam notificações incessantes nem popups que fragmentem o foco do usuário.
-* **Relatório Central em Evolução (`01_evolving_report.md`):** O progresso é escrito continuamente em disco e refletido no Dashboard via pulso discreto. O agente só notifica nos marcos de entrega ou quando exige decisão humana irreversível.
+#### 3. Expurgo Definitivo dos 30+ Hardcodings de Hardware e Caminhos Pessoais no Front-end
+* **Agnosticismo Total na Apresentação Visual:**
+  - Varredura e erradicação de todas as menções estáticas a `"RTX 2060m"`, `"Intel Core i9-9980HK"`, `"5.294 MB"` e `"Dev Drive Z:\"` nos textos descritivos de `local_models.html`, `overview.html`, `subtab_finops.html`, `subtab_router.html` e `dashboard.js`.
+  - Toda menção a hardware deve ser vinculada reativamente aos dados reais retornados por `/api/v1/telemetry` e `/api/v1/system/pulse` (exibindo dinamicamente o modelo exato da GPU ou CPU instalada na máquina do usuário, seja uma RTX 4070, Apple Silicon ou CPU host sem dGPU).
+  - Remoção de caminhos absolutos pessoais de teste (`C:\Users\rosas\...`), substituídos pela interpolação de diretórios providos dinamicamente pela API de telemetria.
 
----
+#### 4. Gavetas de Laboratório para os 6 Simuladores Técnicos (`<details class="lab-drawer">`)
+* **Isolamento de Jargão Técnico:**
+  - Os 6 simuladores de baixo nível:
+    1. *Simulador de Carga & Barreira NVML* (`subtab_finops.html`)
+    2. *Simulador de Recall Híbrido RRF & Grafo LadybugDB* (`subtab_memory.html`)
+    3. *Simulador de Confinamento & Proteção Sandbox* (`subtab_sandbox.html`)
+    4. *Simulador de Entropia & Deliberação Socrática* (`subtab_reasoning.html`)
+    5. *Simulador de Despacho Pareto em Tempo Real* (`subtab_router.html`)
+    6. *Simulador de Contingência & Resolução de Cadeia* (`local_models.html`)
+  - Serão recolhidos para dentro do componente de gaveta colapsável `<details class="lab-drawer">` com cabeçalho discreto `🧪 Diagnóstico & Laboratório Avançado` (fechado por padrão).
+* **Foco Centrado no Humano:** As telas de primeiro nível ficam 100% limpas para o fluxo de valor do usuário comum (acompanhar evolução pessoal, gerenciar assistentes, disparar pesquisas e conectar ferramentas), sem poluição de testes de estresse físicos ou matemáticos.
 
-### MILESTONE v0.9.2: SOULS EVOLUTIVE HARNESS (AUTO-EVOLUÇÃO CONTÍNUA & CORDIS KERNEL)
-
-> **Documento de Referência Arquitetural SSOT:**  
-> 📄 [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md)
-
-O **Souls Evolutive Harness** é o framework de **auto-avaliação e benchmarking interno** do ecossistema, inspirado no Google Harness² e no microkernel reversível Cordis do DeepSeek. Ele atua sobre os componentes operacionais do próprio Souls Engine e do Hermes Agent.
-
-#### 1. Mapeamento dos 8 Componentes Editáveis (`c1` a `c8`)
-Em vez de reescrever ingenuamente o system prompt a cada falha, o sistema particiona sua anatomia operacional em 8 componentes sob governança estrita:
-1. **`c1` System Prompt:** Essência e voz da alma (`SOUL.md` / `core.md`). **Camada Constitucional Fixada:** protegida por hash SHA-256 e fail-closed contra edições utilitaristas.
-2. **`c2` Guardrails:** Filtros inibitórios e regras negativas ("nunca faça X"). Bipartido: guardrails operacionais contra repetições são auto-otimizáveis; tabus de segurança são imutáveis.
-3. **`c3` Memory:** Memória de trabalho e fatos verificados. Higienização por evidência: expurgo de suposições não comprovadas e retenção estrita de fatos.
-4. **`c4` Skills:** Procedimentos modulares sob demanda (`SKILL.md`). Alvo primário de auto-expansão.
-5. **`c5` Tool Guidance:** Orientações sobre contratos de ferramentas, otimizadas para consolidar chamadas granulares e reduzir taxa de erro.
-6. **`c6` Scripts:** Código determinístico auxiliar executável que substitui raciocínio LLM repetitivo, validado por sandbox WASM de 5 fases.
-7. **`c7` Subagents:** Orquestração de sub-processos mentais e delegações atômicas.
-8. **`c8` Plugins / Hooks:** Middleware de ciclo de vida montado via microkernel reversível.
-
-#### 2. O Ciclo de Cochilo e Consolidação Subconsciente (*The Cognitive Catnap Protocol*)
-* **Consolidação em Brechas de Ociosidade (Zero Gargalo Noturno):** Supera o modelo arcaico de rotinas noturnas (que falhariam com o PC desligado). Opera em **Micro-Cochilos Ociosos**: detecta brechas de inatividade do usuário no Windows 11 (`GetLastInputInfo`, CPU < 15%, GPU < 5% e < 50°C, zero prompts ativos no Hermes).
-* **Micro-Lotes Atômicos Fatiados:** Audita 1 trajetória de subagente, higieniza 5 nós no LadybugDB ou roda 1 teste Propose-Probe-Compose em sandbox.
-* **Preempção Instantânea com Zero-Lag (0 ms):** Ao menor movimento do mouse, teclado ou novo prompt no Hermes, o cochilo é interrompido imediatamente, o cursor é salvo no SQLite STRICT e o silício é liberado para o usuário sem travamentos.
-* **Sondagem em Sombra (*Shadow Probing*):** Reexecuta turnos com falha em sandbox comparando o arnês base contra o mutante para comprovar melhoria real antes de aceitar qualquer alteração.
-
-#### 3. Microkernel Reversível de Processos Mentais (DeepSeek Cordis)
-* **Efeitos Reversíveis LIFO (`ctx.effect`):** Cada alteração possui operação inversa computável em pilha LIFO. Se a telemetria acusar regressão, o runtime reverte instantaneamente sem reiniciar o daemon (`fiber.dispose()`).
-* **Coefeitos Reativos (`inject`):** Serviços externos declarados como coefeitos isolados para falhas parciais graciosas.
-
-#### 4. Invalidação JIT de Conflitos em Tempo Real (TencentDB Tombstone Pattern)
-* **Eliminação Imediata de Alucinações Conflitantes:** Ao registrar novas preferências ou fatos que contradizem memórias anteriores no LadybugDB (L2), o fato antigo recebe imediatamente a marcação de **Tombstone (`status = 'superseded'`)**.
-* **Zero Espera Noturna:** A contradição é neutralizada no exato turno da conversa, impedindo que o modelo volte a alucinar informações desautorizadas pelo operador.
-
-#### 5. Cristalização Automática de Skills (*The Ralph Loop*)
-* **Aprendizado Permanente:** Quando um subagente resolve um problema complexo sob o ciclo *tentativa ➔ erro ➔ traceback ➔ correção* e atinge alta eficiência na métrica $E^3$, o módulo de metacognição sintetiza automaticamente uma nova **Skill Parametrizada (`SKILL.md` + scripts)**.
-* **Promoção via Quarentena:** A skill gerada é depositada na Quarentena do **Skills Hub** para aprovação do operador em 1 clique, evitando que o agente reaprenda tarefas difíceis do zero.
+#### 5. Ergonomia, A2UI e Zero Layout Shift (CLS = 0)
+* **Renderização Sem Saltos Visuais:** Dimensionamento explícito de containers (reservando espaço vertical para cards dinâmicos) para garantir Cumulative Layout Shift nulo durante a conexão SSE de telemetria e o carregamento assíncrono dos modelos.
+* **Micro-Interações Táteis de Configuração:**
+  - Sincronização em duas vias entre os sliders/toggles das sub-abas de Settings e o arquivo `souls_config.toml`.
+  - Salva em background com micro-animação de confirmação visual ("Salvo instantaneamente"), eliminando qualquer lag perceptível ou sensação de controle placebo.
 
 ---
 
-### MILESTONE v0.9.3: PERCEPÇÃO MULTIMODAL HÍBRIDA & GROUNDING DE INTERFACE
-
-> **Documentos de Referência Arquiteturais SSOT:**  
-> 📄 [Arquitetura Agente Rust Bare-Metal (Navegação e Parsing O(1)).md](file:///Z:/souls_engine/docs/reference/%5BUPDATE%5D%20%5BDEPENDENCIES%5D%20Arquitetura%20Agente%20Rust%20Bare-Metal%20(Navega%C3%A7%C3%A3o%20e%20Parsing%20O(1)).md)  
-> 📄 [ADR-029: Visão Cognitiva O(1) via Árvore de Acessibilidade (AXTree)](file:///Z:/souls_engine/docs/decisions/adrs/ADR-029-axtree-accessibility-vision.md)
-
-Desmistificação técnica definitiva dos domínios de **Visão de Tela** e **Processamento de Áudio**, equilibrando soberania bare-metal, latência e custo financeiro (FinOps).
-
-#### 1. A Realidade da Visão: AXTree O(1) vs On-Demand Screenshots vs Streaming Contínuo
-* **O Padrão Soberano — Visão Cognitiva $\mathcal{O}(1)$ via AXTree (95% dos Casos):**
-  - Consumo de **0 MB de VRAM** e **0 tokens de imagem**.
-  - Latência sub-5ms: lê diretamente a árvore de acessibilidade do Windows (`windows-sys` UIA) e do Chrome/Edge (`Accessibility.getFullAXTree` via CDP).
-  - Fornece texto semântico estruturado, rótulos, estados e coordenadas vetoriais exatas de clique $(X, Y)$ serializadas no formato LEAN (redução de 71% de tokens).
-* **Quando o AXTree NÃO é Suficiente (Cenários Reais que Exigem Pixels):**
-  1. *Superfícies Gráficas / Canvas / WebGL:* Ferramentas visuais (Figma, Canva, Miro, Blender), editores de nós, gráficos renderizados via `<canvas>` (Tableau, Grafana) e PDFs escaneados como imagem, onde o AXTree reporta apenas um bloco genérico vazio sem filhos.
-  2. *Auditoria Estética & QA Visual de Layout:* Verificar quebra visual de CSS, contraste de cores, alinhamentos finos e sobreposição de z-index ("o botão está visualmente desalinhado ou feio?"), julgamento impossível via árvore textual.
-  3. *Ambientes Remotos / Virtualizados:* Sessões de RDP, VNC, TeamViewer, AnyDesk ou máquinas virtuais onde a acessibilidade local não penetra no sistema operacional convidado.
-* **Por que Streaming Contínuo (30 FPS DXGI/WebRTC) é um Anti-Padrão Tóxico:**
-  - Enviar 30 quadros por segundo para modelos de visão na nuvem consome gigabytes de banda, aquece a GPU desnecessariamente e custaria centenas de dólares por dia em tokens multimais.
-  - **A Solução Canônica: Captura Sob Demanda (*On-Demand Visual Snapshot*):** O agente opera 95% do tempo via AXTree O(1). Quando e apenas quando encontra um elemento Canvas, ou quando o usuário pede explicitamente uma análise estética, ele invoca uma ferramenta de screenshot pontual em sub-50ms via DXGI, analisa a imagem estática e descarta o buffer.
-
-#### 2. Áudio Soberano Local (CPU i9) + Cérebro Plugável vs Gemini Live
-* **Pipeline de Áudio 100% Local (Soberania Bare-Metal, 0 MB VRAM, CPU AVX2):**
-  - **VAD (Voice Activity Detection):** Silero VAD v5 com latência < 30ms e *barge-in* instantâneo (interrompe a fala do agente no milissegundo em que o usuário começa a falar).
-  - **STT (Speech-to-Text):** SenseVoiceSmall rodando localmente na CPU i9 com geração de tags emocionais e de tom (`<HAPPY>`, `<ANGRY>`), convertendo voz em texto em sub-150ms.
-  - **TTS (Text-to-Speech):** Kokoro-82M (pt-BR) não-autoregressivo na CPU (< 100ms para sintetizar a resposta) com áudio natural e zero risco de alucinação ou loop.
-* **O "Cérebro Complementar" Desacoplado:**
-  - A voz do usuário vira texto localmente; esse texto é despachado em streaming para **qualquer modelo LLM** (seja um modelo local no silício ou qualquer LLM de ponta na nuvem como Claude 3.7 Sonnet, DeepSeek V3/R1 ou GPT-4o).
-  - A resposta textual gerada em streaming pelo cérebro é convertida em fala pelo Kokoro local em tempo real.
-  - **Custo Operacional:** STT e TTS custam **R$ 0,00** (processamento puramente local). O custo de inteligência é apenas o valor padrão de tokens de texto da LLM escolhida (frações de centavos por interação).
-* **Comparativo Crítico: Nossa Arquitetura vs Gemini Live:**
-
-| Dimensão de Comparação | Nossa Arquitetura Local + Cérebro Plugável | Gemini Live API (Sessão WebRTC Multimodal) |
-| :--- | :--- | :--- |
-| **Consumo de VRAM** | **0 MB** (Silero + SenseVoice + Kokoro na CPU AVX2) | **0 MB** (Processamento na nuvem da Google) |
-| **Custo por Hora** | **Centavos** (Apenas tokens de texto do cérebro LLM) | **$3,60 a $7,20 / hora** (Cobrado por minuto aberto de áudio/vídeo) |
-| **Privacidade da Voz** | **100% Soberana** (Apenas o texto filtrado vai para a nuvem) | **Zero Soberania** (Áudio bruto de microfone transmitido continuamente) |
-| **Barge-in / Interrupção** | **Sub-30ms** (Silero VAD local no kernel) | Depende da latência de rede e WebRTC (150–400ms) |
-| **Aprisionamento (Lock-in)**| **Zero** (Troca de cérebro a qualquer momento sem mudar áudio) | **Total** (Preso à API e regras de conteúdo da Google) |
-
----
-
-### MILESTONE v0.9.4: GOOGLE PERSONAL & LIFE HUB (WORKSPACE, NOTEBOOKLM UI & ROTINAS PESSOAIS)
+### MILESTONE v0.9.2: GOOGLE PERSONAL & LIFE HUB (WORKSPACE, NOTEBOOKLM UI & ROTINAS PESSOAIS)
 
 > **Documentos de Referência Arquiteturais SSOT:**  
 > 📄 [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md)  
@@ -532,62 +470,147 @@ Transformação do NotebookLM de um serviço invisível em uma **Janela de Vidro
 
 ---
 
-### MILESTONE v0.9.5: PRECISION DARK DESIGN SYSTEM, ÍCONES VETORIAIS SVG & PURGA DE DÍVIDA DE FRONTEND
+### MILESTONE v0.9.3: PERCEPÇÃO MULTIMODAL HÍBRIDA & GROUNDING DE INTERFACE
 
-A consolidação estética e ergonômica definitiva da interface do usuário (Single Page Application headless servida na porta `:9123`), elevando o acabamento visual do Dashboard para o nível de produtos como Linear, Raycast e Vercel, e liquidando 100% da dívida técnica residual de front-end do `implementation_plan.md`:
+> **Documentos de Referência Arquiteturais SSOT:**  
+> 📄 [Arquitetura Agente Rust Bare-Metal (Navegação e Parsing O(1)).md](file:///Z:/souls_engine/docs/reference/%5BUPDATE%5D%20%5BDEPENDENCIES%5D%20Arquitetura%20Agente%20Rust%20Bare-Metal%20(Navega%C3%A7%C3%A3o%20e%20Parsing%20O(1)).md)  
+> 📄 [ADR-029: Visão Cognitiva O(1) via Árvore de Acessibilidade (AXTree)](file:///Z:/souls_engine/docs/decisions/adrs/ADR-029-axtree-accessibility-vision.md)
 
+Desmistificação técnica definitiva dos domínios de **Visão de Tela** e **Processamento de Áudio**, equilibrando soberania bare-metal, latência e custo financeiro (FinOps).
+
+#### 1. A Realidade da Visão: AXTree O(1) vs On-Demand Screenshots vs Streaming Contínuo
+* **O Padrão Soberano — Visão Cognitiva $\mathcal{O}(1)$ via AXTree (95% dos Casos):**
+  - Consumo de **0 MB de VRAM** e **0 tokens de imagem**.
+  - Latência sub-5ms: lê diretamente a árvore de acessibilidade do Windows (`windows-sys` UIA) e do Chrome/Edge (`Accessibility.getFullAXTree` via CDP).
+  - Fornece texto semântico estruturado, rótulos, estados e coordenadas vetoriais exatas de clique $(X, Y)$ serializadas no formato LEAN (redução de 71% de tokens).
+* **Quando o AXTree NÃO é Suficiente (Cenários Reais que Exigem Pixels):**
+  1. *Superfícies Gráficas / Canvas / WebGL:* Ferramentas visuais (Figma, Canva, Miro, Blender), editores de nós, gráficos renderizados via `<canvas>` (Tableau, Grafana) e PDFs escaneados como imagem, onde o AXTree reporta apenas um bloco genérico vazio sem filhos.
+  2. *Auditoria Estética & QA Visual de Layout:* Verificar quebra visual de CSS, contraste de cores, alinhamentos finos e sobreposição de z-index ("o botão está visualmente desalinhado ou feio?"), julgamento impossível via árvore textual.
+  3. *Ambientes Remotos / Virtualizados:* Sessões de RDP, VNC, TeamViewer, AnyDesk ou máquinas virtuais onde a acessibilidade local não penetra no sistema operacional convidado.
+* **Por que Streaming Contínuo (30 FPS DXGI/WebRTC) é um Anti-Padrão Tóxico:**
+  - Enviar 30 quadros por segundo para modelos de visão na nuvem consome gigabytes de banda, aquece a GPU desnecessariamente e custaria centenas de dólares por dia em tokens multimais.
+  - **A Solução Canônica: Captura Sob Demanda (*On-Demand Visual Snapshot*):** O agente opera 95% do tempo via AXTree O(1). Quando e apenas quando encontra um elemento Canvas, ou quando o usuário pede explicitamente uma análise estética, ele invoca uma ferramenta de screenshot pontual em sub-50ms via DXGI, analisa a imagem estática e descarta o buffer.
+
+#### 2. Áudio Soberano Local (CPU i9) + Cérebro Plugável vs Gemini Live
+* **Pipeline de Áudio 100% Local (Soberania Bare-Metal, 0 MB VRAM, CPU AVX2):**
+  - **VAD (Voice Activity Detection):** Silero VAD v5 com latência < 30ms e *barge-in* instantâneo (interrompe a fala do agente no milissegundo em que o usuário começa a falar).
+  - **STT (Speech-to-Text):** SenseVoiceSmall rodando localmente na CPU i9 com geração de tags emocionais e de tom (`<HAPPY>`, `<ANGRY>`), convertendo voz em texto em sub-150ms.
+  - **TTS (Text-to-Speech):** Kokoro-82M (pt-BR) não-autoregressivo na CPU (< 100ms para sintetizar a resposta) com áudio natural e zero risco de alucinação ou loop.
+* **O "Cérebro Complementar" Desacoplado:**
+  - A voz do usuário vira texto localmente; esse texto é despachado em streaming para **qualquer modelo LLM** (seja um modelo local no silício ou qualquer LLM de ponta na nuvem como Claude 3.7 Sonnet, DeepSeek V3/R1 ou GPT-4o).
+  - A resposta textual gerada em streaming pelo cérebro é convertida em fala pelo Kokoro local em tempo real.
+  - **Custo Operacional:** STT e TTS custam **R$ 0,00** (processamento puramente local). O custo de inteligência é apenas o valor padrão de tokens de texto da LLM escolhida (frações de centavos por interação).
+* **Comparativo Crítico: Nossa Arquitetura vs Gemini Live:**
+
+| Dimensão de Comparação | Nossa Arquitetura Local + Cérebro Plugável | Gemini Live API (Sessão WebRTC Multimodal) |
+| :--- | :--- | :--- |
+| **Consumo de VRAM** | **0 MB** (Silero + SenseVoice + Kokoro na CPU AVX2) | **0 MB** (Processamento na nuvem da Google) |
+| **Custo por Hora** | **Centavos** (Apenas tokens de texto do cérebro LLM) | **$3,60 a $7,20 / hora** (Cobrado por minuto aberto de áudio/vídeo) |
+| **Privacidade da Voz** | **100% Soberana** (Apenas o texto filtrado vai para a nuvem) | **Zero Soberania** (Áudio bruto de microfone transmitido continuamente) |
+| **Barge-in / Interrupção** | **Sub-30ms** (Silero VAD local no kernel) | Depende da latência de rede e WebRTC (150–400ms) |
+| **Aprisionamento (Lock-in)**| **Zero** (Troca de cérebro a qualquer momento sem mudar áudio) | **Total** (Preso à API e regras de conteúdo da Google) |
+
+---
+
+### MILESTONE v0.9.4: SOULS EVOLUTIVE HARNESS (AUTO-EVOLUÇÃO CONTÍNUA & CORDIS KERNEL)
+
+> **Documento de Referência Arquitetural SSOT:**  
+> 📄 [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md)
+
+O **Souls Evolutive Harness** é o framework de **auto-avaliação e benchmarking interno** do ecossistema, inspirado no Google Harness² e no microkernel reversível Cordis do DeepSeek. Ele atua sobre os componentes operacionais do próprio Souls Engine e do Hermes Agent.
+
+#### 1. Mapeamento dos 8 Componentes Editáveis (`c1` a `c8`)
+Em vez de reescrever ingenuamente o system prompt a cada falha, o sistema particiona sua anatomia operacional em 8 componentes sob governança estrita:
+1. **`c1` System Prompt:** Essência e voz da alma (`SOUL.md` / `core.md`). **Camada Constitucional Fixada:** protegida por hash SHA-256 e fail-closed contra edições utilitaristas.
+2. **`c2` Guardrails:** Filtros inibitórios e regras negativas ("nunca faça X"). Bipartido: guardrails operacionais contra repetições são auto-otimizáveis; tabus de segurança são imutáveis.
+3. **`c3` Memory:** Memória de trabalho e fatos verificados. Higienização por evidência: expurgo de suposições não comprovadas e retenção estrita de fatos.
+4. **`c4` Skills:** Procedimentos modulares sob demanda (`SKILL.md`). Alvo primário de auto-expansão.
+5. **`c5` Tool Guidance:** Orientações sobre contratos de ferramentas, otimizadas para consolidar chamadas granulares e reduzir taxa de erro.
+6. **`c6` Scripts:** Código determinístico auxiliar executável que substitui raciocínio LLM repetitivo, validado por sandbox WASM de 5 fases.
+7. **`c7` Subagents:** Orquestração de sub-processos mentais e delegações atômicas.
+8. **`c8` Plugins / Hooks:** Middleware de ciclo de vida montado via microkernel reversível.
+
+#### 2. O Ciclo de Cochilo e Consolidação Subconsciente (*The Cognitive Catnap Protocol*)
+* **Consolidação em Brechas de Ociosidade (Zero Gargalo Noturno):** Supera o modelo arcaico de rotinas noturnas (que falhariam com o PC desligado). Opera em **Micro-Cochilos Ociosos**: detecta brechas de inatividade do usuário no Windows 11 (`GetLastInputInfo`, CPU < 15%, GPU < 5% e < 50°C, zero prompts ativos no Hermes).
+* **Micro-Lotes Atômicos Fatiados:** Audita 1 trajetória de subagente, higieniza 5 nós no LadybugDB ou roda 1 teste Propose-Probe-Compose em sandbox.
+* **Preempção Instantânea com Zero-Lag (0 ms):** Ao menor movimento do mouse, teclado ou novo prompt no Hermes, o cochilo é interrompido imediatamente, o cursor é salvo no SQLite STRICT e o silício é liberado para o usuário sem travamentos.
+* **Sondagem em Sombra (*Shadow Probing*):** Reexecuta turnos com falha em sandbox comparando o arnês base contra o mutante para comprovar melhoria real antes de aceitar qualquer alteração.
+
+#### 3. Microkernel Reversível de Processos Mentais (DeepSeek Cordis)
+* **Efeitos Reversíveis LIFO (`ctx.effect`):** Cada alteração possui operação inversa computável em pilha LIFO. Se a telemetria acusar regressão, o runtime reverte instantaneamente sem reiniciar o daemon (`fiber.dispose()`).
+* **Coefeitos Reativos (`inject`):** Serviços externos declarados como coefeitos isolados para falhas parciais graciosas.
+
+#### 4. Invalidação JIT de Conflitos em Tempo Real (TencentDB Tombstone Pattern)
+* **Eliminação Imediata de Alucinações Conflitantes:** Ao registrar novas preferências ou fatos que contradizem memórias anteriores no LadybugDB (L2), o fato antigo recebe imediatamente a marcação de **Tombstone (`status = 'superseded'`)**.
+* **Zero Espera Noturna:** A contradição é neutralizada no exato turno da conversa, impedindo que o modelo volte a alucinar informações desautorizadas pelo operador.
+
+#### 5. Cristalização Automática de Skills (*The Ralph Loop*)
+* **Aprendizado Permanente:** Quando um subagente resolve um problema complexo sob o ciclo *tentativa ➔ erro ➔ traceback ➔ correção* e atinge alta eficiência na métrica $E^3$, o módulo de metacognição sintetiza automaticamente uma nova **Skill Parametrizada (`SKILL.md` + scripts)**.
+* **Promoção via Quarentena:** A skill gerada é depositada na Quarentena do **Skills Hub** para aprovação do operador em 1 clique, evitando que o agente reaprenda tarefas difíceis do zero.
+
+---
+
+### MILESTONE v0.9.5: SOULS ANTHROPOPHAGY (PIPELINE DE CANIBALIZAÇÃO, JANELA DE VIDRO GOOGLE SHEETS & PRIORIZAÇÃO DE FEATURES)
+
+> **Documentos de Referência Arquiteturais SSOT:**  
+> 📄 `_donor/souls_mc_anthropophagy` (Código Doador Canônico: `ssot_injector.rs`, `repo_heuristics`, 82/84 colunas)  
+> 📄 [Ideação Curadoria de Contexto Souls MC.md](file:///Z:/souls_engine/docs/reference/%5BRefinamento%5D%20Ideação%20Curadoria%20de%20Contexto%20Souls%20MC.md)
+
+O **Souls Anthropophagy** é o radar ativo e esteira industrial de **canibalização inteligente** de código e conceitos de repositórios open-source externos catalogados pelo operador. O objetivo é absorver o estado da arte de projetos externos sem duplicar slop nem reinventar a roda.
+
+```mermaid
+flowchart LR
+    A["Repositórios Externos (Links / GitHub / Pastas)"] -->|1. Ingestão Mecânica| B["souls_ast (AST / Tree-sitter / Myers)"]
+    B -->|2. Heurísticas & Essências| C["Janela de Vidro (Google Sheets 85+ Colunas)"]
+    C -->|3. Status de Aprovação & Filtro Humano| D["Fila de Deep Analysis"]
+    D -->|4. Síntese de Backlog| E["PRs Cirúrgicos / ADRs para o Souls Engine"]
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                   DECOMPOSIÇÃO CANÔNICA DA MILESTONE v0.9.5                            │
-├───────────────┬──────────────────────┬────────────────────────┬────────────────────────┤
-│ Sub-Fase      │ Escopo de Domínio    │ Componentes Alvo       │ Entrega Principal      │
-├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.5-A      │ Purga Inline Styles  │ styles.css & templates │ 3.070 styles -> Classes│
-├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.5-B      │ Ícones Vetoriais SVG │ components/modals.html │ 100% Emojis -> SVG Duot│
-├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.5-C      │ Limpeza de Hardware  │ templates/ & scripts/  │ 0 RTX/i9 fixos na UI   │
-├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.5-D      │ Gavetas de Lab (6)   │ tabs/ & settings/      │ Simuladores em Details │
-├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.5-E      │ A2UI / CLS Zero      │ dashboard.js & layouts │ Zero Shift & Ergonomia │
-└───────────────┴──────────────────────┴────────────────────────┴────────────────────────┘
-```
 
-#### 1. Purga Massiva de 3.070 Atributos `style="..."` Inline (`styles.css` Canônico)
-* **Eliminação de CSS Inline:** Mapeamento e substituição integral dos 3.070 atributos `style="..."` espalhados pelas 8 abas e 9 sub-abas de Settings por classes de utilidade e componentes canônicos definidos no `styles.css`.
-* **Design Tokens do Precision Dark UI:**
-  - Paleta base de alto contraste `oklch`: fundo profundo OLED (`#0a0d14` / `oklch 0.12 0.01 250`), cards neutros com elevação sutil (`#101520` / bordas `rgba(255,255,255,0.07)`), acentos em ciano elétrico (`#00f0ff`), verde esmeralda (`#10b981`), roxo orquídea (`#a855f7`) e âmbar preventivo (`#f59e0b`).
-  - Escala rigorosa de espaçamento em base 4px/8px (`gap-1` a `gap-6`, `p-2` a `p-6`).
-  - Tipografia unificada em 5 níveis estritos com anti-aliasing subpixel forçado (`Inter` / `JetBrains Mono`).
+#### 1. A Linhagem das 85+ Colunas e a "Janela de Vidro" (Google Sheets SSOT)
+* **Origem Canônica (`ssot_injector.rs`):** A tabela de 85+ colunas (82 canônicas + metadados de ciclo de vida) é a interface de auditoria humana entre o motor Rust e o operador, servindo como uma **"Janela de Vidro" (Glass Window)** em tempo real no Google Workspace.
+* **Governança por Gatilhos de Status:** Em vez de executar pipelines cegos e caros, o status de cada repositório na planilha funciona como o orquestrador dos sub-processos de hidratação:
+  - `NOVO / CATALOGADO`: Apenas metadados básicos (URL, estrelas, licença).
+  - `RAW_INGESTED`: Código baixado e decomposto em AST/blobs pelo `souls_ast`.
+  - `ESSENCES_EXTRACTED`: Resumo arquitetural e heurísticas das 85+ colunas preenchidas automaticamente.
+  - `APROVADO_PARA_ANALISE`: O operador humano revisa na planilha e altera o status para autorizar o próximo passo. Linhas marcadas como `IGNORAR / DESCARTADO` são puladas permanentemente.
+  - `DEEP_ANALYZED`: Dossiê de transplante gerado pelo enxame de agentes com mapeamento de componentes canibalizáveis.
+  - `INTEGRADO / FECHADO`: Capacidade absorvida pelo Souls Engine via PR ou Skill.
 
-#### 2. Sistema Canônico de Ícones Vetoriais SVG (Fim dos Emojis de Sistema)
-* **Substituição de Emojis Crus:** Eliminação definitiva de emojis do Windows (`🧠`, `🌱`, `📌`, `⚙️`, `📈`, `💰`, `⚡`, `🔬`, `🎭`, `🧩`, `🧪`, `🎮`, `🌡️`, `🔒`, `🔄`) que renderizam de forma discrepante, cortada ou infantil entre navegadores e sistemas operacionais.
-* **Sprite Vetorial SVG / Componente Iconográfico:** Biblioteca de ícones SVG monocromáticos e duotone de 16px, 20px e 24px com traço fino (stroke 1.5px/1.75px), integrados ao compilador de templates em Rust via `include_str!("assets/icons.svg")`.
+#### 2. Os 3 Processos Sequenciais de Canibalização
+1. **Processo 1: Ingestão Mecânica & Heurísticas (Tier 0 Zero-LLM):**
+   - Clonagem leve de repositórios na Dev Drive `Z:\souls_engine\.souls_data\raw_repos\`.
+   - Extração via Tree-sitter dos grafos de chamadas, complexidade ciclomática, densidade de testes e dependências.
+   - Povoamento automático das 85 colunas na planilha do Google Workspace via API REST / Google Universe Bridge.
+2. **Processo 2: Deep Analysis & Dossiê de Canibalização:**
+   - Para os itens com status aprovado pelo operador na planilha, subagentes especializados analisam as camadas internas do projeto-alvo, identificando padrões de design, algoritmos e armadilhas documentadas.
+   - Geração de um dossiê técnico estruturado (`CANIBALIZATION_BRIEF.md`) com árvore de dependências e estimativa de esforço.
+3. **Processo 3: Backlog de Tarefas & Transplante Cirúrgico:**
+   - Criação automática de tarefas atômicas e planos de implementação (`implementation_plan.md`) na fila de trabalho dos agentes.
+   - Os agentes de codificação recebem o plano fatiado e executam a absorção da funcionalidade para dentro do Souls Engine seguindo estritamente a Regra da Crate Única e TDD.
 
-#### 3. Expurgo Definitivo dos 30+ Hardcodings de Hardware e Caminhos Pessoais no Front-end
-* **Agnosticismo Total na Apresentação Visual:**
-  - Varredura e erradicação de todas as menções estáticas a `"RTX 2060m"`, `"Intel Core i9-9980HK"`, `"5.294 MB"` e `"Dev Drive Z:\"` nos textos descritivos de `local_models.html`, `overview.html`, `subtab_finops.html`, `subtab_router.html` e `dashboard.js`.
-  - Toda menção a hardware deve ser vinculada reativamente aos dados reais retornados por `/api/v1/telemetry` e `/api/v1/system/pulse` (exibindo dinamicamente o modelo exato da GPU ou CPU instalada na máquina do usuário, seja uma RTX 4070, Apple Silicon ou CPU host sem dGPU).
-  - Remoção de caminhos absolutos pessoais de teste (`C:\Users\rosas\...`), substituídos pela interpolação de diretórios providos dinamicamente pela API de telemetria.
+#### 3. Calm Mode & Proteção de Foco Neuro-Inclusivo (TDAH / 2e)
+* **Silêncio Operacional:** Subagentes de pesquisa pesada não disparam notificações incessantes nem popups que fragmentem o foco do usuário.
+* **Relatório Central em Evolução (`01_evolving_report.md`):** O progresso é escrito continuamente em disco e refletido no Dashboard via pulso discreto. O agente só notifica nos marcos de entrega ou quando exige decisão humana irreversível.
 
-#### 4. Gavetas de Laboratório para os 6 Simuladores Técnicos (`<details class="lab-drawer">`)
-* **Isolamento de Jargão Técnico:**
-  - Os 6 simuladores de baixo nível:
-    1. *Simulador de Carga & Barreira NVML* (`subtab_finops.html`)
-    2. *Simulador de Recall Híbrido RRF & Grafo LadybugDB* (`subtab_memory.html`)
-    3. *Simulador de Confinamento & Proteção Sandbox* (`subtab_sandbox.html`)
-    4. *Simulador de Entropia & Deliberação Socrática* (`subtab_reasoning.html`)
-    5. *Simulador de Despacho Pareto em Tempo Real* (`subtab_router.html`)
-    6. *Simulador de Contingência & Resolução de Cadeia* (`local_models.html`)
-  - Serão recolhidos para dentro do componente de gaveta colapsável `<details class="lab-drawer">` com cabeçalho discreto `🧪 Diagnóstico & Laboratório Avançado` (fechado por padrão).
-* **Foco Centrado no Humano:** As telas de primeiro nível ficam 100% limpas para o fluxo de valor do usuário comum (acompanhar evolução pessoal, gerenciar assistentes, disparar pesquisas e conectar ferramentas), sem poluição de testes de estresse físicos ou matemáticos.
+---
 
-#### 5. Ergonomia, A2UI e Zero Layout Shift (CLS = 0)
-* **Renderização Sem Saltos Visuais:** Dimensionamento explícito de containers (reservando espaço vertical para cards dinâmicos) para garantir Cumulative Layout Shift nulo durante a conexão SSE de telemetria e o carregamento assíncrono dos modelos.
-* **Micro-Interações Táteis de Configuração:**
-  - Sincronização em duas vias entre os sliders/toggles das sub-abas de Settings e o arquivo `souls_config.toml`.
-  - Salva em background com micro-animação de confirmação visual ("Salvo instantaneamente"), eliminando qualquer lag perceptível ou sensação de controle placebo.
+### MILESTONES v0.9.6 a v0.9.9: REVISÕES, REFINAMENTOS, CORREÇÕES & NOVAS FUNCIONALIDADES (CALIBRAÇÃO PRÉ-v1.0)
+
+A esteira de resiliência, validação em uso real e refinamento contínuo antes do congelamento e lançamento oficial da versão 1.0.0. Este espaço atua como a câmara de descompressão e calibração fina:
+
+#### 1. Ciclo de Estabilização & Baterias de Estresse Concorrente
+* **Testes de Longa Duração (Soak Testing):** Execução do daemon ininterruptamente por dias sob rajadas aleatórias de chamadas de subagentes, telemetria e I/O de disco para comprovar zero leaks de handles Win32, zero leaks de VRAM e zero corrupções no SQLite STRICT WAL.
+* **Stress de Concorrência & Preempção:** Validação da preempção imediata (0 ms) dos micro-cochilos (*Cognitive Catnap*) perante digitação ativa do operador no Windows 11.
+
+#### 2. Incorporação de Feedback do Operador & Resolução de Atritos
+* **Ajuste Fino de UX e Micro-Interações:** Correção de quaisquer atritos de navegação, lentidões de renderização ou inconsistências visuais relatadas pelo usuário durante o uso diário do ecossistema.
+* **Calibração Epistêmica do ParetoBandit:** Ajuste dos hiperparâmetros de recompensa e custo ($E^3$) com base nas rotas reais de despacho de subagentes para maximizar economia e qualidade.
+
+#### 3. Janela de Oportunidade para Novas Funcionalidades do Backlog Canônico
+* **Promoção Seletiva de Recursos Pós-v1:** Espaço estratégico para antecipar funcionalidades de alto valor prático mapeadas no acervo do Canon V7 (§5.3), caso a maturidade das milestones anteriores gere tração adiantada:
+  - *Twilight Mode / Variação Circadiana da Interface;*
+  - *Data & Spreadsheet Canvas em WASM;*
+  - *World-Interaction Observer passivo para compromissos rápidos.*
 
 ---
 
