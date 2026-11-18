@@ -166,6 +166,26 @@ impl CloudArenaRepository {
         Ok(())
     }
 
+    /// Remove snapshots e avaliações anteriores da mesma data para garantir idempotência diária.
+    pub async fn clear_daily_snapshots(&self, date: &str) -> Result<(), CloudArenaError> {
+        sqlx::query("DELETE FROM daily_evaluations WHERE evaluation_date = ?;")
+            .bind(date)
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("DELETE FROM benchmark_snapshots WHERE recorded_at = ?;")
+            .bind(date)
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("DELETE FROM pricing_telemetry_snapshots WHERE recorded_at = ?;")
+            .bind(date)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
     /// Obtém a data do último snapshot gravado.
     pub async fn get_last_sync_date(&self) -> Result<Option<String>, CloudArenaError> {
         let row = sqlx::query("SELECT MAX(evaluation_date) as last_date FROM daily_evaluations;")
@@ -212,10 +232,10 @@ impl CloudArenaRepository {
                 cm.context_window,
                 (SELECT source FROM pricing_telemetry_snapshots pts 
                  WHERE pts.canonical_id = de.canonical_id 
-                 ORDER BY pts.recorded_at DESC LIMIT 1) as best_provider,
+                 ORDER BY CASE WHEN pts.source = 'nous_portal' THEN 0 WHEN pts.source LIKE '%nous%' THEN 1 ELSE 2 END, pts.recorded_at DESC, pts.id DESC LIMIT 1) as best_provider,
                 (SELECT throughput_tps FROM pricing_telemetry_snapshots pts 
                  WHERE pts.canonical_id = de.canonical_id 
-                 ORDER BY pts.recorded_at DESC LIMIT 1) as tps
+                 ORDER BY CASE WHEN pts.source = 'nous_portal' THEN 0 WHEN pts.source LIKE '%nous%' THEN 1 ELSE 2 END, pts.recorded_at DESC, pts.id DESC LIMIT 1) as tps
             FROM daily_evaluations de
             JOIN canonical_models cm ON cm.id = de.canonical_id
             WHERE de.profile_task = ? AND de.evaluation_date = ?

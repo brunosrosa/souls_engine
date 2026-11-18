@@ -363,30 +363,73 @@ fn infer_developer_and_family(id: &str) -> (String, String) {
     (developer, family)
 }
 
-/// Estima TTFT típico em milissegundos para modelos conhecidos.
-fn estimate_ttft(id: &str) -> f64 {
+/// Estima TTFT típico (ms) e Throughput típico (TPS) por classe arquitetural real.
+fn estimate_latency_and_throughput(id: &str) -> (f64, f64) {
     let lower = id.to_lowercase();
-    if lower.contains("flash") || lower.contains("haiku") || lower.contains("mini") || lower.contains("luna") {
-        220.0
-    } else if lower.contains("opus") || lower.contains("astra") || lower.contains("405b") || lower.contains("r1") {
-        550.0
+    if lower.contains("cerebras") {
+        (160.0, 420.0)
+    } else if lower.contains("groq") {
+        (190.0, 280.0)
+    } else if lower.contains("flash-lite") || lower.contains("nano") || lower.contains("-3b") {
+        (185.0, 160.0)
+    } else if lower.contains("flash")
+        || lower.contains("haiku")
+        || lower.contains("luna")
+        || lower.contains("-8b")
+        || ((lower.contains("-mini") || lower.contains("mini-") || lower.contains("solar-mini") || lower.ends_with("mini"))
+            && !lower.contains("gemini")
+            && !lower.contains("minimax"))
+    {
+        (220.0, 145.0)
+    } else if lower.contains("opus")
+        || lower.contains("fable")
+        || lower.contains("astra")
+        || lower.contains("reasoner")
+        || lower.contains("-r1")
+        || lower.contains("405b")
+        || lower.contains("2.4t")
+        || lower.contains("501b")
+        || lower.contains("550b")
+        || lower.contains("wonder")
+    {
+        (760.0, 48.0)
+    } else if lower.contains("hydrogen")
+        || lower.contains("deepseek-chat")
+        || lower.contains("deepseek-v3")
+        || lower.contains("minimax-m")
+        || lower.contains("-plus")
+        || lower.contains("70b")
+        || lower.contains("27b")
+    {
+        (340.0, 102.0)
+    } else if lower.contains("glm-5.3") && !lower.contains("prime") {
+        (360.0, 98.0)
+    } else if lower.contains("carbon")
+        || lower.contains("argon")
+        || lower.contains("sonnet")
+        || lower.contains("sol")
+        || lower.contains("terra")
+        || lower.contains("max")
+        || lower.contains("prime")
+        || lower.contains("grok-4")
+        || lower.contains("kimi-k3")
+        || lower.contains("-pro")
+        || lower.contains("coder")
+    {
+        (430.0, 85.0)
     } else {
-        380.0
+        (460.0, 75.0)
     }
 }
 
+/// Estima TTFT típico em milissegundos para modelos conhecidos.
+pub fn estimate_ttft(id: &str) -> f64 {
+    estimate_latency_and_throughput(id).0
+}
+
 /// Estima Throughput típico em TPS para modelos conhecidos.
-fn estimate_throughput(id: &str) -> f64 {
-    let lower = id.to_lowercase();
-    if lower.contains("flash") || lower.contains("haiku") || lower.contains("mini") || lower.contains("luna") {
-        130.0
-    } else if lower.contains("coder") || lower.contains("sol") {
-        90.0
-    } else if lower.contains("opus") || lower.contains("405b") || lower.contains("astra") {
-        40.0
-    } else {
-        75.0
-    }
+pub fn estimate_throughput(id: &str) -> f64 {
+    estimate_latency_and_throughput(id).1
 }
 
 /// Fornece catálogo canônico de fallback quando o Nous Portal estiver inacessível offline.
@@ -398,12 +441,14 @@ fn get_offline_fallback_result(recorded_at: &str) -> NousIngestionResult {
 
     for item in seeds {
         let m = item.model;
-        let p_prompt = if m.id.contains("opus") {
-            15.0
-        } else if m.id.contains("sonnet") {
-            3.0
+        let p_prompt = if m.id.contains("opus") || m.id.contains("astra") {
+            10.0
+        } else if m.id.contains("sonnet") || m.id.contains("argon") || m.id.contains("sol") {
+            2.0
+        } else if m.id.contains("flash") || m.id.contains("mini") || m.id.contains("luna") {
+            0.08
         } else {
-            0.5
+            0.40
         };
         let p_comp = p_prompt * 4.0;
         pricing_snapshots.push(PricingTelemetrySnapshot {

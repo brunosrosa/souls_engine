@@ -45,6 +45,8 @@ impl CanonicalResolver {
         // Sem prefixo de fornecedor (ex: "claude-sonnet-5.5" -> "anthropic/claude-sonnet-5.5")
         if let Some((_, model)) = norm.split_once('/') {
             self.register_alias(model, &norm);
+            let dashed = model.replace('.', "-").replace('_', "-");
+            self.aliases.entry(dashed).or_insert_with(|| norm.clone());
         }
         // Com prefixo de roteador ~ (ex: "~openai/gpt-6-sol" -> "openai/gpt-6-sol")
         self.register_alias(&format!("~{}", norm), &norm);

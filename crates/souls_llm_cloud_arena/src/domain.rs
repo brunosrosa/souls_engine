@@ -1,39 +1,67 @@
 //! # domain.rs — Entidades de Domínio da Cloud Arena
 //!
 //! Modelagem de dados para modelos canônicos, snapshots diários de precificação,
-//! telemetria de provedores, benchmarks cognitivos e avaliações de Pareto nos 5 perfis.
+//! telemetria de provedores, benchmarks cognitivos e avaliações de Pareto nos 9 perfis (ADR-009).
 
 use serde::{Deserialize, Serialize};
 
-/// Perfil de carga computacional e afinidade cognitiva.
+/// Perfil de carga computacional e afinidade cognitiva (Taxonomia Canônica ADR-009).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskProfileKind {
+    Executive,
     Coding,
     Agentic,
     Reasoning,
     Fast,
     Design,
+    Research,
+    Security,
+    Curation,
 }
 
 impl TaskProfileKind {
     pub fn as_str(&self) -> &'static str {
         match self {
+            Self::Executive => "executive",
             Self::Coding => "coding",
             Self::Agentic => "agentic",
             Self::Reasoning => "reasoning",
             Self::Fast => "fast",
             Self::Design => "design",
+            Self::Research => "research",
+            Self::Security => "security",
+            Self::Curation => "curation",
+        }
+    }
+
+    /// Converte strings e aliases legados (ex: "orchestrator", "maestro", "brain") para o perfil canônico.
+    pub fn from_str_lossy(raw: &str) -> Option<Self> {
+        match raw.trim().to_lowercase().as_str() {
+            "executive" | "orchestrator" | "maestro" | "brain" | "master_brain" => Some(Self::Executive),
+            "coding" | "swe" | "code" => Some(Self::Coding),
+            "agentic" | "tools" | "tool_calling" => Some(Self::Agentic),
+            "reasoning" | "math" | "logic" => Some(Self::Reasoning),
+            "fast" | "triage" | "quick" => Some(Self::Fast),
+            "design" | "frontend" | "vision" | "ui" => Some(Self::Design),
+            "research" | "rag" | "synthesis" => Some(Self::Research),
+            "security" | "audit" | "sec" => Some(Self::Security),
+            "curation" | "writing" | "wiki" | "obsidian" => Some(Self::Curation),
+            _ => None,
         }
     }
 
     pub fn all() -> &'static [TaskProfileKind] {
         &[
+            Self::Executive,
             Self::Coding,
             Self::Agentic,
             Self::Reasoning,
             Self::Fast,
             Self::Design,
+            Self::Research,
+            Self::Security,
+            Self::Curation,
         ]
     }
 }
@@ -52,6 +80,7 @@ pub enum ParetoTag {
     BestValue,
     UltraLowCost,
     Dominated,
+    Estimated,
 }
 
 impl ParetoTag {
@@ -61,6 +90,7 @@ impl ParetoTag {
             Self::BestValue => "BestValue",
             Self::UltraLowCost => "UltraLowCost",
             Self::Dominated => "Dominated",
+            Self::Estimated => "Estimated",
         }
     }
 }
@@ -78,6 +108,51 @@ pub struct CanonicalModel {
     pub supports_caching: bool,
     pub is_multimodal: bool,
     pub created_at: String,
+}
+
+impl CanonicalModel {
+    /// Verifica se o modelo é um LLM gerador de texto/chat (exclui embeddings, áudio puro, geração de imagem e modelos sem janela útil).
+    pub fn is_generative_llm(&self) -> bool {
+        if self.context_window < 4096 {
+            return false;
+        }
+        let lower = self.id.to_lowercase();
+        let blocked_tokens = [
+            "embed",
+            "minilm",
+            "bge-",
+            "e5-",
+            "rerank",
+            "whisper",
+            "tts",
+            "moderation",
+            "flux",
+            "dall-e",
+            "stable-diffusion",
+            "imagen",
+            "sora",
+            "kling",
+        ];
+        !blocked_tokens.iter().any(|tok| lower.contains(tok))
+    }
+
+    /// Verifica elegibilidade técnica estrita do modelo para disputar o Pódio em determinado perfil cognitivo.
+    pub fn is_eligible_for_profile(&self, profile: TaskProfileKind) -> bool {
+        if !self.is_generative_llm() {
+            return false;
+        }
+        match profile {
+            TaskProfileKind::Executive => self.supports_tools && self.context_window >= 64_000,
+            TaskProfileKind::Agentic => self.supports_tools,
+            TaskProfileKind::Design => self.is_multimodal,
+            TaskProfileKind::Research => self.context_window >= 200_000,
+            TaskProfileKind::Coding
+            | TaskProfileKind::Reasoning
+            | TaskProfileKind::Security
+            | TaskProfileKind::Curation => self.context_window >= 32_000,
+            TaskProfileKind::Fast => self.context_window >= 8_192,
+        }
+    }
 }
 
 /// Snapshot pontual de preços e métricas operacionais por provedor.

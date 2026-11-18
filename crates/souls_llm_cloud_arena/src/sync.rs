@@ -3,7 +3,7 @@
 //! Executa verificação diária, ingestão direta da Nous Portal Inference API
 //! (catálogo canônico oficial de 342+ modelos reais e tarifas), OpenRouter
 //! (preço de mercado e benchmarks Artificial Analysis) e LMSYS Arena (Hugging Face),
-//! calculando a Fronteira de Pareto nos 5 perfis cognitivos.
+//! calculando a Fronteira de Pareto nos 9 perfis cognitivos (ADR-009).
 
 use crate::analytics::{
     calculate_pareto_evaluations, compute_blended_cost, compute_composite_score,
@@ -11,13 +11,15 @@ use crate::analytics::{
 };
 use crate::canonical::CanonicalResolver;
 use crate::config::CloudArenaConfig;
-use crate::domain::{CanonicalModel, PricingTelemetrySnapshot, SyncOutcome, TaskProfileKind};
+use crate::domain::{
+    BenchmarkSnapshot, CanonicalModel, PricingTelemetrySnapshot, SyncOutcome, TaskProfileKind,
+};
 use crate::error::CloudArenaError;
 use crate::sources::{BenchmarkSource, NousPortalClient, OpenRouterClient};
 use crate::storage::{run_migrations, CloudArenaRepository};
 use chrono::Utc;
 use sqlx::SqlitePool;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tracing::{info, warn};
 
 pub struct CloudArenaSync {
@@ -86,14 +88,18 @@ impl CloudArenaSync {
         }
 
         // 3. Registra os modelos canônicos e aliases dinamicamente no banco e no resolver
+        let mut registered_ids: HashSet<String> = HashSet::new();
         for model in &nous_result.canonical_models {
             self.repo.upsert_canonical_model(model).await?;
             resolver.register_canonical(&model.id);
+            registered_ids.insert(model.id.clone());
         }
 
         for (alias, canonical_id, source) in &nous_result.aliases {
-            let _ = self.repo.upsert_model_alias(alias, canonical_id, source).await;
-            resolver.register_alias(alias, canonical_id);
+            if registered_ids.contains(canonical_id) {
+                let _ = self.repo.upsert_model_alias(alias, canonical_id, source).await;
+                resolver.register_alias(alias, canonical_id);
+            }
         }
 
         // 4. Ingestão OpenRouter (Preços de mercado spot + Artificial Analysis Intelligence Index)
@@ -122,60 +128,99 @@ impl CloudArenaSync {
             }
         };
 
-        // 6. Grava snapshots de precificação no banco
+        // 6. Limpa snapshots anteriores da mesma data para garantir idempotência diária e grava precificação
+        self.repo.clear_daily_snapshots(target_date).await?;
+
         let mut total_pricing = 0;
         for snap in &nous_result.pricing_snapshots {
-            self.repo.record_pricing_snapshot(snap).await?;
-            total_pricing += 1;
+            if registered_ids.contains(&snap.canonical_id) {
+                self.repo.record_pricing_snapshot(snap).await?;
+                total_pricing += 1;
+            }
         }
         for snap in &nous_result.batch_snapshots {
-            self.repo.record_pricing_snapshot(snap).await?;
-            total_pricing += 1;
+            if registered_ids.contains(&snap.canonical_id) {
+                self.repo.record_pricing_snapshot(snap).await?;
+                total_pricing += 1;
+            }
         }
         for snap in &openrouter_result.pricing_snapshots {
-            self.repo.record_pricing_snapshot(snap).await?;
-            total_pricing += 1;
+            if registered_ids.contains(&snap.canonical_id) {
+                self.repo.record_pricing_snapshot(snap).await?;
+                total_pricing += 1;
+            }
         }
 
-        // 7. Consolidação de benchmarks (Artificial Analysis + LMSYS + Heurística para todos os canônicos)
-        let mut bench_by_model: HashMap<String, crate::domain::BenchmarkSnapshot> = HashMap::new();
+        // 7. Consolidação multi-fonte de benchmarks (Seed Curado + OpenRouter AA + LMSYS + Heurística)
+        let mut bench_by_model: HashMap<String, BenchmarkSnapshot> = HashMap::new();
+        let mut verified_models: HashSet<String> = HashSet::new();
 
-        // 7.1 Artificial Analysis da OpenRouter
+        // 7.0 Matriz curada multidimensional (garante sub-dimensões verificadas IFEval/GPQA/VQA/BFCL)
+        if let Ok(curated) = BenchmarkSource::load_snapshots(&resolver, target_date) {
+            for b in curated {
+                if !registered_ids.contains(&b.canonical_id) {
+                    continue;
+                }
+                verified_models.insert(b.canonical_id.clone());
+                bench_by_model.insert(b.canonical_id.clone(), b);
+            }
+        }
+
+        // 7.1 Artificial Analysis da OpenRouter (fusão campo-a-campo preservando sub-scores curados)
         for b in openrouter_result.benchmark_snapshots {
-            bench_by_model.insert(b.canonical_id.clone(), b);
+            if !registered_ids.contains(&b.canonical_id) {
+                continue;
+            }
+            verified_models.insert(b.canonical_id.clone());
+            bench_by_model
+                .entry(b.canonical_id.clone())
+                .and_modify(|existing| merge_benchmark_fields(existing, &b))
+                .or_insert(b);
         }
 
-        // 7.2 Enriquece com LMSYS Elo humano
+        // 7.2 Enriquece com LMSYS Elo humano sem contaminar escalas Artificial Analysis
         for lmsys in lmsys_snapshots {
+            if !registered_ids.contains(&lmsys.canonical_id) {
+                continue;
+            }
+            verified_models.insert(lmsys.canonical_id.clone());
             bench_by_model
                 .entry(lmsys.canonical_id.clone())
                 .and_modify(|existing| {
-                    if existing.general_elo.is_none() {
+                    if existing.general_elo.is_none() || existing.general_elo.unwrap_or(0.0) > 200.0 {
                         existing.general_elo = lmsys.general_elo;
                     }
-                    if existing.coding_elo.is_none() {
+                    if existing.coding_elo.is_none() && existing.general_elo.unwrap_or(0.0) > 200.0 {
                         existing.coding_elo = lmsys.coding_elo;
                     }
-                    if existing.hard_prompts_elo.is_none() {
+                    if existing.hard_prompts_elo.is_none() || existing.hard_prompts_elo.unwrap_or(0.0) > 200.0 {
                         existing.hard_prompts_elo = lmsys.hard_prompts_elo;
                     }
                 })
                 .or_insert(lmsys);
         }
 
-        // 7.3 Garante que todos os 342 modelos canônicos tenham benchmark válido
+        // 7.3 Modelos sem benchmark empírico recebem estimativa conservadora e NÃO entram em verified_models
         for m in &nous_result.canonical_models {
             bench_by_model.entry(m.id.clone()).or_insert_with(|| {
                 let baseline = estimate_baseline_score(m);
-                crate::domain::BenchmarkSnapshot {
+                BenchmarkSnapshot {
                     canonical_id: m.id.clone(),
                     general_elo: Some(baseline),
-                    coding_elo: Some(baseline),
+                    coding_elo: Some((baseline + 12.0).min(62.0)),
                     hard_prompts_elo: Some(baseline),
-                    bfcl_score: if m.supports_tools { Some(baseline + 5.0) } else { Some(baseline - 10.0) },
-                    ifeval_score: Some(baseline),
-                    gpqa_score: Some(baseline - 5.0),
-                    vqa_multimodal_score: if m.is_multimodal { Some(baseline + 5.0) } else { None },
+                    bfcl_score: if m.supports_tools {
+                        Some((baseline + 3.0).min(45.0))
+                    } else {
+                        Some((baseline - 8.0).max(15.0))
+                    },
+                    ifeval_score: Some((baseline + 25.0).min(78.0)),
+                    gpqa_score: Some((baseline + 15.0).min(65.0)),
+                    vqa_multimodal_score: if m.is_multimodal {
+                        Some((baseline + 25.0).min(76.0))
+                    } else {
+                        None
+                    },
                     recorded_at: target_date.to_string(),
                 }
             });
@@ -188,13 +233,21 @@ impl CloudArenaSync {
             total_bench += 1;
         }
 
-        // 8. Mapa de preços primários de execução (Nous Portal)
+        // 8. Mapa de preços de execução (prioridade Nous Portal, fallback OpenRouter)
         let mut execution_pricing_by_model: HashMap<String, PricingTelemetrySnapshot> = HashMap::new();
+        for snap in &openrouter_result.pricing_snapshots {
+            execution_pricing_by_model.insert(snap.canonical_id.clone(), snap.clone());
+        }
         for snap in &nous_result.pricing_snapshots {
             execution_pricing_by_model.insert(snap.canonical_id.clone(), snap.clone());
         }
 
-        // 9. Calcula avaliações na Fronteira de Pareto nos 5 Perfis Cognitivos
+        // 9. Calcula avaliações na Fronteira de Pareto nos 9 Perfis Cognitivos (ADR-009)
+        let model_map: HashMap<&str, &CanonicalModel> = nous_result
+            .canonical_models
+            .iter()
+            .map(|m| (m.id.as_str(), m))
+            .collect();
         let mut total_evals = 0;
 
         for &profile in TaskProfileKind::all() {
@@ -205,12 +258,19 @@ impl CloudArenaSync {
                     let score = compute_composite_score(bench, price, profile);
                     let blended_cost = compute_blended_cost(price, profile);
                     let roi = compute_roi_index(score, blended_cost);
+                    let is_verified = verified_models.contains(canonical_id);
+                    let is_eligible = model_map
+                        .get(canonical_id.as_str())
+                        .map(|m| m.is_eligible_for_profile(profile))
+                        .unwrap_or(true);
 
                     candidates.push(EvaluationCandidate {
                         canonical_id: canonical_id.clone(),
                         composite_score: score,
                         blended_cost,
                         roi_index: roi,
+                        is_verified,
+                        is_eligible,
                     });
                 }
             }
@@ -223,8 +283,9 @@ impl CloudArenaSync {
         }
 
         info!(
-            "Sincronização Cloud Arena concluída: {} modelos canônicos, {} tarifas, {} benchmarks, {} avaliações de Pareto.",
+            "Sincronização Cloud Arena concluída: {} modelos canônicos ({} verificados), {} tarifas, {} benchmarks, {} avaliações de Pareto.",
             nous_result.canonical_models.len(),
+            verified_models.len(),
             total_pricing,
             total_bench,
             total_evals
@@ -242,20 +303,45 @@ impl CloudArenaSync {
     }
 }
 
-/// Estima baseline prudente de inteligência (0-100) para modelos sem benchmark verificado.
+/// Funde campos de benchmark mantendo sub-scores curados quando a fonte externa vier parcial.
+fn merge_benchmark_fields(existing: &mut BenchmarkSnapshot, incoming: &BenchmarkSnapshot) {
+    if incoming.general_elo.is_some() {
+        existing.general_elo = incoming.general_elo;
+    }
+    if incoming.coding_elo.is_some() {
+        existing.coding_elo = incoming.coding_elo;
+    }
+    if incoming.hard_prompts_elo.is_some() {
+        existing.hard_prompts_elo = incoming.hard_prompts_elo;
+    }
+    if incoming.bfcl_score.is_some() {
+        existing.bfcl_score = incoming.bfcl_score;
+    }
+    if incoming.ifeval_score.is_some() {
+        existing.ifeval_score = incoming.ifeval_score;
+    }
+    if incoming.gpqa_score.is_some() {
+        existing.gpqa_score = incoming.gpqa_score;
+    }
+    if incoming.vqa_multimodal_score.is_some() {
+        existing.vqa_multimodal_score = incoming.vqa_multimodal_score;
+    }
+}
+
+/// Estima baseline conservador na escala Artificial Analysis (32..44) para modelos sem benchmark verificado.
 fn estimate_baseline_score(m: &CanonicalModel) -> f64 {
     let lower = m.id.to_lowercase();
-    if lower.contains("opus") || lower.contains("astra") || lower.contains("argon") {
-        53.0
-    } else if lower.contains("sonnet") || lower.contains("sol") || lower.contains("prime") {
-        50.0
-    } else if lower.contains("flash") || lower.contains("haiku") || lower.contains("luna") || lower.contains("mini") {
+    if lower.contains("opus") || lower.contains("astra") || lower.contains("fable") || lower.contains("argon") {
         44.0
+    } else if lower.contains("sonnet") || lower.contains("sol") || lower.contains("prime") || lower.contains("max") {
+        41.0
     } else if lower.contains("405b") || lower.contains("70b") {
-        47.0
+        38.0
+    } else if lower.contains("flash") || lower.contains("haiku") || lower.contains("luna") || lower.contains("mini") {
+        35.0
     } else if m.context_window >= 500_000 {
-        45.0
+        36.0
     } else {
-        40.0
+        32.0
     }
 }

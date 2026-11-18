@@ -13,19 +13,56 @@ pub fn normalize_val(val: f64, min: f64, max: f64) -> f64 {
     ((clamped - min) / (max - min)) * 100.0
 }
 
-pub fn normalize_score_or_elo(val: f64) -> f64 {
-    if val <= 100.0 {
-        // Escala Artificial Analysis Intelligence Index (10.0 a 60.0 mapeada para 0 a 100)
-        // Se já for um índice percentual direto (ex: SWE / coding_index > 65), preserva o percentual
-        if val > 65.0 {
-            val.clamp(0.0, 100.0)
-        } else {
-            normalize_val(val, 10.0, 60.0)
-        }
+pub fn normalize_elo(val: f64) -> f64 {
+    35.0 + ((val - 1200.0) / 360.0).clamp(0.0, 1.0) * 64.5
+}
+
+pub fn normalize_general_score(val: f64) -> f64 {
+    if val > 200.0 {
+        normalize_elo(val)
+    } else if val > 68.0 {
+        val.clamp(0.0, 100.0)
+    } else if val >= 10.0 {
+        30.0 + ((val - 10.0) / 58.0).clamp(0.0, 1.0) * 69.2
     } else {
-        // Escala Elo humana (LMSYS Chatbot Arena: 1200.0 a 1550.0 mapeada para 0 a 100)
-        normalize_val(val, 1200.0, 1550.0)
+        20.0 + (val / 10.0).clamp(0.0, 1.0) * 10.0
     }
+}
+
+pub fn normalize_coding_score(val: f64) -> f64 {
+    if val > 200.0 {
+        normalize_elo(val)
+    } else if val > 85.0 {
+        val.clamp(0.0, 100.0)
+    } else if val >= 25.0 {
+        40.0 + ((val - 25.0) / 61.0).clamp(0.0, 1.0) * 58.5
+    } else {
+        25.0 + (val / 25.0).clamp(0.0, 1.0) * 15.0
+    }
+}
+
+pub fn normalize_agentic_score(val: f64) -> f64 {
+    if val > 200.0 {
+        normalize_elo(val)
+    } else if val > 62.0 {
+        val.clamp(0.0, 100.0)
+    } else if val >= 5.0 {
+        30.0 + ((val - 5.0) / 55.0).clamp(0.0, 1.0) * 66.0
+    } else {
+        20.0 + (val / 5.0).clamp(0.0, 1.0) * 10.0
+    }
+}
+
+pub fn normalize_direct_pct(val: f64) -> f64 {
+    if val > 200.0 {
+        normalize_elo(val)
+    } else {
+        val.clamp(0.0, 100.0)
+    }
+}
+
+pub fn normalize_score_or_elo(val: f64) -> f64 {
+    normalize_general_score(val)
 }
 
 pub fn normalize_ttft(ttft_ms: f64) -> f64 {
@@ -43,23 +80,40 @@ pub fn compute_composite_score(
 ) -> f64 {
     let (bw, _) = get_profile_weights(profile);
 
-    let coding_norm = match bench.coding_elo {
-        Some(v) => normalize_score_or_elo(v),
-        None => bench.general_elo.map(normalize_score_or_elo).unwrap_or(60.0),
-    };
-    let hard_norm = match bench.hard_prompts_elo {
-        Some(v) => normalize_score_or_elo(v),
-        None => bench.general_elo.map(normalize_score_or_elo).unwrap_or(60.0),
-    };
-    let bfcl_score = match bench.bfcl_score {
-        Some(v) => normalize_score_or_elo(v),
-        None => hard_norm,
-    };
-    let ifeval_score = bench.ifeval_score.map(normalize_score_or_elo).unwrap_or(coding_norm);
-    let gpqa_score = bench.gpqa_score.map(normalize_score_or_elo).unwrap_or(hard_norm);
-    let vqa_score = bench.vqa_multimodal_score.map(normalize_score_or_elo).unwrap_or(60.0);
+    let general_norm = bench.general_elo.map(normalize_general_score).unwrap_or(55.0);
 
-    let tps_norm = normalize_val(price.throughput_tps.unwrap_or(60.0), 10.0, 150.0);
+    // Sub-scores ausentes recebem fator de desconto conservador para não inflar modelos incompletos
+    let coding_norm = bench
+        .coding_elo
+        .map(normalize_coding_score)
+        .unwrap_or(general_norm * 0.94);
+
+    let hard_norm = bench
+        .hard_prompts_elo
+        .map(normalize_general_score)
+        .unwrap_or(general_norm * 0.94);
+
+    let bfcl_score = bench
+        .bfcl_score
+        .map(normalize_agentic_score)
+        .unwrap_or(general_norm * 0.92);
+
+    let ifeval_score = bench
+        .ifeval_score
+        .map(normalize_direct_pct)
+        .unwrap_or(general_norm * 0.94);
+
+    let gpqa_score = bench
+        .gpqa_score
+        .map(normalize_direct_pct)
+        .unwrap_or(general_norm * 0.85);
+
+    let vqa_score = bench
+        .vqa_multimodal_score
+        .map(normalize_direct_pct)
+        .unwrap_or(general_norm * 0.80);
+
+    let tps_norm = normalize_val(price.throughput_tps.unwrap_or(60.0), 10.0, 165.0);
     let ttft_norm = normalize_ttft(price.ttft_ms.unwrap_or(500.0));
 
     let score = bw.coding_elo * coding_norm

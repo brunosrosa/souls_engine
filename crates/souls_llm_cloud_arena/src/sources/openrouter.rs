@@ -132,7 +132,8 @@ impl OpenRouterClient {
                     prompt_price_m * 1.25
                 };
 
-                let throughput = estimate_throughput(&canonical_id);
+                let throughput = crate::sources::nous::estimate_throughput(&canonical_id);
+                let ttft = crate::sources::nous::estimate_ttft(&canonical_id);
 
                 pricing_snapshots.push(PricingTelemetrySnapshot {
                     canonical_id: canonical_id.clone(),
@@ -141,7 +142,7 @@ impl OpenRouterClient {
                     completion_price_per_m: comp_price_m,
                     cache_read_price_per_m: cache_read_m,
                     cache_write_price_per_m: cache_write_m,
-                    ttft_ms: Some(450.0),
+                    ttft_ms: Some(ttft),
                     throughput_tps: Some(throughput),
                     recorded_at: recorded_at.to_string(),
                 });
@@ -153,10 +154,10 @@ impl OpenRouterClient {
                     if aa.intelligence_index.is_some() || aa.coding_index.is_some() || aa.agentic_index.is_some() {
                         benchmark_snapshots.push(BenchmarkSnapshot {
                             canonical_id: canonical_id.clone(),
-                            general_elo: aa.intelligence_index, // Artificial Analysis Intelligence Index
-                            coding_elo: aa.coding_index,        // Artificial Analysis Coding Index
-                            hard_prompts_elo: aa.agentic_index, // Artificial Analysis Agentic Index
-                            bfcl_score: aa.agentic_index,
+                            general_elo: aa.intelligence_index,      // Artificial Analysis Intelligence Index
+                            coding_elo: aa.coding_index,             // Artificial Analysis Coding Index
+                            hard_prompts_elo: aa.intelligence_index, // Inteligência/Raciocínio Geral (sem confundir com agentic)
+                            bfcl_score: aa.agentic_index,            // Artificial Analysis Agentic Index
                             ifeval_score: None,
                             gpqa_score: None,
                             vqa_multimodal_score: None,
@@ -196,27 +197,5 @@ fn parse_price_value(val: Option<&serde_json::Value>) -> f64 {
         Some(serde_json::Value::Number(n)) => n.as_f64().unwrap_or(0.0),
         Some(serde_json::Value::String(s)) => s.parse::<f64>().unwrap_or(0.0),
         _ => 0.0,
-    }
-}
-
-/// Estima throughput médio de mercado em TPS para modelos conhecidos.
-fn estimate_throughput(canonical_id: &str) -> f64 {
-    let lower = canonical_id.to_lowercase();
-    if lower.contains("cerebras") {
-        420.0
-    } else if lower.contains("groq") {
-        280.0
-    } else if lower.contains("haiku") || lower.contains("flash") || lower.contains("mini") || lower.contains("luna") {
-        130.0
-    } else if lower.contains("coder-32b") || lower.contains("sol") {
-        95.0
-    } else if lower.contains("deepseek-v3") || lower.contains("deepseek-chat") {
-        85.0
-    } else if lower.contains("deepseek-r1") || lower.contains("deepseek-reasoner") || lower.contains("astra") || lower.contains("opus") {
-        45.0
-    } else if lower.contains("405b") {
-        35.0
-    } else {
-        70.0
     }
 }

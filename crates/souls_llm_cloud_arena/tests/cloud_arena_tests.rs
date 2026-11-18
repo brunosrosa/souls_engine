@@ -141,24 +141,40 @@ fn test_pareto_dominance_matrix() {
             composite_score: 95.0,
             blended_cost: 3.40,
             roi_index: 38.0,
+            is_verified: true,
+            is_eligible: true,
         },
         EvaluationCandidate {
             canonical_id: "deepseek-v3".to_string(),
             composite_score: 88.0,
             blended_cost: 0.28,
             roi_index: 75.0,
+            is_verified: true,
+            is_eligible: true,
         },
         EvaluationCandidate {
             canonical_id: "qwen-2.5-coder-32b".to_string(),
             composite_score: 82.0,
             blended_cost: 0.18,
             roi_index: 70.0,
+            is_verified: true,
+            is_eligible: true,
         },
         EvaluationCandidate {
             canonical_id: "outclassed-model".to_string(),
             composite_score: 80.0,
             blended_cost: 4.00,
             roi_index: 30.0,
+            is_verified: true,
+            is_eligible: true,
+        },
+        EvaluationCandidate {
+            canonical_id: "unverified-flash".to_string(),
+            composite_score: 85.0,
+            blended_cost: 0.02,
+            roi_index: 83.0,
+            is_verified: false,
+            is_eligible: true,
         },
     ];
 
@@ -179,6 +195,53 @@ fn test_pareto_dominance_matrix() {
     let outclassed = evals.iter().find(|e| e.canonical_id == "outclassed-model").unwrap();
     assert!(!outclassed.is_pareto_optimal);
     assert_eq!(outclassed.pareto_tag, ParetoTag::Dominated);
+
+    let unverified = evals.iter().find(|e| e.canonical_id == "unverified-flash").unwrap();
+    assert!(!unverified.is_pareto_optimal);
+    assert_eq!(unverified.pareto_tag, ParetoTag::Estimated);
+}
+
+#[test]
+fn test_profile_eligibility_and_nine_profiles() {
+    assert_eq!(TaskProfileKind::all().len(), 9);
+    assert_eq!(TaskProfileKind::from_str_lossy("orchestrator"), Some(TaskProfileKind::Executive));
+    assert_eq!(TaskProfileKind::from_str_lossy("maestro"), Some(TaskProfileKind::Executive));
+    assert_eq!(TaskProfileKind::from_str_lossy("research"), Some(TaskProfileKind::Research));
+    assert_eq!(TaskProfileKind::from_str_lossy("security"), Some(TaskProfileKind::Security));
+    assert_eq!(TaskProfileKind::from_str_lossy("curation"), Some(TaskProfileKind::Curation));
+
+    let embed_model = CanonicalModel {
+        id: "sentence-transformers/all-minilm-l12-v2".to_string(),
+        display_name: "MiniLM".to_string(),
+        family: "minilm".to_string(),
+        developer: "sentence-transformers".to_string(),
+        context_window: 512,
+        supports_tools: false,
+        supports_structured_outputs: false,
+        supports_caching: false,
+        is_multimodal: false,
+        created_at: "2026-11-17".to_string(),
+    };
+    assert!(!embed_model.is_generative_llm());
+    assert!(!embed_model.is_eligible_for_profile(TaskProfileKind::Fast));
+    assert!(!embed_model.is_eligible_for_profile(TaskProfileKind::Executive));
+
+    let text_only = CanonicalModel {
+        id: "deepseek/deepseek-chat".to_string(),
+        display_name: "DeepSeek Chat".to_string(),
+        family: "deepseek".to_string(),
+        developer: "deepseek".to_string(),
+        context_window: 163_840,
+        supports_tools: true,
+        supports_structured_outputs: true,
+        supports_caching: true,
+        is_multimodal: false,
+        created_at: "2026-11-17".to_string(),
+    };
+    assert!(text_only.is_eligible_for_profile(TaskProfileKind::Executive));
+    assert!(text_only.is_eligible_for_profile(TaskProfileKind::Coding));
+    assert!(!text_only.is_eligible_for_profile(TaskProfileKind::Design));
+    assert!(!text_only.is_eligible_for_profile(TaskProfileKind::Research));
 }
 
 #[tokio::test]
@@ -206,18 +269,26 @@ async fn test_full_coordinator_pipeline_in_memory() {
 
     assert!(outcome.models_synced >= 10);
     assert!(outcome.benchmark_snapshots >= 10);
-    assert!(outcome.evaluations_calculated >= 25);
+    assert!(outcome.evaluations_calculated >= 90);
 
     let champions = coordinator
         .get_all_champions(Some("2026-10-12"))
         .await
         .expect("Falha ao obter campeões");
 
-    assert_eq!(champions.len(), 5);
+    assert_eq!(champions.len(), 9);
+    let exec = champions.iter().find(|c| c.profile == TaskProfileKind::Executive).unwrap();
+    assert!(exec.quality_leader.is_some());
+    assert!(exec.best_value.is_some());
+    assert!(exec.ultra_low_cost.is_some());
 
     let report = generate_markdown_report("2026-10-12", &champions);
+    assert!(report.contains("Executive / Master Brain (Maestro)"));
     assert!(report.contains("Autonomous Coding & SWE"));
     assert!(report.contains("Design & Multimodal UI"));
+    assert!(report.contains("Research & Deep Synthesis"));
+    assert!(report.contains("Security & Code Audit"));
+    assert!(report.contains("Technical Writing & Obsidian Curator"));
     assert!(report.contains("Líder (Qualidade)"));
 }
 

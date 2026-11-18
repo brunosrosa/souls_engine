@@ -21,11 +21,15 @@ pub fn print_champions_table(champions: &[ProfileChampionReport]) {
 
     for c in champions {
         let profile_str = match c.profile {
+            TaskProfileKind::Executive => "Executive / Maestro",
             TaskProfileKind::Coding => "Coding & SWE",
             TaskProfileKind::Agentic => "Agentic & Tools",
             TaskProfileKind::Reasoning => "Deep Reasoning",
             TaskProfileKind::Fast => "Fast Triage",
             TaskProfileKind::Design => "Design & Multimodal",
+            TaskProfileKind::Research => "Research & RAG",
+            TaskProfileKind::Security => "Security & Audit",
+            TaskProfileKind::Curation => "Writing & Curation",
         };
 
         let leader_str = c.quality_leader.as_ref().map_or("—".to_string(), |e| {

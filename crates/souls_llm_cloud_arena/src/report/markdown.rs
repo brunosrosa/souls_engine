@@ -11,17 +11,21 @@ pub fn generate_markdown_report(
     let mut out = String::new();
 
     out.push_str(&format!("# Relatório de Custo-Benefício de LLMs em Nuvem — {}\n\n", date));
-    out.push_str("Este relatório consolida os preços vigentes (Nous Portal e OpenRouter) e benchmarks cognitivos sob os 5 perfis ponderados do Souls Engine v7.\n\n");
+    out.push_str("Este relatório consolida os preços vigentes (Nous Portal e OpenRouter) e benchmarks cognitivos sob os 9 perfis ponderados do Souls Engine v7 (ADR-009).\n\n");
 
     out.push_str("## 1. Campeões da Fronteira de Pareto por Perfil de Carga\n\n");
 
     for champ in champions {
         let profile_name = match champ.profile {
+            TaskProfileKind::Executive => "Executive / Master Brain (Maestro)",
             TaskProfileKind::Coding => "Autonomous Coding & SWE",
             TaskProfileKind::Agentic => "Autonomous Agentic & Tool Calling",
             TaskProfileKind::Reasoning => "Deep Cognitive Reasoning",
             TaskProfileKind::Fast => "Fast Heuristic Triage",
             TaskProfileKind::Design => "Design & Multimodal UI",
+            TaskProfileKind::Research => "Research & Deep Synthesis (Long Context)",
+            TaskProfileKind::Security => "Security & Code Audit",
+            TaskProfileKind::Curation => "Technical Writing & Obsidian Curator",
         };
 
         out.push_str(&format!("### Perfil: {}\n\n", profile_name));
