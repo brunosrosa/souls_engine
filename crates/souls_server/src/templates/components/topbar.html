@@ -5,9 +5,9 @@
         <img id="mascot-img" src="/dashboard/icon/cyan" alt="Souls Mascot">
       </div>
       <div>
-        <div class="brand-title" style="display: flex; align-items: baseline; gap: 8px;">
+        <div class="brand-title u-d-flex u-gap-2 u-s-7f398f">
           <span>Souls Engine</span>
-          <span id="top-engine-version" style="font-size: 0.70rem; color: var(--cyan); font-weight: 600; font-family: var(--font-mono); letter-spacing: 0.04em;">(v0.9.0)</span>
+          <span class="u-text-cyan u-fw-600 u-mono u-s-5ebd08" id="top-engine-version">(v0.9.0)</span>
         </div>
         <div class="brand-sub">
           <span class="pulse-dot"></span>
@@ -17,20 +17,25 @@
     </div>
 
     <div class="telemetry-pills">
+      <button class="cmd-trigger-btn" id="btn-cmd-palette" onclick="openCommandPalette()" title="Abrir Paleta de Comandos Rápidos (Ctrl+K)">
+        <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-search"></use></svg>
+        <span class="cmd-trigger-label">Buscar...</span>
+        <kbd class="kbd-chip">Ctrl+K</kbd>
+      </button>
       <div class="telemetry-pill" id="pill-brain" title="Master Brain ativo no Hermes Agent">
-        <span>🧠 Brain:</span>
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-brain"></use></svg> Brain</span>
         <strong id="top-brain-name">Carregando...</strong>
       </div>
       <div class="telemetry-pill" id="pill-gpu-container" title="Temperatura da GPU Ativa">
-        <span>🎮 GPU:</span>
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-gamepad"></use></svg> GPU</span>
         <strong id="pill-temp">--°C</strong>
       </div>
       <div class="telemetry-pill" id="pill-vram-container" title="VRAM Livre e Capacidade sob SO">
-        <span>⚡ VRAM:</span>
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> VRAM</span>
         <strong id="pill-vram">-- / -- GB</strong>
       </div>
       <div class="telemetry-pill" title="Uptime do daemon Souls Engine">
-        <span>⏱️ Uptime:</span>
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-clock"></use></svg> Uptime</span>
         <strong id="pill-uptime">--m</strong>
       </div>
     </div>

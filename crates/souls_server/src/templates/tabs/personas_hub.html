@@ -4,15 +4,15 @@
     <section id="tab-personas" class="tab-pane">
 
       <!-- TOP KPI ROW (GLASSMORPHIC STRIP) -->
-      <div class="skills-kpi-grid" style="margin-bottom: 16px;">
+      <div class="skills-kpi-grid u-mb-4">
         <div class="card skills-kpi-card">
           <div class="skills-kpi-top">
             <span class="skills-kpi-label">Seus Assistentes</span>
-            <span class="skills-kpi-icon" style="color: var(--purple);">🎭</span>
+            <span class="skills-kpi-icon u-text-purple"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-masks"></use></svg></span>
           </div>
           <div class="skills-kpi-value" id="personas-kpi-total">--</div>
           <div class="skills-kpi-sub">
-            <span style="color: #4ade80;" id="personas-kpi-sub-active">-- ativas</span> •
+            <span class="u-s-80aa08" id="personas-kpi-sub-active">-- ativas</span> •
             <span id="personas-kpi-sub-archived">0 arquivadas</span>
           </div>
         </div>
@@ -20,27 +20,27 @@
         <div class="card skills-kpi-card" title="Mostra quantas Personas estão conectadas ao motor local do Souls Engine para usar memória profunda e leitura cirúrgica de código.">
           <div class="skills-kpi-top">
             <span class="skills-kpi-label">Aceleração Souls Engine</span>
-            <span class="skills-kpi-icon" style="color: var(--cyan);">🔌</span>
+            <span class="skills-kpi-icon u-text-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-plug"></use></svg></span>
           </div>
-          <div class="skills-kpi-value" style="color: var(--cyan);" id="personas-kpi-mcp">--</div>
+          <div class="skills-kpi-value u-text-cyan" id="personas-kpi-mcp">--</div>
           <div class="skills-kpi-sub" id="personas-kpi-mcp-sub">Conectadas ao motor local (memória &amp; ferramentas)</div>
         </div>
 
         <div class="card skills-kpi-card" title="Mede se o que está escrito na personalidade (SOUL.md) bate com o modelo de IA escolhido e com as regras de privacidade.">
           <div class="skills-kpi-top">
             <span class="skills-kpi-label">Proteção &amp; Coerência</span>
-            <span class="skills-kpi-icon" style="color: var(--green);">🛡️</span>
+            <span class="skills-kpi-icon u-text-green"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-shield"></use></svg></span>
           </div>
           <div class="skills-kpi-value" id="personas-kpi-score">--/100</div>
           <div class="skills-kpi-sub">
-            <span style="color: #fbbf24;" id="personas-kpi-alerts">Verificando privacidade...</span>
+            <span class="u-text-amber-light" id="personas-kpi-alerts">Verificando privacidade...</span>
           </div>
         </div>
 
         <div class="card skills-kpi-card">
           <div class="skills-kpi-top">
             <span class="skills-kpi-label">Habilidades nas Personas</span>
-            <span class="skills-kpi-icon" style="color: var(--amber);">🧩</span>
+            <span class="skills-kpi-icon u-text-amber"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-puzzle"></use></svg></span>
           </div>
           <div class="skills-kpi-value" id="personas-kpi-skills">--</div>
           <div class="skills-kpi-sub">
@@ -50,18 +50,18 @@
       </div>
 
       <!-- SUBTABS BAR -->
-      <div class="subtabs-bar" id="personas-subtabs-bar" style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+      <div class="subtabs-bar u-mb-4 u-d-flex u-gap-2 u-flex-wrap" id="personas-subtabs-bar">
         <button class="subtab-btn active" id="btn-personas-subtab-gallery" onclick="switchPersonasSubtab('gallery')">
-          🎭 Minhas Personas <span id="badge-personas-active-count" style="margin-left: 5px; opacity: 0.85;">0</span>
+          <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-masks"></use></svg> Minhas Personas <span class="u-s-6d315c" id="badge-personas-active-count">0</span>
         </button>
         <button class="subtab-btn" id="btn-personas-subtab-governance" onclick="switchPersonasSubtab('governance')">
-          🛡️ Coerência &amp; Privacidade <span id="badge-personas-gov-alerts" style="display: none; margin-left: 5px; background: rgba(245,158,11,0.22); color: #fbbf24; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem;">0</span>
+          <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-shield"></use></svg> Coerência &amp; Privacidade <span class="u-text-amber-light u-s-de407c is-hidden" id="badge-personas-gov-alerts">0</span>
         </button>
         <button class="subtab-btn" id="btn-personas-subtab-studio" onclick="switchPersonasSubtab('studio')">
-          ✨ Criar &amp; Clonar
+          <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Criar &amp; Clonar
         </button>
         <button class="subtab-btn" id="btn-personas-subtab-history" onclick="switchPersonasSubtab('history')">
-          ⏪ Histórico &amp; Comparar <span id="badge-personas-archived-pill" style="display: none; margin-left: 5px; background: rgba(148,163,184,0.2); color: #cbd5e1; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem;">0</span>
+          <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-history"></use></svg> Histórico &amp; Comparar <span class="u-text-slate u-s-bbf5c4 is-hidden" id="badge-personas-archived-pill">0</span>
         </button>
       </div>
 
@@ -69,24 +69,24 @@
       <!-- SUB-ABA 1: MINHAS PERSONAS + BANCADA DE EDICAO DUPLA      -->
       <!-- ========================================================= -->
       <div id="panel-personas-gallery">
-        <div class="card" style="margin-bottom: 16px;">
-          <div class="skills-header-row" style="margin-bottom: 14px;">
+        <div class="card u-mb-4">
+          <div class="skills-header-row u-mb-14p">
             <div class="skills-header-stack">
-              <div style="display: flex; align-items: center; gap: 9px;">
-                <span style="font-size: 1.15rem;">🎭</span>
-                <h3 style="margin: 0; font-size: 1rem; color: #f8fafc;">Seus Assistentes Especializados (Personas)</h3>
+              <div class="u-d-flex u-items-center u-s-5de3a4">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-masks"></use></svg>
+                <h3 class="u-m-0 u-s-c73cff">Seus Assistentes Especializados (Personas)</h3>
               </div>
               <div class="skills-subtitle-primary">Personalize quem cada assistente é, qual modelo utiliza e quais cuidados de privacidade ele segue.</div>
               <div class="skills-subtitle-secondary">Todas as alterações criam uma cópia automática de segurança antes de salvar — sem precisar mexer em pastas ou arquivos YAML.</div>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="btn-action" onclick="openPersonaStudioClean()">✨ Nova Persona</button>
-              <button class="btn-action primary" onclick="fetchPersonasEcosystem(true)">🔄 Atualizar Lista</button>
+            <div class="u-d-flex u-gap-2 u-flex-wrap">
+              <button class="btn-action" onclick="openPersonaStudioClean()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Nova Persona</button>
+              <button class="btn-action primary" onclick="fetchPersonasEcosystem(true)"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar Lista</button>
             </div>
           </div>
 
-          <div id="personas-not-installed-banner" style="display: none; padding: 18px; border-radius: 10px; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.2); color: #cbd5e1; font-size: 0.82rem;">
-            Não localizamos uma instalação do Hermes Agent neste computador ainda. Assim que o Hermes estiver instalado, suas Personas aparecerão automaticamente aqui — ou você já pode preparar uma em <strong>✨ Criar &amp; Clonar</strong>.
+          <div class="u-text-slate u-s-8807ba is-hidden" id="personas-not-installed-banner">
+            Não localizamos uma instalação do Hermes Agent neste computador ainda. Assim que o Hermes estiver instalado, suas Personas aparecerão automaticamente aqui — ou você já pode preparar uma em <strong><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Criar &amp; Clonar</strong>.
           </div>
 
           <div class="personas-cards-grid" id="personas-cards-grid">
@@ -95,146 +95,146 @@
         </div>
 
         <!-- BANCADA DE CONFIGURACAO EM EXPERIENCIA DUPLA -->
-        <div class="card" id="persona-workbench-card" style="display: none; border: 1px solid rgba(6,182,212,0.45);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid rgba(148,163,184,0.14); margin-bottom: 14px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <div class="persona-avatar-ring" id="pwb-avatar">🎭</div>
+        <div class="card u-s-21600c is-hidden" id="persona-workbench-card">
+          <div class="u-d-flex u-justify-between u-items-start u-gap-3 u-flex-wrap u-mb-14p u-s-9005f9">
+            <div class="u-d-flex u-items-center u-gap-3">
+              <div class="persona-avatar-ring" id="pwb-avatar"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-masks"></use></svg></div>
               <div>
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                  <h3 id="pwb-title" style="margin: 0; font-size: 1rem; color: #f8fafc;">Configurando Persona</h3>
-                  <span id="pwb-score-badge" class="persona-pill" style="background: rgba(56,189,248,0.14); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);">Coerência 100/100</span>
+                <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+                  <h3 class="u-m-0 u-s-c73cff" id="pwb-title">Configurando Persona</h3>
+                  <span id="pwb-score-badge" class="persona-pill u-text-cyan u-s-730ac6">Coerência 100/100</span>
                   <span id="pwb-status-badge"></span>
                 </div>
-                <div id="pwb-path" style="font-family: var(--font-mono); font-size: 0.71rem; color: #64748b; margin-top: 3px;"></div>
+                <div class="u-mono u-text-dark u-mt-3p u-s-c433ac" id="pwb-path"></div>
               </div>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 7px; flex-wrap: wrap;">
-              <button class="subtab-btn active" id="btn-pwb-mode-visual" style="padding: 5px 11px; font-size: 0.75rem;" onclick="switchPersonaWorkbenchMode('visual')">🎛️ Painel Rápido</button>
-              <button class="subtab-btn" id="btn-pwb-mode-soul" style="padding: 5px 11px; font-size: 0.75rem;" onclick="switchPersonaWorkbenchMode('soul')">📜 Personalidade &amp; Regras (SOUL.md)</button>
-              <button class="btn-action primary" id="btn-pwb-quick-align" style="display: none;" onclick="openGovernancePreviewForCurrent()">🛡️ Alinhar em 1 Clique</button>
-              <button class="btn-action" id="btn-pwb-archive" style="color: #fca5a5; border-color: rgba(239,68,68,0.3);" onclick="archiveCurrentPersona()" title="Pausar e guardar esta Persona no cofre de arquivadas sem apagar conversas">📦 Arquivar</button>
-              <button class="btn-action" onclick="closePersonaWorkbench()">✕ Fechar</button>
+            <div class="u-d-flex u-items-center u-flex-wrap u-s-9dfc9a">
+              <button class="subtab-btn active u-s-016be0" id="btn-pwb-mode-visual" onclick="switchPersonaWorkbenchMode('visual')"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sliders"></use></svg> Painel Rápido</button>
+              <button class="subtab-btn u-s-016be0" id="btn-pwb-mode-soul" onclick="switchPersonaWorkbenchMode('soul')"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg> Personalidade &amp; Regras (SOUL.md)</button>
+              <button class="btn-action primary is-hidden" id="btn-pwb-quick-align" onclick="openGovernancePreviewForCurrent()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-shield"></use></svg> Alinhar em 1 Clique</button>
+              <button class="btn-action u-s-7d9191" id="btn-pwb-archive" onclick="archiveCurrentPersona()" title="Pausar e guardar esta Persona no cofre de arquivadas sem apagar conversas"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-archive"></use></svg> Arquivar</button>
+              <button class="btn-action" onclick="closePersonaWorkbench()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-x"></use></svg> Fechar</button>
             </div>
           </div>
 
           <!-- EXPLICACAO CLARA DE ALERTA SE HOUVER -->
-          <div id="pwb-governance-callout" class="skills-why-callout" style="display: none;"></div>
+          <div id="pwb-governance-callout" class="skills-why-callout is-hidden"></div>
 
           <!-- MODO 1: PAINEL VISUAL AMIGAVEL -->
-          <div id="pwb-pane-visual" style="display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 16px;">
+          <div class="u-d-grid u-gap-4 u-s-c1ea56" id="pwb-pane-visual">
             <!-- Coluna Esquerda: Apresentacao, Modelo & Comportamento -->
-            <div style="background: rgba(10,15,28,0.65); border: 1px solid rgba(148,163,184,0.14); border-radius: 10px; padding: 14px;">
-              <div style="font-weight: 700; color: #f1f5f9; font-size: 0.85rem; margin-bottom: 12px;">🎛️ Apresentação, Cérebro &amp; Privacidade</div>
+            <div class="u-s-749209">
+              <div class="u-fw-700 u-mb-3 u-s-38fb19"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sliders"></use></svg> Apresentação, Cérebro &amp; Privacidade</div>
 
-              <div style="display: grid; grid-template-columns: 1fr 110px; gap: 10px; margin-bottom: 10px;">
+              <div class="u-d-grid u-gap-10p u-mb-10p u-s-92c435">
                 <div>
                   <label class="skills-field-label">Nome de exibição</label>
-                  <input type="text" id="pwb-input-title" class="setting-input" style="width: 100%; height: 35px; font-size: 0.79rem;" placeholder="Ex: Guardião Financeiro" />
+                  <input type="text" id="pwb-input-title" class="setting-input u-w-full u-s-4085a1" placeholder="Ex: Guardião Financeiro" />
                 </div>
                 <div>
                   <label class="skills-field-label">Cor do cartão</label>
-                  <input type="color" id="pwb-input-color" class="setting-input" style="width: 100%; height: 35px; padding: 3px; cursor: pointer;" value="#8b5cf6" />
+                  <input type="color" id="pwb-input-color" class="setting-input u-w-full u-pointer u-s-c1b911" value="#8b5cf6" />
                 </div>
               </div>
 
-              <div style="margin-bottom: 12px;">
+              <div class="u-mb-3">
                 <label class="skills-field-label">Resumo curto do papel (aparece nos cartões do Hermes e aqui)</label>
-                <textarea id="pwb-input-desc" class="setting-input" rows="2" style="width: 100%; font-size: 0.78rem; resize: vertical;" placeholder="Descreva em 1 ou 2 frases como esta Persona ajuda você..."></textarea>
+                <textarea id="pwb-input-desc" class="setting-input u-w-full u-resize-y u-s-a768c1" rows="2" placeholder="Descreva em 1 ou 2 frases como esta Persona ajuda você..."></textarea>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 10px; margin-bottom: 6px;">
+              <div class="u-d-grid u-gap-10p u-mb-6p u-s-7ec97a">
                 <div>
                   <label class="skills-field-label">Modelo de IA Principal</label>
-                  <input type="text" id="pwb-input-model" class="setting-input" style="width: 100%; height: 35px; font-size: 0.78rem; font-family: var(--font-mono);" placeholder="Ex: deepseek/deepseek-chat" />
+                  <input type="text" id="pwb-input-model" class="setting-input u-w-full u-mono u-s-b5e2f4" placeholder="Ex: deepseek/deepseek-chat" />
                 </div>
                 <div>
                   <label class="skills-field-label">Provedor</label>
-                  <input type="text" id="pwb-input-provider" class="setting-input" style="width: 100%; height: 35px; font-size: 0.78rem; font-family: var(--font-mono);" placeholder="Ex: nous" />
+                  <input type="text" id="pwb-input-provider" class="setting-input u-w-full u-mono u-s-b5e2f4" placeholder="Ex: nous" />
                 </div>
               </div>
 
-              <div id="pwb-model-suggestions" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+              <div class="u-d-flex u-gap-6p u-flex-wrap u-mb-3" id="pwb-model-suggestions">
                 <!-- Pílulas rápidas de modelos recomendados -->
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+              <div class="u-d-grid u-gap-10p u-mb-3 u-s-80ed41">
                 <div>
                   <label class="skills-field-label">Profundidade de Raciocínio</label>
-                  <select id="pwb-input-reasoning" class="setting-input" style="width: 100%; height: 35px; font-size: 0.78rem;">
-                    <option value="low">⚡ Ágil &amp; Direto (low)</option>
-                    <option value="medium">⚖️ Equilibrado (medium)</option>
-                    <option value="high">🧠 Raciocínio Profundo (high)</option>
+                  <select id="pwb-input-reasoning" class="setting-input u-w-full u-s-b5e2f4">
+                    <option value="low">Ágil &amp; Direto (low)</option>
+                    <option value="medium">Equilibrado (medium)</option>
+                    <option value="high">Raciocínio Profundo (high)</option>
                   </select>
                 </div>
                 <div>
                   <label class="skills-field-label">Limite máximo de passos por tarefa</label>
-                  <input type="number" id="pwb-input-max-turns" class="setting-input" min="10" max="2000" step="10" style="width: 100%; height: 35px; font-size: 0.78rem;" value="500" />
+                  <input type="number" id="pwb-input-max-turns" class="setting-input u-w-full u-s-b5e2f4" min="10" max="2000" step="10" value="500" />
                 </div>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.14); margin-bottom: 14px;">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #e2e8f0; cursor: pointer;">
+              <div class="u-d-flex u-flex-col u-gap-2 u-mb-14p u-s-0603cc">
+                <label class="u-d-flex u-items-center u-gap-2 u-text-slate-light u-pointer u-s-a768c1">
                   <input type="checkbox" id="pwb-chk-souls-mcp" />
-                  <span><strong>🔌 Conectar Aceleração Souls Engine</strong> <span style="color: #94a3b8;">(ativa memória profunda, leitura cirúrgica e modelos locais)</span></span>
+                  <span><strong><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-plug"></use></svg> Conectar Aceleração Souls Engine</strong> <span class="u-text-muted">(ativa memória profunda, leitura cirúrgica e modelos locais)</span></span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #e2e8f0; cursor: pointer;">
+                <label class="u-d-flex u-items-center u-gap-2 u-text-slate-light u-pointer u-s-a768c1">
                   <input type="checkbox" id="pwb-chk-memory" />
-                  <span><strong>💾 Memória Contínua Ativa</strong> <span style="color: #94a3b8;">(permite que o Hermes lembre preferências entre conversas)</span></span>
+                  <span><strong><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-database"></use></svg> Memória Contínua Ativa</strong> <span class="u-text-muted">(permite que o Hermes lembre preferências entre conversas)</span></span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #e2e8f0; cursor: pointer;">
+                <label class="u-d-flex u-items-center u-gap-2 u-text-slate-light u-pointer u-s-a768c1">
                   <input type="checkbox" id="pwb-chk-strict-privacy" />
-                  <span><strong>🔒 Limpar provedores gratuitos (Free Tier)</strong> <span style="color: #94a3b8;">(remove opencode-free dos fallbacks ao salvar)</span></span>
+                  <span><strong><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg> Limpar provedores gratuitos (Free Tier)</strong> <span class="u-text-muted">(remove opencode-free dos fallbacks ao salvar)</span></span>
                 </label>
               </div>
 
-              <button class="btn-action primary" style="width: 100%; padding: 9px 14px; font-size: 0.81rem;" onclick="savePersonaVisualSettings()">
-                💾 Salvar Configurações da Persona
+              <button class="btn-action primary u-w-full u-s-abc8c2" onclick="savePersonaVisualSettings()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-database"></use></svg> Salvar Configurações da Persona
               </button>
             </div>
 
             <!-- Coluna Direita: Skills da Persona, Vinculos & Memorias Somente-Leitura -->
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              <div style="background: rgba(10,15,28,0.65); border: 1px solid rgba(148,163,184,0.14); border-radius: 10px; padding: 12px 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <span style="font-weight: 700; color: #f1f5f9; font-size: 0.83rem;">🧩 Habilidades desta Persona</span>
-                  <button class="btn-action" style="padding: 3px 9px; font-size: 0.71rem;" onclick="jumpFromPersonaToSkillsHub()">Abrir no Skills Hub →</button>
+            <div class="u-d-flex u-flex-col u-gap-3">
+              <div class="u-s-74f632">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-2">
+                  <span class="u-fw-700 u-s-4bb3d1"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-puzzle"></use></svg> Habilidades desta Persona</span>
+                  <button class="btn-action u-s-1f75c8" onclick="jumpFromPersonaToSkillsHub()">Abrir no Skills Hub →</button>
                 </div>
-                <div id="pwb-skills-list" style="max-height: 145px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 5px;"></div>
+                <div class="u-scroll-y u-d-flex u-flex-wrap u-s-8692fd" id="pwb-skills-list"></div>
               </div>
 
-              <div style="background: rgba(10,15,28,0.65); border: 1px solid rgba(148,163,184,0.14); border-radius: 10px; padding: 12px 14px;">
-                <div style="font-weight: 700; color: #f1f5f9; font-size: 0.83rem; margin-bottom: 6px;">📌 Notas &amp; Contratos Citados na Identidade</div>
-                <div style="font-size: 0.73rem; color: #94a3b8; margin-bottom: 8px;">Verificamos se os arquivos e pastas importantes mencionados no SOUL.md existem neste computador:</div>
-                <div id="pwb-anchored-list" style="display: flex; flex-direction: column; gap: 5px;"></div>
-                <pre id="pwb-contract-preview-box" style="display: none; margin-top: 8px; max-height: 130px; overflow: auto; padding: 8px; border-radius: 6px; background: rgba(2,6,23,0.85); color: #cbd5e1; font-size: 0.71rem; white-space: pre-wrap;"></pre>
+              <div class="u-s-74f632">
+                <div class="u-fw-700 u-mb-6p u-s-4bb3d1"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-pin"></use></svg> Notas &amp; Contratos Citados na Identidade</div>
+                <div class="u-text-muted u-mb-2 u-s-6444dd">Verificamos se os arquivos e pastas importantes mencionados no SOUL.md existem neste computador:</div>
+                <div class="u-d-flex u-flex-col u-s-0880e8" id="pwb-anchored-list"></div>
+                <pre class="u-mt-2 u-text-slate u-pre-wrap u-s-f79fe3 is-hidden" id="pwb-contract-preview-box"></pre>
               </div>
 
               <div class="persona-readonly-vault">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <span style="font-weight: 700; color: #e2e8f0; font-size: 0.81rem;">📖 Memória Pessoal do Hermes (Somente Leitura)</span>
-                  <span class="persona-pill" style="background: rgba(148,163,184,0.14); color: #cbd5e1;">Protegida</span>
+                <div class="u-d-flex u-justify-between u-items-center u-mb-1">
+                  <span class="u-fw-700 u-text-slate-light u-s-9a377b"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-book"></use></svg> Memória Pessoal do Hermes (Somente Leitura)</span>
+                  <span class="persona-pill u-text-slate u-s-949c91">Protegida</span>
                 </div>
-                <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 7px;">
+                <div class="u-text-muted u-s-23593d">
                   Por segurança arquitetural, os arquivos <code>MEMORY.md</code> e <code>USER.md</code> são cuidados exclusivamente pelo próprio Hermes durante suas conversas.
                 </div>
-                <div id="pwb-memories-readonly" style="font-size: 0.74rem; color: #cbd5e1; max-height: 115px; overflow-y: auto;"></div>
+                <div class="u-text-slate u-scroll-y u-s-23b226" id="pwb-memories-readonly"></div>
               </div>
             </div>
           </div>
 
           <!-- MODO 2: PERSONALIDADE & REGRAS (SOUL.MD + HISTORICO) -->
-          <div id="pwb-pane-soul" style="display: none; grid-template-columns: 1.2fr 0.8fr; gap: 16px;">
+          <div class="u-gap-4 u-s-dc6215 is-hidden" id="pwb-pane-soul">
             <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-                <span style="font-weight: 700; color: #f1f5f9; font-size: 0.84rem;">📜 Instruções de Identidade &amp; Postura (<code>SOUL.md</code>)</span>
-                <div style="display: flex; gap: 6px;">
-                  <button class="btn-action" style="padding: 4px 10px; font-size: 0.73rem;" onclick="refineCurrentPersonaSoul()">✨ Limpar &amp; Organizar Texto</button>
-                  <button class="btn-action" style="padding: 4px 10px; font-size: 0.73rem;" onclick="previewCurrentSoulDiff()">🔍 Ver O Que Mudou</button>
+              <div class="u-d-flex u-justify-between u-items-center u-gap-2 u-flex-wrap u-mb-2">
+                <span class="u-fw-700 u-s-491b89"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg> Instruções de Identidade &amp; Postura (<code>SOUL.md</code>)</span>
+                <div class="u-d-flex u-gap-6p">
+                  <button class="btn-action u-s-42d134" onclick="refineCurrentPersonaSoul()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Limpar &amp; Organizar Texto</button>
+                  <button class="btn-action u-s-42d134" onclick="previewCurrentSoulDiff()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-search"></use></svg> Ver O Que Mudou</button>
                 </div>
               </div>
 
-              <div class="editor-container-with-lines" style="min-height: 520px;">
+              <div class="editor-container-with-lines u-s-40631f">
                 <div class="editor-gutter" id="pwb-soul-gutter">1</div>
                 <textarea id="pwb-soul-editor" class="editor-textarea" spellcheck="false" placeholder="Carregando SOUL.md..."></textarea>
               </div>
@@ -243,27 +243,27 @@
                 <span>SOUL.md • UTF-8</span>
               </div>
 
-              <div style="display: flex; gap: 8px; margin-top: 8px; margin-bottom: 10px;">
-                <input type="text" id="pwb-soul-instruction" class="setting-input" style="flex: 1; height: 34px; font-size: 0.76rem;" placeholder="Opcional: adicione uma nova regra em linguagem simples (ex: Sempre resumir decisões em tabela no final)..." />
+              <div class="u-d-flex u-gap-2 u-mt-2 u-mb-10p">
+                <input type="text" id="pwb-soul-instruction" class="setting-input u-flex-1 u-s-f280e8" placeholder="Opcional: adicione uma nova regra em linguagem simples (ex: Sempre resumir decisões em tabela no final)..." />
                 <button class="btn-action" onclick="refineCurrentPersonaSoul()">+ Incluir Regra</button>
               </div>
 
-              <div id="pwb-soul-diff-box" style="display: none; margin-bottom: 10px; max-height: 200px; overflow: auto; padding: 8px; border-radius: 8px; background: rgba(2,6,23,0.88); border: 1px solid rgba(56,189,248,0.28); font-family: var(--font-mono); font-size: 0.72rem;"></div>
+              <div class="u-mb-10p u-mono u-s-7ce0f2 is-hidden" id="pwb-soul-diff-box"></div>
 
-              <button class="btn-action primary" style="width: 100%; padding: 9px 14px; font-size: 0.81rem;" onclick="savePersonaSoulOnly()">
-                💾 Salvar SOUL.md (Guarda Versão Anterior Automaticamente)
+              <button class="btn-action primary u-w-full u-s-abc8c2" onclick="savePersonaSoulOnly()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-database"></use></svg> Salvar SOUL.md (Guarda Versão Anterior Automaticamente)
               </button>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              <div style="background: rgba(10,15,28,0.65); border: 1px solid rgba(148,163,184,0.14); border-radius: 10px; padding: 12px 14px;">
-                <div style="font-weight: 700; color: #f1f5f9; font-size: 0.83rem; margin-bottom: 8px;">🧭 Mapa de Capítulos desta Identidade</div>
-                <div id="pwb-soul-sections" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            <div class="u-d-flex u-flex-col u-gap-3">
+              <div class="u-s-74f632">
+                <div class="u-fw-700 u-mb-2 u-s-4bb3d1"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-compass"></use></svg> Mapa de Capítulos desta Identidade</div>
+                <div class="u-d-flex u-flex-col u-gap-6p" id="pwb-soul-sections"></div>
               </div>
 
-              <div style="background: rgba(10,15,28,0.65); border: 1px solid rgba(148,163,184,0.14); border-radius: 10px; padding: 12px 14px;">
-                <div style="font-weight: 700; color: #f1f5f9; font-size: 0.83rem; margin-bottom: 8px;">⏪ Versões Salvas desta Persona (Desfazer com 1 Clique)</div>
-                <div id="pwb-history-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 220px; overflow-y: auto; font-size: 0.74rem;"></div>
+              <div class="u-s-74f632">
+                <div class="u-fw-700 u-mb-2 u-s-4bb3d1"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-history"></use></svg> Versões Salvas desta Persona (Desfazer com 1 Clique)</div>
+                <div class="u-d-flex u-flex-col u-scroll-y u-s-cae7e1" id="pwb-history-list"></div>
               </div>
             </div>
           </div>
@@ -273,44 +273,44 @@
       <!-- ========================================================= -->
       <!-- SUB-ABA 2: COERENCIA & PRIVACIDADE (ALINHAMENTO 1-CLICK)  -->
       <!-- ========================================================= -->
-      <div id="panel-personas-governance" style="display: none;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="is-hidden" id="panel-personas-governance">
+        <div class="u-d-grid u-gap-4 u-s-80ed41">
           <div class="card">
-            <div class="skills-header-stack" style="margin-bottom: 14px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.1rem;">🛡️</span>
-                <h3 style="margin: 0; font-size: 0.98rem; color: #f8fafc;">Diagnóstico de Privacidade &amp; Coerência</h3>
+            <div class="skills-header-stack u-mb-14p">
+              <div class="u-d-flex u-items-center u-gap-2">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-shield"></use></svg>
+                <h3 class="u-m-0 u-s-200ffb">Diagnóstico de Privacidade &amp; Coerência</h3>
               </div>
               <div class="skills-subtitle-primary">Cruzamos o que cada Persona promete no SOUL.md com o modelo e conexões reais configurados no sistema.</div>
               <div class="skills-subtitle-secondary">Nada é alterado sozinho: clique em Revisar Ajuste para ver exatamente o que mudará antes de confirmar.</div>
             </div>
 
-            <div id="personas-gov-cards-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="u-d-flex u-flex-col u-gap-10p" id="personas-gov-cards-list">
               <!-- Preenchido via JS -->
             </div>
           </div>
 
           <div class="card">
-            <div class="skills-header-stack" style="margin-bottom: 12px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.1rem;">🔍</span>
-                <h3 style="margin: 0; font-size: 0.98rem; color: #f8fafc;" id="align-preview-header">Prévia Transparente do Alinhamento</h3>
+            <div class="skills-header-stack u-mb-3">
+              <div class="u-d-flex u-items-center u-gap-2">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-search"></use></svg>
+                <h3 class="u-m-0 u-s-200ffb" id="align-preview-header">Prévia Transparente do Alinhamento</h3>
               </div>
               <div class="skills-subtitle-primary">Confira em português claro e linha por linha o ajuste sugerido para sua Persona.</div>
               <div class="skills-subtitle-secondary">Uma cópia intacta dos arquivos atuais será guardada no Histórico antes de aplicar.</div>
             </div>
 
-            <div id="align-preview-empty" style="padding: 24px; text-align: center; color: #64748b; border: 1px dashed rgba(148,163,184,0.2); border-radius: 8px; font-size: 0.8rem;">
-              Selecione um aviso ao lado clicando em <strong>✨ Revisar Ajuste</strong> para inspecionar a solução proposta.
+            <div class="u-text-center u-text-dark u-s-0e5992" id="align-preview-empty">
+              Selecione um aviso ao lado clicando em <strong><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Revisar Ajuste</strong> para inspecionar a solução proposta.
             </div>
 
-            <div id="align-preview-content" style="display: none;">
-              <div id="align-actions-list" style="margin-bottom: 12px; padding: 10px 12px; border-radius: 8px; background: rgba(6,182,212,0.09); border: 1px solid rgba(6,182,212,0.28); font-size: 0.77rem; color: #e2e8f0;"></div>
+            <div class="is-hidden" id="align-preview-content">
+              <div class="u-mb-3 u-text-slate-light u-s-a11cab" id="align-actions-list"></div>
 
-              <div id="align-diff-viewer" style="max-height: 360px; overflow: auto; padding: 10px; border-radius: 8px; background: rgba(2,6,23,0.88); border: 1px solid rgba(148,163,184,0.16); font-family: var(--font-mono); font-size: 0.72rem; margin-bottom: 12px;"></div>
+              <div class="u-mono u-mb-3 u-s-46c599" id="align-diff-viewer"></div>
 
-              <button class="btn-action primary" id="btn-confirm-align" style="width: 100%; padding: 10px 14px; font-size: 0.82rem;" onclick="confirmApplyPersonaAlignment()">
-                ✅ Confirmar &amp; Aplicar Alinhamento com Backup
+              <button class="btn-action primary u-w-full u-s-72fd14" id="btn-confirm-align" onclick="confirmApplyPersonaAlignment()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-check-circle"></use></svg> Confirmar &amp; Aplicar Alinhamento com Backup
               </button>
             </div>
           </div>
@@ -320,96 +320,96 @@
       <!-- ========================================================= -->
       <!-- SUB-ABA 3: ESTUDIO DE CRIACAO & CLONAGEM DE PERSONA       -->
       <!-- ========================================================= -->
-      <div id="panel-personas-studio" style="display: none;">
+      <div class="is-hidden" id="panel-personas-studio">
         <div class="card">
-          <div class="skills-header-stack" style="margin-bottom: 14px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 1.15rem;">✨</span>
-              <h3 style="margin: 0; font-size: 1rem; color: #f8fafc;">Estúdio de Criação &amp; Clonagem de Persona</h3>
+          <div class="skills-header-stack u-mb-14p">
+            <div class="u-d-flex u-items-center u-gap-2">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+              <h3 class="u-m-0 u-s-c73cff">Estúdio de Criação &amp; Clonagem de Persona</h3>
             </div>
             <div class="skills-subtitle-primary">Crie um novo assistente especializado já conectado ao Souls Engine e pronto para conversar no Hermes.</div>
             <div class="skills-subtitle-secondary">Escolha um tema inicial abaixo ou clone a base de uma Persona que você já utiliza.</div>
           </div>
 
           <!-- Pílulas rápidas de modelos de Persona -->
-          <div class="skills-topic-bar" id="pstudio-templates-bar" style="margin-bottom: 14px;">
-            <span style="font-size: 0.74rem; color: #94a3b8; margin-right: 4px;">Ponto de partida:</span>
-            <button type="button" class="skills-topic-pill active" onclick="applyPersonaStudioPreset('studies', this)">📚 Estudos &amp; Idiomas</button>
-            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('coding', this)">💻 Código &amp; Projetos</button>
-            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('finance', this)">💰 Finanças &amp; Patrimônio</button>
-            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('health', this)">🩺 Saúde &amp; Rotina</button>
-            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('creative', this)">🎨 Escrita &amp; Ideias</button>
-            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('custom', this)">✨ Em Branco</button>
+          <div class="skills-topic-bar u-mb-14p" id="pstudio-templates-bar">
+            <span class="u-text-muted u-s-69eb4e">Ponto de partida:</span>
+            <button type="button" class="skills-topic-pill active" onclick="applyPersonaStudioPreset('studies', this)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-book"></use></svg> Estudos &amp; Idiomas</button>
+            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('coding', this)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-code"></use></svg> Código &amp; Projetos</button>
+            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('finance', this)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-dollar"></use></svg> Finanças &amp; Patrimônio</button>
+            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('health', this)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-stethoscope"></use></svg> Saúde &amp; Rotina</button>
+            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('creative', this)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-palette"></use></svg> Escrita &amp; Ideias</button>
+            <button type="button" class="skills-topic-pill" onclick="applyPersonaStudioPreset('custom', this)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Em Branco</button>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 18px;">
+          <div class="u-d-grid u-s-a3bdde">
             <!-- Coluna Esquerda: Formulario -->
             <div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr 78px; gap: 10px; margin-bottom: 10px;">
+              <div class="u-d-grid u-gap-10p u-mb-10p u-s-68e3d6">
                 <div>
                   <label class="skills-field-label">Nome amigável da Persona</label>
-                  <input type="text" id="pstudio-title" class="setting-input" style="width: 100%; height: 35px; font-size: 0.79rem;" placeholder="Ex: Mentor de Estudos" oninput="autoFillPersonaStudioSlug()" />
+                  <input type="text" id="pstudio-title" class="setting-input u-w-full u-s-4085a1" placeholder="Ex: Mentor de Estudos" oninput="autoFillPersonaStudioSlug()" />
                 </div>
                 <div>
                   <label class="skills-field-label">Pasta / Identificador curto</label>
-                  <input type="text" id="pstudio-slug" class="setting-input" style="width: 100%; height: 35px; font-size: 0.78rem; font-family: var(--font-mono);" placeholder="ex: mentor-estudos" />
+                  <input type="text" id="pstudio-slug" class="setting-input u-w-full u-mono u-s-b5e2f4" placeholder="ex: mentor-estudos" />
                 </div>
                 <div>
                   <label class="skills-field-label">Cor</label>
-                  <input type="color" id="pstudio-color" class="setting-input" style="width: 100%; height: 35px; padding: 3px; cursor: pointer;" value="#38bdf8" />
+                  <input type="color" id="pstudio-color" class="setting-input u-w-full u-pointer u-s-c1b911" value="#38bdf8" />
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+              <div class="u-d-grid u-gap-10p u-mb-10p u-s-80ed41">
                 <div>
                   <label class="skills-field-label">Herdar acesso e base técnica de</label>
-                  <select id="pstudio-clone-from" class="setting-input" style="width: 100%; height: 35px; font-size: 0.78rem;">
-                    <option value="default">👑 Hermes Principal (default)</option>
+                  <select id="pstudio-clone-from" class="setting-input u-w-full u-s-b5e2f4">
+                    <option value="default">Hermes Principal (default)</option>
                   </select>
                 </div>
                 <div>
                   <label class="skills-field-label">Cuidado de Privacidade</label>
-                  <select id="pstudio-privacy" class="setting-input" style="width: 100%; height: 35px; font-size: 0.78rem;">
-                    <option value="standard">🌐 Uso Geral (modelos rápidos &amp; nuvem)</option>
-                    <option value="strict_private">🔒 Dados Sensíveis (proíbe modelos Free Tier)</option>
+                  <select id="pstudio-privacy" class="setting-input u-w-full u-s-b5e2f4">
+                    <option value="standard">Uso Geral (modelos rápidos &amp; nuvem)</option>
+                    <option value="strict_private">Dados Sensíveis (proíbe modelos Free Tier)</option>
                   </select>
                 </div>
               </div>
 
-              <div style="margin-bottom: 10px;">
+              <div class="u-mb-10p">
                 <label class="skills-field-label">Como gerar o texto de personalidade (SOUL.md)?</label>
-                <select id="pstudio-engine" class="setting-input" style="width: 100%; height: 35px; font-size: 0.78rem;">
-                  <option value="deterministic_scaffold">⚡ Estrutura Inteligente Instantânea (Grátis)</option>
-                  <option value="local_silicon">🧠 Modelo Local no seu PC (com fallback instantâneo)</option>
+                <select id="pstudio-engine" class="setting-input u-w-full u-s-b5e2f4">
+                  <option value="deterministic_scaffold">Estrutura Inteligente Instantânea (Grátis)</option>
+                  <option value="local_silicon">Modelo Local no seu PC (com fallback instantâneo)</option>
                 </select>
               </div>
 
-              <div style="margin-bottom: 12px;">
+              <div class="u-mb-3">
                 <label class="skills-field-label">No que este assistente deve focar e como deve falar com você?</label>
-                <textarea id="pstudio-goal" class="setting-input" rows="4" style="width: 100%; font-size: 0.79rem; resize: vertical;" placeholder="Ex: Ajudar a organizar meus estudos semanais, criar resumos diretos ao ponto e testar meu aprendizado com perguntas práticas..."></textarea>
+                <textarea id="pstudio-goal" class="setting-input u-w-full u-resize-y u-s-6f6967" rows="4" placeholder="Ex: Ajudar a organizar meus estudos semanais, criar resumos diretos ao ponto e testar meu aprendizado com perguntas práticas..."></textarea>
               </div>
 
-              <div style="background: rgba(10,15,28,0.65); border: 1px solid rgba(148,163,184,0.14); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-weight: 600; font-size: 0.76rem; color: #e2e8f0;">🧩 Habilidades que já nascem ativas nesta Persona (opcional)</span>
-                  <input type="text" id="pstudio-skills-filter" class="setting-input" style="width: 155px; height: 26px; font-size: 0.72rem;" placeholder="Filtrar skill..." oninput="renderStudioSkillsPicker()" />
+              <div class="u-mb-3 u-s-259896">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+                  <span class="u-fw-600 u-text-slate-light u-s-c79ecd"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-puzzle"></use></svg> Habilidades que já nascem ativas nesta Persona (opcional)</span>
+                  <input type="text" id="pstudio-skills-filter" class="setting-input u-s-892995" placeholder="Filtrar skill..." oninput="renderStudioSkillsPicker()" />
                 </div>
-                <div id="pstudio-skills-picker" style="max-height: 110px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 5px;"></div>
+                <div class="u-scroll-y u-d-flex u-flex-wrap u-s-1aa4bd" id="pstudio-skills-picker"></div>
               </div>
 
-              <button class="btn-action" style="width: 100%; padding: 8px 14px; font-size: 0.8rem;" onclick="previewStudioPersonaSoul()">
-                ✨ Atualizar Prévia do SOUL.md ao Lado
+              <button class="btn-action u-w-full u-s-d177b0" onclick="previewStudioPersonaSoul()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Atualizar Prévia do SOUL.md ao Lado
               </button>
             </div>
 
             <!-- Coluna Direita: Previa do SOUL.md & Criacao -->
-            <div style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="u-d-flex u-flex-col u-justify-between">
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-weight: 700; font-size: 0.83rem; color: #f1f5f9;">📜 Prévia Editável da Identidade (<code>SOUL.md</code>)</span>
-                  <span style="font-size: 0.71rem; color: #38bdf8;">🔌 Nasce conectada ao Souls Engine</span>
+                <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+                  <span class="u-fw-700 u-s-22fff6"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg> Prévia Editável da Identidade (<code>SOUL.md</code>)</span>
+                  <span class="u-text-cyan u-s-c433ac"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-plug"></use></svg> Nasce conectada ao Souls Engine</span>
                 </div>
-                <div class="editor-container-with-lines" style="min-height: 480px;">
+                <div class="editor-container-with-lines u-s-266f65">
                   <div class="editor-gutter" id="pstudio-soul-gutter">1</div>
                   <textarea id="pstudio-soul-preview" class="editor-textarea" spellcheck="false" placeholder="A prévia gerada do SOUL.md aparecerá aqui..."></textarea>
                 </div>
@@ -417,13 +417,13 @@
                   <span id="pstudio-soul-status">Ln 1, Col 1</span>
                   <span>SOUL.md • UTF-8</span>
                 </div>
-                <div style="margin-top: 8px; padding: 8px 10px; border-radius: 7px; background: rgba(34,197,94,0.09); border: 1px solid rgba(34,197,94,0.25); font-size: 0.74rem; color: #cbd5e1;">
-                  ✓ Configura automaticamente <code>profile.yaml</code>, <code>config.yaml</code>, conexão MCP <code>127.0.0.1:9123</code> e estrutura de pastas sem expor chaves de acesso.
+                <div class="u-mt-2 u-text-slate u-s-a21be5">
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg> Configura automaticamente <code>profile.yaml</code>, <code>config.yaml</code>, conexão MCP <code>127.0.0.1:9123</code> e estrutura de pastas sem expor chaves de acesso.
                 </div>
               </div>
 
-              <button class="btn-action primary" id="btn-pstudio-create" style="width: 100%; margin-top: 12px; padding: 10px 14px; font-size: 0.83rem;" onclick="submitCreatePersona()">
-                🚀 Criar Persona Pronta para Uso
+              <button class="btn-action primary u-w-full u-mt-3 u-s-bc0e47" id="btn-pstudio-create" onclick="submitCreatePersona()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-rocket"></use></svg> Criar Persona Pronta para Uso
               </button>
             </div>
           </div>
@@ -433,28 +433,28 @@
       <!-- ========================================================= -->
       <!-- SUB-ABA 4: HISTORICO, ARQUIVADAS & COMPARADOR DE PERSONAS -->
       <!-- ========================================================= -->
-      <div id="panel-personas-history" style="display: none;">
-        <div style="display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 16px;">
+      <div class="is-hidden" id="panel-personas-history">
+        <div class="u-d-grid u-gap-4 u-s-c1ea56">
           <!-- Coluna Esquerda: Comparador Lado a Lado entre Personas -->
           <div class="card">
-            <div class="skills-header-stack" style="margin-bottom: 12px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.1rem;">⚖️</span>
-                <h3 style="margin: 0; font-size: 0.98rem; color: #f8fafc;">Comparar Duas Personas Lado a Lado</h3>
+            <div class="skills-header-stack u-mb-3">
+              <div class="u-d-flex u-items-center u-gap-2">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-scale"></use></svg>
+                <h3 class="u-m-0 u-s-200ffb">Comparar Duas Personas Lado a Lado</h3>
               </div>
               <div class="skills-subtitle-primary">Veja rapidamente o que muda em modelo, privacidade, habilidades e texto entre dois assistentes.</div>
               <div class="skills-subtitle-secondary">Ideal para padronizar configurações entre o perfil Principal e suas Personas especializadas.</div>
             </div>
 
-            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
-              <select id="pcomp-left-select" class="setting-input" style="flex: 1; height: 35px; font-size: 0.78rem;"></select>
-              <span style="color: #64748b; font-weight: 700;">↔</span>
-              <select id="pcomp-right-select" class="setting-input" style="flex: 1; height: 35px; font-size: 0.78rem;"></select>
-              <button class="btn-action primary" onclick="runTwoPersonasComparison()">🔍 Comparar</button>
+            <div class="u-d-flex u-gap-2 u-items-center u-mb-3">
+              <select id="pcomp-left-select" class="setting-input u-flex-1 u-s-b5e2f4"></select>
+              <span class="u-text-dark u-fw-700">↔</span>
+              <select id="pcomp-right-select" class="setting-input u-flex-1 u-s-b5e2f4"></select>
+              <button class="btn-action primary" onclick="runTwoPersonasComparison()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-search"></use></svg> Comparar</button>
             </div>
 
-            <div style="overflow-x: auto; margin-bottom: 12px;">
-              <table class="data-table" style="font-size: 0.76rem;">
+            <div class="u-mb-3 u-s-42d445">
+              <table class="data-table u-s-c79ecd">
                 <thead>
                   <tr>
                     <th>Configuração</th>
@@ -463,41 +463,41 @@
                   </tr>
                 </thead>
                 <tbody id="pcomp-table-body">
-                  <tr><td colspan="3" style="text-align: center; color: #64748b; padding: 14px;">Escolha duas Personas e clique em Comparar.</td></tr>
+                  <tr><td class="u-text-center u-text-dark u-s-bb27b9" colspan="3">Escolha duas Personas e clique em Comparar.</td></tr>
                 </tbody>
               </table>
             </div>
 
-            <div style="font-weight: 600; font-size: 0.76rem; color: #cbd5e1; margin-bottom: 6px;">Diferenças entre os textos de identidade (<code>SOUL.md</code>):</div>
-            <div id="pcomp-soul-diff" style="max-height: 250px; overflow: auto; padding: 8px; border-radius: 8px; background: rgba(2,6,23,0.88); border: 1px solid rgba(148,163,184,0.16); font-family: var(--font-mono); font-size: 0.72rem; color: #94a3b8;">
+            <div class="u-fw-600 u-text-slate u-mb-6p u-s-c79ecd">Diferenças entre os textos de identidade (<code>SOUL.md</code>):</div>
+            <div class="u-mono u-text-muted u-s-13cb37" id="pcomp-soul-diff">
               Selecione duas Personas acima para visualizar as diferenças de personalidade.
             </div>
           </div>
 
           <!-- Coluna Direita: Linha do Tempo de Backups & Personas Arquivadas -->
-          <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="u-d-flex u-flex-col u-gap-4">
             <div class="card">
-              <div class="skills-header-stack" style="margin-bottom: 10px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 1.05rem;">⏪</span>
-                  <h3 style="margin: 0; font-size: 0.96rem; color: #f8fafc;">Versões Salvas &amp; Restauração em 1 Clique</h3>
+              <div class="skills-header-stack u-mb-10p">
+                <div class="u-d-flex u-items-center u-gap-2">
+                  <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-history"></use></svg>
+                  <h3 class="u-m-0 u-s-bb7051">Versões Salvas &amp; Restauração em 1 Clique</h3>
                 </div>
                 <div class="skills-subtitle-primary">Cada ajuste em SOUL.md, config.yaml ou profile.yaml fica guardado aqui.</div>
                 <div class="skills-subtitle-secondary">Se quiser voltar atrás em qualquer mudança, basta clicar em Restaurar.</div>
               </div>
 
-              <select id="phist-persona-select" class="setting-input" style="width: 100%; height: 35px; font-size: 0.78rem; margin-bottom: 10px;" onchange="loadPersonaHistoryTab()"></select>
+              <select id="phist-persona-select" class="setting-input u-w-full u-mb-10p u-s-b5e2f4" onchange="loadPersonaHistoryTab()"></select>
 
-              <div id="phist-snapshots-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 230px; overflow-y: auto; font-size: 0.75rem;">
-                <div style="color: #64748b;">Selecione uma Persona para ver suas versões anteriores.</div>
+              <div class="u-d-flex u-flex-col u-gap-6p u-scroll-y u-s-bf5978" id="phist-snapshots-list">
+                <div class="u-text-dark">Selecione uma Persona para ver suas versões anteriores.</div>
               </div>
             </div>
 
             <div class="card">
-              <div style="font-weight: 700; color: #f8fafc; font-size: 0.9rem; margin-bottom: 4px;">📦 Personas Arquivadas (Em Pausa)</div>
-              <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">Assistentes arquivados ficam guardados em segurança com todo o histórico e podem voltar ao Hermes com 1 clique:</div>
-              <div id="phist-archived-list" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.76rem;">
-                <div style="color: #64748b;">Nenhuma Persona arquivada no momento.</div>
+              <div class="u-fw-700 u-mb-1 u-s-38db3c"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-archive"></use></svg> Personas Arquivadas (Em Pausa)</div>
+              <div class="u-text-muted u-mb-10p u-s-a2b44b">Assistentes arquivados ficam guardados em segurança com todo o histórico e podem voltar ao Hermes com 1 clique:</div>
+              <div class="u-d-flex u-flex-col u-gap-6p u-s-c79ecd" id="phist-archived-list">
+                <div class="u-text-dark">Nenhuma Persona arquivada no momento.</div>
               </div>
             </div>
           </div>

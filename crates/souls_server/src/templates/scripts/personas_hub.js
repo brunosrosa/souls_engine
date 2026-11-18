@@ -174,7 +174,7 @@
       setTxt(
         'personas-kpi-mcp-sub',
         ov.souls_connected_count === ov.total_active_personas && ov.total_active_personas > 0
-          ? '✓ Todas conectadas ao motor local (127.0.0.1:9123)'
+          ? 'Todas conectadas ao motor local (127.0.0.1:9123)'
           : 'Algumas Personas ainda estão sem aceleração local'
       );
       setTxt('personas-kpi-score', `${Math.round(ov.avg_alignment_score || 100)}/100`);
@@ -189,7 +189,7 @@
           alertsEl.textContent = `${ov.attention_needed_count} ajuste(s) simples recomendado(s)`;
         } else {
           alertsEl.style.color = '#4ade80';
-          alertsEl.textContent = '✓ Privacidade e conexões em dia';
+          alertsEl.textContent = 'Privacidade e conexões em dia';
         }
       }
 
@@ -223,28 +223,34 @@
       }
     }
 
+    function handlePersonaAvatarError(imgEl) {
+      if (!imgEl || !imgEl.parentElement) return;
+      imgEl.style.display = 'none';
+      imgEl.parentElement.innerHTML = uiIcon('masks', 'icon-md');
+    }
+
     function buildPersonaAvatarHtml(p) {
-      const borderCol = p.accent_color || '#8b5cf6';
       if (p.has_custom_avatar) {
         const url = `/api/v1/personas/avatar?slug=${encodeURIComponent(p.slug)}`;
-        return `<div class="persona-avatar-ring" style="border-color:${escPersonaHtml(borderCol)};">
-          <img src="${url}" alt="${escPersonaHtml(p.display_title)}" onerror="this.style.display='none'; this.parentElement.textContent='🎭';" />
+        return `<div class="persona-avatar-ring">
+          <img src="${url}" alt="${escPersonaHtml(p.display_title)}" onerror="handlePersonaAvatarError(this)" />
         </div>`;
       }
       const initials = (p.display_title || p.slug || 'P').trim().slice(0, 2).toUpperCase();
-      return `<div class="persona-avatar-ring" style="border-color:${escPersonaHtml(borderCol)}; background:linear-gradient(135deg, ${escPersonaHtml(borderCol)}33, rgba(15,23,42,0.92));">
+      return `<div class="persona-avatar-ring">
         ${escPersonaHtml(initials)}
       </div>`;
     }
 
     function buildPersonaStatusBadgeHtml(p) {
       if (p.status_badge === 'privacy_alert') {
-        return `<span class="persona-pill" title="${escPersonaHtml(p.governance_summary)}" style="background:rgba(239,68,68,0.16); color:#f87171; border:1px solid rgba(239,68,68,0.4);">🔒 Alerta de Privacidade</span>`;
+        return `<span class="persona-pill badge-danger" title="${escPersonaHtml(p.governance_summary)}"><span class="status-dot status-danger"></span> Alerta de Privacidade</span>`;
       }
       if (p.status_badge === 'needs_attention') {
-        return `<span class="persona-pill" title="${escPersonaHtml(p.governance_summary)}" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.38);">🔌 Falta Conectar Motor</span>`;
+        return `<span class="persona-pill badge-lowcost" title="${escPersonaHtml(p.governance_summary)}"><span class="status-dot status-warn"></span> Falta Conectar Motor</span>`;
       }
-      return `<span class="persona-pill" title="${escPersonaHtml(p.governance_summary)}" style="background:rgba(34,197,94,0.13); color:#4ade80; border:1px solid rgba(34,197,94,0.3);">${escPersonaHtml(p.status_label || '✓ Alinhada')}</span>`;
+      const cleanStatus = (p.status_label || 'Alinhada').replace(/^[\u2713\u2714\u2705]\s*/, '');
+      return `<span class="u-d-inline-flex u-items-center u-gap-6p u-text-muted u-s-dbc8d1" title="${escPersonaHtml(p.governance_summary)}"><span class="status-dot status-ok"></span> ${escPersonaHtml(cleanStatus)}</span>`;
     }
 
     function renderPersonasGalleryCards() {
@@ -259,37 +265,28 @@
 
       grid.innerHTML = list.map(p => {
         const isEditing = personasHubState.activeSlug === p.slug;
-        const roleBadge = p.is_default
-          ? `<span class="persona-pill" style="background:rgba(139,92,246,0.16); color:#c4b5fd; border:1px solid rgba(139,92,246,0.32);">👑 Principal</span>`
-          : `<span class="persona-pill" style="background:rgba(148,163,184,0.12); color:#cbd5e1; border:1px solid rgba(148,163,184,0.22);">Perfil: ${escPersonaHtml(p.slug)}</span>`;
-
-        const mcpBadge = p.souls_mcp_connected
-          ? `<span class="persona-pill" style="background:rgba(6,182,212,0.13); color:#38bdf8; border:1px solid rgba(6,182,212,0.3);">🔌 Souls Engine Ativo</span>`
-          : `<span class="persona-pill" style="background:rgba(148,163,184,0.12); color:#94a3b8; border:1px solid rgba(148,163,184,0.2);">⚪ Sem Motor Local</span>`;
-
-        const privTag = p.requires_strict_privacy
-          ? `<span class="persona-pill" style="background:rgba(16,185,129,0.12); color:#6ee7b7; border:1px solid rgba(16,185,129,0.26);">🛡️ Dados Sensíveis</span>`
-          : '';
-
+        const roleMeta = p.is_default ? 'Principal' : `Perfil: ${escPersonaHtml(p.slug)}`;
+        const mcpMeta = p.souls_mcp_connected ? 'Souls Engine Ativo' : 'Sem Motor Local';
+        const privMeta = p.requires_strict_privacy ? ' · Dados Sensíveis' : '';
         const skillsTxt = p.is_default
           ? 'Skills Globais do Hermes'
           : `${p.active_skills_count} skill(s) dedicada(s)`;
 
         const alignBtn = (p.findings && p.findings.some(f => f.auto_fixable))
-          ? `<button class="btn-action primary" style="padding:5px 10px; font-size:0.74rem;" onclick="openGovernancePreviewFor('${escPersonaHtml(p.slug)}')">✨ Revisar &amp; Alinhar</button>`
+          ? `<button class="btn-action primary u-s-3ada9a" onclick="openGovernancePreviewFor('${escPersonaHtml(p.slug)}')">${uiIcon('sparkles', 'icon-xs')} Revisar &amp; Alinhar</button>`
           : '';
 
-        return `<div class="persona-card ${isEditing ? 'active-edit' : ''}" style="border-top: 3px solid ${escPersonaHtml(p.accent_color || '#8b5cf6')};">
+        return `<div class="persona-card ${isEditing ? 'active-edit' : ''}">
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-              <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+            <div class="u-d-flex u-justify-between u-items-start u-gap-10p">
+              <div class="u-d-flex u-items-center u-gap-3 u-min-w-0">
                 ${buildPersonaAvatarHtml(p)}
-                <div style="min-width:0;">
-                  <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                    <span style="font-weight:800; font-size:0.95rem; color:#f8fafc;">${escPersonaHtml(p.display_title)}</span>
-                    ${roleBadge}
+                <div class="u-min-w-0">
+                  <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+                    <span class="u-s-03c535">${escPersonaHtml(p.display_title)}</span>
+                    <span class="u-text-muted u-s-dbc8d1">&middot; ${roleMeta}</span>
                   </div>
-                  <div style="font-size:0.74rem; color:#94a3b8; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escPersonaHtml(p.subtitle_role)}">
+                  <div class="u-text-muted u-mt-2p u-nowrap u-overflow-hidden u-s-f38243" title="${escPersonaHtml(p.subtitle_role)}">
                     ${escPersonaHtml(p.subtitle_role)}
                   </div>
                 </div>
@@ -297,28 +294,25 @@
               ${buildPersonaStatusBadgeHtml(p)}
             </div>
 
-            <div class="skills-mp-desc-clamp" style="margin-top:10px; color:#cbd5e1; font-size:0.77rem;">
+            <div class="skills-mp-desc-clamp u-mt-10p u-text-slate u-s-a3d012">
               ${escPersonaHtml(p.description)}
             </div>
 
-            <div class="persona-meta-strip" style="margin-top:10px;">
-              <span class="persona-pill" style="background:rgba(15,23,42,0.75); color:#e2e8f0; border:1px solid rgba(148,163,184,0.2); font-family:var(--font-mono);" title="Modelo principal configurado nesta Persona">
-                🤖 ${escPersonaHtml(p.model_default || 'padrão')}
-              </span>
-              ${mcpBadge}
-              ${privTag}
-              <span class="persona-pill" style="background:rgba(15,23,42,0.6); color:#94a3b8; border:1px solid rgba(148,163,184,0.16);">
-                🧩 ${escPersonaHtml(skillsTxt)}
-              </span>
+            <div class="persona-meta-strip u-mt-10p u-text-muted u-s-dbc8d1">
+              <span class="u-mono u-text-white" title="Modelo principal configurado nesta Persona">${escPersonaHtml(p.model_default || 'padrão')}</span>
+              <span>&middot;</span>
+              <span>${mcpMeta}${privMeta}</span>
+              <span>&middot;</span>
+              <span>${escPersonaHtml(skillsTxt)}</span>
             </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding-top:10px; border-top:1px solid rgba(148,163,184,0.12);">
-            <span style="font-size:0.72rem; color:#64748b;">Coerência: <strong style="color:${p.alignment_score >= 90 ? '#4ade80' : (p.alignment_score >= 70 ? '#fbbf24' : '#f87171')};">${p.alignment_score}/100</strong> • ${p.soul_tokens} tk de identidade</span>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <div class="u-d-flex u-justify-between u-items-center u-gap-2 u-s-f80f26">
+            <span class="u-text-muted u-s-dbc8d1">Coerência: <strong class="u-text-white">${p.alignment_score}/100</strong> &middot; ${p.soul_tokens} tk</span>
+            <div class="u-d-flex u-gap-6p u-flex-wrap">
               ${alignBtn}
-              <button class="btn-action" style="padding:5px 10px; font-size:0.74rem;" onclick="openPersonaWorkbench('${escPersonaHtml(p.slug)}')">✏️ Configurar</button>
-              <button class="btn-action" style="padding:5px 9px; font-size:0.74rem;" title="Criar uma nova Persona usando esta como ponto de partida" onclick="clonePersonaInStudio('${escPersonaHtml(p.slug)}')">🧬 Clonar</button>
+              <button class="btn-action u-s-3ada9a" onclick="openPersonaWorkbench('${escPersonaHtml(p.slug)}')">${uiIcon('edit', 'icon-xs')} Configurar</button>
+              <button class="btn-action u-s-440209" title="Criar uma nova Persona usando esta como ponto de partida" onclick="clonePersonaInStudio('${escPersonaHtml(p.slug)}')">${uiIcon('dna', 'icon-xs')} Clonar</button>
             </div>
           </div>
         </div>`;
@@ -351,7 +345,7 @@
         if (avBox) {
           avBox.outerHTML = buildPersonaAvatarHtml(p).replace('class="persona-avatar-ring"', 'class="persona-avatar-ring" id="pwb-avatar"');
         }
-        document.getElementById('pwb-title').textContent = `✏️ ${p.display_title} (${p.is_default ? 'Principal' : p.slug})`;
+        document.getElementById('pwb-title').innerHTML = `${uiIcon('edit', 'icon-sm')} ${escPersonaHtml(p.display_title)} (${p.is_default ? 'Principal' : escPersonaHtml(p.slug)})`;
         document.getElementById('pwb-score-badge').textContent = `Coerência ${p.alignment_score}/100`;
         document.getElementById('pwb-status-badge').innerHTML = buildPersonaStatusBadgeHtml(p);
         document.getElementById('pwb-path').textContent = p.root_path || '';
@@ -439,34 +433,110 @@
       box.className = 'skills-why-callout ' + (hasCrit ? 'danger' : '');
       box.style.display = 'block';
 
-      const items = findings.map(f => `<li style="margin-bottom:4px;">
+      const items = findings.map(f => `<li class="u-mb-1">
         <strong>${escPersonaHtml(f.title)}:</strong> ${escPersonaHtml(f.explanation)}
       </li>`).join('');
 
       box.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
-          <strong style="color:#f8fafc;">${hasCrit ? '🔒 Atenção de Privacidade Detectada nesta Persona' : '💡 Oportunidades de Alinhamento para esta Persona'}</strong>
-          <button class="btn-action primary" style="padding:3px 10px; font-size:0.73rem;" onclick="openGovernancePreviewFor('${escPersonaHtml(p.slug)}')">🔍 Ver Prévia &amp; Resolver em 1 Clique</button>
+        <div class="u-d-flex u-justify-between u-items-center u-gap-10p u-flex-wrap u-mb-6p">
+          <strong class="u-s-221324">${hasCrit ? `${uiIcon('lock', 'icon-xs')} Atenção de Privacidade Detectada nesta Persona` : `${uiIcon('lightbulb', 'icon-xs')} Oportunidades de Alinhamento para esta Persona`}</strong>
+          <button class="btn-action primary u-s-43310c" onclick="openGovernancePreviewFor('${escPersonaHtml(p.slug)}')">${uiIcon('search', 'icon-xs')} Ver Prévia &amp; Resolver em 1 Clique</button>
         </div>
-        <ul style="margin:0; padding-left:18px; color:#e2e8f0; font-size:0.76rem;">${items}</ul>
+        <ul class="u-m-0 u-text-slate-light u-s-d6f02b">${items}</ul>
       `;
+    }
+
+    function buildDynamicPersonaModelPresets(p) {
+      const recModel = personasHubState.overview?.recommended_private_model || 'deepseek/deepseek-chat';
+      const recProv = personasHubState.overview?.recommended_private_provider || 'nous';
+      const presets = [
+        { label: `Padrão Privado (${recModel})`, icon: 'shield', model: recModel, prov: recProv }
+      ];
+
+      const champs = personasHubState.cloudChampions || [];
+      const execChamp = champs.find(c => (c.profile || '').toLowerCase() === 'executive') || champs[0];
+      const codingChamp = champs.find(c => (c.profile || '').toLowerCase() === 'coding') || champs[1];
+
+      if (execChamp && execChamp.quality_leader) {
+        const ql = execChamp.quality_leader;
+        presets.push({
+          label: `Campeão Cloud (${ql.display_name || ql.canonical_id})`,
+          icon: 'crown',
+          model: ql.canonical_id,
+          prov: ql.provider || 'nous'
+        });
+      }
+      if (codingChamp && codingChamp.best_value) {
+        const bv = codingChamp.best_value;
+        presets.push({
+          label: `Melhor ROI (${bv.display_name || bv.canonical_id})`,
+          icon: 'zap',
+          model: bv.canonical_id,
+          prov: bv.provider || 'nous'
+        });
+      }
+
+      const locals = personasHubState.localModels || [];
+      if (locals.length > 0) {
+        const bestLocal = locals.find(m => (m.tier || '').includes('Tier 1') && (m.target || '').includes('dGPU'))
+          || locals[0];
+        const lName = bestLocal.name || bestLocal.model || bestLocal.filename;
+        presets.push({
+          label: `Silício Local (${lName})`,
+          icon: 'cpu',
+          model: bestLocal.model || lName,
+          prov: 'local_silicon'
+        });
+      } else {
+        presets.push({
+          label: 'Silício Local (Sem GGUF instalado)',
+          icon: 'cpu',
+          model: 'local_silicon',
+          prov: 'local_silicon'
+        });
+      }
+
+      // Deduplicate by model+prov
+      const seen = new Set();
+      return presets.filter(item => {
+        const k = `${item.model}::${item.prov}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
     }
 
     function renderModelQuickSuggestions(p) {
       const box = document.getElementById('pwb-model-suggestions');
       if (!box) return;
-      const recModel = personasHubState.overview?.recommended_private_model || 'deepseek/deepseek-chat';
-      const recProv = personasHubState.overview?.recommended_private_provider || 'nous';
 
-      const presets = [
-        { label: `⭐ Padrão Privado (${recModel})`, model: recModel, prov: recProv },
-        { label: '🧠 Claude Sonnet 4', model: 'anthropic/claude-sonnet-4', prov: 'openrouter' },
-        { label: '⚡ Gemini 2.5 Flash', model: 'google/gemini-2.5-flash', prov: 'openrouter' },
-        { label: '🏠 Silício Local (Souls Engine :9123)', model: 'qwen2.5-coder-7b-instruct', prov: 'llamacpp' }
-      ];
+      const draw = () => {
+        const presets = buildDynamicPersonaModelPresets(p);
+        box.innerHTML = `<span class="u-text-muted u-s-97af25">Sugestões ao vivo (Arena &amp; Silício):</span>` +
+          presets.map(pr => `<button type="button" class="skills-topic-pill u-s-eea5f2" onclick="applyPersonaModelChip('${escPersonaHtml(pr.model)}', '${escPersonaHtml(pr.prov)}')">${uiIcon(pr.icon, 'icon-xs')} ${escPersonaHtml(pr.label)}</button>`).join('');
+      };
 
-      box.innerHTML = `<span style="font-size:0.7rem; color:#94a3b8; align-self:center;">Sugestões rápidas:</span>` +
-        presets.map(pr => `<button type="button" class="skills-topic-pill" style="padding:2px 8px; font-size:0.69rem;" onclick="applyPersonaModelChip('${escPersonaHtml(pr.model)}', '${escPersonaHtml(pr.prov)}')">${escPersonaHtml(pr.label)}</button>`).join('');
+      draw();
+
+      if (!personasHubState.modelSuggestionsLoaded && !personasHubState.modelSuggestionsLoading) {
+        personasHubState.modelSuggestionsLoading = true;
+        Promise.allSettled([
+          fetch('/api/v1/cloud/champions').then(r => r.ok ? r.json() : null),
+          fetch('/api/v1/models/local').then(r => r.ok ? r.json() : null)
+        ]).then(([cRes, lRes]) => {
+          if (cRes.status === 'fulfilled' && cRes.value && Array.isArray(cRes.value.champions)) {
+            personasHubState.cloudChampions = cRes.value.champions;
+          }
+          if (lRes.status === 'fulfilled' && lRes.value && Array.isArray(lRes.value.models)) {
+            personasHubState.localModels = lRes.value.models;
+          }
+          personasHubState.modelSuggestionsLoaded = true;
+          personasHubState.modelSuggestionsLoading = false;
+          draw();
+        }).catch(() => {
+          personasHubState.modelSuggestionsLoading = false;
+        });
+      }
     }
 
     function applyPersonaModelChip(model, provider) {
@@ -480,20 +550,20 @@
       const box = document.getElementById('pwb-skills-list');
       if (!box) return;
       if (p.is_default) {
-        box.innerHTML = `<div style="font-size:0.75rem; color:#cbd5e1;">
-          O perfil <strong>Principal</strong> acessa automaticamente todas as habilidades globais ativas no seu Hermes (${skills.length} detectadas). Você pode gerenciá-las na aba <strong>🧩 Skills Hub</strong>.
+        box.innerHTML = `<div class="u-text-slate u-s-a2b44b">
+          O perfil <strong>Principal</strong> acessa automaticamente todas as habilidades globais ativas no seu Hermes (${skills.length} detectadas). Você pode gerenciá-las na aba <strong>${uiIcon('puzzle', 'icon-xs')} Skills Hub</strong>.
         </div>`;
         return;
       }
       if (!skills || skills.length === 0) {
-        box.innerHTML = `<span style="font-size:0.75rem; color:#94a3b8;">Nenhuma skill dedicada instalada nesta Persona ainda. Use o botão ao lado para sincronizar skills do catálogo!</span>`;
+        box.innerHTML = `<span class="u-text-muted u-s-a2b44b">Nenhuma skill dedicada instalada nesta Persona ainda. Use o botão ao lado para sincronizar skills do catálogo!</span>`;
         return;
       }
       box.innerHTML = skills.map(s => {
         const bg = s.enabled ? 'rgba(56,189,248,0.12)' : 'rgba(148,163,184,0.1)';
-        const col = s.enabled ? '#38bdf8' : '#64748b';
-        return `<span title="${escPersonaHtml(s.description || '')}" style="padding:3px 8px; border-radius:999px; font-size:0.71rem; font-family:var(--font-mono); background:${bg}; color:${col}; border:1px solid rgba(56,189,248,0.24);">
-          ${s.enabled ? '✓' : '⏸'} ${escPersonaHtml(s.slug)}
+        const col = s.enabled ? '#38bdf8' : '#71717A';
+        return `<span class="u-mono u-s-6ad55f" title="${escPersonaHtml(s.description || '')}" style="background:${bg}; color:${col};">
+          ${s.enabled ? uiIcon('check', 'icon-xs') : uiIcon('pause', 'icon-xs')} ${escPersonaHtml(s.slug)}
         </span>`;
       }).join('');
     }
@@ -505,7 +575,7 @@
       if (!box) return;
 
       if (!paths || paths.length === 0) {
-        box.innerHTML = '<div style="font-size:0.75rem; color:#64748b;">Nenhum caminho de cofre ou contrato externo citado no SOUL.md desta Persona.</div>';
+        box.innerHTML = '<div class="u-text-dark u-s-a2b44b">Nenhum caminho de cofre ou contrato externo citado no SOUL.md desta Persona.</div>';
         return;
       }
 
@@ -516,16 +586,16 @@
 
       box.innerHTML = paths.map(ap => {
         const okBadge = ap.exists_on_host
-          ? `<span style="color:#4ade80; font-size:0.7rem; font-weight:700;">✓ Encontrado</span>`
-          : `<span style="color:#fbbf24; font-size:0.7rem; font-weight:700;">⚠️ Não localizado</span>`;
+          ? `<span class="u-fw-700 u-s-41afd4">${uiIcon('check', 'icon-xs')} Encontrado</span>`
+          : `<span class="u-text-amber-light u-fw-700 u-s-cb8a8e">${uiIcon('alert-triangle', 'icon-xs')} Não localizado</span>`;
         const canPreview = ap.exists_on_host && window._personaContractMap[ap.resolved_path];
         const previewBtn = canPreview
-          ? `<button class="btn-action" style="padding:2px 7px; font-size:0.68rem;" onclick="showAnchoredContractPreview('${escPersonaHtml(ap.resolved_path)}')">📖 Ler</button>`
+          ? `<button class="btn-action u-s-cb7d09" onclick="showAnchoredContractPreview('${escPersonaHtml(ap.resolved_path)}')">${uiIcon('book', 'icon-xs')} Ler</button>`
           : '';
 
-        return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; background:rgba(15,23,42,0.6); border:1px solid rgba(148,163,184,0.14); font-size:0.73rem;">
-          <code style="color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escPersonaHtml(ap.resolved_path)}">${escPersonaHtml(ap.raw_path)}</code>
-          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">${okBadge}${previewBtn}</div>
+        return `<div class="u-d-flex u-justify-between u-items-center u-gap-2 u-s-362d9d">
+          <code class="u-text-slate u-overflow-hidden u-nowrap u-s-9f3798" title="${escPersonaHtml(ap.resolved_path)}">${escPersonaHtml(ap.raw_path)}</code>
+          <div class="u-d-flex u-items-center u-gap-6p u-shrink-0">${okBadge}${previewBtn}</div>
         </div>`;
       }).join('');
     }
@@ -543,12 +613,12 @@
       const box = document.getElementById('pwb-memories-readonly');
       if (!box) return;
       if (!memories || memories.length === 0) {
-        box.innerHTML = '<span style="color:#64748b;">Ainda não há notas gravadas em <code>memories/</code> para esta Persona.</span>';
+        box.innerHTML = '<span class="u-text-dark">Ainda não há notas gravadas em <code>memories/</code> para esta Persona.</span>';
         return;
       }
-      box.innerHTML = memories.map(m => `<div style="margin-bottom:6px; padding:6px 8px; border-radius:6px; background:rgba(2,6,23,0.6);">
-        <div style="font-weight:700; color:#e2e8f0; font-size:0.73rem;">📄 ${escPersonaHtml(m.rel_path)} <span style="color:#64748b; font-weight:400;">(${m.size_bytes} bytes • Somente Leitura)</span></div>
-        <div style="margin-top:3px; color:#94a3b8; font-size:0.72rem; white-space:pre-wrap;">${escPersonaHtml((m.content_preview || '').slice(0, 280))}</div>
+      box.innerHTML = memories.map(m => `<div class="u-mb-6p u-s-eed50e">
+        <div class="u-fw-700 u-text-slate-light u-s-6444dd">${uiIcon('file-text', 'icon-xs')} ${escPersonaHtml(m.rel_path)} <span class="u-text-dark u-s-1c653f">(${m.size_bytes} bytes • Somente Leitura)</span></div>
+        <div class="u-mt-3p u-text-muted u-pre-wrap u-s-dbc8d1">${escPersonaHtml((m.content_preview || '').slice(0, 280))}</div>
       </div>`).join('');
     }
 
@@ -556,15 +626,15 @@
       const box = document.getElementById('pwb-soul-sections');
       if (!box) return;
       if (!sections || sections.length === 0) {
-        box.innerHTML = '<div style="color:#64748b; font-size:0.75rem;">Adicione subtítulos com <code>## Nome da Seção</code> para organizar os capítulos.</div>';
+        box.innerHTML = '<div class="u-text-dark u-s-a2b44b">Adicione subtítulos com <code>## Nome da Seção</code> para organizar os capítulos.</div>';
         return;
       }
-      box.innerHTML = sections.map(sec => `<div style="padding:7px 9px; border-radius:7px; background:rgba(15,23,42,0.62); border:1px solid rgba(148,163,184,0.14);">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong style="color:#e2e8f0; font-size:0.76rem;">${escPersonaHtml(sec.heading)}</strong>
-          <span style="font-size:0.68rem; color:#38bdf8;">linha ${sec.line_start} • ${sec.bullet_count} regra(s)</span>
+      box.innerHTML = sections.map(sec => `<div class="u-s-6c0171">
+        <div class="u-d-flex u-justify-between u-items-center">
+          <strong class="u-text-slate-light u-s-c79ecd">${escPersonaHtml(sec.heading)}</strong>
+          <span class="u-text-cyan u-s-923ef2">linha ${sec.line_start} • ${sec.bullet_count} regra(s)</span>
         </div>
-        ${sec.preview ? `<div style="color:#94a3b8; font-size:0.72rem; margin-top:3px;">${escPersonaHtml(sec.preview)}</div>` : ''}
+        ${sec.preview ? `<div class="u-text-muted u-mt-3p u-s-dbc8d1">${escPersonaHtml(sec.preview)}</div>` : ''}
       </div>`).join('');
     }
 
@@ -572,17 +642,17 @@
       const box = document.getElementById('pwb-history-list');
       if (!box) return;
       if (!history || history.length === 0) {
-        box.innerHTML = '<div style="color:#64748b;">Nenhuma versão anterior salva ainda para esta Persona.</div>';
+        box.innerHTML = '<div class="u-text-dark">Nenhuma versão anterior salva ainda para esta Persona.</div>';
         return;
       }
       box.innerHTML = history.slice(0, 10).map(h => {
         const dt = h.timestamp_epoch ? new Date(h.timestamp_epoch * 1000).toLocaleString('pt-BR') : h.snapshot_id;
-        return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; background:rgba(15,23,42,0.6); border:1px solid rgba(148,163,184,0.14);">
+        return `<div class="u-d-flex u-justify-between u-items-center u-gap-2 u-s-95ee69">
           <div>
-            <strong style="color:#e2e8f0;">${escPersonaHtml(h.target_file)}</strong>
-            <span style="color:#94a3b8; margin-left:5px;">${escPersonaHtml(dt)} (${escPersonaHtml(h.reason)})</span>
+            <strong class="u-text-slate-light">${escPersonaHtml(h.target_file)}</strong>
+            <span class="u-text-muted u-s-29ab0e">${escPersonaHtml(dt)} (${escPersonaHtml(h.reason)})</span>
           </div>
-          <button class="btn-action" style="padding:2px 8px; font-size:0.7rem;" onclick="rollbackPersonaSnapshot('${escPersonaHtml(slug)}', '${escPersonaHtml(h.snapshot_id)}')">⏪ Restaurar</button>
+          <button class="btn-action u-s-cd187d" onclick="rollbackPersonaSnapshot('${escPersonaHtml(slug)}', '${escPersonaHtml(h.snapshot_id)}')">${uiIcon('history', 'icon-xs')} Restaurar</button>
         </div>`;
       }).join('');
     }
@@ -632,6 +702,11 @@
       const instrEl = document.getElementById('pwb-soul-instruction');
       if (!slug || !editor) return;
 
+      const instrVal = (instrEl?.value || '').trim();
+      const provVal = (document.getElementById('pwb-input-provider')?.value || '').toLowerCase();
+      const soulsMcpOn = Boolean(document.getElementById('pwb-chk-souls-mcp')?.checked);
+      const preferLocalSilicon = provVal === 'local_silicon' || provVal === 'llamacpp' || provVal === 'custom' || (soulsMcpOn && instrVal.length > 0);
+
       try {
         const res = await fetch('/api/v1/personas/refine-soul', {
           method: 'POST',
@@ -639,8 +714,8 @@
           body: JSON.stringify({
             slug,
             current_soul: editor.value,
-            instruction: (instrEl?.value || '').trim() || null,
-            use_local_model: false
+            instruction: instrVal || null,
+            use_local_model: preferLocalSilicon
           })
         });
         const data = await res.json();
@@ -758,11 +833,11 @@
         const actionsBox = document.getElementById('align-actions-list');
         if (actionsBox) {
           if (actions.length === 0) {
-            actionsBox.innerHTML = '✓ Esta Persona já está 100% alinhada — nenhuma modificação pendente.';
+            actionsBox.innerHTML = `${uiIcon('check-circle', 'icon-xs')} Esta Persona já está 100% alinhada — nenhuma modificação pendente.`;
           } else {
-            actionsBox.innerHTML = `<div style="font-weight:700; margin-bottom:5px; color:#67e8f9;">O que faremos em "${escPersonaHtml(slug)}":</div>` +
-              `<ul style="margin:0; padding-left:18px;">` +
-              actions.map(a => `<li style="margin-bottom:4px;">${escPersonaHtml(a)}</li>`).join('') +
+            actionsBox.innerHTML = `<div class="u-fw-700 u-s-2df161">O que faremos em "${escPersonaHtml(slug)}":</div>` +
+              `<ul class="u-m-0 u-s-9d1242">` +
+              actions.map(a => `<li class="u-mb-1">${escPersonaHtml(a)}</li>`).join('') +
               `</ul>`;
           }
         }
@@ -819,8 +894,8 @@
       });
 
       if (items.length === 0) {
-        box.innerHTML = `<div style="padding:20px; text-align:center; border-radius:10px; background:rgba(34,197,94,0.09); border:1px solid rgba(34,197,94,0.28); color:#4ade80; font-size:0.82rem;">
-          ✓ Excelente! Todas as suas Personas estão com privacidade protegida, descrições claras e aceleração Souls Engine ativa.
+        box.innerHTML = `<div class="u-text-center u-s-39f44c">
+          ${uiIcon('check-circle', 'icon-sm')} Excelente! Todas as suas Personas estão com privacidade protegida, descrições claras e aceleração Souls Engine ativa.
         </div>`;
         return;
       }
@@ -832,21 +907,21 @@
         const isCrit = finding.severity === 'critical';
         const isWarn = finding.severity === 'warning';
         const border = isCrit ? 'rgba(239,68,68,0.42)' : (isWarn ? 'rgba(245,158,11,0.38)' : 'rgba(56,189,248,0.3)');
-        const bg = isCrit ? 'rgba(239,68,68,0.09)' : (isWarn ? 'rgba(245,158,11,0.08)' : 'rgba(15,23,42,0.55)');
-        const icon = isCrit ? '🔒' : (isWarn ? '🔌' : '💡');
+        const bg = isCrit ? 'rgba(239,68,68,0.09)' : (isWarn ? 'rgba(245,158,11,0.08)' : 'rgba(17, 17, 19,0.55)');
+        const iconName = isCrit ? 'lock' : (isWarn ? 'plug' : 'lightbulb');
 
         const btnHtml = finding.auto_fixable
-          ? `<button class="btn-action primary" style="padding:5px 10px; font-size:0.73rem;" onclick="openGovernancePreviewFor('${escPersonaHtml(persona.slug)}')">✨ Revisar Ajuste</button>`
-          : `<button class="btn-action" style="padding:5px 10px; font-size:0.73rem;" onclick="switchPersonasSubtab('gallery'); openPersonaWorkbench('${escPersonaHtml(persona.slug)}', 'soul');">✏️ Abrir SOUL.md</button>`;
+          ? `<button class="btn-action primary u-s-e0a9f8" onclick="openGovernancePreviewFor('${escPersonaHtml(persona.slug)}')">${uiIcon('sparkles', 'icon-xs')} Revisar Ajuste</button>`
+          : `<button class="btn-action u-s-e0a9f8" onclick="switchPersonasSubtab('gallery'); openPersonaWorkbench('${escPersonaHtml(persona.slug)}', 'soul');">${uiIcon('edit', 'icon-xs')} Abrir SOUL.md</button>`;
 
-        return `<div style="padding:11px 13px; border-radius:9px; background:${bg}; border:1px solid ${border}; display:flex; justify-content:space-between; align-items:center; gap:12px;">
-          <div style="min-width:0;">
-            <div style="font-weight:700; color:#f8fafc; font-size:0.82rem;">
-              ${icon} ${escPersonaHtml(persona.display_title)} <span style="color:#94a3b8; font-weight:500;">(${escPersonaHtml(persona.slug)})</span> — ${escPersonaHtml(finding.title)}
+        return `<div class="u-d-flex u-justify-between u-items-center u-gap-3 u-s-2330bb" style="background:${bg}; border:1px solid ${border};">
+          <div class="u-min-w-0">
+            <div class="u-fw-700 u-s-668559">
+              ${uiIcon(iconName, 'icon-xs')} ${escPersonaHtml(persona.display_title)} <span class="u-text-muted u-fw-500">(${escPersonaHtml(persona.slug)})</span> — ${escPersonaHtml(finding.title)}
             </div>
-            <div style="color:#cbd5e1; font-size:0.75rem; margin-top:4px; line-height:1.42;">${escPersonaHtml(finding.explanation)}</div>
+            <div class="u-text-slate u-mt-1 u-s-a60830">${escPersonaHtml(finding.explanation)}</div>
           </div>
-          <div style="flex-shrink:0;">${btnHtml}</div>
+          <div class="u-shrink-0">${btnHtml}</div>
         </div>`;
       }).join('');
     }
@@ -855,16 +930,16 @@
       const box = document.getElementById(containerId);
       if (!box) return;
       if (!fileDiffs || fileDiffs.length === 0) {
-        box.innerHTML = '<div style="color:#4ade80; padding:6px;">✓ Nenhuma diferença pendente nos arquivos.</div>';
+        box.innerHTML = `<div class="u-s-39cf99">${uiIcon('check', 'icon-xs')} Nenhuma diferença pendente nos arquivos.</div>`;
         return;
       }
 
       box.innerHTML = fileDiffs.map(fd => {
         if (fd.unchanged) {
-          return `<div style="margin-bottom:8px; color:#4ade80;">✓ <strong>${escPersonaHtml(fd.file_name)}</strong>: sem alterações.</div>`;
+          return `<div class="u-mb-2 u-s-80aa08">${uiIcon('check', 'icon-xs')} <strong>${escPersonaHtml(fd.file_name)}</strong>: sem alterações.</div>`;
         }
-        const hdr = `<div style="padding:5px 8px; margin-bottom:4px; border-radius:5px; background:rgba(30,41,59,0.85); color:#e2e8f0; font-weight:700;">
-          📄 ${escPersonaHtml(fd.file_name)} <span style="font-weight:500; color:#94a3b8;">(+${fd.additions} / -${fd.deletions} linhas)</span>
+        const hdr = `<div class="u-mb-1 u-text-slate-light u-fw-700 u-s-e6f093">
+          ${uiIcon('file-text', 'icon-xs')} ${escPersonaHtml(fd.file_name)} <span class="u-fw-500 u-text-muted">(+${fd.additions} / -${fd.deletions} linhas)</span>
         </div>`;
 
         // Filter contextual lines around changes so large 350-line config.yaml stays super readable!
@@ -883,19 +958,19 @@
         allLines.forEach((ln, idx) => {
           if (!changedIdx.has(idx)) return;
           if (prevIdx !== -1 && idx > prevIdx + 1) {
-            body.push('<div style="color:#475569; padding:2px 6px;">  ⋯</div>');
+            body.push('<div class="u-s-47ade5">  ⋯</div>');
           }
           prevIdx = idx;
           if (ln.tag === 'insert') {
-            body.push(`<div style="background:rgba(34,197,94,0.14); color:#86efac; padding:1px 6px; white-space:pre-wrap;">+ ${escPersonaHtml(ln.text)}</div>`);
+            body.push(`<div class="u-pre-wrap u-s-cda35a">+ ${escPersonaHtml(ln.text)}</div>`);
           } else if (ln.tag === 'delete') {
-            body.push(`<div style="background:rgba(239,68,68,0.14); color:#fca5a5; padding:1px 6px; white-space:pre-wrap;">- ${escPersonaHtml(ln.text)}</div>`);
+            body.push(`<div class="u-pre-wrap u-s-16928d">- ${escPersonaHtml(ln.text)}</div>`);
           } else {
-            body.push(`<div style="color:#94a3b8; padding:1px 6px; white-space:pre-wrap;">  ${escPersonaHtml(ln.text)}</div>`);
+            body.push(`<div class="u-text-muted u-pre-wrap u-s-7e80e0">  ${escPersonaHtml(ln.text)}</div>`);
           }
         });
 
-        return `<div style="margin-bottom:12px;">${hdr}${body.join('')}</div>`;
+        return `<div class="u-mb-3">${hdr}${body.join('')}</div>`;
       }).join('');
     }
 
@@ -930,10 +1005,10 @@
       if (!sel) return;
       const cur = sel.value || 'default';
       const opts = (personasHubState.personas || []).map(p => {
-        const icon = p.is_default ? '👑 ' : '🎭 ';
-        return `<option value="${escPersonaHtml(p.slug)}">${icon}${escPersonaHtml(p.display_title)} (${escPersonaHtml(p.slug)})</option>`;
+        const prefix = p.is_default ? '[Principal] ' : '';
+        return `<option value="${escPersonaHtml(p.slug)}">${prefix}${escPersonaHtml(p.display_title)} (${escPersonaHtml(p.slug)})</option>`;
       });
-      sel.innerHTML = opts.length > 0 ? opts.join('') : '<option value="default">👑 Hermes Principal (default)</option>';
+      sel.innerHTML = opts.length > 0 ? opts.join('') : '<option value="default">[Principal] Hermes Principal (default)</option>';
       if ((personasHubState.personas || []).some(p => p.slug === cur)) {
         sel.value = cur;
       }
@@ -969,16 +1044,18 @@
       previewStudioPersonaSoul();
     }
 
-    function previewStudioPersonaSoul() {
+    async function previewStudioPersonaSoul() {
       const title = (document.getElementById('pstudio-title')?.value || 'Novo Assistente').trim();
+      const slug = (document.getElementById('pstudio-slug')?.value || 'nova-persona').trim();
       const goal = (document.getElementById('pstudio-goal')?.value || 'Apoiar suas tarefas com clareza, organização e proatividade.').trim();
       const strict = document.getElementById('pstudio-privacy')?.value === 'strict_private';
+      const engine = document.getElementById('pstudio-engine')?.value || 'deterministic_scaffold';
 
       const privSection = strict
         ? `## 2. Privacidade Absoluta & Soberania de Dados\n- **Privacidade Absoluta (FACTO)**: Documentos sensíveis, dados pessoais, médicos ou financeiros **NUNCA** devem ser enviados para APIs externas do Free Tier.\n- Priorize modelos privados autenticados ou processamento 100% local via GPU/SLM do **Souls Engine**.`
         : `## 2. Governança de Contexto & Eficiência\n- Utilize as ferramentas locais do **Souls Engine** (\`127.0.0.1:9123/mcp\`) para buscar memórias relevantes e economizar contexto.\n- Antes de delegar subtarefas longas (\`delegate_task\`), consulte \`route_subtask\` para escolher o modelo ideal.`;
 
-      const md = `# SOUL.md — ${title}\n\n` +
+      let md = `# SOUL.md — ${title}\n\n` +
         `Você é **${title}**, um assistente dedicado e parceiro estratégico. Sua missão central: ${goal}\n\n` +
         `## 1. Postura & Diretrizes de Atuação\n` +
         `- Atuar com proatividade, clareza e foco prático nos resultados.\n` +
@@ -991,6 +1068,28 @@
       if (prevEl) {
         prevEl.value = md;
         prevEl.dispatchEvent(new Event('input'));
+      }
+
+      if (engine === 'local_silicon' && prevEl) {
+        try {
+          const res = await fetch('/api/v1/personas/refine-soul', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slug: slug || 'studio-draft',
+              current_soul: md,
+              instruction: `Enriquecer diretrizes para o objetivo: ${goal}`,
+              use_local_model: true
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'success' && data.content) {
+              prevEl.value = data.content;
+              prevEl.dispatchEvent(new Event('input'));
+            }
+          }
+        } catch (_) {}
       }
     }
 
@@ -1018,16 +1117,16 @@
       );
 
       if (filtered.length === 0) {
-        box.innerHTML = '<span style="color:#64748b; font-size:0.73rem;">Nenhuma skill correspondente.</span>';
+        box.innerHTML = '<span class="u-text-dark u-s-6444dd">Nenhuma skill correspondente.</span>';
         return;
       }
 
       box.innerHTML = filtered.slice(0, 40).map(s => {
         const active = personasHubState.studioSelectedSkills.has(s.slug);
-        const bg = active ? 'rgba(6,182,212,0.2)' : 'rgba(15,23,42,0.6)';
+        const bg = active ? 'rgba(6,182,212,0.2)' : 'rgba(17, 17, 19,0.6)';
         const border = active ? 'rgba(6,182,212,0.55)' : 'rgba(148,163,184,0.18)';
-        const col = active ? '#67e8f9' : '#cbd5e1';
-        return `<button type="button" onclick="toggleStudioPersonaSkill('${escPersonaHtml(s.slug)}')" title="${escPersonaHtml(s.description || '')}" style="padding:3px 8px; border-radius:999px; font-size:0.71rem; font-family:var(--font-mono); background:${bg}; border:1px solid ${border}; color:${col}; cursor:pointer;">${active ? '✓ ' : '+ '}${escPersonaHtml(s.slug)}</button>`;
+        const col = active ? '#67e8f9' : '#E4E4E7';
+        return `<button class="u-mono u-pointer u-s-d6ce2d" type="button" onclick="toggleStudioPersonaSkill('${escPersonaHtml(s.slug)}')" title="${escPersonaHtml(s.description || '')}" style="background:${bg}; border:1px solid ${border}; color:${col};">${active ? uiIcon('check', 'icon-xs') : uiIcon('plus', 'icon-xs')} ${escPersonaHtml(s.slug)}</button>`;
       }).join('');
     }
 
@@ -1157,11 +1256,11 @@
         if (tbody) {
           tbody.innerHTML = (data.config_comparison || []).map(row => {
             const diff = String(row.left) !== String(row.right);
-            const highlight = diff ? 'color:#fbbf24; font-weight:700;' : 'color:#cbd5e1;';
+            const highlight = diff ? 'color:#fbbf24; font-weight:700;' : 'color:#E4E4E7;';
             return `<tr>
-              <td style="color:#94a3b8;">${escPersonaHtml(row.label)}</td>
-              <td style="${highlight}">${escPersonaHtml(row.left)}</td>
-              <td style="${highlight}">${escPersonaHtml(row.right)}</td>
+              <td class="u-text-muted">${escPersonaHtml(row.label)}</td>
+              <td style="${highlight};">${escPersonaHtml(row.left)}</td>
+              <td style="${highlight};">${escPersonaHtml(row.right)}</td>
             </tr>`;
           }).join('');
         }
@@ -1185,17 +1284,17 @@
         if (data.status !== 'success') return;
         const hist = data.history || [];
         if (hist.length === 0) {
-          box.innerHTML = `<div style="color:#94a3b8;">"${escPersonaHtml(slug)}" ainda não possui alterações anteriores salvas neste histórico.</div>`;
+          box.innerHTML = `<div class="u-text-muted">"${escPersonaHtml(slug)}" ainda não possui alterações anteriores salvas neste histórico.</div>`;
           return;
         }
         box.innerHTML = hist.map(h => {
           const dt = h.timestamp_epoch ? new Date(h.timestamp_epoch * 1000).toLocaleString('pt-BR') : h.snapshot_id;
-          return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 9px; border-radius:6px; background:rgba(15,23,42,0.62); border:1px solid rgba(148,163,184,0.14);">
+          return `<div class="u-d-flex u-justify-between u-items-center u-gap-2 u-s-66b76c">
             <div>
-              <strong style="color:#e2e8f0;">${escPersonaHtml(h.target_file)}</strong>
-              <span style="color:#94a3b8; margin-left:6px;">${escPersonaHtml(dt)} (${escPersonaHtml(h.reason)})</span>
+              <strong class="u-text-slate-light">${escPersonaHtml(h.target_file)}</strong>
+              <span class="u-text-muted u-s-09f9b3">${escPersonaHtml(dt)} (${escPersonaHtml(h.reason)})</span>
             </div>
-            <button class="btn-action" style="padding:3px 9px; font-size:0.71rem;" onclick="rollbackPersonaSnapshot('${escPersonaHtml(slug)}', '${escPersonaHtml(h.snapshot_id)}')">⏪ Restaurar</button>
+            <button class="btn-action u-s-1f75c8" onclick="rollbackPersonaSnapshot('${escPersonaHtml(slug)}', '${escPersonaHtml(h.snapshot_id)}')">${uiIcon('history', 'icon-xs')} Restaurar</button>
           </div>`;
         }).join('');
       } catch (err) {
@@ -1208,15 +1307,15 @@
       if (!box) return;
       const list = personasHubState.archived || [];
       if (list.length === 0) {
-        box.innerHTML = '<div style="color:#64748b;">Nenhuma Persona arquivada no momento.</div>';
+        box.innerHTML = '<div class="u-text-dark">Nenhuma Persona arquivada no momento.</div>';
         return;
       }
-      box.innerHTML = list.map(a => `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; border-radius:7px; background:rgba(15,23,42,0.62); border:1px solid rgba(148,163,184,0.18);">
+      box.innerHTML = list.map(a => `<div class="u-d-flex u-justify-between u-items-center u-gap-10p u-s-930b91">
         <div>
-          <strong style="color:#f1f5f9;">${escPersonaHtml(a.display_title)} (${escPersonaHtml(a.slug)})</strong>
-          <div style="color:#94a3b8; font-size:0.72rem;">${escPersonaHtml(a.description || '')}</div>
+          <strong class="u-s-84c8c1">${escPersonaHtml(a.display_title)} (${escPersonaHtml(a.slug)})</strong>
+          <div class="u-text-muted u-s-dbc8d1">${escPersonaHtml(a.description || '')}</div>
         </div>
-        <button class="btn-action primary" style="padding:4px 10px; font-size:0.73rem;" onclick="restoreArchivedPersona('${escPersonaHtml(a.slug)}')">▶️ Reativar no Hermes</button>
+        <button class="btn-action primary u-s-42d134" onclick="restoreArchivedPersona('${escPersonaHtml(a.slug)}')">${uiIcon('play', 'icon-xs')} Reativar no Hermes</button>
       </div>`).join('');
     }
 
@@ -1226,7 +1325,7 @@
       const ok = window.appConfirm ? await window.appConfirm(
         `Deseja arquivar temporariamente a Persona "${slug}"?\n\n` +
         `Todas as conversas, configurações e memórias dela ficarão guardadas em segurança e você poderá reativá-la com 1 clique na aba "Histórico & Comparar".`,
-        { title: 'Arquivar Persona', icon: '📦', confirmText: 'Arquivar com Segurança' }
+        { title: 'Arquivar Persona', icon: 'archive', confirmText: 'Arquivar com Segurança' }
       ) : window.confirm(
         `Deseja arquivar temporariamente a Persona "${slug}"?\n\n` +
         `Todas as conversas, configurações e memórias dela ficarão guardadas em segurança e você poderá reativá-la com 1 clique na aba "Histórico & Comparar".`

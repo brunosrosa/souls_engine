@@ -807,14 +807,14 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
         ToolMeta {
             name: "cloud_champions",
             namespace: "ops",
-            description: "Consulta os modelos campeões da Fronteira de Pareto nos 5 perfis cognitivos (Coding, Agentic, Reasoning, Fast, Design).",
+            description: "Consulta os modelos campeões da Fronteira de Pareto nos 9 perfis cognitivos ADR-009 (Executive, Coding, Agentic, Reasoning, Fast, Design, Research, Security, Curation).",
             is_level_0: false,
             input_schema: || json!({
                 "type": "object",
                 "properties": {
                     "profile": {
                         "type": "string",
-                        "enum": ["all", "coding", "agentic", "reasoning", "fast", "design"],
+                        "enum": ["all", "executive", "coding", "agentic", "reasoning", "fast", "design", "research", "security", "curation"],
                         "default": "all",
                         "description": "Perfil de carga alvo para filtrar os campeões de nuvem."
                     },

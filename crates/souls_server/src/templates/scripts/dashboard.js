@@ -1,10 +1,39 @@
     // ESTADO GLOBAL DA APLICAÇÃO
     let activePreset = 'balanced';
-    let currentProfile = 'orchestrator';
+    let currentProfile = 'executive';
     let cloudChampionsData = [];
     let currentCloudProviderFilter = 'all';
     let cachedCloudRankedModels = [];
     window.currentHermesMasterModel = 'deepseek/deepseek-chat';
+
+    // HELPER CANÔNICO DE ÍCONES VETORIAIS SVG DUOTONE (v0.9.1-B)
+    const EMOJI_TO_ICON_MAP = {
+      '⚠️': 'alert-triangle', '⚠': 'alert-triangle', '✅': 'check-circle', '❌': 'x-circle', 'ℹ️': 'info',
+      '✏️': 'edit', '✏': 'edit', '🗑️': 'trash', '🗑': 'trash', '🔄': 'refresh', '⚡': 'zap',
+      '🧠': 'brain', '🛡️': 'shield', '🛡': 'shield', '✨': 'sparkles', '🔍': 'search', '🔎': 'search',
+      '🤖': 'bot', '💾': 'database', '💻': 'terminal', '🎯': 'target', '📦': 'archive',
+      '💡': 'lightbulb', '👁️': 'eye', '👁': 'eye', '👑': 'crown', '⚙️': 'settings', '⚙': 'settings',
+      '🚀': 'rocket', '📋': 'list', '🔒': 'lock', '⏳': 'clock', '🌐': 'globe', '⏱️': 'clock', '⏱': 'clock',
+      '🧩': 'puzzle', '🔀': 'git-branch', '🔌': 'plug', '📈': 'trending-up', '📉': 'trending-down',
+      '🎭': 'masks', '⚖️': 'scale', '💎': 'sparkles', '🎨': 'palette', '📄': 'file-text',
+      '⏸️': 'pause', '⏸': 'pause', '🩺': 'stethoscope', '📝': 'edit', '🏟️': 'trophy', '💰': 'dollar',
+      '📑': 'file-text', '🎮': 'gamepad', '📚': 'book', '🌡️': 'thermometer', '🌡': 'thermometer',
+      '📊': 'bar-chart', '⏪': 'history', '🧬': 'dna', '🧭': 'compass', '📥': 'inbox', '🧪': 'flask',
+      '🕸️': 'network', '🏆': 'trophy', '➕': 'plus', '🔬': 'microscope', '🏛️': 'layers', '📖': 'book',
+      '📜': 'file-text', '🧰': 'wrench', '⏹️': 'square', '▶️': 'play', '🛑': 'x-circle',
+      '📓': 'book', '📌': 'pin', '☁️': 'cloud', '🎛️': 'sliders', '🤔': 'brain', '🛠️': 'wrench',
+      '🖥️': 'cpu', '🧹': 'refresh', '🌟': 'sparkles', '📂': 'folder', '🌍': 'globe', '🔗': 'link',
+      '🔥': 'flame', '🔧': 'wrench', '🏷️': 'tag', '📍': 'pin', '🧮': 'cpu', '💥': 'zap',
+      '📡': 'radio', '🕒': 'clock', '🔑': 'key', '🎬': 'play', '🎙️': 'mic', '👤': 'users',
+      '🌿': 'seedling', '🌱': 'seedling', '💬': 'message-square', '🤝': 'users', '♻️': 'refresh',
+      '🪐': 'globe', '📅': 'calendar', '✂️': 'scissors', '📁': 'folder', '❓': 'info', '💸': 'dollar'
+    };
+
+    function uiIcon(name, cls = 'icon-sm') {
+      const resolved = EMOJI_TO_ICON_MAP[name] || name || 'info';
+      return `<svg class="ui-icon ${cls}" aria-hidden="true"><use href="#icon-${resolved}"></use></svg>`;
+    }
+    window.uiIcon = uiIcon;
 
     // SLIDERS COM FEEDBACK TÁTIL & SNAP MAGNÉTICO AO DEFAULT
     function initSlidersMagneticSnap() {
@@ -48,7 +77,7 @@
       });
     }
 
-    // NAVEGAÇÃO ENTRE ABAS
+    // NAVEGAÇÃO ENTRE ABAS (6 PILARES DE PRODUTO + SUBNAVS CONTEXTUAIS)
     function switchTab(tabId) {
       if (tabId === 'tab-cloud') {
         switchTab('tab-local');
@@ -57,12 +86,32 @@
       }
 
       document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn, .nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn, .nav-item, .pillar-subnav-btn').forEach(el => el.classList.remove('active'));
       
       const pane = document.getElementById(tabId);
-      const btn = document.querySelector(`.nav-item[data-tab="${tabId}"]`) || document.getElementById('btn-' + tabId);
       if (pane) pane.classList.add('active');
+
+      // Mapeamento de pilar para botão do topo (6 pilares canônicos)
+      let topBtnId = 'btn-' + tabId;
+      if (tabId === 'tab-subagents') topBtnId = 'btn-tab-personas';
+      if (tabId === 'tab-connections') topBtnId = 'btn-tab-settings';
+
+      const btn = document.querySelector(`.nav-item[data-tab="${tabId}"]`) || document.getElementById(topBtnId);
       if (btn) btn.classList.add('active');
+
+      // Sub-navegação contextual dos pilares compostos
+      const agentsSubnav = document.getElementById('pillar-subnav-agents');
+      const systemSubnav = document.getElementById('pillar-subnav-system');
+      if (agentsSubnav) {
+        agentsSubnav.classList.toggle('is-hidden', tabId !== 'tab-personas' && tabId !== 'tab-subagents');
+      }
+      if (systemSubnav) {
+        systemSubnav.classList.toggle('is-hidden', tabId !== 'tab-connections' && tabId !== 'tab-settings');
+      }
+      if (tabId === 'tab-personas') document.getElementById('btn-pillar-personas')?.classList.add('active');
+      if (tabId === 'tab-subagents') document.getElementById('btn-pillar-subagents')?.classList.add('active');
+      if (tabId === 'tab-connections') document.getElementById('btn-pillar-connections')?.classList.add('active');
+      if (tabId === 'tab-settings') document.getElementById('btn-pillar-settings')?.classList.add('active');
 
       if (window.location.hash !== '#' + tabId) {
         try { history.replaceState(null, '', '#' + tabId); } catch(e) {}
@@ -96,6 +145,9 @@
       } else if (tabId === 'tab-research') {
         if (typeof loadResearchHubMissions === 'function') {
           loadResearchHubMissions();
+        }
+        if (typeof loadResearchDoctorReport === 'function') {
+          loadResearchDoctorReport();
         }
       } else if (tabId === 'tab-connections') {
         if (typeof fetchConnectionsData === 'function') {
@@ -140,19 +192,19 @@
       el.dataset.msg = msg;
 
       const icons = {
-        success: '✅',
-        warning: '⚠️',
-        error: '❌',
-        info: 'ℹ️'
+        success: uiIcon('check-circle', 'icon-md'),
+        warning: uiIcon('alert-triangle', 'icon-md'),
+        error: uiIcon('x-circle', 'icon-md'),
+        info: uiIcon('info', 'icon-md')
       };
-      const icon = icons[type] || 'ℹ️';
+      const icon = icons[type] || uiIcon('info', 'icon-md');
 
       el.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">
-          <span style="font-size: 0.95rem; flex-shrink: 0;">${icon}</span>
-          <div style="font-weight: 500; line-height: 1.35; word-break: break-word;">${msg}</div>
+        <div class="toast-body-row">
+          <span class="toast-icon-wrap">${icon}</span>
+          <div class="toast-msg-text">${msg}</div>
         </div>
-        <button class="toast-close-btn" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 2px 6px; font-size: 0.85rem; line-height: 1; border-radius: 4px; margin-left: 8px;" title="Fechar aviso">✕</button>
+        <button class="toast-close-btn" title="Fechar aviso">${uiIcon('x', 'icon-xs')}</button>
       `;
 
       let timer = null;
@@ -194,7 +246,7 @@
         }
 
         if (titleEl) titleEl.textContent = options.title || 'Confirmar Ação';
-        if (iconEl) iconEl.textContent = options.icon || '⚠️';
+        if (iconEl) iconEl.innerHTML = uiIcon(options.icon || 'alert-triangle', 'icon-md');
         if (okBtn) {
           okBtn.textContent = options.confirmText || 'Confirmar';
           okBtn.className = options.danger ? 'btn btn-danger' : 'btn btn-primary';
@@ -232,7 +284,7 @@
         }
 
         if (titleEl) titleEl.textContent = options.title || 'Entrada Requerida';
-        if (iconEl) iconEl.textContent = options.icon || '✏️';
+        if (iconEl) iconEl.innerHTML = uiIcon(options.icon || 'edit', 'icon-md');
         if (submitBtn) submitBtn.textContent = options.submitText || 'Confirmar';
         if (msgEl) msgEl.textContent = message;
         inputEl.value = defaultValue || '';
@@ -274,22 +326,68 @@
     }
 
     // 1.1 PULSO DO ECOSSISTEMA PESSOAL & EVOLUÇÃO
-    async function fetchEcosystemPulse() {
+    async function fetchEcosystemPulse(isManual = false) {
+      if (window._isFetchingPulse) return;
+      window._isFetchingPulse = true;
+
+      const btn = isManual ? document.getElementById('btn-pulse-refresh') : null;
+      const kpiCards = isManual ? Array.from(document.querySelectorAll('#pulse-kpi-grid .stat-box')) : [];
+      const defaultBtnHtml = '<svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar';
+
+      if (isManual) {
+        if (window._pulseBtnResetTimer) {
+          clearTimeout(window._pulseBtnResetTimer);
+          window._pulseBtnResetTimer = null;
+        }
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.remove('is-synced');
+          btn.classList.add('is-syncing');
+          btn.innerHTML = '<svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Sincronizando...';
+        }
+        kpiCards.forEach(card => {
+          card.classList.remove('kpi-pulse-flash');
+          void card.offsetWidth;
+          card.classList.add('kpi-pulse-flash');
+        });
+      }
+
       try {
-        const res = await fetch('/api/v1/system/pulse');
-        if (!res.ok) return;
+        const minVisualDelay = isManual ? new Promise(resolve => setTimeout(resolve, 380)) : Promise.resolve();
+        const telemetryPromise = (isManual && typeof fetchTelemetry === 'function') ? fetchTelemetry() : Promise.resolve();
+        const [res] = await Promise.all([
+          fetch('/api/v1/system/pulse'),
+          telemetryPromise,
+          minVisualDelay
+        ]);
+
+        if (!res.ok) {
+          if (isManual) throw new Error(`HTTP ${res.status}`);
+          return;
+        }
         const data = await res.json();
-        if (data.status !== 'success' || !data.pulse) return;
+        if (data.status !== 'success' || !data.pulse) {
+          if (isManual) throw new Error('Invalid pulse payload');
+          return;
+        }
         const p = data.pulse;
 
         const badgeEl = document.getElementById('pulse-level-badge');
         if (badgeEl) badgeEl.textContent = p.evolution_level || 'Nível 2 — Curadoria';
 
         const scoreEl = document.getElementById('pulse-evolution-score');
-        if (scoreEl) scoreEl.textContent = `Score ${p.evolution_score}/100`;
+        if (scoreEl) {
+          scoreEl.textContent = `Score ${p.evolution_score}/100`;
+          if (p.evolution_breakdown) {
+            const b = p.evolution_breakdown;
+            const breakdownTitle = `Silício Local: ${b.silicon_pts}/25 (${b.local_models_installed} GGUFs, ${b.local_models_benchmarked} homologados) • Memória & Grafo L2: ${b.memory_graph_pts}/25 (${b.memories_stable} STABLE, ${b.ladybug_nodes} nós) • Obsidian & Pesquisas: ${b.obsidian_research_pts}/25 (${b.obsidian_wiki} wiki, ${p.completed_missions_count} missões) • Ecossistema: ${b.ecosystem_pts}/25 (${p.active_providers_count} provedores)`;
+            scoreEl.title = breakdownTitle;
+            if (scoreEl.parentElement) scoreEl.parentElement.title = breakdownTitle;
+          }
+        }
 
         const subEl = document.getElementById('pulse-evolution-sub');
-        if (subEl) subEl.textContent = p.evolution_level || 'Ecossistema Aumentado';
+        if (subEl) subEl.textContent = p.active_preset || p.evolution_level || 'Ecossistema Aumentado';
 
         const finopsEl = document.getElementById('pulse-finops-saved');
         if (finopsEl) finopsEl.textContent = `$${p.finops_savings_usd} USD`;
@@ -301,27 +399,70 @@
         if (entEl) entEl.textContent = `${p.sovereign_entities_count} Entidades / Fatos`;
 
         const hwEl = document.getElementById('pulse-hw-readiness');
-        if (hwEl) hwEl.textContent = p.hardware_readiness || 'Nominal';
+        if (hwEl) hwEl.textContent = p.hardware_readiness || 'Estável';
 
         const provEl = document.getElementById('pulse-providers-active');
         if (provEl) provEl.textContent = `${p.active_providers_count} Provedores Configurados`;
+
+        if (isManual) {
+          if (btn) {
+            btn.classList.remove('is-syncing');
+            btn.classList.add('is-synced');
+            btn.disabled = false;
+            btn.innerHTML = '<svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg> Atualizado';
+          }
+          if (typeof showToast === 'function') {
+            showToast('Pulso do ecossistema e telemetria sincronizados!', 'success');
+          }
+          window._pulseBtnResetTimer = setTimeout(() => {
+            if (btn) {
+              btn.classList.remove('is-synced');
+              btn.innerHTML = defaultBtnHtml;
+            }
+            kpiCards.forEach(c => c.classList.remove('kpi-pulse-flash'));
+            window._pulseBtnResetTimer = null;
+          }, 1400);
+        }
       } catch (err) {
         console.warn('Falha ao obter pulso do ecossistema:', err);
+        if (isManual) {
+          if (btn) {
+            btn.classList.remove('is-syncing', 'is-synced');
+            btn.disabled = false;
+            btn.innerHTML = defaultBtnHtml;
+          }
+          kpiCards.forEach(c => c.classList.remove('kpi-pulse-flash'));
+          if (typeof showToast === 'function') {
+            showToast('Não foi possível sincronizar o pulso do ecossistema.', 'warning');
+          }
+        }
+      } finally {
+        window._isFetchingPulse = false;
       }
     }
     window.fetchEcosystemPulse = fetchEcosystemPulse;
 
     function updateDashboardMetrics(data) {
-      // VRAM (WDDM limit vs physical 6144 MB)
+      // VRAM (WDDM usable ceiling vs physical GPU VRAM from NVML telemetry)
       if (data.vram_used_mb !== undefined) {
-        const limit = data.vram_limit_mb || 5294;
-        const total = data.vram_total_mb || 6144;
+        const total = data.vram_total_mb || 4096;
+        const limit = data.vram_limit_mb || Math.round(total * 0.86);
+        window.soulsTelemetryState = Object.assign(window.soulsTelemetryState || {}, {
+          vramTotalMb: total,
+          vramLimitMb: limit,
+          vramUsedMb: data.vram_used_mb,
+          gpuName: data.gpu_name || (window.soulsTelemetryState && window.soulsTelemetryState.gpuName) || 'dGPU Local',
+          cpuName: data.cpu_name || (window.soulsTelemetryState && window.soulsTelemetryState.cpuName) || 'Host CPU AVX2'
+        });
         const wddmPct = Math.round((data.vram_used_mb / limit) * 100);
         const barWidthPct = Math.min(100, Math.round((data.vram_used_mb / total) * 100));
         const markerLeftPct = Math.min(98, Math.round((limit / total) * 100));
 
         const pillVram = document.getElementById('pill-vram');
         if (pillVram) pillVram.innerText = (data.vram_used_mb / 1024).toFixed(2) + ' / ' + (limit / 1024).toFixed(2) + ' GB';
+
+        const vramGaugeLabel = document.getElementById('vram-gauge-label');
+        if (vramGaugeLabel) vramGaugeLabel.innerText = 'Alocação de VRAM sob WDDM (Físico ' + (total / 1024).toFixed(2) + ' GB)';
 
         const vramText = document.getElementById('vram-text');
         if (vramText) {
@@ -331,19 +472,51 @@
         if (vramBar) vramBar.style.width = barWidthPct + '%';
 
         const vramMarker = document.getElementById('vram-wddm-marker');
-        if (vramMarker) vramMarker.style.left = markerLeftPct + '%';
+        if (vramMarker) {
+          vramMarker.style.left = markerLeftPct + '%';
+          vramMarker.title = 'Teto Útil WDDM (' + (limit / 1024).toFixed(2) + ' GB / ' + limit + ' MB)';
+        }
 
         // Sub-aba Aceleração Local: VRAM & Telemetria
         const hwMetricVram = document.getElementById('hw-metric-vram');
         if (hwMetricVram) hwMetricVram.innerText = (data.vram_used_mb / 1024).toFixed(2) + ' / ' + (limit / 1024).toFixed(2) + ' GB';
+        const hwMetricVramSub = document.getElementById('hw-metric-vram-sub');
+        if (hwMetricVramSub) {
+          const wddmOverhead = Math.max(0, total - limit);
+          hwMetricVramSub.innerText = 'Teto WDDM: ' + limit.toLocaleString('pt-BR') + ' MB (' + wddmOverhead.toLocaleString('pt-BR') + ' MB SO)';
+        }
         const hwLiveVramText = document.getElementById('hw-live-vram-text');
         if (hwLiveVramText) hwLiveVramText.innerText = (data.vram_used_mb / 1024).toFixed(2) + ' GB / ' + (limit / 1024).toFixed(2) + ' GB (' + wddmPct + '%)';
         const hwLiveVramFill = document.getElementById('hw-live-vram-fill');
         if (hwLiveVramFill) hwLiveVramFill.style.width = barWidthPct + '%';
+        const hwLiveVramMarker = document.getElementById('hw-live-vram-marker');
+        if (hwLiveVramMarker) {
+          hwLiveVramMarker.style.left = markerLeftPct + '%';
+          hwLiveVramMarker.title = 'Teto Útil WDDM (' + limit.toLocaleString('pt-BR') + ' MB)';
+        }
+        const hwLiveVramLimit = document.getElementById('hw-live-vram-limit');
+        if (hwLiveVramLimit) hwLiveVramLimit.innerText = limit.toLocaleString('pt-BR') + ' MB';
         const hwLiveVramUsed = document.getElementById('hw-live-vram-used');
         if (hwLiveVramUsed) hwLiveVramUsed.innerText = data.vram_used_mb.toLocaleString('pt-BR') + ' MB';
         const hwLiveVramFree = document.getElementById('hw-live-vram-free');
-        if (hwLiveVramFree) hwLiveVramFree.innerText = Math.max(0, (data.vram_total_mb || 6144) - data.vram_used_mb).toLocaleString('pt-BR') + ' MB';
+        if (hwLiveVramFree) hwLiveVramFree.innerText = Math.max(0, total - data.vram_used_mb).toLocaleString('pt-BR') + ' MB';
+        const vramCfgSlider = document.getElementById('cfg-vram-limit');
+        if (vramCfgSlider) {
+          vramCfgSlider.max = String(total);
+          vramCfgSlider.dataset.default = String(limit);
+        }
+        const simVramInput = document.getElementById('sim-hw-vram-input');
+        if (simVramInput) simVramInput.max = String(total);
+        const finopsTooltipDef = document.getElementById('finops-tooltip-hw-def');
+        if (finopsTooltipDef) {
+          const gLabel = data.gpu_name || 'dGPU Local';
+          const cLabel = data.cpu_name || 'Host CPU AVX2';
+          finopsTooltipDef.innerText = 'dGPU: ' + gLabel + ' (' + total.toLocaleString('pt-BR') + ' MB) | Host: ' + cLabel + ' (0 MB VRAM)';
+        }
+        const routerSimZone = document.getElementById('router-sim-zone');
+        if (routerSimZone && (!routerSimZone.dataset.simCustom)) {
+          routerSimZone.innerText = 'Zona Segura WDDM (< ' + limit.toLocaleString('pt-BR') + ' MB)';
+        }
 
         // Composição da VRAM ativa (Processos & WDDM)
         const totalUsed = data.vram_used_mb || 1360;
@@ -363,6 +536,7 @@
       // Temperatura & Watchdog Zone
       if (data.gpu_temp_c !== undefined) {
         const temp = Number(data.gpu_temp_c);
+        window.soulsTelemetryState = Object.assign(window.soulsTelemetryState || {}, { gpuTempC: temp });
         const prevLimit = Number(data.gpu_temp_preventive_c || 72.0);
         const throttleLimit = Number(data.gpu_temp_throttle_c || 78.0);
 
@@ -439,11 +613,17 @@
       // Hardware Local: Subtítulo dinâmico GPU & CPU + RPM real dos Coolers (ATKACPI + NVML)
       if (data.gpu_name || data.cpu_name) {
         const hwSub = document.getElementById('hw-local-subtitle');
-        const gName = data.gpu_name || 'NVIDIA GeForce RTX 2060';
-        const cName = data.cpu_name || 'Intel Core i9 CPU';
+        const gName = data.gpu_name || 'dGPU Local Dedicada';
+        const cName = data.cpu_name || 'Host CPU AVX2';
         if (hwSub) hwSub.innerText = `${gName} • ${cName}`;
         const cpuSub = document.getElementById('cpu-name-sub');
         if (cpuSub && data.cpu_name) cpuSub.innerText = data.cpu_name;
+        const hwMetricCpu = document.getElementById('hw-metric-cpu');
+        if (hwMetricCpu && data.cpu_name) hwMetricCpu.innerText = data.cpu_name;
+        const hwFinopsCpuTitle = document.getElementById('hw-finops-cpu-title');
+        if (hwFinopsCpuTitle && data.cpu_name) {
+          hwFinopsCpuTitle.innerText = `${data.cpu_name}${data.cpu_threads ? ' (' + data.cpu_threads + ' threads)' : ''}`;
+        }
       }
 
       if (data.cpu_fan_rpm !== undefined || data.fan_speed !== undefined) {
@@ -493,6 +673,8 @@
       if (data.cpu_threads !== undefined) {
         const cEl = document.getElementById('cpu-threads');
         if (cEl) cEl.innerText = data.cpu_threads + 'T AVX2';
+        const hwThreadsSub = document.getElementById('hw-metric-cpu-threads-sub');
+        if (hwThreadsSub) hwThreadsSub.innerText = `${data.cpu_threads} Threads • Tier 0/0.5 (0 MB VRAM)`;
       }
 
       // Badges de Contagem nas Abas Superiores
@@ -503,7 +685,7 @@
       if (data.profiles_count !== undefined) {
         const bCloud = document.getElementById('badge-cloud-profiles-count');
         const pillCount = document.querySelectorAll('#profile-pill-container .profile-pill').length;
-        if (bCloud) bCloud.innerText = (pillCount > 0 ? pillCount : 6) + ' Perfis';
+        if (bCloud) bCloud.innerText = (pillCount > 0 ? pillCount : 9) + ' Perfis';
       }
 
       // FinOps & Eficiência E³ (com suporte a filtro Dia / Mês / Ano)
@@ -558,22 +740,36 @@
 
         const sizeBadge = document.getElementById('sqlite-vault-size-badge');
         if (sizeBadge && m3.sqlite_size_mb !== undefined) {
-          sizeBadge.innerText = `💾 Banco Z:\\ • ${Number(m3.sqlite_size_mb).toFixed(2)} MB`;
+          sizeBadge.innerHTML = `${uiIcon('database', 'icon-xs')} Cofre ReFS • ${Number(m3.sqlite_size_mb).toFixed(2)} MB`;
         }
 
         const snapBadge = document.getElementById('hero-snapshot-badge');
         if (snapBadge && m3.snapshot_id) {
-          snapBadge.innerText = `🔒 ${m3.snapshot_id.substring(0, 13)} (${(m3.memory_entries_count || 0) + (m3.user_entries_count || 0)} itens)`;
+          snapBadge.innerHTML = `${uiIcon('lock', 'icon-xs')} ${escapeHtml(m3.snapshot_id.substring(0, 13))} (${(m3.memory_entries_count || 0) + (m3.user_entries_count || 0)} itens)`;
         }
 
         const snapLine = document.getElementById('l3-snapshot-summary-line');
         if (snapLine && m3.snapshot_id) {
           const shortSha = (m3.composite_sha256 || '').substring(0, 10);
-          snapLine.innerHTML = `&bull; Snapshot: <code class="mono" style="color: var(--cyan);">${m3.snapshot_id}</code> (SHA <code class="mono">${shortSha}</code>)`;
+          snapLine.innerHTML = `&bull; Snapshot: <code class="mono u-text-cyan">${m3.snapshot_id}</code> (SHA <code class="mono">${shortSha}</code>)`;
         }
 
         const chkLbl = document.getElementById('l3-checkpoints-count-label');
         if (chkLbl) chkLbl.innerText = `${m3.checkpoints_count || 0} Checkpoints v2`;
+
+        // Hidratação dos KPIs da sub-aba Settings -> Memória L2/L3
+        const sStable = document.getElementById('metric-memory-stable');
+        if (sStable) sStable.innerText = `${m3.stable_count || 0} STABLE`;
+        const sEvolv = document.getElementById('metric-memory-evolving');
+        if (sEvolv) sEvolv.innerText = `${m3.evolving_count || 0} EVOLVING`;
+        const sTotal = document.getElementById('metric-memory-total-fatos');
+        if (sTotal) sTotal.innerText = `${(m3.stable_count || 0) + (m3.evolving_count || 0)} Fatos no FrankenSQLite`;
+        const sNodes = document.getElementById('metric-ladybug-nodes');
+        if (sNodes) sNodes.innerText = `${m3.ladybug_nodes || 0} Nós`;
+        const sEdges = document.getElementById('metric-ladybug-edges');
+        if (sEdges) sEdges.innerText = `${m3.ladybug_edges || 0} Arestas`;
+        const sSnapDisp = document.getElementById('snapshot-id-display');
+        if (sSnapDisp && m3.snapshot_id) sSnapDisp.innerText = m3.snapshot_id;
       } else if (data.ladybug_nodes !== undefined) {
         const lbEl = document.getElementById('ladybug-nodes');
         if (lbEl) lbEl.innerText = `${data.ladybug_nodes} nós`;
@@ -635,7 +831,7 @@
       }
     }
 
-    // 2. FETCH MATRIZ PREDITIVA DO INTEGRADOR (OVERVIEW)
+    // 2. FETCH MATRIZ PREDITIVA DO INTEGRADOR (OVERVIEW & SUBAGENTS)
     async function fetchRouterMatrix() {
       try {
         const res = await fetch('/api/v1/router/matrix');
@@ -644,15 +840,51 @@
           if (data.cpu_simd) {
             window.detectedCpuSimd = data.cpu_simd;
           }
+          window.cachedBareMetalEngines = data.bare_metal_engines || [];
+          window.cachedInstalledLocalModels = data.installed_local_models || [];
           const summaryBadge = document.getElementById('matrix-arena-summary-badge');
           if (summaryBadge && data.benchmarked_count !== undefined) {
             summaryBadge.innerText = `${data.benchmarked_count} Homologados • ${data.total_arena_runs || 0} Provas`;
           }
           renderRouterMatrix(data.matrix || []);
+          renderBareMetalEnginesStrip(window.cachedBareMetalEngines);
         }
       } catch (e) {
         console.warn("Falha ao carregar matriz do integrador", e);
       }
+    }
+
+    function renderBareMetalEnginesStrip(engines) {
+      const strip = document.getElementById('router-bare-metal-engines-strip');
+      if (!strip) return;
+      if (!engines || engines.length === 0) {
+        strip.innerHTML = '';
+        return;
+      }
+      strip.innerHTML = `
+        <div class="u-d-flex u-justify-between u-items-center u-mb-2 u-flex-wrap u-gap-2">
+          <span class="u-mono u-fw-700 u-text-muted u-uppercase u-s-fe2c9f">
+            ${uiIcon('cpu', 'icon-xs')} Motores Bare-Metal Determinísticos (0 Custo de Tokens / Execução Nativa Rust)
+          </span>
+          <span class="u-mono u-text-green u-s-3b4cd3">${engines.length} Subsistemas Ativos</span>
+        </div>
+        <div class="u-d-grid u-gap-3 u-s-ab1b65">
+          ${engines.map(eng => `
+            <div class="stat-box u-text-left" style="padding:10px 12px;">
+              <div class="u-d-flex u-items-center u-justify-between u-gap-2 u-mb-1">
+                <strong class="u-text-white u-d-flex u-items-center u-gap-6p u-s-d3bc8d">
+                  ${uiIcon(eng.icon || 'cpu', 'icon-xs')} ${escapeHtml(eng.name)}
+                </strong>
+              </div>
+              <div class="u-text-muted u-mono u-s-923ef2">${escapeHtml(eng.target)}</div>
+              <div class="u-d-flex u-justify-between u-items-center u-mt-2 u-s-923ef2">
+                <span class="u-text-cyan">${escapeHtml(eng.metric)}</span>
+                <span class="u-text-green u-fw-600">${escapeHtml(eng.status)}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
     }
 
     function renderRouterMatrix(matrix) {
@@ -660,8 +892,8 @@
       const tbody1 = document.getElementById('integrator-tbody');
       const tbody2 = document.getElementById('subagents-router-tbody');
       if (!matrix || matrix.length === 0) {
-        if (tbody1) tbody1.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma regra configurada.</td></tr>';
-        if (tbody2) tbody2.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma regra configurada.</td></tr>';
+        if (tbody1) tbody1.innerHTML = '<tr><td class="u-text-center u-text-muted" colspan="5">Nenhuma regra configurada.</td></tr>';
+        if (tbody2) tbody2.innerHTML = '<tr><td class="u-text-center u-text-muted" colspan="5">Nenhuma regra configurada.</td></tr>';
         return;
       }
 
@@ -679,65 +911,65 @@
         return `
         <tr>
           <!-- 1: DOMÍNIO COGNITIVO COM MAIOR ESPAÇO, ÍCONE E HIERARQUIA -->
-          <td style="vertical-align: top; padding: 12px 14px;">
-            <div style="font-weight: 700; color: #fff; font-size: 0.84rem; display: flex; align-items: center; gap: 8px; white-space: nowrap;">
-              <span style="font-size: 1.15rem;">${item.icon}</span>
+          <td class="u-s-61fcff">
+            <div class="u-fw-700 u-text-white u-d-flex u-items-center u-gap-2 u-nowrap u-s-849ec2">
+              <span class="u-d-inline-flex u-items-center u-s-ff0d51">${uiIcon(item.icon, 'icon-sm')}</span>
               <span>${item.category}</span>
             </div>
-            <div style="font-size: 0.73rem; color: #94a3b8; margin-top: 4px; line-height: 1.45;">${item.description}</div>
+            <div class="u-text-muted u-mt-1 u-s-14aac2">${item.description}</div>
           </td>
 
           <!-- 2: SILÍCIO LOCAL: LINHA 1 (MODELO + TROCAR), LINHA 2 (TARGET/ALOCAÇÃO), LINHA 3 DEDICADA P/ VELOCIDADE -->
-          <td style="vertical-align: top; padding: 12px 14px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
-              <div style="min-width: 0; flex: 1; overflow: hidden;">
+          <td class="u-s-61fcff">
+            <div class="u-d-flex u-items-center u-justify-between u-gap-2 u-mb-1">
+              <div class="u-min-w-0 u-flex-1 u-overflow-hidden">
                 ${formatModelDisplayName(localModel, true)}
               </div>
               <button class="btn-micro" onclick="openConfigureDomainModal('${item.id}', 'local')" title="Alterar modelo local padrão deste domínio">
                 Trocar
               </button>
             </div>
-            <div style="font-size: 0.69rem; color: var(--text-muted); line-height: 1.3;">
+            <div class="u-text-muted u-s-0a2dfa">
               ${item.local_default.target}
             </div>
-            <div style="font-size: 0.7rem; color: var(--green); font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-              <span style="color: #64748b; font-weight: normal;">Velocidade:</span> ${item.local_default.tps}
+            <div class="u-text-green u-fw-600 u-mt-1 u-d-flex u-items-center u-gap-1 u-s-cb8a8e">
+              <span class="u-text-dark u-s-10ba0c">Velocidade:</span> ${item.local_default.tps}
             </div>
           </td>
 
           <!-- 2: CLOUD FALLBACK: LINHA 1 (MODELO + TROCAR), LINHA 2 (ROTEAMENTO), LINHA 3 DEDICADA P/ TARIFA -->
-          <td style="vertical-align: top; padding: 12px 14px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
-              <div style="min-width: 0; flex: 1; overflow: hidden;">
+          <td class="u-s-61fcff">
+            <div class="u-d-flex u-items-center u-justify-between u-gap-2 u-mb-1">
+              <div class="u-min-w-0 u-flex-1 u-overflow-hidden">
                 ${formatModelDisplayName(cloudModel, false)}
               </div>
               <button class="btn-micro" onclick="openConfigureDomainModal('${item.id}', 'cloud')" title="Alterar modelo cloud fallback deste domínio">
                 Trocar
               </button>
             </div>
-            <div style="font-size: 0.69rem; color: var(--text-muted); line-height: 1.3;">
+            <div class="u-text-muted u-s-0a2dfa">
               ${item.cloud_fallback.provider}
             </div>
-            <div style="font-size: 0.7rem; color: var(--cyan); font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-              <span style="color: #64748b; font-weight: normal;">Tarifa:</span> ${item.cloud_fallback.cost}
+            <div class="u-text-cyan u-fw-600 u-mt-1 u-d-flex u-items-center u-gap-1 u-s-cb8a8e">
+              <span class="u-text-dark u-s-10ba0c">Tarifa:</span> ${item.cloud_fallback.cost}
             </div>
           </td>
 
           <!-- REGRA PARETO -->
-          <td style="vertical-align: top; padding: 12px 14px;">
-            <div style="font-size: 0.74rem; color: #cbd5e1; line-height: 1.45;">${paretoRule}</div>
+          <td class="u-s-61fcff">
+            <div class="u-text-slate u-s-fdae4f">${paretoRule}</div>
           </td>
 
           <!-- AÇÕES COM BOTÃO DE CONFIGURAÇÃO DIRETA -->
-          <td class="text-center" style="vertical-align: top; padding: 12px 10px;">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-              <span class="badge ${badgeClass}" style="width: 100%; justify-content: center; text-align: center;">${item.status}</span>
-              <div style="display: flex; gap: 4px; width: 100%; margin-top: 2px;">
-                <button class="btn" style="padding: 3px 6px; font-size: 0.68rem; border-radius: 5px; flex: 1; justify-content: center;" onclick="openConfigureDomainModal('${item.id}')" title="Configurar modelos local e cloud deste domínio">
-                  ⚙️ Ajustar
+          <td class="text-center u-s-c59a48">
+            <div class="u-d-flex u-flex-col u-items-center u-gap-6p">
+              <span class="badge ${badgeClass} u-w-full u-justify-center u-text-center">${item.status}</span>
+              <div class="u-d-flex u-gap-1 u-w-full u-mt-2p">
+                <button class="btn u-flex-1 u-justify-center u-s-fbea82" onclick="openConfigureDomainModal('${item.id}')" title="Configurar modelos local e cloud deste domínio">
+                  ${uiIcon('settings', 'icon-xs')} Ajustar
                 </button>
-                <button class="btn" style="padding: 3px 6px; font-size: 0.68rem; border-radius: 5px; flex: 1; justify-content: center;" onclick="switchTab('tab-local'); testModelInArena('${localModel}')" title="Aferir este modelo local na Silicon Arena">
-                  🏟️ Aferir
+                <button class="btn u-flex-1 u-justify-center u-s-fbea82" onclick="switchTab('tab-local'); testModelInArena('${localModel}')" title="Aferir este modelo local na Silicon Arena">
+                  ${uiIcon('trophy', 'icon-xs')} Aferir
                 </button>
               </div>
             </div>
@@ -755,7 +987,7 @@
     // 3. FETCH LOCAL SILICON ARENA (llm_local)
     async function fetchLocalModels() {
       const tbody = document.getElementById('local-arena-tbody');
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Consultando pesos físicos GGUF...</td></tr>';
+      tbody.innerHTML = '<tr><td class="u-text-center u-text-muted" colspan="9">Consultando pesos físicos GGUF...</td></tr>';
       
       try {
         const res = await fetch('/api/v1/models/local');
@@ -776,7 +1008,7 @@
           }
         }
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--red);">Erro ao carregar modelos locais.</td></tr>';
+        tbody.innerHTML = '<tr><td class="u-text-center u-text-red" colspan="9">Erro ao carregar modelos locais.</td></tr>';
       }
     }
 
@@ -902,12 +1134,12 @@
         const badgeLabel = isCpu ? `CPU ${cpuSimd}` : 'dGPU';
         const badgeClass = isCpu ? 'cpu' : 'local';
         return `
-          <div class="model-id-box" style="display: flex; flex-direction: column; gap: 2px;">
-            <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+          <div class="model-id-box u-d-flex u-flex-col u-s-43638e">
+            <div class="u-d-flex u-items-center u-gap-6p u-nowrap">
               <span class="model-brand-pill ${badgeClass}">${badgeLabel}</span>
-              <span class="model-name-text" title="${canonicalId}" style="font-weight: 600; color: #fff;">${friendlyName}</span>
+              <span class="model-name-text u-fw-600 u-text-white" title="${canonicalId}">${friendlyName}</span>
             </div>
-            <div class="mono" style="font-size: 0.66rem; color: var(--text-muted);">${canonicalId}</div>
+            <div class="mono u-text-muted u-s-fa7df8">${canonicalId}</div>
           </div>
         `;
       }
@@ -915,22 +1147,22 @@
       if (slashIdx !== -1) {
         const brand = canonicalId.substring(0, slashIdx).toUpperCase();
         return `
-          <div class="model-id-box" style="display: flex; flex-direction: column; gap: 2px;">
-            <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+          <div class="model-id-box u-d-flex u-flex-col u-s-43638e">
+            <div class="u-d-flex u-items-center u-gap-6p u-nowrap">
               <span class="model-brand-pill">${brand}</span>
-              <span class="model-name-text" title="${canonicalId}" style="font-weight: 600; color: #fff;">${friendlyName}</span>
+              <span class="model-name-text u-fw-600 u-text-white" title="${canonicalId}">${friendlyName}</span>
             </div>
-            <div class="mono" style="font-size: 0.66rem; color: var(--text-muted);">${canonicalId}</div>
+            <div class="mono u-text-muted u-s-fa7df8">${canonicalId}</div>
           </div>
         `;
       }
       return `
-        <div class="model-id-box" style="display: flex; flex-direction: column; gap: 2px;">
-          <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+        <div class="model-id-box u-d-flex u-flex-col u-s-43638e">
+          <div class="u-d-flex u-items-center u-gap-6p u-nowrap">
             <span class="model-brand-pill">CLOUD</span>
-            <span class="model-name-text" title="${canonicalId}" style="font-weight: 600; color: #fff;">${friendlyName}</span>
+            <span class="model-name-text u-fw-600 u-text-white" title="${canonicalId}">${friendlyName}</span>
           </div>
-          <div class="mono" style="font-size: 0.66rem; color: var(--text-muted);">${canonicalId}</div>
+          <div class="mono u-text-muted u-s-fa7df8">${canonicalId}</div>
         </div>
       `;
     }
@@ -955,7 +1187,7 @@
         let opts = '';
         if (profilesData && profilesData.length > 0) {
           opts = profilesData.map(p => `
-            <option value="${p.id}">${p.name} (${p.role === 'orchestrator' ? '👑 Master' : '🤖 Subagente'})</option>
+            <option value="${p.id}">${p.name} (${p.role === 'orchestrator' ? 'Master' : 'Subagente'})</option>
           `).join('');
         } else {
           opts = '<option value="custom_subagent">Subagente Customizado (Default)</option>';
@@ -998,10 +1230,34 @@
         try {
           const overrides = JSON.parse(localStorage.getItem('souls_domain_overrides') || '{}');
           if (!overrides[domId]) overrides[domId] = {};
-          overrides[domId].cloud_model = quickApplyTargetModel;
-          overrides[domId].cloud_provider = quickApplyTargetProvider;
+          if (quickApplyIsLocal) {
+            overrides[domId].local_model = quickApplyTargetModel;
+          } else {
+            overrides[domId].cloud_model = quickApplyTargetModel;
+            overrides[domId].cloud_provider = quickApplyTargetProvider;
+          }
           localStorage.setItem('souls_domain_overrides', JSON.stringify(overrides));
-          showToast(`✅ Modelo ${quickApplyTargetModel} atribuído ao subagente de [${domId.toUpperCase()}]!`, 'green');
+
+          // Also persist to souls_config.toml via /api/v1/profiles
+          const matrixItem = (window.cachedRouterMatrix || []).find(m => m.id === domId || m.arena_category === domId);
+          const profId = domId === 'agentic'
+            ? 'agentic_dispatcher'
+            : ((matrixItem && matrixItem.profile_id) || `domain_${domId}`);
+          await fetch('/api/v1/profiles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: profId,
+              name: (matrixItem && matrixItem.category) || domId,
+              description: (matrixItem && matrixItem.description) || `Domínio ${domId}`,
+              role: domId === 'executive' ? 'orchestrator' : 'subagent',
+              arena_category: domId,
+              target_model: quickApplyTargetModel,
+              provider: quickApplyIsLocal ? 'local_silicon' : quickApplyTargetProvider
+            })
+          });
+          if (typeof fetchRouterMatrix === 'function') await fetchRouterMatrix();
+          showToast(`Modelo ${quickApplyTargetModel} atribuído e salvo para [${domId.toUpperCase()}]!`, 'green');
         } catch(e) {
           showToast(`Erro ao salvar domínio: ${e.message}`, 'red');
         }
@@ -1031,56 +1287,20 @@
     }
 
     function renderTierBadge(tier) {
-      if (!tier) return '<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.4); font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); padding: 3px 8px; border-radius: 9999px;">Tier 1</span>';
+      if (!tier) return '<span class="u-mono u-text-muted" style="font-size:0.72rem;">Tier 1</span>';
       const t = tier.trim();
       const lower = t.toLowerCase();
-      
-      let bg = 'rgba(139, 92, 246, 0.18)';
-      let color = '#c084fc';
-      let border = 'rgba(168, 85, 247, 0.5)';
       let subtitle = 'Master Coder';
-      
-      if (lower.includes('tier 0.5') || lower.includes('tier 05')) {
-        // Tier 0.5: Epistemic & Intent Probing (Emerald / Mint)
-        bg = 'rgba(16, 185, 129, 0.16)';
-        color = '#34d399';
-        border = 'rgba(16, 185, 129, 0.45)';
-        subtitle = 'Epistemic Probing';
-      } else if (lower.includes('tier 0')) {
-        // Tier 0: Fast Triage / Bootstrap SLM (Sky Cyan)
-        bg = 'rgba(6, 182, 212, 0.16)';
-        color = '#38bdf8';
-        border = 'rgba(6, 182, 212, 0.45)';
-        subtitle = 'Fast Triage';
-      } else if (lower.includes('tier 1')) {
-        // Tier 1: Master dGPU Coder (Violet / Purple)
-        bg = 'rgba(139, 92, 246, 0.18)';
-        color = '#c084fc';
-        border = 'rgba(168, 85, 247, 0.5)';
-        subtitle = 'Master dGPU';
-      } else if (lower.includes('tier 2')) {
-        // Tier 2: MoE Offload CPU (Amber / Gold)
-        bg = 'rgba(245, 158, 11, 0.16)';
-        color = '#fbbf24';
-        border = 'rgba(245, 158, 11, 0.45)';
-        subtitle = 'MoE Deep Reasoning';
-      } else if (lower.includes('tier 3')) {
-        // Tier 3: Vision VLM (Rose / Coral)
-        bg = 'rgba(244, 63, 94, 0.16)';
-        color = '#fb7185';
-        border = 'rgba(244, 63, 94, 0.45)';
-        subtitle = 'Vision / VLM';
-      } else if (lower.includes('tier 4')) {
-        // Tier 4: Speculative Draft (Electric Blue)
-        bg = 'rgba(59, 130, 246, 0.16)';
-        color = '#60a5fa';
-        border = 'rgba(59, 130, 246, 0.45)';
-        subtitle = 'Speculative Draft';
-      }
+      if (lower.includes('tier 0.5') || lower.includes('tier 05')) subtitle = 'Epistemic Probing';
+      else if (lower.includes('tier 0')) subtitle = 'Fast Triage';
+      else if (lower.includes('tier 1')) subtitle = 'Master dGPU';
+      else if (lower.includes('tier 2')) subtitle = 'MoE Offload';
+      else if (lower.includes('tier 3')) subtitle = 'Vision';
+      else if (lower.includes('tier 4')) subtitle = 'Draft';
       return `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-          <span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); padding: 2px 7px; border-radius: 9999px;">${t}</span>
-          <span style="font-size: 0.58rem; color: ${color}; opacity: 0.9; white-space: nowrap; font-weight: 600; letter-spacing: 0.02em;">${subtitle}</span>
+        <div class="u-d-flex u-flex-col u-items-center u-s-43638e">
+          <span class="badge u-fw-600 u-mono">${t}</span>
+          <span class="u-nowrap u-text-muted" style="font-size:0.66rem;">${subtitle}</span>
         </div>
       `;
     }
@@ -1088,7 +1308,7 @@
     function renderTierBadges(m) {
       const tiers = (m.tiers && m.tiers.length > 0) ? m.tiers : (m.tier ? [m.tier] : ['Tier 1']);
       return `
-        <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center;">
+        <div class="u-d-flex u-flex-col u-gap-1 u-items-center u-justify-center">
           ${tiers.map(t => renderTierBadge(t)).join('')}
         </div>
       `;
@@ -1107,58 +1327,16 @@
         navigator.clipboard.writeText(snippet).then(() => {
           showToast("Configuração MCP copiada para a área de transferência!");
         }).catch(() => {
-          appPrompt("Copie a configuração MCP abaixo:", snippet, { title: "Configuração MCP", icon: "📋" });
+          appPrompt("Copie a configuração MCP abaixo:", snippet, { title: "Configuração MCP", icon: "list" });
         });
       } else {
-        appPrompt("Copie a configuração MCP abaixo:", snippet, { title: "Configuração MCP", icon: "📋" });
+        appPrompt("Copie a configuração MCP abaixo:", snippet, { title: "Configuração MCP", icon: "list" });
       }
     }
 
     function renderTagBadge(tag) {
       if (!tag) return '';
-      const t = tag.trim().toLowerCase();
-      let bg = 'rgba(148, 163, 184, 0.12)';
-      let color = '#94a3b8';
-      let border = 'rgba(148, 163, 184, 0.25)';
-
-      // 1. Código, AST & Sintaxe (Roxo / Violeta)
-      if (t.includes('code') || t.includes('rust') || t.includes('ast') || t.includes('syntax') || t.includes('refactor') || t.includes('image_to_code')) {
-        bg = 'rgba(139, 92, 246, 0.16)';
-        color = '#c084fc';
-        border = 'rgba(168, 85, 247, 0.4)';
-      }
-      // 2. Ferramentas, Protocolos & Schemas (Ciano / Azul Céu)
-      else if (t.includes('tool') || t.includes('mcp') || t.includes('json') || t.includes('schema') || t.includes('agentic') || t.includes('function') || t.includes('fc') || t.includes('ui_inspection')) {
-        bg = 'rgba(6, 182, 212, 0.16)';
-        color = '#38bdf8';
-        border = 'rgba(6, 182, 212, 0.4)';
-      }
-      // 3. Raciocínio Profundo, CoT & Prova (Índigo / Safira)
-      else if (t.includes('reason') || t.includes('cot') || t.includes('logic') || t.includes('math') || t.includes('thinking') || t.includes('socratic')) {
-        bg = 'rgba(99, 102, 241, 0.16)';
-        color = '#818cf8';
-        border = 'rgba(99, 102, 241, 0.4)';
-      }
-      // 4. Triagem Rápida, Hardware & Silício (Esmeralda / Menta)
-      else if (t.includes('triage') || t.includes('fast') || t.includes('avx') || t.includes('cpu') || t.includes('dgpu') || t.includes('bootstrap') || t.includes('intent') || t.includes('guardrail')) {
-        bg = 'rgba(16, 185, 129, 0.16)';
-        color = '#34d399';
-        border = 'rgba(16, 185, 129, 0.4)';
-      }
-      // 5. Visão, VLM & Multimodal (Rosa / Framboesa)
-      else if (t.includes('vision') || t.includes('vlm') || t.includes('multi') || t.includes('image') || t.includes('ocr')) {
-        bg = 'rgba(244, 63, 94, 0.16)';
-        color = '#fb7185';
-        border = 'rgba(244, 63, 94, 0.4)';
-      }
-      // 6. Especulativo / Drafter (Âmbar / Laranja)
-      else if (t.includes('draft') || t.includes('speculative') || t.includes('mtp')) {
-        bg = 'rgba(245, 158, 11, 0.16)';
-        color = '#f59e0b';
-        border = 'rgba(245, 158, 11, 0.4)';
-      }
-
-      return `<span class="badge" style="background: ${bg}; color: ${color}; border: 1px solid ${border}; font-size: 0.64rem; padding: 2px 6px; border-radius: 4px; line-height: 1.2; font-weight: 500; margin: 0;">${tag}</span>`;
+      return `<span class="u-text-muted u-mono" style="font-size:0.68rem;">#${tag.trim()}</span>`;
     }
 
     function resolveAgenticProfile(m) {
@@ -1167,30 +1345,30 @@
       const name = `${m.model || ''} ${m.name || ''} ${(m.tags || []).join(' ')}`.toLowerCase();
 
       if (t.includes('tier 3') || name.includes('vl') || name.includes('vision') || name.includes('multimodal')) {
-        return { icon: '👁️', title: 'Multimodal Vision', color: '#fb7185' };
+        return { icon: 'eye', title: 'Multimodal Vision', color: '#fb7185' };
       }
       if ((name.includes('agentic') && name.includes('coder')) || (name.includes('coder') && name.includes('tool'))) {
-        return { icon: '💻', title: 'Agentic Coder', color: '#34d399' };
+        return { icon: 'code', title: 'Agentic Coder', color: '#34d399' };
       }
       if (name.includes('function') || name.includes('tool') || name.includes('fc') || name.includes('xlam')) {
-        return { icon: '🛠️', title: 'Tool Specialist', color: '#38bdf8' };
+        return { icon: 'wrench', title: 'Tool Specialist', color: '#38bdf8' };
       }
       if (name.includes('mtp') || t.includes('tier 4') || name.includes('draft')) {
-        return { icon: '🚀', title: 'Speculative Draft', color: '#60a5fa' };
+        return { icon: 'rocket', title: 'Speculative Draft', color: '#60a5fa' };
       }
       if (name.includes('reasoning') || name.includes('r1') || t.includes('tier 0.5') || name.includes('socratic')) {
-        return { icon: '🔍', title: 'Intent Probing', color: '#34d399' };
+        return { icon: 'search', title: 'Intent Probing', color: '#34d399' };
       }
       if (t.includes('tier 0') || name.includes('135m')) {
-        return { icon: '⚡', title: 'Fast Triage', color: '#38bdf8' };
+        return { icon: 'zap', title: 'Fast Triage', color: '#38bdf8' };
       }
       if (name.includes('coder') || name.includes('code') || name.includes('temper')) {
-        return { icon: '🤖', title: 'Code Surgeon', color: '#c084fc' };
+        return { icon: 'bot', title: 'Code Surgeon', color: '#c084fc' };
       }
       if (name.includes('hermes') || name.includes('nemotron')) {
-        return { icon: '👑', title: 'Master Candidate', color: '#fbbf24' };
+        return { icon: 'crown', title: 'Master Candidate', color: '#fbbf24' };
       }
-      return { icon: '🤖', title: 'General Subagent', color: '#94a3b8' };
+      return { icon: 'bot', title: 'General Subagent', color: '#A1A1AA' };
     }
 
     function sortLocalModels(key) {
@@ -1220,7 +1398,7 @@
     function renderLocalTable(models) {
       const tbody = document.getElementById('local-arena-tbody');
       if (!models || models.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo físico encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="13">Nenhum modelo físico encontrado.</td></tr>';
         return;
       }
 
@@ -1288,18 +1466,18 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="13">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
         return;
       }
 
       tbody.innerHTML = filtered.map(m => {
-        const tagsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 3px 5px; max-width: 160px; align-items: center;">` +
+        const tagsHtml = `<div class="u-d-flex u-flex-wrap u-items-center u-s-4c5172">` +
           (m.tags || []).map(t => renderTagBadge(t)).join('') +
           `</div>`;
         const isGpu = m.target && m.target.includes('dGPU');
-        const statusBadge = isGpu 
-          ? '<span class="badge badge-champion" style="font-size: 0.70rem; padding: 3px 8px; white-space: nowrap;">🎮 dGPU (RTX 2060m)</span>' 
-          : '<span class="badge badge-value" style="font-size: 0.70rem; padding: 3px 8px; white-space: nowrap;">⚡ Host CPU (AVX2)</span>';
+        const statusBadge = isGpu
+          ? `<span class="badge badge-champion u-nowrap u-s-263c8b">${uiIcon('gamepad', 'icon-xs')} dGPU (${escapeHtml((window.soulsTelemetryState && window.soulsTelemetryState.gpuName) || 'Local')})</span>`
+          : `<span class="badge badge-value u-nowrap u-s-263c8b">${uiIcon('zap', 'icon-xs')} Host CPU (AVX2)</span>`;
         const sizeMb = m.size_mb ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(2) + ' GB' : m.size_mb.toFixed(0) + ' MB') : '--';
         const modelId = m.model || m.name;
         const rowSlug = (modelId || '').toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -1307,51 +1485,52 @@
         // Perfil Agêntico
         const prof = resolveAgenticProfile(m);
         const profileHtml = `
-          <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
-            <span style="font-size: 0.85rem;">${prof.icon}</span>
-            <span style="font-size: 0.74rem; font-weight: 600; color: ${prof.color};">${prof.title}</span>
+          <div class="u-d-flex u-items-center u-gap-6p u-nowrap">
+            <span class="u-d-inline-flex u-items-center u-s-933a8e">${uiIcon(prof.icon, 'icon-sm')}</span>
+            <span class="u-fw-600 u-s-d3bc8d" style="color: ${prof.color};">${prof.title}</span>
           </div>
         `;
 
         // Capacidades do Modelo (VLM, Code, Reasoning, Chat)
         const caps = m.capabilities || ['chat'];
-        let capsHtml = '<div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center;">';
+        let capsHtml = '<div class="u-d-flex u-gap-1 u-flex-wrap u-justify-center u-items-center">';
         if (m.has_mmproj || caps.includes('vision')) {
-          capsHtml += '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); font-size: 0.65rem; padding: 2px 5px;" title="Suporta Visão Multimodal com projetor mmproj">👁️ VLM</span>';
+          capsHtml += `<span class="badge u-text-cyan u-s-339d3b" title="Suporta Visão Multimodal com projetor mmproj">${uiIcon('eye', 'icon-xs')} VLM</span>`;
         }
         if (caps.includes('code')) {
-          capsHtml += '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.65rem; padding: 2px 5px;" title="Especialista em Código & AST">💻 Code</span>';
+          capsHtml += `<span class="badge u-text-emerald u-s-6a81bf" title="Especialista em Código & AST">${uiIcon('code', 'icon-xs')} Code</span>`;
         }
         if (caps.includes('reasoning')) {
-          capsHtml += '<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.65rem; padding: 2px 5px;" title="Raciocínio Lógico & CoT">🧠 CoT</span>';
+          capsHtml += `<span class="badge u-s-d8176c" title="Raciocínio Lógico & CoT">${uiIcon('brain', 'icon-xs')} CoT</span>`;
         }
         if (caps.length === 1 && caps[0] === 'chat') {
-          capsHtml += '<span class="badge" style="background: rgba(148, 163, 184, 0.12); color: #cbd5e1; font-size: 0.65rem; padding: 2px 5px;" title="Conversacional Geral">💬 Chat</span>';
+          capsHtml += `<span class="badge u-text-slate u-s-e4c8ed" title="Conversacional Geral">${uiIcon('message-square', 'icon-xs')} Chat</span>`;
         }
         capsHtml += '</div>';
 
-        // VRAM & Margem WDDM (teto 5.17 GB)
+        // VRAM & Margem WDDM (teto dinâmico via NVML)
         let vramHtml = '';
         if (isGpu) {
           const vramGb = m.size_mb ? (m.size_mb / 1024).toFixed(1) : '0';
-          const headroom = Math.max(0, (5.17 - (m.size_mb / 1024))).toFixed(1);
+          const vramLimitGb = (window.soulsTelemetryState && window.soulsTelemetryState.vramLimitMb) ? (window.soulsTelemetryState.vramLimitMb / 1024) : 4.0;
+          const headroom = Math.max(0, (vramLimitGb - (m.size_mb / 1024))).toFixed(1);
           let folgaColor = '#34d399';
-          let folgaLabel = `🟢 Folga ${headroom} GB`;
+          let folgaLabel = `${uiIcon('check-circle', 'icon-xs')} Folga ${headroom} GB`;
           if (headroom < 0.6) {
             folgaColor = '#ef4444';
-            folgaLabel = `🔴 Folga ${headroom} GB (Risco)`;
+            folgaLabel = `${uiIcon('alert-triangle', 'icon-xs')} Folga ${headroom} GB (Risco)`;
           } else if (headroom < 1.2) {
             folgaColor = '#fbbf24';
-            folgaLabel = `🟡 Folga ${headroom} GB`;
+            folgaLabel = `${uiIcon('info', 'icon-xs')} Folga ${headroom} GB`;
           }
           vramHtml = `
-            <div class="mono text-center" style="color: var(--cyan); font-weight: 600; font-size: 0.78rem;">${vramGb} GB</div>
-            <div style="font-size: 0.62rem; color: ${folgaColor}; margin-top: 2px; white-space: nowrap; font-weight: 500;">${folgaLabel}</div>
+            <div class="mono text-center u-text-cyan u-fw-600 u-s-a768c1">${vramGb} GB</div>
+            <div class="u-mt-2p u-nowrap u-fw-500 u-s-f6a7a6" style="color: ${folgaColor};">${folgaLabel}</div>
           `;
         } else {
           vramHtml = `
-            <div class="mono text-center" style="color: var(--text-muted); font-size: 0.78rem;">0 MB</div>
-            <div style="font-size: 0.62rem; color: var(--green); margin-top: 2px; white-space: nowrap; font-weight: 500;">⚡ Host RAM</div>
+            <div class="mono text-center u-text-muted u-s-a768c1">0 MB</div>
+            <div class="u-text-green u-mt-2p u-nowrap u-fw-500 u-s-f6a7a6">${uiIcon('zap', 'icon-xs')} Host RAM</div>
           `;
         }
 
@@ -1361,18 +1540,20 @@
           const ttftStr = m.ttft_ms ? `${m.ttft_ms.toFixed(0)}ms` : '--';
           const tpotStr = m.tpot_ms ? `${m.tpot_ms.toFixed(0)}ms` : (m.tps > 0 ? (1000 / m.tps).toFixed(0) + 'ms' : '--');
           speedHtml = `
-            <div class="mono text-center" style="color: var(--green); font-weight: 600; font-size: 0.76rem;">⚡ ${m.tps.toFixed(1)} tok/s</div>
-            <div style="font-size: 0.62rem; color: var(--text-muted); margin-top: 2px;" title="TTFT: Tempo de resposta inicial • TPOT: Tempo por token gerado">
-              TTFT: <strong style="color: var(--cyan);">${ttftStr}</strong> <span style="color: rgba(255,255,255,0.2);">•</span> TPOT: <strong style="color: #cbd5e1;">${tpotStr}</strong>
+            <div class="mono text-center u-text-green u-fw-600 u-s-c79ecd">${uiIcon('zap', 'icon-xs')} ${m.tps.toFixed(1)} tok/s</div>
+            <div class="u-text-muted u-mt-2p u-s-f6a7a6" title="TTFT: Tempo de resposta inicial • TPOT: Tempo por token gerado">
+              TTFT: <strong class="u-text-cyan">${ttftStr}</strong> <span class="u-s-815433">•</span> TPOT: <strong class="u-text-slate">${tpotStr}</strong>
             </div>
           `;
         } else {
-          const approxTps = isGpu ? (m.size_mb > 3000 ? '28~45' : '45~75') : '90~150';
+          const estVal = (m.estimated_tps && Number(m.estimated_tps) > 0)
+            ? Number(m.estimated_tps).toFixed(1)
+            : (isGpu ? '42.0' : '24.0');
           speedHtml = `
-            <div style="font-size: 0.68rem; color: var(--text-muted); text-align: center;">~${approxTps} tok/s</div>
-            <div style="text-align: center; margin-top: 2px;">
-              <button class="btn" style="padding: 1px 7px; font-size: 0.62rem; border-radius: 4px; border-color: rgba(6, 182, 212, 0.3); color: var(--cyan); white-space: nowrap;" onclick="testModelInArena('${modelId}')" title="Aferir velocidade real na Local Silicon Arena">
-                Aferir 🏟️
+            <div class="u-text-muted u-text-center u-s-923ef2" title="Estimativa física calculada pela largura de banda do hardware vs tamanho da quantização">~${estVal} tok/s <span class="u-text-dark">(Est. Banda)</span></div>
+            <div class="u-text-center u-mt-2p">
+              <button class="btn u-text-cyan u-nowrap u-s-129880" onclick="testModelInArena('${modelId}')" title="Aferir velocidade real na Local Silicon Arena">
+                Aferir ${uiIcon('trophy', 'icon-xs')}
               </button>
             </div>
           `;
@@ -1384,17 +1565,17 @@
           const dateTitle = m.last_benchmarked_at ? `Último ensaio: ${m.last_benchmarked_at}` : 'Aferido no silício';
           e3Html = `
             <div class="text-center" title="${dateTitle} • Eficiência E³: ${m.e3_score.toFixed(1)}">
-              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.70rem; font-weight: 700;">
-                ⚡ ${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)} E³
+              <span class="badge u-fw-700 u-s-7ab53a">
+                ${uiIcon('zap', 'icon-xs')} ${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)} E³
               </span>
-              <div style="font-size: 0.60rem; color: var(--emerald); margin-top: 2px; font-weight: 600;">✓ Homologado</div>
+              <div class="u-text-green u-mt-2p u-fw-600 u-s-778b43">${uiIcon('check-circle', 'icon-xs')} Homologado</div>
             </div>
           `;
         } else {
           e3Html = `
             <div class="text-center">
-              <span class="badge" style="background: rgba(234, 179, 8, 0.12); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.25); font-size: 0.68rem;" title="Execute a prova na Silicon Arena para calcular a eficiência física e homologar o modelo.">
-                ⏳ Pendente
+              <span class="badge u-s-eccd6d" title="Execute a prova na Silicon Arena para calcular a eficiência física e homologar o modelo.">
+                ${uiIcon('clock', 'icon-xs')} Pendente
               </span>
             </div>
           `;
@@ -1403,76 +1584,164 @@
         // Freshness ("Há X dias")
         const freshnessLabel = m.freshness || 'Hoje';
         const freshnessHtml = `
-          <div class="text-center" style="font-size: 0.72rem; color: #cbd5e1; white-space: nowrap;">
-            📅 ${freshnessLabel}
+          <div class="text-center u-text-slate u-nowrap u-s-dbc8d1">
+            ${uiIcon('calendar', 'icon-xs')} ${freshnessLabel}
           </div>
         `;
 
+        const rawFileName = m.filename || ((m.file_path || '').split(/[\\/]/).pop()) || modelId;
+        const safeFileArg = String(rawFileName).replace(/'/g, "\\'");
+        const safeDisplayArg = String(m.name || modelId).replace(/'/g, "\\'");
         return `
           <tr id="local-row-${rowSlug}" data-model-id="${modelId}">
             <td>
               ${formatModelDisplayName(modelId, true)}
-              <div style="font-size: 0.65rem; color: var(--text-muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${m.file_path || ''}">
+              <div class="u-text-muted u-overflow-hidden u-nowrap u-mt-2p u-s-25de43" title="${m.file_path || ''}">
                 ${m.file_path || ''}
               </div>
             </td>
-            <td class="text-center" style="vertical-align: middle;">
-              <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
-                <button class="btn-apply-model local-btn" style="padding: 3px 6px; font-size: 0.68rem;" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
-                  <span>⚡</span> Usar
+            <td class="text-center u-s-da57c5">
+              <div class="u-d-flex u-gap-1 u-justify-center u-items-center">
+                <button class="btn-apply-model local-btn u-s-96e357" onclick="openQuickApplyModal('${modelId}', 'local_silicon', true)" title="Aplicar este modelo local no Hermes">
+                  ${uiIcon('zap', 'icon-sm')} Usar
                 </button>
-                <button class="btn" style="padding: 3px 6px; font-size: 0.68rem; border-radius: 5px; white-space: nowrap;" onclick="testModelInArena('${modelId}')" title="Aferir este modelo na Local Silicon Arena">
-                  <span>🏟️</span> Aferir
+                <button class="btn u-nowrap u-s-fbea82" onclick="testModelInArena('${modelId}')" title="Aferir este modelo na Local Silicon Arena">
+                  ${uiIcon('trophy', 'icon-sm')} Aferir
+                </button>
+                <button class="btn u-text-red u-nowrap u-s-fbea82" onclick="deletePhysicalLocalModel('${safeFileArg}', '${safeDisplayArg}')" title="Excluir arquivo GGUF do disco e liberar espaço">
+                  ${uiIcon('trash', 'icon-sm')}
                 </button>
               </div>
             </td>
-            <td class="text-center" style="vertical-align: middle;">${renderTierBadges(m)}</td>
-            <td style="vertical-align: middle;">${profileHtml}</td>
-            <td class="text-center" style="vertical-align: middle;">${capsHtml}</td>
-            <td class="mono text-center" style="white-space: nowrap; vertical-align: middle;">${sizeMb} <span style="color: var(--cyan); margin: 0 4px; font-weight: bold; font-size: 0.85rem;">•</span> <strong style="color: #fff;">${m.quantization || 'Q4_K_M'}</strong></td>
-            <td class="text-center" style="vertical-align: middle;">${vramHtml}</td>
-            <td class="text-center" style="vertical-align: middle;">${speedHtml}</td>
-            <td class="text-center" style="vertical-align: middle;">${e3Html}</td>
-            <td class="mono text-center" style="vertical-align: middle;">${(m.context_window || 8192).toLocaleString()}</td>
-            <td style="vertical-align: middle;">${tagsHtml}</td>
-            <td style="vertical-align: middle;">${freshnessHtml}</td>
-            <td class="text-center" style="vertical-align: middle;">${statusBadge}</td>
+            <td class="text-center u-s-da57c5">${renderTierBadges(m)}</td>
+            <td class="u-s-da57c5">${profileHtml}</td>
+            <td class="text-center u-s-da57c5">${capsHtml}</td>
+            <td class="mono text-center u-nowrap u-s-da57c5">${sizeMb} <span class="u-text-cyan u-fw-700 u-s-a50fcb">•</span> <strong class="u-text-white">${m.quantization || 'Q4_K_M'}</strong></td>
+            <td class="text-center u-s-da57c5">${vramHtml}</td>
+            <td class="text-center u-s-da57c5">${speedHtml}</td>
+            <td class="text-center u-s-da57c5">${e3Html}</td>
+            <td class="mono text-center u-s-da57c5">${(m.context_window || 8192).toLocaleString()}</td>
+            <td class="u-s-da57c5">${tagsHtml}</td>
+            <td class="u-s-da57c5">${freshnessHtml}</td>
+            <td class="text-center u-s-da57c5">${statusBadge}</td>
           </tr>
         `;
       }).join('');
     }
 
-    // Correspondência inteligente com modelos reais baixados em disco
-    function findInstalledModelMatch(targetFileName, repoId = '', modelName = '') {
+    async function deletePhysicalLocalModel(filename, displayName) {
+      if (!filename) return;
+      const confirmed = await appConfirm(
+        `Deseja remover permanentemente o arquivo GGUF "${filename}" do disco para liberar espaço?\n\nEsta ação apaga os pesos físicos de ${displayName || filename}.`,
+        {
+          title: 'Excluir Modelo GGUF do Disco',
+          icon: 'trash',
+          confirmText: 'Excluir Arquivo GGUF',
+          danger: true
+        }
+      );
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch(`/api/v1/inventory/models/${encodeURIComponent(filename)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (res.ok && (data.status === 'deleted' || data.status === 'success')) {
+          showToast(`Modelo "${filename}" removido do disco com sucesso!`, 'success');
+          await fetchLocalModels();
+          if (typeof fetchModelHubRecommendations === 'function') fetchModelHubRecommendations();
+        } else {
+          showToast(`Não foi possível excluir "${filename}": ${data.message || 'erro desconhecido'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Erro de rede ao excluir modelo: ${err.message}`, 'error');
+      }
+    }
+    window.deletePhysicalLocalModel = deletePhysicalLocalModel;
+
+    function extractQuantTagFromName(str) {
+      if (!str) return '';
+      const low = str.toLowerCase().replace(/-/g, '_');
+      const tags = [
+        'iq4_xs', 'iq4_nl', 'q4_k_l', 'q4_k_m', 'q4_k_s', 'q4_0', 'q4_1',
+        'q5_k_l', 'q5_k_m', 'q5_k_s', 'q5_0', 'q5_1',
+        'q6_k_l', 'q6_k', 'q8_0', 'q8_1',
+        'iq3_m', 'iq3_xs', 'q3_k_l', 'q3_k_m', 'q3_k_s',
+        'q2_k', 'fp16', 'bf16', 'f16'
+      ];
+      for (const t of tags) {
+        if (low.includes(t)) return t.toUpperCase();
+      }
+      return '';
+    }
+
+    function stripQuantFromNameStem(str) {
+      if (!str) return '';
+      let s = str.toLowerCase().replace(/\.(gguf|bin)$/i, '').replace(/[-.]/g, '_');
+      const markers = [
+        '_iq4_xs', '_iq4_nl', '_q4_k_l', '_q4_k_m', '_q4_k_s', '_q4_0', '_q4_1',
+        '_q5_k_l', '_q5_k_m', '_q5_k_s', '_q5_0', '_q5_1',
+        '_q6_k_l', '_q6_k', '_q8_0', '_q8_1',
+        '_iq3_m', '_iq3_xs', '_q3_k_l', '_q3_k_m', '_q3_k_s',
+        '_q2_k', '_fp16', '_bf16', '_f16', '_imatrix', '_i1'
+      ];
+      for (const mk of markers) {
+        const idx = s.indexOf(mk);
+        if (idx !== -1) s = s.slice(0, idx) + s.slice(idx + mk.length);
+      }
+      return s.replace(/_/g, '');
+    }
+
+    function findArenaMatchForHubModel(model, activeFile, variantFile) {
+      if (!arenaModelsData || arenaModelsData.length === 0) return null;
+      return arenaModelsData.find(am =>
+        (am.file_name && (
+          (variantFile && am.file_name.toLowerCase() === variantFile.toLowerCase()) ||
+          (activeFile && (am.file_name.toLowerCase() === activeFile.toLowerCase() || activeFile.toLowerCase().includes(am.file_name.toLowerCase())))
+        )) ||
+        (am.name && model && model.model_name && (
+          am.name.toLowerCase() === model.model_name.toLowerCase() ||
+          stripQuantFromNameStem(am.file_name || '') === stripQuantFromNameStem(variantFile || model.local_file_path || '')
+        ))
+      ) || null;
+    }
+
+    // Correspondência estrita com modelos reais baixados em disco (respeitando quantização)
+    function findInstalledModelMatch(targetFileName, repoId = '', modelName = '', requiredQuantTag = '') {
       if (!localModelsList || localModelsList.length === 0) return null;
       const targetLower = (targetFileName || '').toLowerCase().replace(/\.gguf$/, '');
-      const repoLower = (repoId || '').toLowerCase();
-      const nameLower = (modelName || '').toLowerCase();
+      const targetQuant = (requiredQuantTag || extractQuantTagFromName(targetFileName)).toUpperCase();
+      const targetBase = stripQuantFromNameStem(targetFileName);
 
       for (const m of localModelsList) {
         const filePath = m.file_path || '';
         const realFileName = filePath.split(/[\\/]/).pop() || m.model || m.name || '';
         const fnLower = realFileName.toLowerCase().replace(/\.gguf$/, '');
-        const modelLower = (m.model || m.name || '').toLowerCase();
+        const mQuant = (m.quantization && m.quantization !== 'UNKNOWN'
+          ? m.quantization
+          : extractQuantTagFromName(realFileName)).toUpperCase();
 
-        // 1. Match exato de nome de arquivo GGUF
-        if (targetLower && fnLower === targetLower) return { ...m, realFileName };
+        // 1. Match exato de nome de arquivo GGUF (sempre soberano)
+        if (targetLower && fnLower === targetLower) {
+          return { ...m, realFileName };
+        }
 
-        // 2. Match de Stem & Quantização idênticos (ex: qwen2.5-coder-0.5b / q4_k_m)
+        // 2. Match de Stem limpo + igualdade estrita de quantização
         if (targetLower && fnLower) {
           const cleanTarget = targetLower.replace(/[-_.]/g, '');
           const cleanFn = fnLower.replace(/[-_.]/g, '');
-          if (cleanTarget === cleanFn || cleanFn.includes(cleanTarget) || cleanTarget.includes(cleanFn)) {
+          if (cleanTarget === cleanFn) {
             return { ...m, realFileName };
           }
-        }
-
-        // 3. Match por família de modelo
-        if (nameLower && modelLower) {
-          const cleanName = nameLower.replace(/[^a-z0-9]/g, '');
-          const cleanModel = modelLower.replace(/[^a-z0-9]/g, '');
-          if (cleanName.length > 5 && cleanModel.length > 5 && (cleanName.includes(cleanModel) || cleanModel.includes(cleanName))) {
-            return { ...m, realFileName };
+          const fnBase = stripQuantFromNameStem(realFileName);
+          if (targetBase.length >= 6 && fnBase.length >= 6 && (fnBase === targetBase || fnBase.includes(targetBase) || targetBase.includes(fnBase))) {
+            const quantMatches = !targetQuant
+              || mQuant === targetQuant
+              || (!mQuant && targetQuant === 'Q4_K_M');
+            if (quantMatches) {
+              return { ...m, realFileName };
+            }
           }
         }
       }
@@ -1559,39 +1828,40 @@
       if (previewTitle) {
         const isBench = model.status === 'BENCHMARKED';
         const tpsStr = model.latest_tps ? ` (${model.latest_tps.toFixed(1)} tok/s)` : '';
-        previewTitle.innerHTML = `<strong>${model.name}</strong> • <span style="color: ${isBench ? 'var(--emerald)' : '#facc15'};">${isBench ? '✅ Homologado' + tpsStr : '⏳ Pendente de Aferição'}</span>`;
+        previewTitle.innerHTML = `<strong>${model.name}</strong> • <span style="color: ${isBench ? 'var(--emerald)' : '#facc15'};">${isBench ? uiIcon('check-circle', 'icon-xs') + ' Homologado' + tpsStr : uiIcon('clock', 'icon-xs') + ' Pendente de Aferição'}</span>`;
       }
       if (previewSub) {
         const sizeGb = (model.size_mb / 1024).toFixed(1);
         const isGpu = model.size_mb < 5120;
-        const targetStr = isGpu ? '🎮 dGPU NVIDIA RTX 2060m (CUDA)' : '⚡ Host CPU (AVX2)';
-        const vramFree = Math.max(0, 5.17 - (model.size_mb / 1024)).toFixed(1);
+        const targetStr = isGpu ? 'dGPU Dedicada (CUDA)' : 'Host CPU (AVX2)';
+        const vramLimitGb = (window.soulsTelemetryState && window.soulsTelemetryState.vramLimitMb) ? (window.soulsTelemetryState.vramLimitMb / 1024) : 4.0;
+        const vramFree = Math.max(0, vramLimitGb - (model.size_mb / 1024)).toFixed(1);
         previewSub.innerText = `${model.quantization || 'GGUF'} • ${sizeGb} GB • Silício Ideal: ${targetStr} • Folga WDDM: ~${vramFree} GB`;
       }
 
       if (pillsContainer) {
         let pillsHtml = '';
         if (model.has_mmproj) {
-          pillsHtml += '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); font-size: 0.70rem;">👁️ Visão Multimodal (mmproj ✅)</span>';
+          pillsHtml += `<span class="badge u-text-cyan u-s-945e20">${uiIcon('eye', 'icon-xs')} Visão Multimodal (mmproj ${uiIcon('check-circle', 'icon-xs')})</span>`;
         } else {
-          pillsHtml += '<span class="badge" style="background: rgba(148, 163, 184, 0.1); color: #94a3b8; font-size: 0.70rem;">📝 LLM Texto Puro</span>';
+          pillsHtml += `<span class="badge u-text-muted u-s-5ade7a">${uiIcon('file-text', 'icon-xs')} LLM Texto Puro</span>`;
         }
         if ((model.name || '').toLowerCase().includes('coder') || (model.model_id || '').toLowerCase().includes('coder')) {
-          pillsHtml += '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.70rem;">💻 Code & AST</span>';
+          pillsHtml += `<span class="badge u-text-emerald u-s-7de9d2">${uiIcon('code', 'icon-xs')} Code & AST</span>`;
         }
         if ((model.name || '').toLowerCase().includes('reasoning') || (model.tier || '').includes('0')) {
-          pillsHtml += '<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.70rem;">🧠 Raciocínio CoT</span>';
+          pillsHtml += `<span class="badge u-s-5f9dc5">${uiIcon('brain', 'icon-xs')} Raciocínio CoT</span>`;
         }
         const sInfo = model.speculative_info;
         if (sInfo) {
           if (sInfo.status === 'PairedAvailable') {
-            pillsHtml += `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.70rem;" title="${escapeHtml(sInfo.reason || '')}">⚡ Par Draft: ${escapeHtml(sInfo.companion_id || '0.5B')}</span>`;
+            pillsHtml += `<span class="badge u-text-emerald u-s-705c98" title="${escapeHtml(sInfo.reason || '')}">${uiIcon('zap', 'icon-xs')} Par Draft: ${escapeHtml(sInfo.companion_id || '0.5B')}</span>`;
           } else if (sInfo.status === 'NativeMtp') {
-            pillsHtml += `<span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 0.70rem;" title="${escapeHtml(sInfo.reason || '')}">⚡ MTP Embutido</span>`;
+            pillsHtml += `<span class="badge u-s-762314" title="${escapeHtml(sInfo.reason || '')}">${uiIcon('zap', 'icon-xs')} MTP Embutido</span>`;
           } else if (sInfo.status === 'Sub1bExempt') {
-            pillsHtml += `<span class="badge" style="background: rgba(100, 116, 139, 0.2); color: #94a3b8; font-size: 0.70rem;" title="${escapeHtml(sInfo.reason || '')}">⚡ Sub-1B (Isento)</span>`;
+            pillsHtml += `<span class="badge u-text-muted u-s-f3a75f" title="${escapeHtml(sInfo.reason || '')}">${uiIcon('zap', 'icon-xs')} Sub-1B (Isento)</span>`;
           } else if (sInfo.status === 'CompanionMissing') {
-            pillsHtml += `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 0.70rem;" title="${escapeHtml(sInfo.reason || '')}">⚡ Par Draft Ausente</span>`;
+            pillsHtml += `<span class="badge u-s-8bb761" title="${escapeHtml(sInfo.reason || '')}">${uiIcon('zap', 'icon-xs')} Par Draft Ausente</span>`;
           }
         }
         pillsContainer.innerHTML = pillsHtml;
@@ -1603,11 +1873,11 @@
       if (typeSelect && optVlm) {
         if (model.has_mmproj) {
           optVlm.disabled = false;
-          optVlm.innerText = '👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj ✅)';
+          optVlm.innerText = 'Visão Multimodal (Pareamento de Projetor VLM mmproj - Ativo)';
           optVlm.style.color = 'var(--cyan)';
         } else {
           optVlm.disabled = true;
-          optVlm.innerText = '👁️ Visão Multimodal (Indisponível: sem projetor mmproj)';
+          optVlm.innerText = 'Visão Multimodal (Indisponível: sem projetor mmproj)';
           optVlm.style.color = 'var(--text-muted)';
           if (typeSelect.value === '3') {
             typeSelect.value = '1';
@@ -1620,21 +1890,21 @@
         const sInfo = model.speculative_info;
         if (sInfo && sInfo.status === 'PairedAvailable') {
           optSpec.disabled = false;
-          optSpec.innerText = `🚀 Aceleração Especulativa (⚡ Par Ativo: ${sInfo.companion_id || 'Draft'})`;
+          optSpec.innerText = `Aceleração Especulativa (Par Ativo: ${sInfo.companion_id || 'Draft'})`;
           optSpec.style.color = 'var(--emerald)';
         } else if (sInfo && sInfo.status === 'NativeMtp') {
           optSpec.disabled = false;
-          optSpec.innerText = '🚀 Aceleração Especulativa (⚡ MTP Nativo Embutido)';
+          optSpec.innerText = 'Aceleração Especulativa (MTP Nativo Embutido)';
           optSpec.style.color = '#c084fc';
         } else if (sInfo && sInfo.status === 'Sub1bExempt') {
           optSpec.disabled = true;
-          optSpec.innerText = '🚀 Aceleração Especulativa (Indisponível: Modelos < 1B já operam no limite do silício)';
+          optSpec.innerText = 'Aceleração Especulativa (Indisponível: Modelos < 1B já operam no limite do silício)';
           optSpec.style.color = 'var(--text-muted)';
           if (typeSelect.value === '4') typeSelect.value = '1';
         } else {
           optSpec.disabled = true;
           const recStr = sInfo?.recommended_companion ? ` - ex: ${sInfo.recommended_companion}` : '';
-          optSpec.innerText = `🚀 Aceleração Especulativa (Requer par draft no disco${recStr})`;
+          optSpec.innerText = `Aceleração Especulativa (Requer par draft no disco${recStr})`;
           optSpec.style.color = 'var(--text-muted)';
           if (typeSelect.value === '4') typeSelect.value = '1';
         }
@@ -1680,17 +1950,17 @@
           el.style.borderColor = 'rgba(16, 185, 129, 0.5)';
           if (labelEl) {
             labelEl.style.color = 'var(--emerald)';
-            labelEl.innerText = 'FASE ' + i + ' ✓';
+            labelEl.innerHTML = 'FASE ' + i + ' ' + uiIcon('check-circle', 'icon-xs');
           }
         } else if (i === stepNumber) {
           el.style.background = 'rgba(6, 182, 212, 0.2)';
           el.style.borderColor = 'var(--cyan)';
           if (labelEl) {
             labelEl.style.color = 'var(--cyan)';
-            labelEl.innerText = 'FASE ' + i + ' ⏳';
+            labelEl.innerHTML = 'FASE ' + i + ' ' + uiIcon('clock', 'icon-xs');
           }
         } else {
-          el.style.background = 'rgba(15, 23, 42, 0.5)';
+          el.style.background = 'rgba(17, 17, 19, 0.5)';
           el.style.borderColor = 'rgba(255, 255, 255, 0.08)';
           if (labelEl) {
             labelEl.style.color = 'var(--text-muted)';
@@ -1729,14 +1999,14 @@
         totalTests += tests.length;
 
         const isGpu = m.size_mb < 5120;
-        const targetStr = isGpu ? '🎮 dGPU' : '⚡ CPU';
+        const targetStr = isGpu ? `${uiIcon('gamepad', 'icon-xs')} dGPU` : `${uiIcon('zap', 'icon-xs')} CPU`;
         listHtml += `
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-            <div style="font-size: 0.74rem; font-weight: 600; color: #fff; min-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              ${idx + 1}. ${escapeHtml(m.name)} <span style="font-size: 0.65rem; color: var(--text-muted);">(${targetStr})</span>
+          <div class="u-d-flex u-justify-between u-items-center u-gap-2 u-s-4ec25a">
+            <div class="u-fw-600 u-text-white u-overflow-hidden u-nowrap u-s-fcf835">
+              ${idx + 1}. ${escapeHtml(m.name)} <span class="u-text-muted u-s-3b4cd3">(${targetStr})</span>
             </div>
-            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-              ${tests.map(t => `<span class="badge" style="font-size: 0.65rem; padding: 2px 6px; background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.3);">${t}</span>`).join('')}
+            <div class="u-d-flex u-gap-1 u-flex-wrap">
+              ${tests.map(t => `<span class="badge u-text-cyan u-s-fb1661">${t}</span>`).join('')}
             </div>
           </div>
         `;
@@ -1753,7 +2023,7 @@
       if (isBatchBenchmarkRunning) {
         const ok = await appConfirm('A homologação sequencial está em andamento. Deseja realmente interromper e fechar?', {
           title: 'Interromper Homologação',
-          icon: '⏹️',
+          icon: 'square',
           confirmText: 'Sim, Interromper',
           danger: true
         });
@@ -1771,7 +2041,7 @@
       const cancelBtn = document.getElementById('btn-cancel-batch-benchmark');
       if (cancelBtn) {
         cancelBtn.disabled = true;
-        cancelBtn.innerText = '⏹️ Interrompendo...';
+        cancelBtn.innerHTML = `${uiIcon('square', 'icon-xs')} Interrompendo...`;
       }
       appendBatchLog('[AVISO] Sinal de cancelamento recebido. Finalizando ensaio atual...');
     }
@@ -1780,7 +2050,7 @@
       const logsEl = document.getElementById('arena-batch-logs');
       if (!logsEl) return;
       const now = new Date().toLocaleTimeString();
-      logsEl.innerHTML += `<div><span style="color: var(--text-muted);">${now}</span> ${escapeHtml(text)}</div>`;
+      logsEl.innerHTML += `<div><span class="u-text-muted">${now}</span> ${escapeHtml(text)}</div>`;
       logsEl.scrollTop = logsEl.scrollHeight;
     }
 
@@ -1802,7 +2072,7 @@
       if (cancelBtn) {
         cancelBtn.style.display = 'inline-block';
         cancelBtn.disabled = false;
-        cancelBtn.innerText = '⏹️ Interromper Fila';
+        cancelBtn.innerHTML = `${uiIcon('square', 'icon-xs')} Interromper Fila`;
       }
       if (closeBtn) closeBtn.disabled = true;
       if (progressSec) progressSec.style.display = 'block';
@@ -1853,7 +2123,7 @@
 
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            appendBatchLog(`  ❌ Erro: ${err.message || res.statusText}`);
+            appendBatchLog(`  [ERRO] ${err.message || res.statusText}`);
           } else {
             const data = await res.json();
             const metrics = data.metrics || {};
@@ -1862,11 +2132,11 @@
             if (metrics.ttft_ms) metricSummary += ` | TTFT: ${metrics.ttft_ms.toFixed(0)}ms`;
             if (metrics.speedup_ratio) metricSummary += `Speedup: ${metrics.speedup_ratio.toFixed(2)}x`;
             if (metrics.cognitive_score) metricSummary += `Score: ${metrics.cognitive_score.toFixed(1)}`;
-            appendBatchLog(`  ✅ Concluído! [${metricSummary || 'Auditado'}]`);
+            appendBatchLog(`  [OK] Concluído! [${metricSummary || 'Auditado'}]`);
             completedCount++;
           }
         } catch (err) {
-          appendBatchLog(`  ❌ Falha de rede/execução: ${err.message}`);
+          appendBatchLog(`  [FALHA] Falha de rede/execução: ${err.message}`);
         }
 
         // Delay between physical allocations to guarantee WDDM VRAM garbage collection
@@ -1886,7 +2156,7 @@
       isBatchBenchmarkRunning = false;
       if (startBtn) {
         startBtn.style.display = 'inline-block';
-        startBtn.innerText = '🔄 Re-executar Homologação Completa';
+        startBtn.innerHTML = `${uiIcon('refresh', 'icon-xs')} Re-executar Homologação Completa`;
       }
       if (cancelBtn) cancelBtn.style.display = 'none';
       if (closeBtn) closeBtn.disabled = false;
@@ -1977,7 +2247,7 @@
               badgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
               badgeEl.style.color = 'var(--emerald)';
             } else {
-              badgeEl.innerText = `${count} ⚠️`;
+              badgeEl.innerHTML = `${count} ${uiIcon('alert-triangle', 'icon-xs')}`;
               badgeEl.style.background = 'rgba(245, 158, 11, 0.2)';
               badgeEl.style.color = 'var(--amber)';
             }
@@ -1992,7 +2262,7 @@
             if (sectionEl) sectionEl.style.display = 'none';
           } else {
             if (statusEl) {
-              statusEl.innerText = `⚠️ ${count} Modelo(s) em Quarentena`;
+              statusEl.innerHTML = `${uiIcon('alert-triangle', 'icon-xs')} ${count} Modelo(s) em Quarentena`;
               statusEl.style.color = 'var(--amber)';
             }
             if (detailEl) detailEl.innerText = 'Desvio automático ativo para o próximo modelo da Fronteira de Pareto.';
@@ -2000,12 +2270,12 @@
             if (tbodyEl) {
               tbodyEl.innerHTML = (data.active_quarantines || []).map(q => `
                 <tr>
-                  <td><code class="mono" style="color: var(--amber); font-weight: bold;">${q.model_id}</code></td>
-                  <td><span class="chip chip-amber" style="font-size: 0.72rem;">${q.incident}</span></td>
+                  <td><code class="mono u-text-amber u-fw-700">${q.model_id}</code></td>
+                  <td><span class="chip chip-amber u-s-dbc8d1">${q.incident}</span></td>
                   <td>${q.remaining_secs}s restantes</td>
                   <td>
-                    <button class="btn btn-sm btn-cyan" onclick="resetFallbackQuarantines('${q.model_id}')" style="padding: 2px 8px; font-size: 0.72rem;">
-                      <span>🔄</span> Resetar
+                    <button class="btn btn-sm btn-cyan u-s-d2340c" onclick="resetFallbackQuarantines('${q.model_id}')">
+                      ${uiIcon('refresh', 'icon-sm')} Resetar
                     </button>
                   </td>
                 </tr>
@@ -2020,7 +2290,7 @@
 
     async function resetFallbackQuarantines(modelId) {
       try {
-        const resp = await fetch('/api/v1/router/quarantines/reset', {
+        const resp = await fetch('/api/v1/router/quarantines', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ model_id: modelId || 'all' })
@@ -2044,23 +2314,23 @@
         const gridEl = document.getElementById('fallback-providers-grid');
         if (data.status === 'success' && gridEl) {
           gridEl.innerHTML = (data.providers || []).map(p => `
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="u-d-flex u-flex-col u-justify-between u-s-ffbb36">
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <strong style="color: var(--text-normal); font-size: 0.88rem;">${p.name}</strong>
-                  <span class="chip chip-cyan" style="font-size: 0.70rem;">${p.tier}</span>
+                <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+                  <strong class="u-s-5b3e83">${p.name}</strong>
+                  <span class="chip chip-cyan u-s-6262d0">${p.tier}</span>
                 </div>
-                <div style="font-size: 0.74rem; color: var(--text-muted); margin-bottom: 8px;">
-                  Modelos: <span style="color: var(--text-normal);">${(p.models || []).join(', ')}</span>
+                <div class="u-text-muted u-mb-2 u-s-d3bc8d">
+                  Modelos: <span class="u-s-058a53">${(p.models || []).join(', ')}</span>
                 </div>
-                <div style="background: rgba(6, 182, 212, 0.08); padding: 8px; border-radius: 6px; font-size: 0.72rem; color: var(--cyan); margin-bottom: 6px;">
-                  💡 <strong>Cache:</strong> ${p.cache_discount}
+                <div class="u-text-cyan u-mb-6p u-s-7d0f7b">
+                  ${uiIcon('lightbulb', 'icon-xs')} <strong>Cache:</strong> ${p.cache_discount}
                 </div>
-                <div style="font-size: 0.72rem; color: var(--text-muted);">
-                  ⚡ <strong>Latência:</strong> ${p.latency_factor}
+                <div class="u-text-muted u-s-dbc8d1">
+                  ${uiIcon('zap', 'icon-xs')} <strong>Latência:</strong> ${p.latency_factor}
                 </div>
               </div>
-              <div style="margin-top: 10px; font-size: 0.72rem; color: var(--emerald); font-weight: bold;">
+              <div class="u-mt-10p u-text-green u-fw-700 u-s-dbc8d1">
                 ● ${p.status}
               </div>
             </div>
@@ -2105,41 +2375,41 @@
 
           const p = data.primary;
           let html = `
-            <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid var(--emerald); padding: 12px; border-radius: 8px;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="u-s-fb7d5a">
+              <div class="u-d-flex u-justify-between u-items-center">
                 <div>
-                  <span class="chip chip-emerald" style="font-size: 0.70rem; margin-right: 6px;">1º CANDIDATO PRINCIPAL</span>
-                  <strong style="color: var(--emerald); font-size: 0.9rem;">${p.model_id}</strong>
-                  <span style="font-size: 0.74rem; color: var(--text-muted); margin-left: 8px;">(Provedor: ${p.provider})</span>
+                  <span class="chip chip-emerald u-s-ce21ba">1º CANDIDATO PRINCIPAL</span>
+                  <strong class="u-text-green u-s-27895a">${p.model_id}</strong>
+                  <span class="u-text-muted u-s-78b0f8">(Provedor: ${p.provider})</span>
                 </div>
-                <div style="font-size: 0.85rem; font-weight: bold; color: var(--emerald);">
+                <div class="u-fw-700 u-text-green u-s-933a8e">
                   Utilidade U: ${p.utility_score.toFixed(3)}
                 </div>
               </div>
-              <div style="display: flex; gap: 16px; font-size: 0.74rem; color: var(--text-muted); margin-top: 6px;">
-                <span>Custo Projetado: <strong style="color: var(--text-normal);">$${p.projected_cost_usd.toFixed(5)}</strong></span>
-                <span>Latência Projetada: <strong style="color: var(--text-normal);">${p.projected_latency_ms.toFixed(0)} ms</strong></span>
-                <span>Tier: <strong style="color: var(--text-normal);">${p.tier_name}</strong></span>
+              <div class="u-d-flex u-gap-4 u-text-muted u-mt-6p u-s-d3bc8d">
+                <span>Custo Projetado: <strong class="u-s-058a53">$${p.projected_cost_usd.toFixed(5)}</strong></span>
+                <span>Latência Projetada: <strong class="u-s-058a53">${p.projected_latency_ms.toFixed(0)} ms</strong></span>
+                <span>Tier: <strong class="u-s-058a53">${p.tier_name}</strong></span>
               </div>
             </div>
           `;
 
           (data.fallbacks || []).forEach((fb, idx) => {
-            const cdBadge = fb.in_cooldown ? `<span class="chip chip-amber" style="font-size: 0.68rem; margin-left: 6px;">QUARENTENA (${fb.cooldown_remaining_secs}s)</span>` : '';
+            const cdBadge = fb.in_cooldown ? `<span class="chip chip-amber u-s-60c951">QUARENTENA (${fb.cooldown_remaining_secs}s)</span>` : '';
             html += `
-              <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-subtle); padding: 10px 12px; border-radius: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="u-s-e818b6">
+                <div class="u-d-flex u-justify-between u-items-center">
                   <div>
-                    <span class="chip chip-purple" style="font-size: 0.70rem; margin-right: 6px;">${idx + 2}º FALLBACK</span>
-                    <strong style="color: var(--text-normal); font-size: 0.85rem;">${fb.model_id}</strong>
+                    <span class="chip chip-purple u-s-ce21ba">${idx + 2}º FALLBACK</span>
+                    <strong class="u-s-2ee5b5">${fb.model_id}</strong>
                     ${cdBadge}
-                    <span style="font-size: 0.74rem; color: var(--text-muted); margin-left: 8px;">(Provedor: ${fb.provider})</span>
+                    <span class="u-text-muted u-s-78b0f8">(Provedor: ${fb.provider})</span>
                   </div>
-                  <div style="font-size: 0.8rem; color: var(--purple);">
+                  <div class="u-text-purple u-s-22b62c">
                     Utilidade U: ${fb.utility_score.toFixed(3)}
                   </div>
                 </div>
-                <div style="display: flex; gap: 16px; font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+                <div class="u-d-flex u-gap-4 u-text-muted u-mt-1 u-s-dbc8d1">
                   <span>Custo: $${fb.projected_cost_usd.toFixed(5)}</span>
                   <span>Latência: ${fb.projected_latency_ms.toFixed(0)} ms</span>
                 </div>
@@ -2211,7 +2481,7 @@
       const currentVal = select.value;
       select.innerHTML = models.map(m => {
         const isBenchmarked = m.status === 'BENCHMARKED';
-        const prefix = isBenchmarked ? '✅' : '⏳';
+        const prefix = isBenchmarked ? '[Homologado]' : '[Pendente]';
         const tpsStr = m.latest_tps ? ` • ${m.latest_tps.toFixed(0)} tok/s` : '';
         const paramsStr = m.parameters ? ` • ${m.parameters}` : '';
         return `<option value="${m.model_id}">${prefix} ${m.name} (${m.tier}${paramsStr} • ${m.quantization || 'GGUF'}${tpsStr})</option>`;
@@ -2321,89 +2591,89 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="12">Nenhum modelo corresponde aos filtros aplicados.</td></tr>';
         return;
       }
 
       tbody.innerHTML = filtered.map(m => {
         const isBenchmarked = m.status === 'BENCHMARKED';
         const statusBadge = isBenchmarked
-          ? '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3);">✅ Homologado</span>'
-          : '<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3);">⏳ Pendente</span>';
+          ? `<span class="badge u-text-green u-s-52c49d">${uiIcon('check-circle', 'icon-xs')} Homologado</span>`
+          : `<span class="badge u-s-038898">${uiIcon('clock', 'icon-xs')} Pendente</span>`;
 
         const tpsHtml = m.latest_tps
-          ? `<div style="line-height: 1.2;"><strong style="color: var(--emerald); font-size: 0.88rem;">${m.latest_tps.toFixed(1)}</strong><div style="font-size: 0.65rem; color: var(--text-muted);">tok/s</div></div>`
-          : '<span style="color: var(--text-muted);">--</span>';
+          ? `<div class="u-s-973ba1"><strong class="u-text-green u-s-604fde">${m.latest_tps.toFixed(1)}</strong><div class="u-text-muted u-s-3b4cd3">tok/s</div></div>`
+          : '<span class="u-text-muted">--</span>';
 
         const ttftHtml = m.latest_ttft_ms
-          ? `<div style="line-height: 1.2;"><span class="mono" style="color: var(--cyan); font-size: 0.82rem; font-weight: 600;">${m.latest_ttft_ms.toFixed(0)}</span><div style="font-size: 0.65rem; color: var(--text-muted);">ms</div></div>`
-          : '<span style="color: var(--text-muted);">--</span>';
+          ? `<div class="u-s-973ba1"><span class="mono u-text-cyan u-fw-600 u-s-5b9d54">${m.latest_ttft_ms.toFixed(0)}</span><div class="u-text-muted u-s-3b4cd3">ms</div></div>`
+          : '<span class="u-text-muted">--</span>';
 
         const tpotVal = m.latest_tpot_ms || (m.latest_tps ? (1000 / m.latest_tps) : null);
         const tpotHtml = tpotVal
-          ? `<div style="line-height: 1.2;"><span class="mono" style="color: #cbd5e1; font-size: 0.82rem; font-weight: 600;">${tpotVal.toFixed(0)}</span><div style="font-size: 0.65rem; color: var(--text-muted);">ms/tok</div></div>`
-          : '<span style="color: var(--text-muted);">--</span>';
+          ? `<div class="u-s-973ba1"><span class="mono u-text-slate u-fw-600 u-s-5b9d54">${tpotVal.toFixed(0)}</span><div class="u-text-muted u-s-3b4cd3">ms/tok</div></div>`
+          : '<span class="u-text-muted">--</span>';
 
         const vramHtml = m.latest_vram_peak_mb
-          ? `<div style="line-height: 1.2;"><span class="mono" style="color: #f43f5e; font-size: 0.82rem; font-weight: 600;">${m.latest_vram_peak_mb.toFixed(0)}</span><div style="font-size: 0.65rem; color: var(--text-muted);">MB</div></div>`
-          : `<div style="line-height: 1.2;"><span class="mono" style="color: var(--text-muted); font-size: 0.75rem;">${m.size_mb ? (m.size_mb + 36).toFixed(0) : '--'}</span><div style="font-size: 0.65rem; color: var(--text-muted);">MB (est)</div></div>`;
+          ? `<div class="u-s-973ba1"><span class="mono u-fw-600 u-s-6b3520">${m.latest_vram_peak_mb.toFixed(0)}</span><div class="u-text-muted u-s-3b4cd3">MB</div></div>`
+          : `<div class="u-s-973ba1"><span class="mono u-text-muted u-s-a2b44b">${m.size_mb ? (m.size_mb + 36).toFixed(0) : '--'}</span><div class="u-text-muted u-s-3b4cd3">MB (est)</div></div>`;
 
         const e3Html = m.e3_score
-          ? `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.72rem; font-weight: 700;" title="Eficiência Empírica E³: ${m.e3_score.toFixed(1)} (Throughput / [VRAM × Latência])">${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)}</span>`
-          : '<span style="color: var(--text-muted); font-size: 0.75rem;" title="Score não calculado ainda. Execute o teste Type 1 para aferir Throughput, TTFT e VRAM.">--</span>';
+          ? `<span class="badge u-fw-700 u-s-825ef1" title="Eficiência Empírica E³: ${m.e3_score.toFixed(1)} (Throughput / [VRAM × Latência])">${m.e3_score > 9000 ? '9999' : m.e3_score.toFixed(1)}</span>`
+          : '<span class="u-text-muted u-s-a2b44b" title="Score não calculado ainda. Execute o teste Type 1 para aferir Throughput, TTFT e VRAM.">--</span>';
 
         const activeFile = m.file_path || m.model_id;
         const rowSlug = (m.model_id || '').toLowerCase().replace(/[^a-z0-9]/g, '-');
 
         // Capacidades
         const caps = m.capabilities || ['chat'];
-        let capsHtml = '<div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center;">';
+        let capsHtml = '<div class="u-d-flex u-gap-1 u-flex-wrap u-justify-center u-items-center">';
         if (m.has_mmproj || caps.includes('vision')) {
-          capsHtml += '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); font-size: 0.65rem; padding: 2px 5px;" title="Suporta Visão Multimodal com projetor mmproj">👁️ VLM</span>';
+          capsHtml += `<span class="badge u-text-cyan u-s-339d3b" title="Suporta Visão Multimodal com projetor mmproj">${uiIcon('eye', 'icon-xs')} VLM</span>`;
         }
         if (caps.includes('code')) {
-          capsHtml += '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.65rem; padding: 2px 5px;" title="Especialista em Código & AST">💻 Code</span>';
+          capsHtml += `<span class="badge u-text-emerald u-s-6a81bf" title="Especialista em Código & AST">${uiIcon('code', 'icon-xs')} Code</span>`;
         }
         if (caps.includes('reasoning')) {
-          capsHtml += '<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.65rem; padding: 2px 5px;" title="Raciocínio Lógico & CoT">🧠 CoT</span>';
+          capsHtml += `<span class="badge u-s-d8176c" title="Raciocínio Lógico & CoT">${uiIcon('brain', 'icon-xs')} CoT</span>`;
         }
         if (caps.length === 1 && caps[0] === 'chat') {
-          capsHtml += '<span class="badge" style="background: rgba(148, 163, 184, 0.12); color: #cbd5e1; font-size: 0.65rem; padding: 2px 5px;" title="Conversacional Geral">💬 Chat</span>';
+          capsHtml += `<span class="badge u-text-slate u-s-e4c8ed" title="Conversacional Geral">${uiIcon('message-square', 'icon-xs')} Chat</span>`;
         }
         capsHtml += '</div>';
 
         // Silício Recomendado
         const isGpu = m.size_mb < 5120;
         const targetBadge = isGpu
-          ? '<span class="badge badge-champion" style="font-size: 0.68rem; padding: 2px 7px;">🎮 dGPU (CUDA)</span>'
-          : '<span class="badge badge-value" style="font-size: 0.68rem; padding: 2px 7px;">⚡ Host CPU</span>';
+          ? `<span class="badge badge-champion u-s-77d53f">${uiIcon('gamepad', 'icon-xs')} dGPU (CUDA)</span>`
+          : `<span class="badge badge-value u-s-77d53f">${uiIcon('zap', 'icon-xs')} Host CPU</span>`;
 
         return `
           <tr id="arena-row-${rowSlug}">
-            <td class="text-center" style="vertical-align: middle;">
+            <td class="text-center u-s-da57c5">
               ${renderTierBadge(m.tier)}
             </td>
             <td>
-              <div style="font-weight: 600; color: #fff; font-size: 0.82rem;">${m.name}</div>
-              <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">${m.model_id}</div>
+              <div class="u-fw-600 u-text-white u-s-5b9d54">${m.name}</div>
+              <div class="mono u-text-muted u-mt-2p u-s-923ef2">${m.model_id}</div>
             </td>
-            <td class="text-center" style="vertical-align: middle;">${capsHtml}</td>
-            <td class="text-center mono" style="font-size: 0.78rem;">${m.quantization || 'GGUF'}</td>
+            <td class="text-center u-s-da57c5">${capsHtml}</td>
+            <td class="text-center mono u-s-a768c1">${m.quantization || 'GGUF'}</td>
             <td class="text-center">${tpsHtml}</td>
             <td class="text-center">${ttftHtml}</td>
             <td class="text-center">${tpotHtml}</td>
             <td class="text-center">${vramHtml}</td>
             <td class="text-center">${e3Html}</td>
-            <td class="text-center" style="vertical-align: middle;">${targetBadge}</td>
+            <td class="text-center u-s-da57c5">${targetBadge}</td>
             <td class="text-center">${statusBadge}</td>
             <td class="text-center">
-              <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
-                <button class="btn btn-emerald" style="padding: 4px 10px; font-size: 0.72rem; height: 28px;" onclick="testModelInArena('${m.model_id}')" title="Selecionar e Testar na Silicon Arena">
-                  <span>⚡</span> Testar
+              <div class="u-d-flex u-justify-center u-items-center u-s-0880e8">
+                <button class="btn btn-emerald u-s-177395" onclick="testModelInArena('${m.model_id}')" title="Selecionar e Testar na Silicon Arena">
+                  ${uiIcon('zap', 'icon-sm')} Testar
                 </button>
                 ${isBenchmarked ? `
-                  <button class="btn btn-green" style="padding: 4px 10px; font-size: 0.72rem; height: 28px;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
-                    <span>⚡</span> Usar
+                  <button class="btn btn-green u-s-177395" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                    ${uiIcon('zap', 'icon-sm')} Usar
                   </button>
                 ` : ''}
               </div>
@@ -2421,54 +2691,54 @@
       }
       if (!tbody) return;
       if (!history || history.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhum ensaio registrado no SQLite Vault.</td></tr>';
+        tbody.innerHTML = '<tr><td class="u-text-center u-text-muted u-s-ede515" colspan="11">Nenhum ensaio registrado no SQLite Vault.</td></tr>';
         return;
       }
 
       tbody.innerHTML = history.slice(0, 30).map(h => {
-        let statusBadge = '<span class="badge badge-champion" style="font-size: 0.65rem;">NOMINAL</span>';
+        let statusBadge = '<span class="badge badge-champion u-s-3b4cd3">NOMINAL</span>';
         const st = (h.status || '').toUpperCase();
         if (st.includes('NOMINAL') || st.includes('SUCCESS') || st.includes('VERIFIED')) {
-          statusBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.65rem;">NOMINAL</span>';
+          statusBadge = '<span class="badge u-text-green u-s-116cda">NOMINAL</span>';
         } else if (st.includes('WARN') || st.includes('THROTTLE')) {
-          statusBadge = '<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem;">THROTTLED</span>';
+          statusBadge = '<span class="badge u-s-bf352d">THROTTLED</span>';
         } else if (st.includes('FAIL') || st.includes('ERR')) {
-          statusBadge = '<span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 0.65rem;">FALHA</span>';
+          statusBadge = '<span class="badge u-s-9640a5">FALHA</span>';
         }
 
         const bt = (h.benchmark_type || '').toLowerCase();
         let typeBadge = '';
         if (bt.includes('hardeval') || bt.includes('hardware') || bt.includes('profile')) {
-          typeBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.68rem;">⚡ Velocidade & VRAM</span>';
+          typeBadge = `<span class="badge u-text-emerald u-s-21e397">${uiIcon('zap', 'icon-xs')} Velocidade &amp; VRAM</span>`;
         } else if (bt.includes('cognitive') || bt.includes('eval') || bt.includes('cot')) {
-          typeBadge = '<span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 0.68rem;">🧠 Avaliação Cognitiva</span>';
+          typeBadge = `<span class="badge u-s-006ab2">${uiIcon('brain', 'icon-xs')} Avaliação Cognitiva</span>`;
         } else if (bt.includes('vision') || bt.includes('multimodal') || bt.includes('vlm')) {
-          typeBadge = '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); font-size: 0.68rem;">👁️ Visão Multimodal</span>';
+          typeBadge = `<span class="badge u-text-cyan u-s-1c59c5">${uiIcon('eye', 'icon-xs')} Visão Multimodal</span>`;
         } else if (bt.includes('speculative') || bt.includes('draft')) {
-          typeBadge = '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.68rem;">🚀 Especulativa</span>';
+          typeBadge = `<span class="badge u-text-amber-light u-s-11f801">${uiIcon('rocket', 'icon-xs')} Especulativa</span>`;
         } else if (bt.includes('context') || bt.includes('pressure') || bt.includes('needle')) {
-          typeBadge = '<span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #fb7185; font-size: 0.68rem;">📦 Pressão Contexto</span>';
+          typeBadge = `<span class="badge u-s-e34a85">${uiIcon('archive', 'icon-xs')} Pressão Contexto</span>`;
         } else {
-          typeBadge = `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 0.68rem;">🔬 ${h.benchmark_type || 'Geral'}</span>`;
+          typeBadge = `<span class="badge u-s-d24a57">${uiIcon('microscope', 'icon-xs')} ${h.benchmark_type || 'Geral'}</span>`;
         }
 
         const tpotVal = h.tpot_ms > 0 ? h.tpot_ms : (h.tps > 0 ? (1000 / h.tps) : 0);
 
         return `
           <tr id="telemetry-row-${h.id}">
-            <td class="text-center mono" style="color: var(--text-muted); font-size: 0.72rem;">#${h.id}</td>
+            <td class="text-center mono u-text-muted u-s-dbc8d1">#${h.id}</td>
             <td>
-              <div style="font-weight: 600; color: #fff; font-size: 0.8rem;">${h.model_id}</div>
+              <div class="u-fw-600 u-text-white u-s-22b62c">${h.model_id}</div>
             </td>
             <td>${typeBadge}</td>
-            <td class="text-center mono" style="font-size: 0.72rem; color: var(--cyan);">${h.engine}</td>
-            <td class="text-center mono" style="color: var(--emerald); font-weight: 600;">${h.tps > 0 ? h.tps.toFixed(1) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">tok/s</span>' : '--'}</td>
-            <td class="text-center mono">${h.ttft_ms > 0 ? h.ttft_ms.toFixed(0) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">ms</span>' : '--'}</td>
-            <td class="text-center mono" style="color: #cbd5e1;">${tpotVal > 0 ? tpotVal.toFixed(0) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">ms</span>' : '--'}</td>
-            <td class="text-center mono" style="color: #f43f5e;">${h.vram_peak_mb > 0 ? h.vram_peak_mb.toFixed(0) + ' <span style="font-size: 0.65rem; color: var(--text-muted);">MB</span>' : '--'}</td>
-            <td class="text-center mono" style="color: #c084fc; font-weight: 600;">${h.e3_score > 0 ? (h.e3_score > 9000 ? '9999' : h.e3_score.toFixed(1)) : '--'}</td>
+            <td class="text-center mono u-text-cyan u-s-dbc8d1">${h.engine}</td>
+            <td class="text-center mono u-text-green u-fw-600">${h.tps > 0 ? h.tps.toFixed(1) + ' <span class="u-text-muted u-s-3b4cd3">tok/s</span>' : '--'}</td>
+            <td class="text-center mono">${h.ttft_ms > 0 ? h.ttft_ms.toFixed(0) + ' <span class="u-text-muted u-s-3b4cd3">ms</span>' : '--'}</td>
+            <td class="text-center mono u-text-slate">${tpotVal > 0 ? tpotVal.toFixed(0) + ' <span class="u-text-muted u-s-3b4cd3">ms</span>' : '--'}</td>
+            <td class="text-center mono u-s-e6ce75">${h.vram_peak_mb > 0 ? h.vram_peak_mb.toFixed(0) + ' <span class="u-text-muted u-s-3b4cd3">MB</span>' : '--'}</td>
+            <td class="text-center mono u-fw-600 u-s-358e52">${h.e3_score > 0 ? (h.e3_score > 9000 ? '9999' : h.e3_score.toFixed(1)) : '--'}</td>
             <td class="text-center">${statusBadge}</td>
-            <td class="mono" style="font-size: 0.7rem; color: var(--text-muted);">${h.created_at || '--'}</td>
+            <td class="mono u-text-muted u-s-cb8a8e">${h.created_at || '--'}</td>
           </tr>
         `;
       }).join('');
@@ -2496,14 +2766,14 @@
 
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:6px;">⏳</span> Executando Prova...';
+        btn.innerHTML = '<span class="spin-icon u-d-inline-block u-s-a36b17">' + uiIcon('refresh', 'icon-xs') + '</span> Executando Prova...';
       }
 
       if (feedback) {
         feedback.style.display = 'block';
-        if (titleEl) titleEl.innerHTML = `<span>⚡</span> Executando Prova no Silício para <strong>${modelId}</strong>...`;
-        if (verdictEl) verdictEl.innerHTML = '<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.4);">NVML Watchdog Ativo</span>';
-        if (gridEl) gridEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem; grid-column: 1 / -1;"><span style="display:inline-block; animation:spin 1s linear infinite; margin-right:6px;">⚙️</span> Preparando tensores via memmap2 e medindo telemetria física bare-metal...</div>';
+        if (titleEl) titleEl.innerHTML = `<span>${uiIcon('zap', 'icon-sm')}</span> Executando Prova no Silício para <strong>${modelId}</strong>...`;
+        if (verdictEl) verdictEl.innerHTML = '<span class="badge u-text-cyan u-s-3be721">NVML Watchdog Ativo</span>';
+        if (gridEl) gridEl.innerHTML = '<div class="u-text-muted u-s-5874b4"><span class="spin-icon u-d-inline-block u-s-a36b17">' + uiIcon('settings', 'icon-xs') + '</span> Preparando tensores via memmap2 e medindo telemetria física bare-metal...</div>';
       }
 
       // Ativa Stepper Fase 1
@@ -2528,8 +2798,8 @@
 
         if (res.ok && data.status === 'success') {
           setArenaStep(4);
-          showToast(`✨ Prova ${data.benchmark_type} concluída e persistida no Heuristic Vault com sucesso!`, 'success');
-          if (titleEl) titleEl.innerHTML = `<span>✅</span> Resultado da Prova: <strong>${data.model_id}</strong> (${data.benchmark_type})`;
+          showToast(`Prova ${data.benchmark_type} concluída e persistida no Heuristic Vault com sucesso!`, 'success');
+          if (titleEl) titleEl.innerHTML = `<span>${uiIcon('check-circle', 'icon-sm')}</span> Resultado da Prova: <strong>${data.model_id}</strong> (${data.benchmark_type})`;
           if (verdictEl) verdictEl.innerHTML = `<span class="badge badge-champion">${data.metrics?.verdict || 'NOMINAL'}</span>`;
 
           if (gridEl && data.metrics) {
@@ -2539,7 +2809,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Throughput Real</div>
-                  <div class="hw-spec-val" style="color: var(--emerald);">${data.metrics.tps.toFixed(1)} <span style="font-size: 0.7rem;">tok/s</span></div>
+                  <div class="hw-spec-val u-text-green">${data.metrics.tps.toFixed(1)} <span class="u-s-cb8a8e">tok/s</span></div>
                 </div>
               `;
             }
@@ -2547,7 +2817,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Tempo Resposta (TTFT)</div>
-                  <div class="hw-spec-val" style="color: var(--cyan);">${data.metrics.ttft_ms.toFixed(0)} <span style="font-size: 0.7rem;">ms</span></div>
+                  <div class="hw-spec-val u-text-cyan">${data.metrics.ttft_ms.toFixed(0)} <span class="u-s-cb8a8e">ms</span></div>
                 </div>
               `;
             }
@@ -2556,7 +2826,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Latência por Token (TPOT)</div>
-                  <div class="hw-spec-val" style="color: #cbd5e1;">${tp.toFixed(0)} <span style="font-size: 0.7rem;">ms/tok</span></div>
+                  <div class="hw-spec-val u-text-slate">${tp.toFixed(0)} <span class="u-s-cb8a8e">ms/tok</span></div>
                 </div>
               `;
             }
@@ -2564,7 +2834,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">VRAM Pico NVML</div>
-                  <div class="hw-spec-val" style="color: #f43f5e;">${data.metrics.peak_vram_mb.toFixed(0)} <span style="font-size: 0.7rem;">MB</span></div>
+                  <div class="hw-spec-val u-s-e6ce75">${data.metrics.peak_vram_mb.toFixed(0)} <span class="u-s-cb8a8e">MB</span></div>
                 </div>
               `;
             }
@@ -2572,7 +2842,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">RAM Host</div>
-                  <div class="hw-spec-val">${data.metrics.ram_mb.toFixed(0)} <span style="font-size: 0.7rem;">MB</span></div>
+                  <div class="hw-spec-val">${data.metrics.ram_mb.toFixed(0)} <span class="u-s-cb8a8e">MB</span></div>
                 </div>
               `;
             }
@@ -2580,7 +2850,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Eficiência E³</div>
-                  <div class="hw-spec-val" style="color: #a855f7;">${data.metrics.e3_score > 9000 ? '9999' : data.metrics.e3_score.toFixed(1)}</div>
+                  <div class="hw-spec-val u-s-189e9a">${data.metrics.e3_score > 9000 ? '9999' : data.metrics.e3_score.toFixed(1)}</div>
                 </div>
               `;
             }
@@ -2590,7 +2860,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Acurácia Sintática</div>
-                  <div class="hw-spec-val" style="color: var(--emerald);">${data.metrics.accuracy_pct.toFixed(1)}%</div>
+                  <div class="hw-spec-val u-text-green">${data.metrics.accuracy_pct.toFixed(1)}%</div>
                 </div>
               `;
             }
@@ -2598,7 +2868,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Throughput Médio</div>
-                  <div class="hw-spec-val" style="color: var(--emerald);">${data.metrics.avg_tps.toFixed(1)} <span style="font-size: 0.7rem;">tok/s</span></div>
+                  <div class="hw-spec-val u-text-green">${data.metrics.avg_tps.toFixed(1)} <span class="u-s-cb8a8e">tok/s</span></div>
                 </div>
               `;
             }
@@ -2608,7 +2878,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Latência Visão VLM</div>
-                  <div class="hw-spec-val" style="color: var(--cyan);">${data.metrics.multimodal_ttft_ms.toFixed(0)} <span style="font-size: 0.7rem;">ms</span></div>
+                  <div class="hw-spec-val u-text-cyan">${data.metrics.multimodal_ttft_ms.toFixed(0)} <span class="u-s-cb8a8e">ms</span></div>
                 </div>
               `;
             }
@@ -2616,7 +2886,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Projeção mmproj</div>
-                  <div class="hw-spec-val" style="color: #a855f7;">${data.metrics.projection_latency_ms.toFixed(0)} <span style="font-size: 0.7rem;">ms</span></div>
+                  <div class="hw-spec-val u-s-189e9a">${data.metrics.projection_latency_ms.toFixed(0)} <span class="u-s-cb8a8e">ms</span></div>
                 </div>
               `;
             }
@@ -2626,7 +2896,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Ganho de Velocidade</div>
-                  <div class="hw-spec-val" style="color: var(--emerald);">${data.metrics.speedup_ratio.toFixed(2)}x</div>
+                  <div class="hw-spec-val u-text-green">${data.metrics.speedup_ratio.toFixed(2)}x</div>
                 </div>
               `;
             }
@@ -2634,7 +2904,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Taxa Alpha (Aceite)</div>
-                  <div class="hw-spec-val" style="color: var(--cyan);">${(data.metrics.acceptance_rate_alpha * 100).toFixed(1)}%</div>
+                  <div class="hw-spec-val u-text-cyan">${(data.metrics.acceptance_rate_alpha * 100).toFixed(1)}%</div>
                 </div>
               `;
             }
@@ -2644,7 +2914,7 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Janela Máxima Efetiva</div>
-                  <div class="hw-spec-val" style="color: var(--cyan);">${Number(data.metrics.max_effective_context).toLocaleString()} <span style="font-size: 0.7rem;">tokens</span></div>
+                  <div class="hw-spec-val u-text-cyan">${Number(data.metrics.max_effective_context).toLocaleString()} <span class="u-s-cb8a8e">tokens</span></div>
                 </div>
               `;
             }
@@ -2652,16 +2922,16 @@
               cardsHtml += `
                 <div class="hw-spec-card">
                   <div class="hw-spec-label">Degradação</div>
-                  <div class="hw-spec-val" style="color: ${data.metrics.degradation_detected ? '#f43f5e' : 'var(--emerald)'};">${data.metrics.degradation_detected ? 'Detectada ⚠️' : 'Zero Queda ✅'}</div>
+                  <div class="hw-spec-val" style="color: ${data.metrics.degradation_detected ? '#f43f5e' : 'var(--emerald)'};">${data.metrics.degradation_detected ? 'Detectada ' + uiIcon('alert-triangle', 'icon-xs') : 'Zero Queda ' + uiIcon('check-circle', 'icon-xs')}</div>
                 </div>
               `;
             }
 
             // Ação Direta no Feedback: Usar no Hermes
             cardsHtml += `
-              <div style="grid-column: 1 / -1; margin-top: 10px; display: flex; justify-content: flex-end; gap: 8px;">
-                <button class="btn btn-green" onclick="openQuickApplyModal('${data.model_id}', 'local_silicon', true)" style="font-size: 0.76rem; font-weight: 600; padding: 6px 14px;">
-                  <span>⚡</span> Usar este Modelo no Hermes Agent
+              <div class="u-mt-10p u-d-flex u-gap-2 u-s-741f8b">
+                <button class="btn btn-green u-fw-600 u-s-4aead5" onclick="openQuickApplyModal('${data.model_id}', 'local_silicon', true)">
+                  ${uiIcon('zap', 'icon-sm')} Usar este Modelo no Hermes Agent
                 </button>
               </div>
             `;
@@ -2690,8 +2960,8 @@
         } else {
           showToast(data.message || 'Falha ao executar prova no silício.', 'error');
           if (titleEl) titleEl.innerText = 'Falha na Prova de Silício';
-          if (verdictEl) verdictEl.innerHTML = '<span class="badge" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e;">ERRO</span>';
-          if (gridEl) gridEl.innerHTML = `<div style="color: #f43f5e; font-size: 0.8rem; grid-column: 1 / -1;">${data.message || 'Erro desconhecido'}</div>`;
+          if (verdictEl) verdictEl.innerHTML = '<span class="badge u-s-a6160e">ERRO</span>';
+          if (gridEl) gridEl.innerHTML = `<div class="u-s-39e3d0">${data.message || 'Erro desconhecido'}</div>`;
         }
       } catch (err) {
         console.error('Erro ao executar benchmark:', err);
@@ -2699,7 +2969,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<span>⚡</span> Iniciar Teste no Silício';
+          btn.innerHTML = `${uiIcon('zap', 'icon-sm')} Iniciar Teste no Silício`;
         }
       }
     }
@@ -2708,14 +2978,14 @@
       const btn = event?.currentTarget;
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:4px;">⏳</span> Sincronizando...';
+        btn.innerHTML = '<span class="spin-icon u-d-inline-block u-s-043e24">' + uiIcon('refresh', 'icon-xs') + '</span> Sincronizando...';
       }
       try {
         const res = await fetch('/api/v1/arena/sync', { method: 'POST' });
         if (res.ok) {
           const data = await res.json();
           const count = data.synced_vault_models || 0;
-          showToast(`✨ Sincronizado com sucesso! ${count} modelos no Heuristic Vault e links do Hermes ativos.`, 'success');
+          showToast(`Sincronizado com sucesso! ${count} modelos no Heuristic Vault e links do Hermes ativos.`, 'success');
           await fetchLocalArenaData();
         } else {
           showToast('Falha ao sincronizar links com o Hermes.', 'error');
@@ -2726,7 +2996,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<span>🔗</span> Sincronizar com Hermes Agent';
+          btn.innerHTML = `${uiIcon('link', 'icon-sm')} Sincronizar com Hermes Agent`;
         }
       }
     }
@@ -2741,7 +3011,7 @@
 
     const SKILL_METADATA_MAP = {
       'souls-code-surgeon': {
-        icon: '💻',
+        icon: 'code',
         category: 'coding',
         categoryLabel: 'Código & AST',
         badgeBg: 'rgba(168, 85, 247, 0.15)',
@@ -2749,7 +3019,7 @@
         samplePrompt: 'extrair outline e substituir symbol na ast de rust'
       },
       'souls-blast-radius': {
-        icon: '💥',
+        icon: 'zap',
         category: 'coding',
         categoryLabel: 'Código & Impacto',
         badgeBg: 'rgba(168, 85, 247, 0.15)',
@@ -2757,7 +3027,7 @@
         samplePrompt: 'medir frecency gitoxide e blast radius de arquivos modificados'
       },
       'souls-memory-triad': {
-        icon: '🧠',
+        icon: 'brain',
         category: 'memory',
         categoryLabel: 'Memória L2',
         badgeBg: 'rgba(6, 182, 212, 0.15)',
@@ -2765,7 +3035,7 @@
         samplePrompt: 'busca hibrida rrf no lancedb e sqlite strict wal'
       },
       'souls-ontology-graph': {
-        icon: '🕸️',
+        icon: 'network',
         category: 'memory',
         categoryLabel: 'Grafo Ontológico',
         badgeBg: 'rgba(6, 182, 212, 0.15)',
@@ -2773,7 +3043,7 @@
         samplePrompt: 'criar entidades e relacoes tipadas no grafo ladybugdb'
       },
       'obsidian-vault-curator': {
-        icon: '📚',
+        icon: 'book',
         category: 'memory',
         categoryLabel: 'Obsidian Wiki',
         badgeBg: 'rgba(6, 182, 212, 0.15)',
@@ -2781,15 +3051,15 @@
         samplePrompt: 'curadoria de notas no cofre obsidian raw para wiki'
       },
       'souls-hardware-watchdog': {
-        icon: '🌡️',
+        icon: 'thermometer',
         category: 'hardware',
         categoryLabel: 'Hardware NVML',
         badgeBg: 'rgba(244, 63, 94, 0.15)',
         badgeColor: '#fb7185',
-        samplePrompt: 'telemetria nvml vram temperatura rtx 2060m'
+        samplePrompt: 'telemetria nvml vram temperatura gpu local'
       },
       'souls-context-lean': {
-        icon: '🗜️',
+        icon: 'archive',
         category: 'hardware',
         categoryLabel: 'Context Lean CCR',
         badgeBg: 'rgba(56, 189, 248, 0.15)',
@@ -2797,7 +3067,7 @@
         samplePrompt: 'comprimir tokens e deduplicar contexto em ram'
       },
       'souls-subagent-dispatch': {
-        icon: '🤖',
+        icon: 'bot',
         category: 'hardware',
         categoryLabel: 'Despacho Subagentes',
         badgeBg: 'rgba(56, 189, 248, 0.15)',
@@ -2805,7 +3075,7 @@
         samplePrompt: 'despachar subagente via paretobandit e handoff'
       },
       'souls-intent-probing': {
-        icon: '🎯',
+        icon: 'target',
         category: 'hardware',
         categoryLabel: 'Intenção Socrática',
         badgeBg: 'rgba(56, 189, 248, 0.15)',
@@ -2813,7 +3083,7 @@
         samplePrompt: 'classificar intencao e medir entropia shannon tier 0'
       },
       'souls-safe-sandbox': {
-        icon: '🛡️',
+        icon: 'shield',
         category: 'security',
         categoryLabel: 'Sandbox NT',
         badgeBg: 'rgba(16, 185, 129, 0.15)',
@@ -2821,7 +3091,7 @@
         samplePrompt: 'executar comando shell em jobobject restrito seguro'
       },
       'obsidian-privacy-shield': {
-        icon: '🔒',
+        icon: 'lock',
         category: 'security',
         categoryLabel: 'Privacidade PII',
         badgeBg: 'rgba(16, 185, 129, 0.15)',
@@ -2829,7 +3099,7 @@
         samplePrompt: 'higienizar dados confidenciais pii de saude e financas'
       },
       'souls-web-intelligence': {
-        icon: '🌍',
+        icon: 'globe',
         category: 'security',
         categoryLabel: 'Web Intelligence',
         badgeBg: 'rgba(16, 185, 129, 0.15)',
@@ -2837,7 +3107,7 @@
         samplePrompt: 'pesquisar documentacao na web e converter markdown'
       },
       'souls-socratic-thinking': {
-        icon: '🤔',
+        icon: 'brain',
         category: 'reasoning',
         categoryLabel: 'Grafo DAG Socrático',
         badgeBg: 'rgba(245, 158, 11, 0.15)',
@@ -2845,7 +3115,7 @@
         samplePrompt: 'deliberar hipoteses em grafo dag socratico'
       },
       'souls-cloud-arena-advisor': {
-        icon: '👑',
+        icon: 'crown',
         category: 'reasoning',
         categoryLabel: 'Fronteira Pareto',
         badgeBg: 'rgba(245, 158, 11, 0.15)',
@@ -2853,7 +3123,7 @@
         samplePrompt: 'consultar precos e campeoes cloud arena pareto'
       },
       'agent-self-learning-loop': {
-        icon: '🔄',
+        icon: 'refresh',
         category: 'reasoning',
         categoryLabel: 'Auto-Aprendizado',
         badgeBg: 'rgba(245, 158, 11, 0.15)',
@@ -2864,11 +3134,11 @@
 
     function getSkillMeta(name) {
       return SKILL_METADATA_MAP[name] || {
-        icon: '⚡',
+        icon: 'zap',
         category: 'reasoning',
         categoryLabel: 'Skill Geral',
         badgeBg: 'rgba(148, 163, 184, 0.15)',
-        badgeColor: '#94a3b8',
+        badgeColor: '#A1A1AA',
         samplePrompt: `executar acoes da skill ${name}`
       };
     }
@@ -2881,17 +3151,17 @@
         'ops': { label: 'ops', bg: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: 'rgba(16, 185, 129, 0.3)' },
         'sys': { label: 'sys', bg: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', border: 'rgba(244, 63, 94, 0.3)' },
         'context': { label: 'context', bg: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: 'rgba(56, 189, 248, 0.3)' },
-        'core': { label: 'core', bg: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8', border: 'rgba(148, 163, 184, 0.3)' }
+        'core': { label: 'core', bg: 'rgba(148, 163, 184, 0.15)', color: '#A1A1AA', border: 'rgba(148, 163, 184, 0.3)' }
       };
       const item = map[ns] || { label: ns, bg: 'rgba(255,255,255,0.08)', color: '#fff', border: 'rgba(255,255,255,0.15)' };
-      return `<span class="badge" style="background:${item.bg}; color:${item.color}; border:1px solid ${item.border}; font-size:0.68rem; padding:2px 7px;">${item.label}</span>`;
+      return `<span class="badge u-s-77d53f" style="background:${item.bg}; color:${item.color}; border:1px solid ${item.border};">${item.label}</span>`;
     }
 
     async function fetchSwitchboardSkills() {
       const btn = document.getElementById('btn-refresh-skills');
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:4px;">⏳</span> Recarregando...';
+        btn.innerHTML = '<span class="spin-icon u-d-inline-block u-s-043e24">' + uiIcon('refresh', 'icon-xs') + '</span> Recarregando...';
       }
       try {
         const [resSkills, resHealth] = await Promise.all([
@@ -2911,14 +3181,14 @@
           const data = await resSkills.json();
           switchboardSkillsData = data.skills || [];
           filterSwitchboardSkills();
-          showToast('✓ Catálogo sincronizado com sucesso: 15 habilidades e 55 ferramentas ativas!', 'success');
+          showToast('Catálogo sincronizado com sucesso: 15 habilidades e 55 ferramentas ativas!', 'success');
         }
       } catch (err) {
         console.error('Erro ao buscar skills do switchboard:', err);
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<span>🔄</span> Recarregar Skills';
+          btn.innerHTML = `${uiIcon('refresh', 'icon-sm')} Recarregar Skills`;
         }
       }
     }
@@ -2960,11 +3230,11 @@
       if (!grid) return;
       if (!skills || skills.length === 0) {
         grid.innerHTML = `
-          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 32px 16px; background: rgba(15, 23, 42, 0.4); border: 1px dashed var(--border-subtle); border-radius: 10px;">
-            <div style="font-size: 1.3rem; margin-bottom: 6px;">🔍</div>
-            <div style="font-size: 0.88rem; color: #cbd5e1; font-weight: 600;">Nenhuma skill encontrada para o filtro atual.</div>
-            <div style="margin-top: 10px;">
-              <button class="btn btn-cyan" style="font-size: 0.74rem; padding: 5px 14px;" onclick="setSwitchboardSkillCategory('all'); const inp = document.getElementById('sb-skill-search-input'); if(inp) inp.value=''; filterSwitchboardSkills();">
+          <div class="u-text-center u-text-muted u-s-779ea9">
+            <div class="u-mb-6p u-s-c2d8f9">${uiIcon('search', 'icon-md')}</div>
+            <div class="u-text-slate u-fw-600 u-s-604fde">Nenhuma skill encontrada para o filtro atual.</div>
+            <div class="u-mt-10p">
+              <button class="btn btn-cyan u-s-918d92" onclick="setSwitchboardSkillCategory('all'); const inp = document.getElementById('sb-skill-search-input'); if(inp) inp.value=''; filterSwitchboardSkills();">
                 Limpar Filtros e Ver Todas
               </button>
             </div>
@@ -2976,34 +3246,34 @@
       grid.innerHTML = skills.map(s => {
         const meta = getSkillMeta(s.name);
         return `
-          <div class="skill-card-item" id="skill-card-${s.name}" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; transition: border-color 0.2s ease, box-shadow 0.2s ease;">
+          <div class="skill-card-item u-d-flex u-flex-col u-justify-between u-s-1cbf0c" id="skill-card-${s.name}">
             <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 7px;">
-                  <span style="font-size: 1.15rem;">${meta.icon}</span>
-                  <strong style="color: #fff; font-size: 0.88rem; font-family: var(--font-mono);">${s.name}</strong>
+              <div class="u-d-flex u-justify-between u-items-start u-mb-2 u-gap-2">
+                <div class="u-d-flex u-items-center u-s-9dfc9a">
+                  <span class="u-d-inline-flex u-items-center u-s-ff0d51">${uiIcon(meta.icon, 'icon-md')}</span>
+                  <strong class="u-text-white u-mono u-s-604fde">${s.name}</strong>
                 </div>
-                <span class="badge" style="background: ${meta.badgeBg}; color: ${meta.badgeColor}; font-size: 0.65rem; padding: 2px 7px; border: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+                <span class="badge u-nowrap u-s-44086b" style="background: ${meta.badgeBg}; color: ${meta.badgeColor};">
                   ${meta.categoryLabel}
                 </span>
               </div>
-              <p style="font-size: 0.76rem; color: #cbd5e1; line-height: 1.45; margin-bottom: 12px;">${s.description}</p>
+              <p class="u-text-slate u-mb-3 u-s-9414ca">${s.description}</p>
             </div>
             <div>
-              <div style="margin-bottom: 8px;">
-                <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px; text-transform: uppercase;">Ferramentas Primárias:</span>
-                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                  ${(s.primary_tools || []).map(t => `<span class="badge badge-lowcost" style="font-size: 0.66rem; padding: 2px 6px;">${t}</span>`).join('')}
+              <div class="u-mb-2">
+                <span class="u-text-muted u-fw-600 u-d-block u-mb-1 u-uppercase u-s-923ef2">Ferramentas Primárias:</span>
+                <div class="u-d-flex u-gap-1 u-flex-wrap">
+                  ${(s.primary_tools || []).map(t => `<span class="badge badge-lowcost u-s-c5144d">${t}</span>`).join('')}
                 </div>
               </div>
-              <div style="margin-bottom: 10px;">
-                <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px; text-transform: uppercase;">Palavras-Chave:</span>
-                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                  ${(s.keywords || []).slice(0, 5).map(k => `<span style="font-size: 0.65rem; color: var(--text-muted); background: rgba(255,255,255,0.05); border-radius: 4px; padding: 1px 5px;">#${k}</span>`).join('')}
+              <div class="u-mb-10p">
+                <span class="u-text-muted u-fw-600 u-d-block u-mb-1 u-uppercase u-s-923ef2">Palavras-Chave:</span>
+                <div class="u-d-flex u-gap-1 u-flex-wrap">
+                  ${(s.keywords || []).slice(0, 5).map(k => `<span class="u-text-muted u-s-ba0b33">#${k}</span>`).join('')}
                 </div>
               </div>
               <button class="sb-skill-test-btn" onclick="setSwitchboardPreset('${meta.samplePrompt}')">
-                <span>⚡</span> Testar no Switchboard
+                ${uiIcon('zap', 'icon-sm')} Testar no Switchboard
               </button>
             </div>
           </div>
@@ -3088,7 +3358,7 @@
       try {
         if (btn) {
           btn.disabled = true;
-          btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:4px;">⏳</span> Roteando...';
+          btn.innerHTML = '<span class="spin-icon u-d-inline-block u-s-043e24">' + uiIcon('refresh', 'icon-xs') + '</span> Roteando...';
         }
 
         const res = await fetch('/api/v1/switchboard/evaluate', {
@@ -3110,11 +3380,11 @@
           const stageBadge = document.getElementById('sb-stage-badge');
           if (stageBadge) {
             if (d.stage.includes('fast_path')) {
-              stageBadge.textContent = '⚡ Fast-Path RAM Cosine (< 2ms)';
+              stageBadge.innerHTML = `${uiIcon('zap', 'icon-xs')} Fast-Path RAM Cosine (&lt; 2ms)`;
               stageBadge.style.background = 'rgba(16, 185, 129, 0.2)';
               stageBadge.style.color = 'var(--emerald)';
             } else {
-              stageBadge.textContent = '🧠 Stage 2 Entropy Gated';
+              stageBadge.innerHTML = `${uiIcon('brain', 'icon-xs')} Stage 2 Entropy Gated`;
               stageBadge.style.background = 'rgba(168, 85, 247, 0.25)';
               stageBadge.style.color = 'var(--purple)';
             }
@@ -3149,7 +3419,7 @@
             if (skillCard) skillCard.style.display = 'block';
             const meta = getSkillMeta(d.recommended_skill.name);
             const iconElem = document.getElementById('sb-skill-icon');
-            if (iconElem) iconElem.textContent = meta.icon;
+            if (iconElem) iconElem.innerHTML = uiIcon(meta.icon, 'icon-md');
             const skName = document.getElementById('sb-skill-name');
             if (skName) skName.textContent = d.recommended_skill.name;
             const skScore = document.getElementById('sb-skill-score-badge');
@@ -3158,7 +3428,7 @@
             if (skDesc) skDesc.textContent = d.recommended_skill.description;
             const skTools = document.getElementById('sb-skill-primary-tools');
             if (skTools) {
-              skTools.innerHTML = (d.recommended_skill.primary_tools || []).map(t => `<span class="badge badge-lowcost" style="font-size: 0.68rem; padding: 2px 7px;">${t}</span>`).join('');
+              skTools.innerHTML = (d.recommended_skill.primary_tools || []).map(t => `<span class="badge badge-lowcost u-s-77d53f">${t}</span>`).join('');
             }
           } else {
             if (skillCard) skillCard.style.display = 'none';
@@ -3168,7 +3438,7 @@
           const tbody = document.getElementById('sb-projected-tools-tbody');
           if (tbody) {
             if (!d.tools || d.tools.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">Nenhuma ferramenta projetada para o filtro selecionado.</td></tr>';
+              tbody.innerHTML = '<tr><td class="u-text-center u-text-muted u-s-0af041" colspan="4">Nenhuma ferramenta projetada para o filtro selecionado.</td></tr>';
             } else {
               tbody.innerHTML = d.tools.map(t => {
                 const pct = Math.round(t.score * 100);
@@ -3176,9 +3446,9 @@
                 
                 const parentSkill = findSkillForTool(t.name);
                 const skillBadge = parentSkill ? `
-                  <div style="margin-top: 4px;">
-                    <span class="badge" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc; font-size: 0.65rem; padding: 2px 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s ease;" onclick="scrollToSkillInCatalog('${parentSkill.name}')" title="Clique para localizar esta Skill no Catálogo">
-                      <span>🎯</span> ${parentSkill.name}
+                  <div class="u-mt-1">
+                    <span class="badge u-pointer u-d-inline-flex u-items-center u-gap-1 u-s-5e7224" onclick="scrollToSkillInCatalog('${parentSkill.name}')" title="Clique para localizar esta Skill no Catálogo">
+                      ${uiIcon('target', 'icon-xs')} ${parentSkill.name}
                     </span>
                   </div>
                 ` : '';
@@ -3190,11 +3460,11 @@
                   const propList = props.map(p => {
                     const isReq = req.includes(p);
                     const propType = (t.schema.properties[p] && t.schema.properties[p].type) || 'string';
-                    return `<span style="display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:1px 6px; border-radius:4px; font-size:0.68rem; font-family:var(--font-mono);"><strong style="color:#fff;">${p}</strong>: <span style="color:var(--cyan);">${propType}</span>${isReq ? ' <span style="color:#f87171; font-weight:700;" title="Obrigatório">*</span>' : ''}</span>`;
+                    return `<span class="u-d-inline-flex u-items-center u-mono u-s-579406"><strong class="u-text-white">${p}</strong>: <span class="u-text-cyan">${propType}</span>${isReq ? ' <span class="u-fw-700 u-s-006447" title="Obrigatório">*</span>' : ''}</span>`;
                   }).join(' ');
                   schemaParamsHtml = `
-                    <div style="margin-top: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                      <span style="font-size: 0.66rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Parâmetros:</span>
+                    <div class="u-mt-6p u-d-flex u-items-center u-gap-6p u-flex-wrap">
+                      <span class="u-text-muted u-fw-600 u-uppercase u-s-fa7df8">Parâmetros:</span>
                       ${propList}
                     </div>
                   `;
@@ -3203,8 +3473,8 @@
                 return `
                   <tr>
                     <td>
-                      <div style="display: flex; flex-direction: column; align-items: flex-start;">
-                        <strong class="mono" style="color: var(--cyan); font-size: 0.85rem;">${t.name}</strong>
+                      <div class="u-d-flex u-flex-col u-items-start">
+                        <strong class="mono u-text-cyan u-s-933a8e">${t.name}</strong>
                         ${skillBadge}
                       </div>
                     </td>
@@ -3212,15 +3482,15 @@
                       ${getNamespaceBadge(t.namespace)}
                     </td>
                     <td class="text-center">
-                      <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <div style="width: 50px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 9999px; overflow: hidden;">
-                          <div style="width: ${pct}%; height: 100%; background: ${barColor}; border-radius: 9999px;"></div>
+                      <div class="u-d-flex u-items-center u-justify-center u-gap-2">
+                        <div class="u-overflow-hidden u-s-463a03">
+                          <div class="u-s-cabe4a" style="width: ${pct}%; background: ${barColor};"></div>
                         </div>
-                        <span class="mono" style="color: ${barColor}; font-weight: 700; font-size: 0.8rem; min-width: 32px;">${pct}%</span>
+                        <span class="mono u-fw-700 u-s-5c41e7" style="color: ${barColor};">${pct}%</span>
                       </div>
                     </td>
                     <td>
-                      <div style="font-size: 0.78rem; color: #cbd5e1; line-height: 1.4;">${t.description}</div>
+                      <div class="u-text-slate u-s-3a74a8">${t.description}</div>
                       ${schemaParamsHtml}
                     </td>
                   </tr>
@@ -3237,17 +3507,41 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<span>⚡</span> Simular Seleção de Ferramentas';
+          btn.innerHTML = `${uiIcon('zap', 'icon-sm')} Simular Seleção de Ferramentas`;
         }
       }
     }
 
     async function fetchHardwareAndRecommendations() {
       const btn = document.getElementById('btn-recalibrate-hw');
-      if (btn) btn.innerHTML = '<span>⏳</span> Recalibrando...';
+      if (btn) btn.innerHTML = `${uiIcon('clock', 'icon-sm')} Recalibrando...`;
       try {
-        const res = await fetch('/api/v1/inventory/recommendations');
-        if (res.ok) {
+        const fetches = [fetch('/api/v1/inventory/recommendations')];
+        if (!arenaModelsData || arenaModelsData.length === 0) {
+          fetches.push(fetch('/api/v1/arena/models'));
+        }
+        if (!localModelsList || localModelsList.length === 0) {
+          fetches.push(fetch('/api/v1/models/local'));
+        }
+        const responses = await Promise.all(fetches);
+        const res = responses[0];
+        let idx = 1;
+        if (!arenaModelsData || arenaModelsData.length === 0) {
+          const aRes = responses[idx++];
+          if (aRes && aRes.ok) {
+            const aData = await aRes.json();
+            arenaModelsData = aData.models || [];
+          }
+        }
+        if (!localModelsList || localModelsList.length === 0) {
+          const lRes = responses[idx++];
+          if (lRes && lRes.ok) {
+            const lData = await lRes.json();
+            localModelsList = lData.models || [];
+          }
+        }
+
+        if (res && res.ok) {
           const data = await res.json();
           hubHardwareData = data.hardware;
           hubRecommendationsData = data.triad;
@@ -3255,61 +3549,71 @@
 
           renderHardwareDiagnostic(data.hardware);
           renderRecommendedTriad(data.triad);
-          renderCuratedCatalog(curatedCatalogData, data.hardware);
+          if (currentCuratedViewMode === 'trending' && trendingCatalogData.length > 0) {
+            renderCuratedCatalog(trendingCatalogData, data.hardware);
+          } else {
+            renderCuratedCatalog(curatedCatalogData, data.hardware);
+          }
         }
       } catch (e) {
         console.error('Erro ao buscar recomendações de hardware:', e);
         showToast('Falha ao obter diagnóstico de hardware.', 'error');
       } finally {
-        if (btn) btn.innerHTML = '<span>🔄</span> Recalibrar Hardware';
+        if (btn) btn.innerHTML = `${uiIcon('refresh', 'icon-sm')} Recalibrar Hardware`;
       }
     }
 
     function renderHardwareDiagnostic(hw) {
       if (!hw) return;
+      const tele = window.soulsTelemetryState || {};
       const elGpu = document.getElementById('hw-gpu-name');
       const elVram = document.getElementById('hw-vram-usable');
       const elRam = document.getElementById('hw-host-ram');
       const elCpu = document.getElementById('hw-cpu-features');
       const elCtx = document.getElementById('hw-context-ceiling');
 
-      if (elGpu) elGpu.innerText = hw.gpu_name || 'NVIDIA GeForce RTX 2060 Mobile';
+      if (elGpu) elGpu.innerText = hw.gpu_name || tele.gpuName || 'dGPU Local Dedicada';
       const gpuSub = document.getElementById('hw-gpu-sub');
       if (gpuSub) {
-        gpuSub.innerText = `${hw.gpu_architecture || 'Turing TU106'} • CC ${hw.gpu_compute_capability || '7.5'} • ${hw.gpu_details || '1.920 CUDA Cores • 240 Tensor Cores (FP16/INT8)'}`;
+        const arch = hw.gpu_architecture || 'Arquitetura dGPU';
+        const ccPart = hw.gpu_compute_capability ? ` • CC ${hw.gpu_compute_capability}` : '';
+        const details = hw.gpu_details || 'CUDA / Tensor';
+        gpuSub.innerText = `${arch}${ccPart} • ${details}`;
       }
 
+      const usableMb = hw.vram_safe_usable_mb || tele.vramLimitMb;
+      const totalMb = hw.vram_total_mb || tele.vramTotalMb;
       if (elVram) {
-        const usableGb = hw.vram_safe_usable_mb ? (hw.vram_safe_usable_mb / 1024).toFixed(2) : '5.17';
-        const totalGb = hw.vram_total_mb ? (hw.vram_total_mb / 1024).toFixed(2) : '6.00';
+        const usableGb = usableMb ? (usableMb / 1024).toFixed(2) : '--';
+        const totalGb = totalMb ? (totalMb / 1024).toFixed(2) : '--';
         elVram.innerText = `${usableGb} GB (${totalGb} GB Total)`;
       }
       const vramSub = document.getElementById('hw-vram-sub');
       if (vramSub) {
-        const weights = hw.weights_budget_gb !== undefined ? hw.weights_budget_gb : 3.8;
-        const kv = hw.kv_cache_budget_gb !== undefined ? hw.kv_cache_budget_gb : 1.3;
-        vramSub.innerHTML = `<div>📦 Teto Pesos: ~${weights} GB (Q4_K_M)</div><div style="margin-top: 2px;">🧠 Margem KV Cache: ~${kv} GB</div>`;
+        const weights = hw.weights_budget_gb !== undefined ? hw.weights_budget_gb : (usableMb ? ((usableMb / 1024) * 0.74).toFixed(1) : '--');
+        const kv = hw.kv_cache_budget_gb !== undefined ? hw.kv_cache_budget_gb : (usableMb ? ((usableMb / 1024) * 0.26).toFixed(1) : '--');
+        vramSub.innerHTML = `<div>${uiIcon('archive', 'icon-xs')} Teto Pesos: ~${weights} GB (Q4_K_M)</div><div class="u-mt-2p">${uiIcon('brain', 'icon-xs')} Margem KV Cache: ~${kv} GB</div>`;
       }
 
       if (elRam) {
-        const ramGb = hw.host_ram_total_mb ? (hw.host_ram_total_mb / 1024).toFixed(1) : '31.8';
+        const ramGb = hw.host_ram_total_mb ? (hw.host_ram_total_mb / 1024).toFixed(1) : '--';
         elRam.innerText = `${ramGb} GB RAM`;
       }
       const ramSub = document.getElementById('hw-host-ram-sub');
       if (ramSub) {
-        ramSub.innerText = '⚡ DDR4 Dual Channel • Swap Segura NVMe';
+        ramSub.innerHTML = `${uiIcon('zap', 'icon-xs')} Memória Host • Swap Segura NVMe`;
       }
 
       if (elCpu) {
         const rawCpu = hw.cpu_instructions_extended || (hw.has_avx2 ? 'AVX2 • FMA • BMI2 • SSE4.2 • AES-NI' : 'x86_64');
         const instList = rawCpu.split('•').map(s => s.trim()).filter(Boolean);
-        elCpu.innerHTML = `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px;">` +
-          instList.map(inst => `<span class="badge" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.28); font-size: 0.64rem; padding: 1px 5px; font-weight: 700; white-space: nowrap;">${inst}</span>`).join('') +
+        elCpu.innerHTML = `<div class="u-d-flex u-gap-1 u-flex-wrap u-mt-3p">` +
+          instList.map(inst => `<span class="badge u-text-cyan u-fw-700 u-nowrap u-s-1e70fe">${inst}</span>`).join('') +
           `</div>`;
       }
       const cpuSub = document.getElementById('hw-cpu-sub');
       if (cpuSub) {
-        cpuSub.innerText = hw.cpu_name || 'Intel Core i9-9980HK (8 Cores / 16 Threads)';
+        cpuSub.innerText = hw.cpu_name || tele.cpuName || 'Host CPU AVX2';
       }
 
       if (elCtx) {
@@ -3322,7 +3626,7 @@
       }
       const ctxSub = document.getElementById('hw-context-sub');
       if (ctxSub) {
-        ctxSub.innerText = hw.context_formula_subtitle || 'Baseado em 5.17 GB úteis: seguro p/ 3B (16k-32k) e 7B c/ KV Q4 (4k-8k FP16). Sessões curtas evitam spillover PCIe.';
+        ctxSub.innerText = hw.context_formula_subtitle || 'Cálculo dinâmico sobre a VRAM útil sob WDDM: garante estabilidade em contextos estendidos sem spillover PCIe.';
       }
       updateDynamicParamFitPills(hw);
     }
@@ -3330,52 +3634,52 @@
     function renderProfileTagBadge(profile) {
       if (!profile) return '';
       const p = profile.toLowerCase();
-      let color = '#94a3b8';
+      let color = '#A1A1AA';
       let bg = 'rgba(148, 163, 184, 0.12)';
       let border = 'rgba(148, 163, 184, 0.3)';
-      let icon = '🏷️';
+      let icon = 'tag';
       let label = profile;
 
       if (p.includes('coding') || p.includes('código')) {
         color = '#c084fc';
         bg = 'rgba(168, 85, 247, 0.15)';
         border = 'rgba(168, 85, 247, 0.4)';
-        icon = '💻';
+        icon = 'code';
         label = 'Coding Specialist';
       } else if (p.includes('reasoning') || p.includes('socratic') || p.includes('r1')) {
         color = '#818cf8';
         bg = 'rgba(99, 102, 241, 0.15)';
         border = 'rgba(99, 102, 241, 0.4)';
-        icon = '🧠';
+        icon = 'brain';
         label = 'Deep Reasoning (R1 CoT)';
       } else if (p.includes('agentic') || p.includes('tool') || p.includes('mcp')) {
         color = '#38bdf8';
         bg = 'rgba(6, 182, 212, 0.15)';
         border = 'rgba(6, 182, 212, 0.4)';
-        icon = '🤖';
+        icon = 'bot';
         label = 'Agentic & Tool Calling';
       } else if (p.includes('vision') || p.includes('vlm') || p.includes('multimodal')) {
         color = '#fb7185';
         bg = 'rgba(244, 63, 94, 0.15)';
         border = 'rgba(244, 63, 94, 0.4)';
-        icon = '👁️';
+        icon = 'eye';
         label = 'Vision Multimodal (VLM)';
       } else if (p.includes('fast') || p.includes('triagem') || p.includes('reflex')) {
         color = '#34d399';
         bg = 'rgba(16, 185, 129, 0.15)';
         border = 'rgba(16, 185, 129, 0.4)';
-        icon = '⚡';
+        icon = 'zap';
         label = 'Fast Reflex & Triage';
       } else if (p.includes('design') || p.includes('frontend') || p.includes('ui')) {
         color = '#fbbf24';
         bg = 'rgba(245, 158, 11, 0.15)';
         border = 'rgba(245, 158, 11, 0.4)';
-        icon = '🎨';
+        icon = 'palette';
         label = 'UI/UX & Frontend Design';
       }
 
-      return `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 700; font-family: var(--font-mono); background: ${bg}; color: ${color}; border: 1px solid ${border};">
-        <span>${icon}</span> <span>${label}</span>
+      return `<span class="u-d-inline-flex u-items-center u-gap-1 u-fw-700 u-mono u-s-fbe4db" style="background: ${bg}; color: ${color}; border: 1px solid ${border};">
+        <span>${uiIcon(icon, 'icon-xs')}</span> <span>${label}</span>
       </span>`;
     }
 
@@ -3384,18 +3688,33 @@
       const status = typeof fitStatus === 'string' ? fitStatus : (fitStatus.status || 'OptimalVram');
       switch (status) {
         case 'OptimalVram':
-          return `<span class="fit-badge optimal" title="100% dos pesos e KV-cache cabem com folga na dGPU">⚡ 100% VRAM</span>`;
+          return `<span class="fit-badge optimal" title="100% dos pesos e KV-cache cabem com folga na dGPU">${uiIcon('zap', 'icon-xs')} 100% VRAM</span>`;
         case 'TightVram':
-          return `<span class="fit-badge tight" title="Cabe na VRAM aproveitando o headroom do WDDM">✓ VRAM Completa</span>`;
+          return `<span class="fit-badge tight" title="Cabe na VRAM aproveitando o headroom do WDDM">${uiIcon('check', 'icon-xs')} VRAM Completa</span>`;
         case 'PartialCpuOffload':
-          return `<span class="fit-badge offload" title="Offload parcial para CPU RAM">⚠️ CPU Offload</span>`;
+          return `<span class="fit-badge offload" title="Offload parcial para CPU RAM">${uiIcon('alert-triangle', 'icon-xs')} CPU Offload</span>`;
         case 'CpuOnly':
-          return `<span class="fit-badge offload" title="Execução integral na CPU Intel via AVX2">💻 Modo CPU (AVX2)</span>`;
+          return `<span class="fit-badge offload" title="Execução integral na CPU Intel via AVX2">${uiIcon('terminal', 'icon-xs')} Modo CPU (AVX2)</span>`;
         case 'Incompatible':
-          return `<span class="fit-badge incompatible" title="Excede a memória combinada VRAM + RAM">❌ Memória Insuficiente</span>`;
+          return `<span class="fit-badge incompatible" title="Excede a memória combinada VRAM + RAM">${uiIcon('x-circle', 'icon-xs')} Memória Insuficiente</span>`;
         default:
           return `<span class="fit-badge tight">${status}</span>`;
       }
+    }
+
+    function escapeJsSingleQuote(str) {
+      return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
+    function getCategoryRoleBadgeHtml(role) {
+      const r = (role || '').toLowerCase();
+      if (r === 'featherweight') {
+        return `<span class="badge" style="background: rgba(56, 189, 248, 0.14); color: #38bdf8;">${uiIcon('rocket', 'icon-xs')} Featherweight (&lt;1.5 GB)</span>`;
+      }
+      if (r === 'sweetspot') {
+        return `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">${uiIcon('zap', 'icon-xs')} Sweet Spot (1.5–3.6 GB)</span>`;
+      }
+      return `<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--purple-light);">${uiIcon('crown', 'icon-xs')} Heavyweight (Teto VRAM)</span>`;
     }
 
     function renderRecommendedTriad(triad) {
@@ -3403,72 +3722,106 @@
       if (!container || !triad) return;
 
       const items = [
-        { tierLabel: 'Tier 0 — Fast Reflex & Triage', tierColor: 'var(--green)', icon: '⚡', data: triad.tier0_velocista, role: 'Triagem ultra-rápida, guardrails e classificação de intenção (180+ tok/s)' },
-        { tierLabel: 'Tier 0.5 — Socratic Thinking & Intent', tierColor: 'var(--cyan)', icon: '🧠', data: triad.tier05_socratico, role: 'Raciocínio socrático formal DeepSeek-R1 CoT e deliberação epistêmica' },
-        { tierLabel: 'Tier 1 — Workhorse / Code & Logic', tierColor: 'var(--purple)', icon: '💻', data: triad.tier1_coder, role: 'Cavalo de batalha Sweet Spot para cirurgia de código, AST e lógica profunda' },
+        { tierLabel: 'Tier 0 — Fast Reflex & Triage', tierColor: 'var(--green)', icon: 'zap', data: triad.tier0_velocista, role: 'Triagem ultra-rápida, guardrails e classificação de intenção com zero latência.' },
+        { tierLabel: 'Tier 0.5 — Socratic Thinking & Intent', tierColor: 'var(--cyan)', icon: 'brain', data: triad.tier05_socratico, role: 'Raciocínio socrático, cadeia de pensamento (CoT) e deliberação epistêmica.' },
+        { tierLabel: 'Tier 1 — Workhorse / Code & Logic', tierColor: 'var(--purple)', icon: 'code', data: triad.tier1_coder, role: 'Cavalo de batalha na dGPU para cirurgia de código, AST e agentes autônomos.' },
       ];
 
       container.innerHTML = items.map(item => {
         const model = item.data;
         if (!model) return '';
-        const variant = (model.variants || []).find(v => v.is_recommended_fit) || (model.variants || [])[0];
+        const variants = model.variants || [];
+        const variant = variants.find(v => v.is_installed) || variants.find(v => v.is_recommended_fit) || variants[0];
         if (!variant) return '';
 
-        const sizeGb = variant.size_gb ? variant.size_gb.toFixed(2) : (variant.size_bytes / (1024 ** 3)).toFixed(2);
-        const estTps = model.benchmark_scores && model.benchmark_scores.speed_tokens_sec_estimate ? `${model.benchmark_scores.speed_tokens_sec_estimate.toFixed(0)} tps` : '--';
-        const matched = findInstalledModelMatch(variant.file_name, model.repo_id, model.model_name);
-        const isDown = Boolean(model.is_downloaded || matched);
-        const activeFile = (matched && matched.realFileName) ? matched.realFileName : (model.local_file_path || variant.file_name);
+        const matched = findInstalledModelMatch(variant.file_name, model.repo_id, model.model_name, variant.quant_tag);
+        const isDown = Boolean(variant.is_installed || model.is_downloaded || matched);
+        const activeFile = variant.installed_file_name || (matched && matched.realFileName) || model.local_file_path || variant.file_name;
+
+        const sizeBytes = (matched && matched.size_mb) ? matched.size_mb * 1024 * 1024 : variant.size_bytes;
+        const sizeGb = sizeBytes > 0 ? (sizeBytes / (1024 ** 3)).toFixed(2) : (variant.size_gb ? variant.size_gb.toFixed(2) : '--');
+        const arenaMatch = findArenaMatchForHubModel(model, activeFile, variant.file_name);
+        const hasRealBench = Boolean(isDown && arenaMatch && arenaMatch.latest_tps > 0);
+        const rawEstTps = variant.estimated_tps || (model.benchmark_scores && model.benchmark_scores.speed_tokens_sec_estimate) || 0;
+        const tpsDisplay = hasRealBench
+          ? `${uiIcon('zap', 'icon-xs')} ${arenaMatch.latest_tps.toFixed(1)} tps <span class="badge u-text-emerald u-s-3fefe0" style="font-size:0.62rem;padding:1px 5px;">Aferido</span>`
+          : (rawEstTps > 0 ? `~${rawEstTps.toFixed(0)} tps` : '--');
+
+        const alt = model.upgrade_candidate;
+        let upgradeHtml = '';
+        if (alt) {
+          const altVariants = alt.variants || [];
+          const altVar = altVariants.find(v => v.is_recommended_fit) || altVariants[0];
+          if (altVar) {
+            const altSizeGb = altVar.size_gb ? altVar.size_gb.toFixed(2) : (altVar.size_bytes / (1024 ** 3)).toFixed(2);
+            const altTps = (altVar.estimated_tps || (alt.benchmark_scores && alt.benchmark_scores.speed_tokens_sec_estimate) || 0).toFixed(0);
+            upgradeHtml = `
+              <div class="triad-upgrade-box">
+                <div class="triad-upgrade-header">
+                  <span>${uiIcon('sparkles', 'icon-xs')} Próximo Upgrade / Alternativa</span>
+                  <span>${escapeHtml(altVar.quant_tag)} &bull; ${altSizeGb} GB &bull; ~${altTps} tps</span>
+                </div>
+                <div class="u-d-flex u-items-center u-justify-between u-gap-2 u-mt-4p">
+                  <div class="u-text-white u-fw-600 u-mono" style="font-size:0.78rem;" title="${escapeHtml(alt.why_recommended || alt.model_name)}">${escapeHtml(alt.model_name)}</div>
+                  <button class="btn btn-cyan u-s-918d92 u-nowrap" onclick="requestCuratedVariantDownload('${escapeJsSingleQuote(alt.repo_id)}', '${escapeJsSingleQuote(altVar.download_url || '')}', '${escapeJsSingleQuote(altVar.file_name)}', ${altVar.size_bytes || 0}, '${escapeJsSingleQuote(altVar.sha256 || '')}', '${escapeJsSingleQuote(altVar.projector_file || '')}', '${escapeJsSingleQuote(altVar.projector_url || '')}', '${escapeJsSingleQuote(altVar.quant_tag)}')">
+                    ${uiIcon('download', 'icon-xs')} Baixar (${altSizeGb} GB)
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }
 
         return `
-          <div class="triad-card ${isDown ? 'is-installed-card' : ''}" style="border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div class="triad-card ${isDown ? 'is-installed-card' : ''} u-d-flex u-flex-col u-justify-between u-s-7c2e41">
             <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 0.72rem; font-weight: 700; color: ${item.tierColor}; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.03em;">
+              <div class="u-d-flex u-items-center u-justify-between u-mb-10p u-flex-wrap u-gap-6p">
+                <div class="u-d-flex u-items-center u-gap-2">
+                  <span class="u-fw-700 u-mono u-uppercase u-s-85ebd3" style="color: ${item.tierColor};">
                     ${item.tierLabel}
                   </span>
-                  ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.65rem; padding: 1px 7px; font-weight: 700;">✓ Instalado</span>' : ''}
+                  ${isDown ? '<span class="badge u-text-emerald u-fw-700 u-s-3fefe0">' + uiIcon('check', 'icon-xs') + ' Instalado</span>' : ''}
                 </div>
                 <div>
                   ${getFitBadgeHtml(variant.hardware_fit)}
                 </div>
               </div>
 
-              <div style="font-size: 1.05rem; font-weight: 700; color: #fff; font-family: var(--font-mono); word-break: break-word; line-height: 1.3;">
-                ${model.model_name}
+              <div class="u-fw-700 u-text-white u-mono u-s-66e304">
+                ${escapeHtml(model.model_name)}
               </div>
 
-              <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
+              <p class="u-text-muted u-mt-6p u-s-68e8c4">
                 ${item.role}
               </p>
 
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: 0.72rem;">
-                <div><span style="color: var(--text-muted);">Quantização:</span> <strong style="color: var(--cyan);">${variant.quant_tag}</strong></div>
-                <div><span style="color: var(--text-muted);">Tamanho:</span> <strong style="color: #fff;">${sizeGb} GB</strong></div>
-                <div><span style="color: var(--text-muted);">Throughput:</span> <strong style="color: #34d399;">~${estTps}</strong></div>
-                <div><span style="color: var(--text-muted);">Silício:</span> <strong style="color: #fff;">${variant.hardware_fit === 'OptimalVram' ? 'dGPU RTX' : 'CPU Host'}</strong></div>
+              <div class="u-d-grid u-gap-2 u-mt-3 u-mono u-s-85e1ad">
+                <div><span class="u-text-muted">Quantização:</span> <strong class="u-text-cyan">${escapeHtml(variant.quant_tag)}</strong></div>
+                <div><span class="u-text-muted">Tamanho:</span> <strong class="u-text-white">${sizeGb} GB</strong></div>
+                <div><span class="u-text-muted">Throughput:</span> <strong class="u-text-emerald">${tpsDisplay}</strong></div>
+                <div><span class="u-text-muted">Silício:</span> <strong class="u-text-white">${variant.hardware_fit === 'OptimalVram' ? 'dGPU RTX' : 'CPU Host'}</strong></div>
               </div>
             </div>
 
-            <div style="margin-top: 16px; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+            <div class="u-mt-4 u-s-6355ee">
               ${isDown ? `
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <button class="btn btn-green" style="flex: 2; height: 30px; font-size: 0.75rem; justify-content: center; font-weight: 600;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir como cérebro no Hermes Agent">
-                    <span>⚡</span> Usar no Hermes
+                <div class="u-d-flex u-gap-6p u-items-center">
+                  <button class="btn btn-green u-justify-center u-fw-600 u-s-a84808" onclick="openQuickApplyModal('${escapeJsSingleQuote(activeFile)}', 'local_silicon', true)" title="Definir como cérebro no Hermes Agent">
+                    ${uiIcon('zap', 'icon-sm')} Usar no Hermes
                   </button>
-                  <button class="btn btn-cyan" style="flex: 1; height: 30px; font-size: 0.74rem; justify-content: center;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
-                    <span>🏟️</span> Arena
+                  <button class="btn btn-cyan u-flex-1 u-justify-center u-s-c5a735" onclick="testModelInArena('${escapeJsSingleQuote(activeFile)}')" title="Testar na Local Silicon Arena">
+                    ${uiIcon('trophy', 'icon-sm')} Arena
                   </button>
-                  <button class="btn" style="width: 36px; height: 30px; padding: 0; justify-content: center; font-size: 0.8rem;" title="Baixar novamente" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
-                    <span>🔄</span>
+                  <button class="btn u-justify-center u-s-195416" title="Baixar novamente" onclick="requestCuratedVariantDownload('${escapeJsSingleQuote(model.repo_id)}', '${escapeJsSingleQuote(variant.download_url || '')}', '${escapeJsSingleQuote(variant.file_name)}', ${variant.size_bytes || 0}, '${escapeJsSingleQuote(variant.sha256 || '')}', '${escapeJsSingleQuote(variant.projector_file || '')}', '${escapeJsSingleQuote(variant.projector_url || '')}', '${escapeJsSingleQuote(variant.quant_tag)}')">
+                    ${uiIcon('refresh', 'icon-sm')}
                   </button>
                 </div>
               ` : `
-                <button class="btn btn-cyan" style="width: 100%; height: 30px; justify-content: center; font-size: 0.78rem; font-weight: 600;" onclick="requestModelDownload('${variant.download_url}', '${variant.file_name}', ${variant.size_bytes}, '${variant.sha256 || ''}', '${model.repo_id}')">
-                  <span>⬇️</span> 1-Click Download (${sizeGb} GB)
+                <button class="btn btn-cyan u-w-full u-justify-center u-fw-600 u-s-40d5e9" onclick="requestCuratedVariantDownload('${escapeJsSingleQuote(model.repo_id)}', '${escapeJsSingleQuote(variant.download_url || '')}', '${escapeJsSingleQuote(variant.file_name)}', ${variant.size_bytes || 0}, '${escapeJsSingleQuote(variant.sha256 || '')}', '${escapeJsSingleQuote(variant.projector_file || '')}', '${escapeJsSingleQuote(variant.projector_url || '')}', '${escapeJsSingleQuote(variant.quant_tag)}')">
+                  ${uiIcon('download', 'icon-sm')} 1-Click Download (${sizeGb} GB)
                 </button>
               `}
+              ${upgradeHtml}
             </div>
           </div>
         `;
@@ -3483,32 +3836,29 @@
       const btnTrusted = document.getElementById('btn-curated-mode-trusted');
       const btnTrending = document.getElementById('btn-curated-mode-trending');
       if (btnTrusted && btnTrending) {
-        if (mode === 'trusted') {
-          btnTrusted.style.background = 'var(--purple)';
-          btnTrusted.style.color = '#fff';
-          btnTrusted.style.fontWeight = '600';
-          btnTrending.style.background = 'transparent';
-          btnTrending.style.color = 'var(--text-muted)';
-          btnTrending.style.fontWeight = '500';
-        } else {
-          btnTrending.style.background = 'var(--purple)';
-          btnTrending.style.color = '#fff';
-          btnTrending.style.fontWeight = '600';
-          btnTrusted.style.background = 'transparent';
-          btnTrusted.style.color = 'var(--text-muted)';
-          btnTrusted.style.fontWeight = '500';
-        }
+        const isTrusted = mode === 'trusted';
+        btnTrusted.classList.toggle('active', isTrusted);
+        btnTrending.classList.toggle('active', !isTrusted);
+        [btnTrusted, btnTrending].forEach(b => {
+          b.style.background = '';
+          b.style.color = '';
+          b.style.fontWeight = '';
+        });
       }
 
-      if (mode === 'trending' && (!trendingCatalogData || trendingCatalogData.length === 0)) {
-        loadTrendingCatalog();
+      if (mode === 'trending') {
+        if (!trendingCatalogData || trendingCatalogData.length === 0) {
+          loadTrendingCatalog();
+        } else {
+          renderCuratedCatalog(trendingCatalogData, hubHardwareData);
+        }
       } else {
         renderCuratedCatalog(curatedCatalogData, hubHardwareData);
       }
     }
 
     function calculateFitFromParamEstimate(paramSize, isMoe = false) {
-      const safeVramGb = hubHardwareData && hubHardwareData.vram_safe_usable_mb ? (hubHardwareData.vram_safe_usable_mb / 1024) : 5.17;
+      const safeVramGb = hubHardwareData && hubHardwareData.vram_safe_usable_mb ? (hubHardwareData.vram_safe_usable_mb / 1024) : ((window.soulsTelemetryState && window.soulsTelemetryState.vramLimitMb) ? (window.soulsTelemetryState.vramLimitMb / 1024) : 4.0);
       const estVramGb = paramSize * 0.65;
       if (isMoe) {
         return paramSize <= 35 ? 'PartialCpuOffload' : 'Incompatible';
@@ -3527,47 +3877,21 @@
     async function loadTrendingCatalog() {
       const container = document.getElementById('curated-models-grid');
       if (container) {
-        container.innerHTML = '<div style="color: var(--cyan); text-align: center; grid-column: 1 / -1; padding: 30px;"><span style="display:inline-block; animation:spin 1s linear infinite; margin-right:8px;">⏳</span> Buscando novidades em alta no Hugging Face Hub para a sua máquina...</div>';
+        container.innerHTML = `<div class="u-text-cyan u-text-center u-s-c20f1a"><span class="spin-icon u-d-inline-block u-s-d1cc57">${uiIcon('refresh', 'icon-xs')}</span> Buscando tendências e lançamentos GGUF no Hugging Face para o seu hardware...</div>`;
       }
       try {
-        const res = await fetch('/api/v1/inventory/search?query=gguf&limit=25');
+        const res = await fetch('/api/v1/inventory/recommendations?mode=trending');
         if (res.ok) {
           const data = await res.json();
-          const repos = data.results || [];
-          trendingCatalogData = repos.map(r => {
-            const repoId = r.repo_id || r.id || '';
-            const details = parseRepoModelDetails(repoId, r.tags || []);
-            const paramSize = details.total_b || details.active_b || null;
-            const fit = paramSize ? calculateFitFromParamEstimate(paramSize, details.is_moe) : 'OptimalVram';
-            const isSweet = paramSize ? (paramSize <= 4.0 && !details.is_moe) : false;
-            const repoSimple = repoId.split('/').pop() || repoId;
-            const author = r.author || (repoId.includes('/') ? repoId.split('/')[0] : 'Comunidade');
-            const profile = (details.specialties && details.specialties.length > 0) ? (
-              details.specialties[0].label.toLowerCase().includes('coding') ? 'coding' :
-              details.specialties[0].label.toLowerCase().includes('reasoning') ? 'reasoning' :
-              details.specialties[0].label.toLowerCase().includes('vision') ? 'vision' : 'all'
-            ) : 'all';
-            return {
-              model_name: repoSimple,
-              repo_id: repoId,
-              author: author,
-              cognitive_profile: profile,
-              category_role: isSweet ? 'SweetSpot' : 'Heavyweight',
-              why_recommended: `Novidade em alta na comunidade com ${Number(r.downloads || 0).toLocaleString()} downloads e ${r.likes || 0} curtidas.`,
-              downloads: r.downloads,
-              likes: r.likes,
-              paramSize: paramSize,
-              is_trending: true,
-              variants: []
-            };
-          }).filter(m => !m.paramSize || m.paramSize <= 45.0);
+          if (data.hardware) hubHardwareData = data.hardware;
+          trendingCatalogData = data.trending_catalog || [];
           renderCuratedCatalog(trendingCatalogData, hubHardwareData);
         } else {
-          if (container) container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Não foi possível buscar as novidades da nuvem agora.</div>';
+          if (container) container.innerHTML = '<div class="u-text-muted u-text-center u-s-720583">Não foi possível buscar as novidades da nuvem agora.</div>';
         }
       } catch (err) {
         console.error('Erro ao carregar novidades:', err);
-        if (container) container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Falha de conexão ao buscar novidades da nuvem.</div>';
+        if (container) container.innerHTML = '<div class="u-text-muted u-text-center u-s-720583">Falha de conexão ao buscar novidades da nuvem.</div>';
       }
     }
 
@@ -3576,19 +3900,28 @@
       const syncBadge = document.getElementById('catalog-last-sync-badge');
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span style="display:inline-block; animation:spin 1s linear infinite; margin-right:4px;">⏳</span> Sincronizando...';
+        btn.innerHTML = '<span class="spin-icon u-d-inline-block u-s-043e24">' + uiIcon('refresh', 'icon-xs') + '</span> Sincronizando HF...';
       }
       try {
+        const recUrl = currentCuratedViewMode === 'trending'
+          ? '/api/v1/inventory/recommendations?sync=true&mode=trending'
+          : '/api/v1/inventory/recommendations?sync=true';
+
         const [recRes, arenaRes] = await Promise.all([
-          fetch('/api/v1/inventory/recommendations'),
+          fetch(recUrl),
           fetch('/api/v1/arena/models')
         ]);
 
+        let syncedLiveCount = 0;
         if (recRes.ok) {
           const data = await recRes.json();
           curatedCatalogData = data.catalog || [];
           hubHardwareData = data.hardware;
           hubRecommendationsData = data.triad;
+          if (data.trending_catalog && data.trending_catalog.length > 0) {
+            trendingCatalogData = data.trending_catalog;
+          }
+          syncedLiveCount = curatedCatalogData.length;
         }
 
         if (arenaRes.ok) {
@@ -3597,7 +3930,11 @@
         }
 
         if (currentCuratedViewMode === 'trending') {
-          await loadTrendingCatalog();
+          if (!trendingCatalogData || trendingCatalogData.length === 0) {
+            await loadTrendingCatalog();
+          } else {
+            renderCuratedCatalog(trendingCatalogData, hubHardwareData);
+          }
         } else {
           renderCuratedCatalog(curatedCatalogData, hubHardwareData);
         }
@@ -3606,17 +3943,18 @@
         if (syncBadge) {
           const now = new Date();
           const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          syncBadge.innerText = `✓ Sincronizado às ${timeStr}`;
+          syncBadge.innerHTML = `${uiIcon('check-circle', 'icon-xs')} Sincronizado às ${timeStr}`;
           syncBadge.style.display = 'inline-flex';
+          syncBadge.classList.remove('is-hidden');
         }
-        showToast('✨ Catálogo e benchmarks empíricos sincronizados com sucesso!', 'success');
+        showToast(`Catálogo vivo sincronizado (${syncedLiveCount || 'catálogo'} modelos avaliados na GPU)!`, 'success');
       } catch (err) {
         console.error('Falha ao sincronizar catálogo:', err);
         showToast('Catálogo mantido no baseline seguro.', 'warning');
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<span id="btn-sync-catalog-icon">✨</span> Sincronizar Catálogo';
+          btn.innerHTML = `<span id="btn-sync-catalog-icon">${uiIcon('sparkles', 'icon-sm')}</span> Sincronizar Catálogo`;
         }
       }
     }
@@ -3646,21 +3984,27 @@
         return prof === currentCuratedProfileFilter.toLowerCase();
       });
 
-      // Ordenação inteligente: (1) Instalado no disco, (2) Cabe 100% na VRAM (OptimalVram), (3) tok/s / likes, (4) Incompatível por último
-      filteredCuratedModels.sort((a, b) => {
-        const vA = a.variants && a.variants[0] ? a.variants[0] : {};
-        const vB = b.variants && b.variants[0] ? b.variants[0] : {};
-        const matchA = Boolean(a.is_downloaded || findInstalledModelMatch(vA.file_name, a.repo_id, a.model_name));
-        const matchB = Boolean(b.is_downloaded || findInstalledModelMatch(vB.file_name, b.repo_id, b.model_name));
-        if (matchA !== matchB) return matchA ? -1 : 1;
+      const getInstalledVariant = (m) => {
+        const variants = m.variants || [];
+        return variants.find(v => Boolean(v.is_installed || findInstalledModelMatch(v.file_name, m.repo_id, m.model_name, v.quant_tag)));
+      };
 
-        const fitRank = (fit) => {
-          if (fit === 'OptimalVram') return 1;
-          if (fit === 'TightVram') return 2;
-          if (fit === 'PartialCpuOffload') return 3;
-          if (fit === 'Incompatible') return 5;
-          return 4;
-        };
+      const fitRank = (fit) => {
+        if (fit === 'OptimalVram') return 1;
+        if (fit === 'TightVram') return 2;
+        if (fit === 'PartialCpuOffload') return 3;
+        if (fit === 'Incompatible' || fit === 'IncompatibleSpillover') return 5;
+        return 4;
+      };
+
+      // Ordenação: (1) Instalado no disco, (2) Cabe 100% na VRAM, (3) Score/downloads
+      filteredCuratedModels.sort((a, b) => {
+        const downA = Boolean(a.is_downloaded || getInstalledVariant(a));
+        const downB = Boolean(b.is_downloaded || getInstalledVariant(b));
+        if (downA !== downB) return downA ? -1 : 1;
+
+        const vA = (a.variants || []).find(v => v.is_recommended_fit) || (a.variants && a.variants[0]) || {};
+        const vB = (b.variants || []).find(v => v.is_recommended_fit) || (b.variants && b.variants[0]) || {};
         const rankA = fitRank(vA.hardware_fit);
         const rankB = fitRank(vB.hardware_fit);
         if (rankA !== rankB) return rankA - rankB;
@@ -3669,145 +4013,146 @@
       });
 
       if (filteredCuratedModels.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Nenhum modelo encontrado para este filtro.</div>';
+        container.innerHTML = '<div class="u-text-muted u-text-center u-s-720583">Nenhum modelo encontrado para este filtro.</div>';
         return;
       }
 
       container.innerHTML = filteredCuratedModels.map((m, idx) => {
         const variants = m.variants || [];
-        const recommendedVariant = variants.find(v => v.is_recommended_fit) || variants[0] || {};
+        const selectedVariant = variants.find(v => v.is_installed)
+          || variants.find(v => findInstalledModelMatch(v.file_name, m.repo_id, m.model_name, v.quant_tag))
+          || variants.find(v => v.is_recommended_fit)
+          || variants[0]
+          || {};
 
-        // Verificação inteligente com base no inventário real local
-        const matched = findInstalledModelMatch(recommendedVariant.file_name, m.repo_id, m.model_name);
-        const isDown = Boolean(m.is_downloaded || matched);
-        const activeFile = (matched && matched.realFileName) ? matched.realFileName : (m.local_file_path || recommendedVariant.file_name);
+        const matched = findInstalledModelMatch(selectedVariant.file_name, m.repo_id, m.model_name, selectedVariant.quant_tag);
+        const isDown = Boolean(selectedVariant.is_installed || matched);
+        const activeFile = selectedVariant.installed_file_name || (matched && matched.realFileName) || m.local_file_path || selectedVariant.file_name || '';
 
         const hasVariants = variants.length > 0;
-        const quantOptions = hasVariants ? variants.map(v => `
-          <option value="${v.quant_tag}" ${v.is_recommended_fit ? 'selected' : ''} data-size="${v.size_bytes}" data-url="${v.download_url}" data-file="${v.file_name}" data-fit="${v.hardware_fit}" data-sha256="${v.sha256 || ''}" data-proj-file="${v.projector_file || ''}" data-proj-url="${v.projector_url || ''}">
-            ${v.quant_tag} (${(v.size_bytes / (1024**3)).toFixed(2)} GB)
-          </option>
-        `).join('') : '';
+        const quantOptions = hasVariants ? variants.map(v => {
+          const isVDown = Boolean(v.is_installed || findInstalledModelMatch(v.file_name, m.repo_id, m.model_name, v.quant_tag));
+          const isSel = v === selectedVariant;
+          const vGb = (v.size_bytes / (1024 ** 3)).toFixed(2);
+          return `
+            <option value="${escapeHtml(v.quant_tag)}" ${isSel ? 'selected' : ''} data-size="${v.size_bytes || 0}" data-url="${escapeHtml(v.download_url || '')}" data-file="${escapeHtml(v.file_name)}" data-fit="${v.hardware_fit || 'OptimalVram'}" data-tps="${v.estimated_tps || ''}" data-sha256="${escapeHtml(v.sha256 || '')}" data-proj-file="${escapeHtml(v.projector_file || '')}" data-proj-url="${escapeHtml(v.projector_url || '')}" data-installed="${isVDown ? '1' : '0'}" data-installed-file="${escapeHtml(v.installed_file_name || '')}">
+              ${escapeHtml(v.quant_tag)} (${vGb} GB)${isVDown ? ' ✓ No Disco' : ''}
+            </option>
+          `;
+        }).join('') : '';
 
-        const fitBadge = getFitBadgeHtml(recommendedVariant.hardware_fit || (m.paramSize ? calculateFitFromParamEstimate(m.paramSize, false) : 'OptimalVram'));
-        const isSweet = m.category_role === 'SweetSpot';
+        const fitBadge = getFitBadgeHtml(selectedVariant.hardware_fit || (m.paramSize ? calculateFitFromParamEstimate(m.paramSize, false) : 'OptimalVram'));
+        const arenaMatch = findArenaMatchForHubModel(m, activeFile, selectedVariant.file_name);
+        const hasRealBench = Boolean(isDown && arenaMatch && arenaMatch.latest_tps > 0);
+        const estTpsVal = selectedVariant.estimated_tps || (m.benchmark_scores && m.benchmark_scores.speed_tokens_sec_estimate) || 0;
+        const speedDisplay = hasRealBench
+          ? `${arenaMatch.latest_tps.toFixed(1)} tps (Aferido)`
+          : (estTpsVal > 0 ? `~${estTpsVal.toFixed(0)} tps` : '--');
 
-        // Procura se o modelo tem benchmark real medido na Silicon Arena deste PC
-        const arenaMatch = (arenaModelsData || []).find(am =>
-          (am.file_name && (am.file_name === recommendedVariant.file_name || activeFile.includes(am.file_name))) ||
-          (am.name && m.model_name && (am.name.toLowerCase().includes(m.model_name.toLowerCase()) || m.model_name.toLowerCase().includes(am.name.toLowerCase())))
-        );
-
-        const hasRealBench = Boolean(arenaMatch && arenaMatch.latest_tps);
+        const selSizeGb = selectedVariant.size_bytes ? (selectedVariant.size_bytes / (1024 ** 3)).toFixed(2) : '--';
+        const downloadLabel = m.is_multimodal_vlm
+          ? `Baixar Bundle VLM ${selectedVariant.quant_tag || ''} (${selSizeGb} GB)`
+          : `Baixar ${selectedVariant.quant_tag || 'GGUF'} (${selSizeGb} GB)`;
 
         return `
           <div class="curated-card ${isDown ? 'is-installed-card' : ''}" id="curated-card-${idx}">
             <div>
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+              <div class="u-d-flex u-items-center u-justify-between u-mb-10p u-flex-wrap u-gap-2">
+                <div class="u-d-flex u-gap-6p u-items-center u-flex-wrap">
                   ${m.is_trending ? `
-                    <span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); font-size: 0.65rem; padding: 2px 7px; font-weight: 700;">
-                      🔥 Novidade em Alta
+                    <span class="badge u-fw-700 u-s-7559ef">
+                      ${uiIcon('flame', 'icon-xs')} Novidade em Alta
                     </span>
                   ` : `
-                    <span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem; padding: 2px 7px; font-weight: 700;">
-                      ⭐ Mais Confiável
+                    <span class="badge u-fw-700 u-s-a40b84">
+                      ${uiIcon('sparkles', 'icon-xs')} ${(m.downloads && !m.upgrade_recommendation) ? 'Catálogo Vivo HF' : 'Mais Confiável'}
                     </span>
                   `}
-                  <span class="badge" style="background: ${isSweet ? 'rgba(16, 185, 129, 0.15)' : 'rgba(168, 85, 247, 0.15)'}; color: ${isSweet ? '#34d399' : 'var(--purple-light)'};">
-                    ${isSweet ? '⚡ Sweet Spot (45+ tps)' : '💎 Heavyweight (Teto)'}
-                  </span>
-                  ${m.is_multimodal_vlm ? '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">👁️ VLM Visão</span>' : ''}
+                  ${getCategoryRoleBadgeHtml(m.category_role)}
+                  ${m.is_multimodal_vlm ? '<span class="badge u-text-cyan u-s-b8e4da">' + uiIcon('eye', 'icon-xs') + ' VLM Visão</span>' : ''}
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="u-d-flex u-items-center u-gap-10p">
                   <span id="curated-fit-${idx}">${fitBadge}</span>
                   <span id="curated-badge-installed-${idx}">
-                    ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.65rem; padding: 2px 8px; font-weight: 700; border-radius: 9999px;">✓ Instalado</span>' : ''}
+                    ${isDown ? '<span class="badge u-text-emerald u-fw-700 u-s-3e3280">' + uiIcon('check', 'icon-xs') + ' Instalado</span>' : ''}
                   </span>
                 </div>
               </div>
-              <div style="font-size: 1.02rem; font-weight: 700; color: #fff; font-family: var(--font-mono); margin-top: 4px;">
-                ${m.model_name}
+              <div class="u-fw-700 u-text-white u-mono u-mt-1 u-s-38f55e">
+                ${escapeHtml(m.model_name)}
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; font-family: var(--font-mono); margin-top: 6px; background: rgba(15, 23, 42, 0.35); padding: 7px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
-                <div>👤 <span style="color: var(--text-muted);">Autor:</span> <strong style="color: #fff;">${m.author || '--'}</strong></div>
-                <div>📦 <span style="color: var(--text-muted);">Repo:</span> <span style="color: var(--cyan);">${m.repo_id}</span></div>
-                <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-                  <span>🎯</span> <span style="color: var(--text-muted);">Perfil Indicado:</span> ${renderProfileTagBadge(m.cognitive_profile)}
+              <div class="u-d-flex u-flex-col u-gap-1 u-mono u-mt-6p u-s-402265">
+                <div>${uiIcon('users', 'icon-xs')} <span class="u-text-muted">Autor:</span> <strong class="u-text-white">${escapeHtml(m.author || '--')}</strong></div>
+                <div>${uiIcon('archive', 'icon-xs')} <span class="u-text-muted">Repo:</span> <span class="u-text-cyan">${escapeHtml(m.repo_id)}</span></div>
+                <div class="u-d-flex u-items-center u-gap-6p u-mt-2p">
+                  <span>${uiIcon('target', 'icon-xs')}</span> <span class="u-text-muted">Perfil Indicado:</span> ${renderProfileTagBadge(m.cognitive_profile)}
                 </div>
               </div>
 
-              <p style="font-size: 0.74rem; color: #cbd5e1; margin-top: 8px; line-height: 1.4;">
-                ${m.why_recommended || ''}
+              <p class="u-text-slate u-mt-2 u-s-e197f7">
+                ${escapeHtml(m.why_recommended || '')}
               </p>
 
-              <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
-                ${(m.highlights || []).map(h => `<span class="badge" style="background: rgba(255,255,255,0.05); color: #94a3b8; font-size: 0.65rem;">${h}</span>`).join('')}
+              <div class="u-mt-2 u-d-flex u-flex-wrap u-gap-1">
+                ${(m.highlights || []).map(h => `<span class="badge u-text-muted u-s-1ee417">${escapeHtml(h)}</span>`).join('')}
               </div>
 
-              <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: rgba(15,23,42,0.4); padding: 8px; border-radius: var(--radius-sm); font-size: 0.7rem; font-family: var(--font-mono);">
-                ${m.is_trending ? `
-                  <div>Downloads: <strong style="color: var(--cyan);">${m.downloads ? Number(m.downloads).toLocaleString() : '--'}</strong></div>
-                  <div>Likes: <strong style="color: #facc15;">${m.likes || 0}</strong></div>
-                  <div>Parâmetros: <strong style="color: #fff;">${m.paramSize ? `~${m.paramSize.toFixed(1)}B` : 'GGUF'}</strong></div>
-                  <div>Silício: <strong style="color: #34d399;">${isSweet ? '100% VRAM' : 'VRAM + RAM'}</strong></div>
-                ` : `
-                  <div>Coding: <strong style="color: var(--cyan);">${m.benchmark_scores && m.benchmark_scores.coding_score ? m.benchmark_scores.coding_score.toFixed(1) : '--'}</strong></div>
-                  <div>MMLU: <strong style="color: #fff;">${m.benchmark_scores && m.benchmark_scores.mmlu_score ? m.benchmark_scores.mmlu_score.toFixed(1) : '--'}</strong></div>
-                  <div>IFEval: <strong style="color: #fff;">${m.benchmark_scores && m.benchmark_scores.ifeval_score ? m.benchmark_scores.ifeval_score.toFixed(1) : '--'}</strong></div>
-                  <div>Speed: <strong style="color: #34d399;">~${m.benchmark_scores && m.benchmark_scores.speed_tokens_sec_estimate ? m.benchmark_scores.speed_tokens_sec_estimate.toFixed(0) : '--'} tps</strong></div>
-                `}
+              <div class="u-mt-10p u-d-grid u-gap-6p u-mono u-s-50efb0">
+                <div>Coding: <strong class="u-text-cyan">${m.benchmark_scores && m.benchmark_scores.coding_score ? m.benchmark_scores.coding_score.toFixed(1) : '--'}</strong></div>
+                <div>MMLU: <strong class="u-text-white">${m.benchmark_scores && m.benchmark_scores.mmlu_score ? m.benchmark_scores.mmlu_score.toFixed(1) : '--'}</strong></div>
+                <div>IFEval: <strong class="u-text-white">${m.benchmark_scores && m.benchmark_scores.ifeval_score ? m.benchmark_scores.ifeval_score.toFixed(1) : '--'}</strong></div>
+                <div>Speed: <strong class="u-text-emerald" id="curated-speed-${idx}">${speedDisplay}</strong></div>
+                ${(m.downloads || m.likes) ? `
+                  <div class="u-text-muted u-mt-2p" style="grid-column: 1 / -1; font-size:0.74rem;">
+                    ${uiIcon('download', 'icon-xs')} ${Number(m.downloads || 0).toLocaleString()} downloads &bull; ${uiIcon('sparkles', 'icon-xs')} ${Number(m.likes || 0).toLocaleString()} curtidas no HF
+                  </div>
+                ` : ''}
                 ${hasRealBench ? `
-                  <div style="grid-column: 1 / -1; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 4px; padding: 4px 8px; color: var(--emerald); font-weight: 700; margin-top: 3px; display: flex; justify-content: space-between; align-items: center;">
-                    <span>🏅 Silício Local Medido:</span>
+                  <div class="u-text-green u-fw-700 u-mt-3p u-d-flex u-justify-between u-items-center u-s-297f26" style="grid-column: 1 / -1;">
+                    <span>${uiIcon('trophy', 'icon-xs')} Silício Local Medido (Arena):</span>
                     <span>${arenaMatch.latest_tps.toFixed(1)} tok/s</span>
                   </div>
                 ` : ''}
               </div>
             </div>
 
-            <div style="margin-top: 12px; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+            <div class="u-mt-3 u-s-7c24ed">
               ${hasVariants ? `
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                  <label style="font-size: 0.72rem; color: var(--text-muted);">Quantização:</label>
-                  <select id="curated-select-${idx}" class="setting-input" style="padding: 3px 8px; font-size: 0.74rem; width: auto;" onchange="onCuratedQuantChange(${idx})">
-                    ${quantOptions}
-                  </select>
+                <div class="u-d-flex u-items-center u-justify-between u-mb-2 u-gap-2">
+                  <label class="u-text-muted u-s-dbc8d1">Quantização:</label>
+                  <div class="u-d-flex u-items-center u-gap-1">
+                    <select id="curated-select-${idx}" class="setting-input u-s-41c5fe" onchange="onCuratedQuantChange(${idx})">
+                      ${quantOptions}
+                    </select>
+                    <button class="btn u-s-918d92" title="Verificar arquivos GGUF ao vivo no Hugging Face" onclick="inspectRepoFiles('${escapeJsSingleQuote(m.repo_id)}')">
+                      ${uiIcon('folder', 'icon-xs')}
+                    </button>
+                  </div>
                 </div>
               ` : `
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.72rem; color: var(--text-muted);">
+                <div class="u-d-flex u-items-center u-justify-between u-mb-2 u-text-muted u-s-dbc8d1">
                   <span>Quants GGUF:</span>
-                  <span style="color: var(--cyan); cursor: pointer; text-decoration: underline;" onclick="inspectRepoFiles('${m.repo_id}')">Inspecionar Arquivos</span>
+                  <span class="u-text-cyan u-pointer u-s-744734" onclick="inspectRepoFiles('${escapeJsSingleQuote(m.repo_id)}')">Inspecionar Arquivos</span>
                 </div>
               `}
 
               <div id="curated-actions-${idx}">
                 ${isDown ? `
-                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                    <button class="btn btn-green" style="flex: 1; min-width: 120px; justify-content: center; font-size: 0.76rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
-                      <span>⚡</span> Usar no Hermes
+                  <div class="u-d-flex u-gap-6p u-flex-wrap">
+                    <button class="btn btn-green u-flex-1 u-justify-center u-s-6d9f18" onclick="openQuickApplyModal('${escapeJsSingleQuote(activeFile)}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                      ${uiIcon('zap', 'icon-sm')} Usar no Hermes
                     </button>
-                    <button class="btn btn-cyan" style="padding: 6px 10px; font-size: 0.74rem;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
-                      <span>🏟️</span> Arena
+                    <button class="btn btn-cyan u-s-84fa0e" onclick="testModelInArena('${escapeJsSingleQuote(activeFile)}')" title="Testar na Local Silicon Arena">
+                      ${uiIcon('trophy', 'icon-sm')} Arena
                     </button>
-                    ${hasVariants ? `
-                      <button class="btn" style="padding: 6px 10px; font-size: 0.74rem;" title="Baixar novamente" onclick="triggerCuratedDownload(${idx}, '${m.repo_id}')">
-                        <span>🔄</span>
-                      </button>
-                    ` : `
-                      <button class="btn" style="padding: 6px 10px; font-size: 0.74rem;" title="Ver arquivos" onclick="inspectRepoFiles('${m.repo_id}')">
-                        <span>📂</span>
-                      </button>
-                    `}
+                    <button class="btn u-s-84fa0e" title="Baixar esta quantização novamente" onclick="triggerCuratedDownload(${idx}, '${escapeJsSingleQuote(m.repo_id)}')">
+                      ${uiIcon('refresh', 'icon-sm')}
+                    </button>
                   </div>
-                ` : (m.is_trending || !hasVariants) ? `
-                  <button class="btn btn-cyan" style="width: 100%; justify-content: center; font-size: 0.78rem;" onclick="inspectRepoFiles('${m.repo_id}')">
-                    <span>📂</span> Inspecionar Arquivos GGUF do Repo
-                  </button>
                 ` : `
-                  <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="triggerCuratedDownload(${idx}, '${m.repo_id}')">
-                    <span>⬇️</span> ${m.is_multimodal_vlm ? 'Baixar Bundle VLM (GGUF + mmproj)' : 'Baixar Seleção'}
+                  <button class="btn btn-cyan u-w-full u-justify-center" onclick="triggerCuratedDownload(${idx}, '${escapeJsSingleQuote(m.repo_id)}')">
+                    ${uiIcon('download', 'icon-sm')} ${downloadLabel}
                   </button>
                 `}
               </div>
@@ -3821,65 +4166,148 @@
       const select = document.getElementById(`curated-select-${idx}`);
       if (!select) return;
       const opt = select.options[select.selectedIndex];
+      const quantTag = opt.value || 'Q4_K_M';
       const fitStatus = opt.getAttribute('data-fit') || 'OptimalVram';
       const fileName = opt.getAttribute('data-file') || '';
+      const sizeBytes = parseInt(opt.getAttribute('data-size') || '0', 10);
+      const sizeGb = sizeBytes > 0 ? (sizeBytes / (1024 ** 3)).toFixed(2) : '--';
+      const optTps = parseFloat(opt.getAttribute('data-tps') || '0');
+      const optInstalled = opt.getAttribute('data-installed') === '1';
+      const optInstalledFile = opt.getAttribute('data-installed-file') || '';
+
       const fitEl = document.getElementById(`curated-fit-${idx}`);
       if (fitEl) {
         fitEl.innerHTML = getFitBadgeHtml(fitStatus);
       }
 
-      // Reavalia dinamicamente se a quantização selecionada bate com o inventário físico
       const model = filteredCuratedModels[idx] || curatedCatalogData[idx];
       const repoId = model ? model.repo_id : '';
       const modelName = model ? model.model_name : '';
-      const matched = findInstalledModelMatch(fileName, repoId, modelName);
-      const isDown = Boolean(matched || (model && model.local_file_path && model.local_file_path.toLowerCase().includes(fileName.toLowerCase())));
-      const activeFile = (matched && matched.realFileName) ? matched.realFileName : fileName;
+      const matched = findInstalledModelMatch(fileName, repoId, modelName, quantTag);
+      const isDown = Boolean(optInstalled || matched);
+      const activeFile = optInstalledFile || (matched && matched.realFileName) || fileName;
+
+      const speedEl = document.getElementById(`curated-speed-${idx}`);
+      if (speedEl) {
+        const arenaMatch = findArenaMatchForHubModel(model, activeFile, fileName);
+        if (isDown && arenaMatch && arenaMatch.latest_tps > 0) {
+          speedEl.textContent = `${arenaMatch.latest_tps.toFixed(1)} tps (Aferido)`;
+        } else if (optTps > 0) {
+          speedEl.textContent = `~${optTps.toFixed(0)} tps`;
+        }
+      }
+
+      const cardEl = document.getElementById(`curated-card-${idx}`);
+      if (cardEl) {
+        cardEl.classList.toggle('is-installed-card', isDown);
+      }
 
       const badgeContainer = document.getElementById(`curated-badge-installed-${idx}`);
       const actionContainer = document.getElementById(`curated-actions-${idx}`);
 
       if (badgeContainer) {
-        badgeContainer.innerHTML = isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.65rem; padding: 2px 8px; font-weight: 700; border-radius: 9999px;">✓ Instalado</span>' : '';
+        badgeContainer.innerHTML = isDown ? '<span class="badge u-text-emerald u-fw-700 u-s-3e3280">' + uiIcon('check', 'icon-xs') + ' Instalado</span>' : '';
       }
 
       if (actionContainer) {
         if (isDown) {
           actionContainer.innerHTML = `
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <button class="btn btn-green" style="flex: 1; min-width: 120px; justify-content: center; font-size: 0.76rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
-                <span>⚡</span> Usar no Hermes
+            <div class="u-d-flex u-gap-6p u-flex-wrap">
+              <button class="btn btn-green u-flex-1 u-justify-center u-s-6d9f18" onclick="openQuickApplyModal('${escapeJsSingleQuote(activeFile)}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                ${uiIcon('zap', 'icon-sm')} Usar no Hermes
               </button>
-              <button class="btn btn-cyan" style="padding: 6px 10px; font-size: 0.74rem;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
-                <span>🏟️</span> Arena
+              <button class="btn btn-cyan u-s-84fa0e" onclick="testModelInArena('${escapeJsSingleQuote(activeFile)}')" title="Testar na Local Silicon Arena">
+                ${uiIcon('trophy', 'icon-sm')} Arena
               </button>
-              <button class="btn" style="padding: 6px 10px; font-size: 0.74rem;" title="Baixar novamente" onclick="triggerCuratedDownload(${idx}, '${repoId}')">
-                <span>🔄</span>
+              <button class="btn u-s-84fa0e" title="Baixar esta quantização novamente" onclick="triggerCuratedDownload(${idx}, '${escapeJsSingleQuote(repoId)}')">
+                ${uiIcon('refresh', 'icon-sm')}
               </button>
             </div>
           `;
         } else {
+          const dlText = model && model.is_multimodal_vlm
+            ? `Baixar Bundle VLM ${quantTag} (${sizeGb} GB)`
+            : `Baixar ${quantTag} (${sizeGb} GB)`;
           actionContainer.innerHTML = `
-            <button class="btn btn-cyan" style="width: 100%; justify-content: center;" onclick="triggerCuratedDownload(${idx}, '${repoId}')">
-              <span>⬇️</span> ${model && model.is_multimodal_vlm ? 'Baixar Bundle VLM (GGUF + mmproj)' : 'Baixar Seleção'}
+            <button class="btn btn-cyan u-w-full u-justify-center" onclick="triggerCuratedDownload(${idx}, '${escapeJsSingleQuote(repoId)}')">
+              ${uiIcon('download', 'icon-sm')} ${dlText}
             </button>
           `;
         }
       }
     }
 
+    async function requestCuratedVariantDownload(repoId, url, filename, sizeBytes, sha256, projFile, projUrl, quantTag = '') {
+      if (url && url.startsWith('http')) {
+        return requestModelDownload(url, filename, sizeBytes, sha256, repoId, projFile, projUrl);
+      }
+
+      // Dynamic item lacked verified tree URL: resolve live from HF before queueing
+      showToast(`Resolvendo arquivo ${quantTag || 'GGUF'} real em ${repoId}...`, 'info');
+      try {
+        const res = await fetch(`/api/v1/inventory/repo-files?repo_id=${encodeURIComponent(repoId)}`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const files = (data.files || []).filter(f => !(f.file_name || '').toLowerCase().includes('mmproj'));
+        const proj = (data.files || []).find(f => (f.file_name || '').toLowerCase().includes('mmproj'));
+        if (files.length === 0) {
+          showToast(`Nenhum arquivo GGUF encontrado diretamente em ${repoId}.`, 'warning');
+          return inspectRepoFiles(repoId);
+        }
+        const matchFile = files.find(f => f.quant_tag && quantTag && f.quant_tag.toUpperCase() === quantTag.toUpperCase())
+          || files.find(f => (f.quant_tag || '').toUpperCase() === 'Q4_K_M')
+          || files[0];
+        return requestModelDownload(
+          matchFile.download_url,
+          matchFile.file_name,
+          matchFile.size_bytes,
+          matchFile.sha256 || '',
+          repoId,
+          proj ? proj.file_name : projFile,
+          proj ? proj.download_url : projUrl
+        );
+      } catch (err) {
+        console.error('Erro ao resolver arquivo HF:', err);
+        showToast('Falha ao resolver arquivos no Hugging Face.', 'error');
+      }
+    }
+
     function triggerCuratedDownload(idx, repoIdOverride) {
       const select = document.getElementById(`curated-select-${idx}`);
-      if (!select) return;
+      if (!select) {
+        return inspectRepoFiles(repoIdOverride);
+      }
       const opt = select.options[select.selectedIndex];
-      const url = opt.getAttribute('data-url');
-      const filename = opt.getAttribute('data-file');
+      const quantTag = opt.value || '';
+      const url = opt.getAttribute('data-url') || '';
+      const filename = opt.getAttribute('data-file') || '';
       const sizeBytes = parseInt(opt.getAttribute('data-size') || '0', 10);
       const sha256 = opt.getAttribute('data-sha256') || '';
       const projFile = opt.getAttribute('data-proj-file') || '';
       const projUrl = opt.getAttribute('data-proj-url') || '';
 
-      requestModelDownload(url, filename, sizeBytes, sha256, repoIdOverride, projFile, projUrl);
+      requestCuratedVariantDownload(repoIdOverride, url, filename, sizeBytes, sha256, projFile, projUrl, quantTag);
+    }
+
+    async function inspectRepoFiles(repoId) {
+      if (!repoId) return;
+      const input = document.getElementById('hf-search-input');
+      if (input) {
+        input.value = repoId;
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      currentHfParamFilter = 'all';
+      currentHfTaskFilter = 'all';
+      document.querySelectorAll('#hf-param-filters .profile-pill, #hf-task-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
+      const allBtn = document.getElementById('btn-hf-param-all');
+      if (allBtn) allBtn.classList.add('active');
+      await searchHuggingFaceHub();
+      setTimeout(() => {
+        const idx = (currentRawHfResults || []).findIndex(r => (r.repo_id || '').toLowerCase() === repoId.toLowerCase());
+        if (idx >= 0) {
+          inspectHfRepo(repoId, idx);
+        }
+      }, 80);
     }
 
     // Global alias to ensure single-click activation in Hermes
@@ -3953,7 +4381,7 @@
 
       if (!active && queue.length === 0) {
         container.innerHTML = `
-          <div style="text-align: center; color: var(--text-muted); padding: 18px 0; font-size: 0.85rem;">
+          <div class="u-text-center u-text-muted u-s-c89d66">
             Nenhum download ativo no momento. A fila de silício está ociosa.
           </div>
         `;
@@ -3971,19 +4399,19 @@
 
         activeHtml = `
           <div class="download-progress-box">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="u-d-flex u-items-center u-justify-between">
               <div>
-                <strong style="color: var(--cyan); font-family: var(--font-mono); font-size: 0.95rem;">${active.filename}</strong>
-                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
-                  Status: <span style="color: ${isPaused ? '#fbbf24' : '#34d399'}; font-weight: 600;">${active.status}</span> &bull; Velocidade: <strong>${speedMb}</strong> &bull; ETA: <strong>${eta}</strong>
+                <strong class="u-text-cyan u-mono u-s-e1fb4b">${active.filename}</strong>
+                <div class="u-text-muted u-mt-2p u-s-dbc8d1">
+                  Status: <span class="u-fw-600" style="color: ${isPaused ? '#fbbf24' : '#34d399'};">${active.status}</span> &bull; Velocidade: <strong>${speedMb}</strong> &bull; ETA: <strong>${eta}</strong>
                 </div>
               </div>
-              <div style="display: flex; gap: 8px;">
+              <div class="u-d-flex u-gap-2">
                 ${isPaused ? 
-                  `<button class="btn btn-green" style="padding: 4px 10px; font-size: 0.74rem;" onclick="resumeActiveDownload('${active.id}')">▶ Retomar</button>` :
-                  `<button class="btn" style="padding: 4px 10px; font-size: 0.74rem;" onclick="pauseActiveDownload('${active.id}')">⏸ Pausar</button>`
+                  `<button class="btn btn-green u-s-c07599" onclick="resumeActiveDownload('${active.id}')">${uiIcon('play', 'icon-xs')} Retomar</button>` :
+                  `<button class="btn u-s-c07599" onclick="pauseActiveDownload('${active.id}')">${uiIcon('pause', 'icon-xs')} Pausar</button>`
                 }
-                <button class="btn" style="padding: 4px 10px; font-size: 0.74rem; color: #f87171; border-color: rgba(239, 68, 68, 0.4);" onclick="cancelActiveDownload('${active.id}')">✖ Cancelar</button>
+                <button class="btn u-s-eaf987" onclick="cancelActiveDownload('${active.id}')">${uiIcon('x', 'icon-xs')} Cancelar</button>
               </div>
             </div>
 
@@ -3991,9 +4419,9 @@
               <div class="download-progress-fill" style="width: ${pct}%;"></div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+            <div class="u-d-flex u-justify-between u-text-muted u-mono u-s-dbc8d1">
               <span>${downloadedGb} GB / ${totalGb} GB (${pct}%)</span>
-              <span>SHA-256 Incremental: <span style="color: #34d399;">Ativo</span></span>
+              <span>SHA-256 Incremental: <span class="u-text-emerald">Ativo</span></span>
             </div>
           </div>
         `;
@@ -4002,15 +4430,15 @@
       let queueHtml = '';
       if (queue.length > 0) {
         queueHtml = `
-          <div style="margin-top: 14px;">
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase;">Próximos na Fila Sequencial (${queue.length}):</div>
-            <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+          <div class="u-mt-14p">
+            <div class="u-text-muted u-mono u-uppercase u-s-a2b44b">Próximos na Fila Sequencial (${queue.length}):</div>
+            <div class="u-mt-6p u-d-flex u-flex-col u-gap-6p">
               ${queue.map(q => `
-                <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem;">
-                  <span class="mono" style="color: #e2e8f0;">${q.filename}</span>
-                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <span class="mono" style="color: var(--text-muted);">${(q.total_bytes / (1024**3)).toFixed(2)} GB</span>
-                    <button class="btn" style="padding: 2px 6px; font-size: 0.68rem; color: #f87171;" onclick="cancelActiveDownload('${q.id}')">✕</button>
+                <div class="u-d-flex u-justify-between u-items-center u-s-f1166c">
+                  <span class="mono u-text-slate-light">${q.filename}</span>
+                  <div class="u-d-flex u-gap-2 u-items-center">
+                    <span class="mono u-text-muted">${(q.total_bytes / (1024**3)).toFixed(2)} GB</span>
+                    <button class="btn u-s-c8911f" onclick="cancelActiveDownload('${q.id}')">${uiIcon('x', 'icon-xs')}</button>
                   </div>
                 </div>
               `).join('')}
@@ -4067,7 +4495,7 @@
       downloadEventSource = new EventSource('/api/v1/inventory/downloads/stream');
 
       downloadEventSource.onopen = () => {
-        if (sseStatus) sseStatus.innerHTML = '<span style="color: #34d399;">● Ativo</span>';
+        if (sseStatus) sseStatus.innerHTML = '<span class="u-text-emerald">● Ativo</span>';
       };
 
       downloadEventSource.onmessage = (event) => {
@@ -4081,16 +4509,29 @@
       };
 
       downloadEventSource.onerror = () => {
-        if (sseStatus) sseStatus.innerHTML = '<span style="color: var(--amber);">○ Reconectando</span>';
+        if (sseStatus) sseStatus.innerHTML = '<span class="u-text-amber">○ Reconectando</span>';
       };
     }
 
     // ==========================================
-    // 3.3 EXPLORADOR HUGGING FACE HUB
+    // 3.3 EXPLORADOR HUGGING FACE HUB (BUSCA COMBINADA + AUTOCOMPLETE)
     // ==========================================
     let currentHfParamFilter = 'all';
     let currentHfTaskFilter = 'all';
     let currentRawHfResults = [];
+    let hfAutocompleteTimer = null;
+    let hfAutocompleteAbortCtrl = null;
+
+    const HF_QUICK_SUGGESTIONS = [
+      { label: 'Qwen3 (Nova Geração Híbrida)', query: 'Qwen3', badge: '1.7B–8B • Sweet Spot' },
+      { label: 'Qwen2.5-Coder (Cirurgia de Código)', query: 'Qwen2.5-Coder', badge: '3B–7B • Coding' },
+      { label: 'DeepSeek-R1-Distill (Raciocínio CoT)', query: 'DeepSeek-R1', badge: '1.5B–8B • R1' },
+      { label: 'Phi-4 Mini (Microsoft 128k)', query: 'Phi-4-mini', badge: '3.8B • Optimal VRAM' },
+      { label: 'Gemma 3 IT (Google Design & Geral)', query: 'gemma-3', badge: '1B–12B • 128k' },
+      { label: 'bartowski (Quantizador Imatrix Oficial)', query: 'bartowski', badge: 'Autor Elite' },
+      { label: 'unsloth (Quants Dinâmicas Otimizadas)', query: 'unsloth', badge: 'Autor Elite' },
+      { label: 'NousResearch / Hermes-3 (Agêntico)', query: 'Hermes-3', badge: 'Tool Calling' },
+    ];
 
     function setHfParamFilter(param) {
       if (currentHfParamFilter === param && param !== 'all') {
@@ -4102,11 +4543,13 @@
       const activeBtn = document.getElementById(`btn-hf-param-${currentHfParamFilter}`);
       if (activeBtn) activeBtn.classList.add('active');
 
-      if (currentRawHfResults && currentRawHfResults.length > 0) {
-        renderHfSearchResults(currentRawHfResults);
-      } else {
-        triggerSmartHfSearch();
+      const input = document.getElementById('hf-search-input');
+      const hasText = input && input.value.trim().length > 0;
+      if (currentHfParamFilter === 'all' && currentHfTaskFilter === 'all' && !hasText) {
+        resetHfExplorerResultsPlaceholder();
+        return;
       }
+      searchHuggingFaceHub();
     }
 
     function setHfTaskFilter(task) {
@@ -4121,19 +4564,165 @@
         if (activeBtn) activeBtn.classList.add('active');
       }
 
-      if (currentRawHfResults && currentRawHfResults.length > 0) {
-        renderHfSearchResults(currentRawHfResults);
-      } else {
-        triggerSmartHfSearch();
+      const input = document.getElementById('hf-search-input');
+      const hasText = input && input.value.trim().length > 0;
+      if (currentHfParamFilter === 'all' && currentHfTaskFilter === 'all' && !hasText) {
+        resetHfExplorerResultsPlaceholder();
+        return;
+      }
+      searchHuggingFaceHub();
+    }
+
+    function resetHfExplorerResultsPlaceholder() {
+      currentRawHfResults = [];
+      const container = document.getElementById('hf-search-results');
+      if (container) {
+        container.innerHTML = `
+          <div class="u-text-center u-text-muted u-s-40d486">
+            Selecione uma faixa de parâmetros ou tipo de tarefa acima, ou digite um termo para explorar arquivos GGUF na nuvem.
+          </div>
+        `;
       }
     }
 
+    function resetHfExplorerFilters() {
+      const input = document.getElementById('hf-search-input');
+      if (input) input.value = '';
+      currentHfParamFilter = 'all';
+      currentHfTaskFilter = 'all';
+      document.querySelectorAll('#hf-param-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
+      const allBtn = document.getElementById('btn-hf-param-all');
+      if (allBtn) allBtn.classList.add('active');
+      document.querySelectorAll('#hf-task-filters .profile-pill').forEach(btn => btn.classList.remove('active'));
+      hideHfAutocomplete();
+      resetHfExplorerResultsPlaceholder();
+    }
+
+    function hideHfAutocomplete() {
+      const dd = document.getElementById('hf-autocomplete-dropdown');
+      if (dd) dd.classList.add('is-hidden');
+    }
+
+    function selectHfAutocomplete(val, autoInspect = false) {
+      const input = document.getElementById('hf-search-input');
+      if (input) input.value = val;
+      hideHfAutocomplete();
+      searchHuggingFaceHub().then(() => {
+        if (autoInspect && currentRawHfResults && currentRawHfResults.length > 0) {
+          const idx = currentRawHfResults.findIndex(r => (r.repo_id || '').toLowerCase() === val.toLowerCase());
+          if (idx >= 0) inspectHfRepo(val, idx);
+        }
+      });
+    }
+
+    function renderHfAutocompleteItems(term, liveItems = [], isLoading = false) {
+      const dd = document.getElementById('hf-autocomplete-dropdown');
+      if (!dd) return;
+      const lower = (term || '').toLowerCase();
+      const quickMatches = HF_QUICK_SUGGESTIONS.filter(s =>
+        !lower || s.label.toLowerCase().includes(lower) || s.query.toLowerCase().includes(lower)
+      ).slice(0, lower ? 3 : 6);
+
+      let html = '';
+      if (quickMatches.length > 0) {
+        html += `<div class="hf-ac-section-title">Famílias &amp; Autores Recomendados</div>`;
+        html += quickMatches.map(s => `
+          <div class="hf-ac-item" onclick="selectHfAutocomplete('${escapeJsSingleQuote(s.query)}', false)">
+            <div class="u-d-flex u-items-center u-gap-2">
+              <span class="u-text-cyan">${uiIcon('sparkles', 'icon-xs')}</span>
+              <span class="u-text-white u-fw-600">${escapeHtml(s.label)}</span>
+            </div>
+            <span class="badge u-text-muted u-s-1ee417">${escapeHtml(s.badge)}</span>
+          </div>
+        `).join('');
+      }
+
+      if (lower.length >= 2) {
+        html += `<div class="hf-ac-section-title">Repositórios GGUF ao Vivo (Hugging Face)</div>`;
+        if (isLoading && liveItems.length === 0) {
+          html += `<div class="u-text-cyan u-p-2 u-s-dbc8d1"><span class="spin-icon u-d-inline-block u-s-d1cc57">${uiIcon('refresh', 'icon-xs')}</span> Buscando "${escapeHtml(term)}"...</div>`;
+        } else if (liveItems.length === 0) {
+          html += `<div class="u-text-muted u-p-2 u-s-dbc8d1">Pressione Enter para pesquisa completa por "${escapeHtml(term)}".</div>`;
+        } else {
+          html += liveItems.map(r => {
+            const fit = r.hardware_fit || 'PartialCpuOffload';
+            const fitCls = fit === 'OptimalVram' ? 'optimal' : (fit === 'PartialCpuOffload' ? 'offload' : 'incompatible');
+            const fitTxt = fit === 'OptimalVram' ? '100% VRAM' : (fit === 'PartialCpuOffload' ? 'CPU Offload' : 'Pesado');
+            const tpsTxt = r.estimated_tps ? `~${Number(r.estimated_tps).toFixed(0)} tps` : '';
+            const paramB = r.parameter_count ? (r.parameter_count >= 1e9 ? `${(r.parameter_count / 1e9).toFixed(1).replace('.0', '')}B` : `${Math.round(r.parameter_count / 1e6)}M`) : 'GGUF';
+            return `
+              <div class="hf-ac-item" onclick="selectHfAutocomplete('${escapeJsSingleQuote(r.repo_id)}', true)">
+                <div class="u-overflow-hidden">
+                  <div class="mono u-text-white u-fw-600" style="font-size:0.78rem; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(r.repo_id)}</div>
+                  <div class="u-text-muted" style="font-size:0.7rem;">
+                    ${paramB} ${tpsTxt ? '&bull; ' + tpsTxt : ''} &bull; ${Number(r.downloads || 0).toLocaleString()} downloads
+                  </div>
+                </div>
+                <span class="fit-badge ${fitCls}" style="flex-shrink:0;">${fitTxt}</span>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      if (!html) {
+        dd.classList.add('is-hidden');
+        return;
+      }
+      dd.innerHTML = html;
+      dd.classList.remove('is-hidden');
+    }
+
+    function onHfSearchInputKeyup(event) {
+      const input = document.getElementById('hf-search-input');
+      if (!input) return;
+      const term = input.value.trim();
+
+      renderHfAutocompleteItems(term, [], term.length >= 2);
+      if (hfAutocompleteTimer) clearTimeout(hfAutocompleteTimer);
+      if (term.length < 2) return;
+
+      hfAutocompleteTimer = setTimeout(async () => {
+        try {
+          if (hfAutocompleteAbortCtrl) hfAutocompleteAbortCtrl.abort();
+          hfAutocompleteAbortCtrl = new AbortController();
+          const res = await fetch(`/api/v1/inventory/search?q=${encodeURIComponent(term)}&autocomplete=true&limit=6`, {
+            signal: hfAutocompleteAbortCtrl.signal
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (document.activeElement === input || term === input.value.trim()) {
+              renderHfAutocompleteItems(term, data.results || [], false);
+            }
+          }
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            renderHfAutocompleteItems(term, [], false);
+          }
+        }
+      }, 250);
+    }
+
+    document.addEventListener('click', (e) => {
+      const wrap = document.querySelector('.hf-autocomplete-wrap');
+      if (wrap && !wrap.contains(e.target)) {
+        hideHfAutocomplete();
+      }
+    });
+
     function updateDynamicParamFitPills(hw) {
-      const safeVramGb = hw && hw.vram_safe_usable_mb ? (hw.vram_safe_usable_mb / 1024) : 5.17;
+      const safeVramGb = hw && hw.vram_safe_usable_mb ? (hw.vram_safe_usable_mb / 1024) : ((window.soulsTelemetryState && window.soulsTelemetryState.vramLimitMb) ? (window.soulsTelemetryState.vramLimitMb / 1024) : 4.0);
       const gpuName = hw && hw.gpu_name ? hw.gpu_name : 'dGPU';
       const legend = document.getElementById('hf-vram-fit-legend');
       if (legend) {
-        legend.innerText = `(🟢 Cabem na ${gpuName.includes('RTX') ? gpuName : 'GPU ' + gpuName})`;
+        legend.innerHTML = `(${uiIcon('check-circle', 'icon-xs')} Cabem na ${gpuName.includes('RTX') ? gpuName : 'GPU ' + gpuName})`;
+      }
+
+      const fitGpuBtn = document.getElementById('btn-hf-param-fit_gpu');
+      if (fitGpuBtn) {
+        fitGpuBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+        fitGpuBtn.style.color = '#34d399';
+        fitGpuBtn.title = `Filtrar modelos que rodam 100% na VRAM da ${gpuName} (~${safeVramGb.toFixed(1)} GB úteis)`;
       }
 
       const paramPillSizes = [
@@ -4173,93 +4762,40 @@
       });
     }
 
-    function triggerSmartHfSearch() {
-      const input = document.getElementById('hf-search-input');
-      if (!input) return;
-
-      const userText = input.value.trim();
-      if (userText) {
-        searchHuggingFaceHub();
-        return;
-      }
-
-      if (currentHfParamFilter === 'all' && currentHfTaskFilter === 'all') {
-        return;
-      }
-
-      let queryParts = [];
-      const taskTerms = {
-        'all': '',
-        'coding': 'coder',
-        'reasoning': 'reasoning',
-        'agentic': 'function calling',
-        'vision': 'vision',
-        'fast': 'smollm',
-        'general': 'instruct'
-      };
-
-      const baseTerm = taskTerms[currentHfTaskFilter] || '';
-      if (baseTerm) queryParts.push(baseTerm);
-      if (currentHfParamFilter !== 'all') {
-        queryParts.push(currentHfParamFilter.replace('_', ' '));
-      }
-      queryParts.push('GGUF');
-
-      input.value = queryParts.join(' ').trim();
-      searchHuggingFaceHub();
-    }
-
     function parseRepoModelDetails(repoId, tags = []) {
-      if (!repoId) return { total_b: null, active_b: null, is_moe: false, fit_label: '📦 Formato GGUF', fit_class: 'default', specialties: [] };
+      if (!repoId) return { total_b: null, active_b: null, is_moe: false, fit_label: 'Formato GGUF', fit_class: 'default', specialties: [] };
       const r = repoId.toLowerCase();
       const tagsStr = (Array.isArray(tags) ? tags.join(' ') : '').toLowerCase();
 
       let total_b = null;
       let active_b = null;
       let is_moe = false;
-      let fit_label = '📦 Formato GGUF (Ver Arquivos)';
+      let fit_label = 'Formato GGUF (Ver Arquivos)';
       let fit_class = 'default';
 
-      // 1. MoE notation com parâmetros ativos: ex: 35b-a3b, 30b-a3b, 16b-a2.4b
       const moeMatch = r.match(/(\d+(?:\.\d+)?)\s*b\s*[-_]a(\d+(?:\.\d+)?)\s*b/i);
       if (moeMatch) {
         total_b = parseFloat(moeMatch[1]);
         active_b = parseFloat(moeMatch[2]);
         is_moe = true;
-        if (total_b <= 35) {
-          fit_label = `⚠️ MoE ${total_b}B (${active_b}B Ativos) • CPU RAM`;
-          fit_class = 'offload';
-        } else {
-          fit_label = `🏢 Datacenter Only (>${total_b}B MoE)`;
-          fit_class = 'incompatible';
-        }
-      }
-      // 2. MoE notation clássica: ex: 8x7b, 8x22b
-      else if (r.match(/(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*b/i)) {
+        fit_label = total_b <= 35 ? `MoE ${total_b}B (${active_b}B Ativos) • CPU RAM` : `Datacenter Only (>${total_b}B MoE)`;
+        fit_class = total_b <= 35 ? 'offload' : 'incompatible';
+      } else if (r.match(/(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*b/i)) {
         const mx = r.match(/(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*b/i);
         const experts = parseInt(mx[1], 10);
         const size = parseFloat(mx[2]);
         total_b = experts * size;
         active_b = size;
         is_moe = true;
-        if (total_b <= 45) {
-          fit_label = `⚠️ MoE ${experts}x${size}B (~${total_b}B) • CPU RAM`;
-          fit_class = 'offload';
-        } else {
-          fit_label = `🏢 Datacenter Only (>${total_b}B MoE)`;
-          fit_class = 'incompatible';
-        }
-      }
-      // 3. Parameter count in Millions: 135m, 360m, 500m
-      else if (r.match(/(?:^|[^0-9a-z])(\d+)\s*m(?:[^0-9a-z]|$)/i)) {
+        fit_label = total_b <= 45 ? `MoE ${experts}x${size}B (~${total_b}B) • CPU RAM` : `Datacenter Only (>${total_b}B MoE)`;
+        fit_class = total_b <= 45 ? 'offload' : 'incompatible';
+      } else if (r.match(/(?:^|[^0-9a-z])(\d+)\s*m(?:[^0-9a-z]|$)/i)) {
         const m = r.match(/(?:^|[^0-9a-z])(\d+)\s*m(?:[^0-9a-z]|$)/i);
         total_b = parseInt(m[1], 10) / 1000.0;
         active_b = total_b;
-        fit_label = '⚡ Ultra-Leve (<1B • Zero Latência)';
+        fit_label = 'Ultra-Leve (<1B • 100% VRAM)';
         fit_class = 'optimal';
-      }
-      // 4. Dense parameters in Billions: encontra todos e pega o valor semântico máximo
-      else {
+      } else {
         const bMatches = [...r.matchAll(/(?:^|[^0-9a-z])(\d+(?:\.\d+)?)\s*b(?:[^0-9a-z]|$)/gi)];
         if (bMatches && bMatches.length > 0) {
           const bValues = bMatches.map(m => parseFloat(m[1])).filter(v => !isNaN(v) && v > 0);
@@ -4267,95 +4803,42 @@
             total_b = Math.max(...bValues);
             active_b = total_b;
             if (total_b <= 4.5) {
-              fit_label = `⚡ Sweet Spot dGPU (100% VRAM • ${total_b}B)`;
+              fit_label = `Sweet Spot dGPU (100% VRAM • ${total_b}B)`;
               fit_class = 'optimal';
             } else if (total_b <= 8.5) {
-              fit_label = `✓ Teto Seguro dGPU (Q4_K_M • ${total_b}B)`;
+              fit_label = `Teto Seguro dGPU (Q4_K_M • ${total_b}B)`;
               fit_class = 'tight';
             } else if (total_b <= 35.0) {
-              fit_label = `💻 Modo CPU Host RAM (${total_b}B)`;
+              fit_label = `Modo CPU Host RAM (${total_b}B)`;
               fit_class = 'offload';
             } else {
-              fit_label = `🏢 Datacenter Only (>${total_b}B)`;
+              fit_label = `Datacenter Only (>${total_b}B)`;
               fit_class = 'incompatible';
             }
           }
         } else if (r.includes('phi-4-mini') || r.includes('phi-3.5-mini')) {
           total_b = 3.8;
           active_b = 3.8;
-          fit_label = '⚡ Sweet Spot dGPU (100% VRAM • 3.8B)';
+          fit_label = 'Sweet Spot dGPU (100% VRAM • 3.8B)';
           fit_class = 'optimal';
-        } else if (tagsStr.includes('moe') || tagsStr.includes('mixture-of-experts') || r.includes('moe')) {
-          is_moe = true;
-          fit_label = '⚠️ Arquitetura MoE • CPU RAM';
-          fit_class = 'offload';
         }
       }
 
-      // Specialty badges from tags and repo name
       const specialties = [];
       if (r.includes('code') || r.includes('coder') || tagsStr.includes('code') || tagsStr.includes('coder')) {
-        specialties.push({ label: '💻 Coding', color: '#c084fc', bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.3)' });
+        specialties.push({ icon: 'code', label: 'Coding', color: '#c084fc', bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.3)' });
       }
-      if (r.includes('vision') || r.includes('vlm') || r.includes('multimodal') || tagsStr.includes('image') || tagsStr.includes('vision')) {
-        specialties.push({ label: '👁️ Vision/VLM', color: '#fb7185', bg: 'rgba(244, 63, 94, 0.15)', border: 'rgba(244, 63, 94, 0.3)' });
+      if (r.includes('vision') || r.includes('vlm') || r.includes('-vl') || r.includes('multimodal') || tagsStr.includes('image') || tagsStr.includes('vision')) {
+        specialties.push({ icon: 'eye', label: 'Vision/VLM', color: '#fb7185', bg: 'rgba(244, 63, 94, 0.15)', border: 'rgba(244, 63, 94, 0.3)' });
       }
-      if (r.includes('r1') || r.includes('reasoning') || r.includes('cot') || tagsStr.includes('reasoning')) {
-        specialties.push({ label: '🧠 Reasoning', color: '#818cf8', bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.3)' });
+      if (r.includes('r1') || r.includes('reasoning') || r.includes('think') || r.includes('cot') || tagsStr.includes('reasoning')) {
+        specialties.push({ icon: 'brain', label: 'Reasoning', color: '#818cf8', bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.3)' });
       }
-      if (r.includes('agent') || r.includes('tool') || r.includes('hermes') || tagsStr.includes('function-calling')) {
-        specialties.push({ label: '🤖 Agentic', color: '#38bdf8', bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.3)' });
+      if (r.includes('agent') || r.includes('tool') || r.includes('hermes') || r.includes('xlam') || tagsStr.includes('function-calling')) {
+        specialties.push({ icon: 'bot', label: 'Agentic', color: '#38bdf8', bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.3)' });
       }
 
       return { total_b, active_b, is_moe, fit_label, fit_class, specialties };
-    }
-
-    function estimateRepoHardwareFit(repoId, tags = []) {
-      const details = parseRepoModelDetails(repoId, tags);
-      return `<span class="fit-badge ${details.fit_class}" title="${details.fit_label}">${details.fit_label}</span>`;
-    }
-
-    function matchesHfFilters(details, repoId, tags) {
-      // 1. Filtro estrito de Parâmetros
-      if (currentHfParamFilter !== 'all') {
-        const t = details.total_b;
-        if (t === null || t === undefined) {
-          return false;
-        }
-        switch(currentHfParamFilter) {
-          case 'sub1b': if (t >= 1.0 || details.is_moe) return false; break;
-          case '1b': if (t < 1.0 || t >= 2.0 || details.is_moe) return false; break;
-          case '2b': if (t < 2.0 || t >= 3.0 || details.is_moe) return false; break;
-          case '3b': if (t < 3.0 || t >= 4.0 || details.is_moe) return false; break;
-          case '4b': if (t < 4.0 || t >= 5.0 || details.is_moe) return false; break;
-          case '5b': if (t < 5.0 || t >= 6.0) return false; break;
-          case '6b': if (t < 6.0 || t >= 7.0) return false; break;
-          case '7b': if (t < 7.0 || t >= 8.0) return false; break;
-          case '8b': if (t < 8.0 || t >= 9.0) return false; break;
-          case '9b': if (t < 9.0 || t >= 10.0) return false; break;
-          case '10b_12b': if (t < 10.0 || t > 12.5) return false; break;
-          case '14b': if (t <= 12.5 || t > 16.0) return false; break;
-          case '32b': if (t <= 16.0 || t > 45.0) return false; break;
-          case '70b_plus': if (t <= 45.0) return false; break;
-        }
-      }
-
-      // 2. Filtro de Tipo de Tarefa
-      if (currentHfTaskFilter !== 'all') {
-        const specLabels = (details.specialties || []).map(s => s.label.toLowerCase()).join(' ');
-        const r = (repoId || '').toLowerCase();
-        const tagsStr = (Array.isArray(tags) ? tags.join(' ') : '').toLowerCase();
-        switch(currentHfTaskFilter) {
-          case 'coding': if (!specLabels.includes('coding') && !r.includes('code') && !r.includes('coder') && !tagsStr.includes('code') && !tagsStr.includes('coder')) return false; break;
-          case 'reasoning': if (!specLabels.includes('reasoning') && !r.includes('r1') && !r.includes('reasoning') && !r.includes('cot') && !tagsStr.includes('reasoning')) return false; break;
-          case 'agentic': if (!specLabels.includes('agentic') && !r.includes('agent') && !r.includes('tool') && !r.includes('hermes') && !tagsStr.includes('function-calling') && !tagsStr.includes('tool')) return false; break;
-          case 'vision': if (!specLabels.includes('vision') && !r.includes('vision') && !r.includes('vlm') && !tagsStr.includes('vision') && !tagsStr.includes('image-text-to-text')) return false; break;
-          case 'fast': if ((details.total_b !== null && details.total_b >= 1.0) && !r.includes('fast') && !r.includes('smol')) return false; break;
-          case 'general': if (!r.includes('instruct') && !r.includes('chat') && !tagsStr.includes('conversational')) return false; break;
-        }
-      }
-
-      return true;
     }
 
     async function searchHuggingFaceHub() {
@@ -4364,24 +4847,30 @@
       if (!input || !resultsContainer) return;
 
       const query = input.value.trim();
-      if (!query) {
-        showToast('Digite um termo ou selecione os filtros acima para pesquisar.', 'info');
+      if (!query && currentHfParamFilter === 'all' && currentHfTaskFilter === 'all') {
+        showToast('Digite um termo ou selecione um filtro acima para pesquisar.', 'info');
         return;
       }
 
-      resultsContainer.innerHTML = '<div style="color: var(--cyan); text-align: center; padding: 24px; font-size: 0.85rem;"><span style="display:inline-block; animation:spin 1s linear infinite; margin-right:8px;">⏳</span> Consultando repositórios GGUF na nuvem Hugging Face...</div>';
+      resultsContainer.innerHTML = `<div class="u-text-cyan u-text-center u-s-a2a79e"><span class="spin-icon u-d-inline-block u-s-d1cc57">${uiIcon('refresh', 'icon-xs')}</span> Consultando repositórios GGUF combinados no Hugging Face...</div>`;
 
       try {
-        const res = await fetch(`/api/v1/inventory/search?query=${encodeURIComponent(query)}&limit=30`);
+        const params = new URLSearchParams();
+        if (query) params.set('query', query);
+        params.set('param_filter', currentHfParamFilter);
+        params.set('task_filter', currentHfTaskFilter);
+        params.set('limit', '30');
+
+        const res = await fetch(`/api/v1/inventory/search?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           currentRawHfResults = data.results || [];
           renderHfSearchResults(currentRawHfResults);
         } else {
-          resultsContainer.innerHTML = '<div style="color: var(--red); text-align: center; padding: 16px;">Erro ao consultar repositórios no Hugging Face. Verifique a conexão com a internet.</div>';
+          resultsContainer.innerHTML = '<div class="u-text-red u-text-center u-s-872b66">Erro ao consultar repositórios no Hugging Face. Verifique a conexão com a internet.</div>';
         }
       } catch (e) {
-        resultsContainer.innerHTML = '<div style="color: var(--red); text-align: center; padding: 16px;">Falha de rede ao conectar com a API do Hugging Face.</div>';
+        resultsContainer.innerHTML = '<div class="u-text-red u-text-center u-s-872b66">Falha de rede ao conectar com a API do Hugging Face.</div>';
       }
     }
 
@@ -4390,32 +4879,16 @@
       if (!container) return;
 
       if (!repos || repos.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 24px; font-size: 0.85rem;">Nenhum repositório GGUF encontrado para o termo pesquisado.</div>';
-        return;
-      }
-
-      const decorated = repos.map((r, i) => ({
-        originalIndex: i,
-        repo: r,
-        details: parseRepoModelDetails(r.repo_id, r.tags || [])
-      }));
-
-      const filtered = decorated.filter(item => matchesHfFilters(item.details, item.repo.repo_id, item.repo.tags || []));
-
-      if (filtered.length === 0) {
         const paramPill = document.querySelector('#hf-param-filters .profile-pill.active')?.innerText || currentHfParamFilter;
         const taskPill = document.querySelector('#hf-task-filters .profile-pill.active')?.innerText;
-        const filterDesc = taskPill ? `${paramPill} • ${taskPill}` : paramPill;
+        const activeFilterDesc = [paramPill !== 'Todos' ? paramPill : '', taskPill || ''].filter(Boolean).join(' • ');
         container.innerHTML = `
-          <div style="text-align: center; color: var(--text-muted); padding: 28px 16px; background: rgba(15, 23, 42, 0.4); border: 1px dashed var(--border-subtle); border-radius: 10px;">
-            <div style="font-size: 1.3rem; margin-bottom: 6px;">🔍</div>
-            <div style="font-size: 0.88rem; color: #cbd5e1; font-weight: 600;">Nenhum modelo encontrado para o filtro "${filterDesc}".</div>
-            <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-              Foram retornados ${repos.length} repositórios para a busca, mas nenhum atende aos filtros combinados.
-            </div>
-            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
-              <button class="btn btn-cyan" style="font-size: 0.74rem; padding: 5px 14px;" onclick="setHfParamFilter('all'); setHfTaskFilter('all');">
-                Limpar Filtros e Ver Todos (${repos.length})
+          <div class="u-text-center u-text-muted u-s-cc6502">
+            <div class="u-mb-6p u-s-c2d8f9">${uiIcon('search', 'icon-md')}</div>
+            <div class="u-text-slate u-fw-600 u-s-604fde">Nenhum repositório GGUF encontrado${activeFilterDesc ? ` para "${escapeHtml(activeFilterDesc)}"` : ''}.</div>
+            <div class="u-mt-3 u-d-flex u-gap-2 u-justify-center">
+              <button class="btn btn-cyan u-s-918d92" onclick="resetHfExplorerFilters()">
+                Limpar Filtros e Recomeçar
               </button>
             </div>
           </div>
@@ -4423,38 +4896,51 @@
         return;
       }
 
-      container.innerHTML = filtered.map(item => {
-        const r = item.repo;
-        const i = item.originalIndex;
-        const d = item.details;
-        const fitBadge = `<span class="fit-badge ${d.fit_class}" title="${d.fit_label}">${d.fit_label}</span>`;
+      container.innerHTML = repos.map((r, i) => {
+        const d = parseRepoModelDetails(r.repo_id, r.tags || []);
+        const backendFit = r.hardware_fit;
+        const fitBadge = backendFit
+          ? getFitBadgeHtml(backendFit)
+          : `<span class="fit-badge ${d.fit_class}" title="${d.fit_label}">${d.fit_label}</span>`;
+
+        const paramCount = r.parameter_count || (d.total_b ? d.total_b * 1e9 : 0);
+        const paramBadge = paramCount > 0
+          ? `<span class="badge u-text-muted u-s-1ee417">${paramCount >= 1e9 ? (paramCount / 1e9).toFixed(1).replace('.0', '') + 'B' : Math.round(paramCount / 1e6) + 'M'}</span>`
+          : '';
+        const tpsBadge = r.estimated_tps
+          ? `<span class="badge u-text-emerald u-s-3fefe0">~${Number(r.estimated_tps).toFixed(0)} tok/s</span>`
+          : '';
+
         const specialtyBadges = (d.specialties || []).map(s => `
-          <span class="badge" style="background: ${s.bg}; color: ${s.color}; border: 1px solid ${s.border}; font-size: 0.65rem; padding: 2px 7px;">
-            ${s.label}
+          <span class="badge u-s-7f12b7" style="background: ${s.bg}; color: ${s.color}; border: 1px solid ${s.border};">
+            ${uiIcon(s.icon, 'icon-xs')} ${s.label}
           </span>
         `).join('');
 
         return `
-          <div class="hf-repo-item" id="hf-repo-${i}" style="border-radius: 10px; margin-bottom: 10px; padding: 14px 16px;">
-            <div style="flex: 1;">
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-weight: 700; color: #fff; font-family: var(--font-mono); font-size: 0.92rem;">
-                  ${r.repo_id}
+          <div class="hf-repo-item u-mb-10p u-s-5d32a8" id="hf-repo-${i}">
+            <div class="u-flex-1">
+              <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+                <span class="u-fw-700 u-text-white u-mono u-s-13ccaf">
+                  ${escapeHtml(r.repo_id)}
                 </span>
                 ${fitBadge}
+                ${paramBadge}
+                ${tpsBadge}
+                ${r.is_downloaded ? '<span class="badge u-text-emerald u-fw-700 u-s-3e3280">' + uiIcon('check', 'icon-xs') + ' Instalado</span>' : ''}
                 ${specialtyBadges}
               </div>
-              <div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 6px; font-family: var(--font-mono);">
-                👤 Autor: <strong style="color: #cbd5e1;">${r.author || '--'}</strong> &bull; 📥 Downloads: <strong style="color: var(--cyan);">${(r.downloads || 0).toLocaleString()}</strong> &bull; ❤️ Likes: <strong style="color: #f472b6;">${(r.likes || 0).toLocaleString()}</strong>
+              <div class="u-text-muted u-mt-6p u-mono u-s-6444dd">
+                ${uiIcon('users', 'icon-xs')} Autor: <strong class="u-text-slate">${escapeHtml(r.author || '--')}</strong> &bull; ${uiIcon('download', 'icon-xs')} Downloads: <strong class="u-text-cyan">${(r.downloads || 0).toLocaleString()}</strong> &bull; ${uiIcon('sparkles', 'icon-xs')} Likes: <strong class="u-s-23cce7">${(r.likes || 0).toLocaleString()}</strong>
               </div>
             </div>
             <div>
-              <button class="btn btn-cyan" style="padding: 6px 14px; font-size: 0.76rem; height: 32px; font-weight: 600;" onclick="inspectHfRepo('${r.repo_id}', ${i})">
-                <span>📂</span> Ver Arquivos GGUF
+              <button class="btn btn-cyan u-fw-600 u-s-205356" onclick="inspectHfRepo('${escapeJsSingleQuote(r.repo_id)}', ${i})">
+                ${uiIcon('folder', 'icon-sm')} Ver Arquivos GGUF
               </button>
             </div>
           </div>
-          <div id="hf-repo-files-${i}" style="display: none;"></div>
+          <div class="is-hidden" id="hf-repo-files-${i}"></div>
         `;
       }).join('');
     }
@@ -4469,7 +4955,7 @@
       }
 
       container.style.display = 'block';
-      container.innerHTML = '<div style="padding: 10px; color: var(--text-muted); font-size: 0.78rem;">Carregando arquivos GGUF do repositório...</div>';
+      container.innerHTML = '<div class="u-text-muted u-s-8d2332">Carregando arquivos GGUF e hashes SHA-256 reais do repositório...</div>';
 
       try {
         const res = await fetch(`/api/v1/inventory/repo-files?repo_id=${encodeURIComponent(repoId)}`);
@@ -4477,50 +4963,55 @@
           const data = await res.json();
           const files = data.files || [];
           if (files.length === 0) {
-            container.innerHTML = '<div style="padding: 10px; color: var(--text-muted); font-size: 0.78rem;">Nenhum arquivo .gguf encontrado na raiz deste repositório.</div>';
+            container.innerHTML = '<div class="u-text-muted u-s-8d2332">Nenhum arquivo .gguf encontrado na raiz deste repositório.</div>';
             return;
           }
+          const proj = files.find(f => (f.file_name || '').toLowerCase().includes('mmproj'));
 
           container.innerHTML = `
             <div class="hf-files-container">
-              <div style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 8px; text-transform: uppercase;">Arquivos GGUF Disponíveis:</div>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div class="u-text-muted u-mono u-mb-2 u-uppercase u-s-cb8a8e">Arquivos GGUF Disponíveis (${files.length}):</div>
+              <div class="u-d-flex u-flex-col u-gap-6p">
                 ${files.map(f => {
                   const sizeGb = f.size_gb ? f.size_gb.toFixed(2) : (f.size_bytes / (1024 ** 3)).toFixed(2);
                   const fileName = f.file_name || f.filename;
                   const fitBadge = getFitBadgeHtml(f.hardware_fit);
-                  const matched = findInstalledModelMatch(fileName, repoId);
-                  const isDown = Boolean(matched);
+                  const matched = f.is_installed ? { realFileName: f.installed_file_name || fileName } : findInstalledModelMatch(fileName, repoId, '', f.quant_tag);
+                  const isDown = Boolean(f.is_installed || matched);
                   const activeFile = (matched && matched.realFileName) ? matched.realFileName : fileName;
+                  const estTps = f.estimated_tps ? `&bull; Vel: <strong class="u-text-emerald">~${Number(f.estimated_tps).toFixed(0)} tps</strong>` : '';
+                  const isMmproj = fileName.toLowerCase().includes('mmproj');
 
                   return `
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+                    <div class="u-d-flex u-justify-between u-items-center u-s-659226">
                       <div>
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                          <span class="mono" style="font-size: 0.8rem; font-weight: 600; color: #fff;">${fileName}</span>
-                          ${isDown ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">✅ Já Instalado no Silício</span>' : ''}
+                        <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+                          <span class="mono u-fw-600 u-text-white u-s-22b62c">${escapeHtml(fileName)}</span>
+                          ${isDown ? '<span class="badge u-text-emerald u-fw-700 u-s-4a274a">' + uiIcon('check-circle', 'icon-xs') + ' Já Instalado no Silício</span>' : ''}
                           ${fitBadge}
                         </div>
-                        <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
-                          Quant: <strong style="color: var(--cyan);">${f.quant_tag || '--'}</strong> &bull; Tamanho: <strong style="color: #fff;">${sizeGb} GB</strong> ${f.sha256 ? '&bull; LFS SHA-256 verificado' : ''}
+                        <div class="u-text-muted u-mt-2p u-s-923ef2">
+                          Quant: <strong class="u-text-cyan">${escapeHtml(f.quant_tag || '--')}</strong> &bull; Tamanho: <strong class="u-text-white">${sizeGb} GB</strong> ${estTps} ${f.sha256 ? '&bull; LFS SHA-256 verificado' : ''}
                         </div>
                       </div>
                       <div>
                         ${isDown ? `
-                          <div style="display: flex; gap: 4px;">
-                            <button class="btn btn-green" style="padding: 4px 10px; font-size: 0.72rem;" onclick="openQuickApplyModal('${activeFile}', 'local_silicon', true)" title="Definir no Hermes Agent">
-                              <span>⚡</span> Usar
-                            </button>
-                            <button class="btn btn-cyan" style="padding: 4px 8px; font-size: 0.72rem;" onclick="testModelInArena('${activeFile}')" title="Testar na Local Silicon Arena">
-                              <span>🏟️</span>
-                            </button>
-                            <button class="btn" style="padding: 4px 8px; font-size: 0.72rem;" title="Baixar novamente" onclick="requestModelDownload('${f.download_url}', '${fileName}', ${f.size_bytes}, '${f.sha256 || ''}')">
-                              <span>🔄</span>
+                          <div class="u-d-flex u-gap-1">
+                            ${!isMmproj ? `
+                              <button class="btn btn-green u-s-513c8c" onclick="openQuickApplyModal('${escapeJsSingleQuote(activeFile)}', 'local_silicon', true)" title="Definir no Hermes Agent">
+                                ${uiIcon('zap', 'icon-sm')} Usar
+                              </button>
+                              <button class="btn btn-cyan u-s-44e27c" onclick="testModelInArena('${escapeJsSingleQuote(activeFile)}')" title="Testar na Local Silicon Arena">
+                                ${uiIcon('trophy', 'icon-sm')}
+                              </button>
+                            ` : ''}
+                            <button class="btn u-s-44e27c" title="Baixar novamente" onclick="requestModelDownload('${escapeJsSingleQuote(f.download_url)}', '${escapeJsSingleQuote(fileName)}', ${f.size_bytes}, '${escapeJsSingleQuote(f.sha256 || '')}', '${escapeJsSingleQuote(repoId)}')">
+                              ${uiIcon('refresh', 'icon-sm')}
                             </button>
                           </div>
                         ` : `
-                          <button class="btn btn-cyan" style="padding: 4px 12px; font-size: 0.72rem;" onclick="requestModelDownload('${f.download_url}', '${fileName}', ${f.size_bytes}, '${f.sha256 || ''}')">
-                            <span>⬇️</span> Baixar
+                          <button class="btn btn-cyan u-s-a20e80" onclick="requestModelDownload('${escapeJsSingleQuote(f.download_url)}', '${escapeJsSingleQuote(fileName)}', ${f.size_bytes}, '${escapeJsSingleQuote(f.sha256 || '')}', '${escapeJsSingleQuote(repoId)}', '${escapeJsSingleQuote(!isMmproj && proj ? proj.file_name : '')}', '${escapeJsSingleQuote(!isMmproj && proj ? proj.download_url : '')}')">
+                            ${uiIcon('download', 'icon-sm')} Baixar${!isMmproj && proj ? ' + VLM' : ''}
                           </button>
                         `}
                       </div>
@@ -4531,10 +5022,10 @@
             </div>
           `;
         } else {
-          container.innerHTML = '<div style="padding: 10px; color: var(--red); font-size: 0.78rem;">Falha ao listar arquivos GGUF.</div>';
+          container.innerHTML = '<div class="u-text-red u-s-8d2332">Falha ao listar arquivos GGUF.</div>';
         }
       } catch (e) {
-        container.innerHTML = '<div style="padding: 10px; color: var(--red); font-size: 0.78rem;">Erro de conexão.</div>';
+        container.innerHTML = '<div class="u-text-red u-s-8d2332">Erro de conexão.</div>';
       }
     }
 
@@ -4562,7 +5053,7 @@
             if (presetEl) presetEl.innerText = `Preset: ${mb.active_profile_name || 'Frontier Balanced'}`;
             if (provEl) {
               const p = (mb.provider || 'nous').toLowerCase();
-              provEl.innerHTML = p.includes('nous') ? '🧠 Nous Portal (Crédito Ativo)' : '🔀 OpenRouter';
+              provEl.innerHTML = p.includes('nous') ? uiIcon('brain', 'icon-xs') + ' Nous Portal (Crédito Ativo)' : uiIcon('git-branch', 'icon-xs') + ' OpenRouter';
             }
             if (metaEl) {
               const ctx = mb.context_window ? formatContextTokens(mb.context_window) : '64k tokens';
@@ -4835,7 +5326,7 @@
       const c = (canonicalId || '').toLowerCase();
       let brand = 'CLOUD';
       let bg = 'rgba(255, 255, 255, 0.08)';
-      let color = '#cbd5e1';
+      let color = '#E4E4E7';
       let border = 'rgba(255, 255, 255, 0.15)';
 
       if (d.includes('anthropic') || c.includes('claude') || c.startsWith('anthropic/')) {
@@ -4898,7 +5389,7 @@
         brand = (dev || (slashIdx !== -1 ? c.substring(0, slashIdx) : 'CLOUD')).toUpperCase();
       }
 
-      return `<span class="model-brand-pill" style="font-size: 0.62rem; padding: 1px 5px; background: ${bg}; color: ${color}; border: 1px solid ${border}; border-radius: 3px; font-weight: 700; font-family: var(--font-mono); letter-spacing: 0.04em;">${brand}</span>`;
+      return `<span class="model-brand-pill u-fw-700 u-mono u-s-809218" style="background: ${bg}; color: ${color}; border: 1px solid ${border};">${brand}</span>`;
     }
 
     const cloudColumnDefs = {
@@ -4907,128 +5398,128 @@
         label: 'Status',
         width: '135px',
         sortKey: 'status',
-        title: 'Status de Otimização na Fronteira de Pareto.&#10;👑 Líder Qualidade: Ponto ótimo não-dominado.&#10;💎 Melhor ROI: Maior razão inteligência por dólar.&#10;⚡ Ultra Econômico: Menor tarifa com alta velocidade.&#10;🔹 Homologado: Modelo homologado complementar.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-status text-center" style="white-space: nowrap;">${h.statusBadge}</td>`
+        title: 'Status de Otimização na Fronteira de Pareto.&#10;Líder Qualidade: Ponto ótimo não-dominado.&#10;Melhor ROI: Maior razão inteligência por dólar.&#10;Ultra Econômico: Menor tarifa com alta velocidade.&#10;Homologado: Modelo homologado complementar.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-status text-center u-nowrap">${h.statusBadge}</td>`
       },
       score: {
         plainName: 'Score Geral',
         label: 'Score Geral',
         width: '105px',
         sortKey: 'score',
-        title: 'Score Multiobjetivo Geral Ponderado (0 a 100).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Cálculo: Combinação de benchmarks ponderados pelas prioridades do perfil cognitivo ativo.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-score mono text-center" style="font-weight: 800; color: var(--cyan); font-size: 0.84rem; white-space: nowrap;">${(m.composite_score || 0).toFixed(1)}</td>`
+        title: 'Score Multiobjetivo Geral Ponderado (0 a 100).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Cálculo: Combinação de benchmarks ponderados pelas prioridades do perfil cognitivo ativo.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-score mono text-center u-text-cyan u-nowrap u-s-5fc6fa">${(m.composite_score || 0).toFixed(1)}</td>`
       },
       roi: {
         plainName: 'ROI Index',
         label: 'ROI Index',
         width: '105px',
         sortKey: 'roi',
-        title: 'Índice de Retorno sobre Investimento (Score ÷ Blended Cost).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Cálculo: Mede o volume de capacidade cognitiva entregue por cada dólar investido.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-roi mono text-center" style="color: var(--green); font-weight: 700; white-space: nowrap;">${(m.roi_index || 0).toFixed(1)}x</td>`
+        title: 'Índice de Retorno sobre Investimento (Score ÷ Blended Cost).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Cálculo: Mede o volume de capacidade cognitiva entregue por cada dólar investido.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-roi mono text-center u-text-green u-fw-700 u-nowrap">${(m.roi_index || 0).toFixed(1)}x</td>`
       },
       nous: {
         plainName: 'Tarifa Nous ($/1M)',
-        label: '<span style="color: #e879f9;">🟣</span> Tarifa Nous ($/1M)',
+        label: `${uiIcon('brain', 'icon-xs')} Tarifa Nous ($/1M)`,
         width: '145px',
         sortKey: 'nous_cost',
-        title: 'Tarifa da API do Nous Portal por 1M de tokens (Blended: 25% Entrada + 75% Saída).&#10;📉 Como Interpretar: Quanto MENOR, melhor.&#10;★ Indica menor tarifa entre provedores homologados. Consome créditos do Nous.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-nous mono text-center" style="white-space: nowrap;">${h.nousCostStr}</td>`
+        title: 'Tarifa da API do Nous Portal por 1M de tokens (Blended: 25% Entrada + 75% Saída).&#10;Como Interpretar: Quanto MENOR, melhor.&#10;* Indica menor tarifa entre provedores homologados. Consome créditos do Nous.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-nous mono text-center u-nowrap">${h.nousCostStr}</td>`
       },
       or: {
         plainName: 'Tarifa OpenRouter ($/1M)',
-        label: '<span style="color: #818cf8;">🔀</span> Tarifa OR ($/1M)',
+        label: `${uiIcon('git-branch', 'icon-xs')} Tarifa OR ($/1M)`,
         width: '145px',
         sortKey: 'or_cost',
-        title: 'Tarifa da API do OpenRouter por 1M de tokens (Blended: 25% Entrada + 75% Saída).&#10;📉 Como Interpretar: Quanto MENOR, melhor.&#10;★ Indica menor tarifa entre provedores homologados.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-or mono text-center" style="white-space: nowrap;">${h.orCostStr}</td>`
+        title: 'Tarifa da API do OpenRouter por 1M de tokens (Blended: 25% Entrada + 75% Saída).&#10;Como Interpretar: Quanto MENOR, melhor.&#10;* Indica menor tarifa entre provedores homologados.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-or mono text-center u-nowrap">${h.orCostStr}</td>`
       },
       intel: {
         plainName: 'Inteligência (Arena ELO)',
         label: 'Inteligência',
         width: '115px',
         sortKey: 'intel',
-        title: 'Inteligência Geral e Discernimento Cognitivo (LMSYS Arena ELO / Hard Prompts).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Avalia capacidade geral de síntese, julgamento e resolução de problemas abertos.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-intel mono text-center" style="white-space: nowrap;">${h.intelScoreStr}</td>`
+        title: 'Inteligência Geral e Discernimento Cognitivo (LMSYS Arena ELO / Hard Prompts).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Avalia capacidade geral de síntese, julgamento e resolução de problemas abertos.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-intel mono text-center u-nowrap">${h.intelScoreStr}</td>`
       },
       coding: {
         plainName: 'Coding (SWE-bench)',
         label: 'Coding',
         width: '110px',
         sortKey: 'coding',
-        title: 'Capacidade em Engenharia de Software e Programação (SWE-bench / Code ELO).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Mede resolução real de bugs em repositórios e refatoração de código.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-coding mono text-center" style="white-space: nowrap;">${h.codingScoreStr}</td>`
+        title: 'Capacidade em Engenharia de Software e Programação (SWE-bench / Code ELO).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Mede resolução real de bugs em repositórios e refatoração de código.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-coding mono text-center u-nowrap">${h.codingScoreStr}</td>`
       },
       bfcl: {
         plainName: 'Tools (BFCL)',
         label: 'Tools (BFCL)',
         width: '115px',
         sortKey: 'bfcl',
-        title: 'Berkeley Function Calling Leaderboard (Chamada de Ferramentas e MCP).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Mede precisão sintática e semântica no disparo de tools.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-bfcl mono text-center" style="white-space: nowrap;">${h.bfclScoreStr}</td>`
+        title: 'Berkeley Function Calling Leaderboard (Chamada de Ferramentas e MCP).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Mede precisão sintática e semântica no disparo de tools.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-bfcl mono text-center u-nowrap">${h.bfclScoreStr}</td>`
       },
       reasoning: {
         plainName: 'Reasoning (GPQA)',
         label: 'Reasoning',
         width: '115px',
         sortKey: 'reasoning',
-        title: 'Raciocínio Lógico e Científico (GPQA Diamond / Hard Math).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Avalia deduções complexas e cadeias lógicas profundas.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-reasoning mono text-center" style="white-space: nowrap;">${h.reasoningScoreStr}</td>`
+        title: 'Raciocínio Lógico e Científico (GPQA Diamond / Hard Math).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Avalia deduções complexas e cadeias lógicas profundas.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-reasoning mono text-center u-nowrap">${h.reasoningScoreStr}</td>`
       },
       design: {
         plainName: 'Design UI/UX',
         label: 'Design UI/UX',
         width: '120px',
         sortKey: 'design',
-        title: 'Capacidade de Frontend, Design UI/UX e Estética de Código.&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Mede refinamento visual, geração CSS/Tailwind, acessibilidade e componentes interativos.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-design mono text-center" style="white-space: nowrap;">${h.designScoreStr}</td>`
+        title: 'Capacidade de Frontend, Design UI/UX e Estética de Código.&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Mede refinamento visual, geração CSS/Tailwind, acessibilidade e componentes interativos.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-design mono text-center u-nowrap">${h.designScoreStr}</td>`
       },
       vision: {
         plainName: 'Visão (VQA)',
         label: 'Visão (VQA)',
         width: '115px',
         sortKey: 'vision',
-        title: 'Visão Computacional e Entendimento Multimodal (MMMU / ChartQA / MathVista).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Avalia compreensão de prints de tela, diagramas técnicos e dados visuais.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-vision mono text-center" style="white-space: nowrap;">${h.visionScoreStr}</td>`
+        title: 'Visão Computacional e Entendimento Multimodal (MMMU / ChartQA / MathVista).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Avalia compreensão de prints de tela, diagramas técnicos e dados visuais.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-vision mono text-center u-nowrap">${h.visionScoreStr}</td>`
       },
       ifeval: {
         plainName: 'Instrução (IFEval)',
         label: 'Instrução',
         width: '115px',
         sortKey: 'ifeval',
-        title: 'Fidelidade a Instruções e Restrições de Formato (IFEval).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Mede cumprimento estrito de JSON schemas, delimitadores e contagens.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-ifeval mono text-center" style="white-space: nowrap;">${h.ifevalScoreStr}</td>`
+        title: 'Fidelidade a Instruções e Restrições de Formato (IFEval).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Mede cumprimento estrito de JSON schemas, delimitadores e contagens.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-ifeval mono text-center u-nowrap">${h.ifevalScoreStr}</td>`
       },
       ttft: {
         plainName: 'Latência (TTFT)',
         label: 'TTFT',
         width: '115px',
         sortKey: 'ttft',
-        title: 'Time to First Token (Latência de Resposta Inicial em milissegundos).&#10;📉 Como Interpretar: Quanto MENOR, melhor.&#10;Impacta diretamente a reatividade do diálogo e início do streaming.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-ttft mono text-center" style="white-space: nowrap;">${h.ttftStr}</td>`
+        title: 'Time to First Token (Latência de Resposta Inicial em milissegundos).&#10;Como Interpretar: Quanto MENOR, melhor.&#10;Impacta diretamente a reatividade do diálogo e início do streaming.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-ttft mono text-center u-nowrap">${h.ttftStr}</td>`
       },
       tps: {
         plainName: 'Throughput (TPS)',
         label: 'TPS',
         width: '110px',
         sortKey: 'tps',
-        title: 'Velocidade média em tokens por segundo (Throughput).&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Indica velocidade de streaming e geração em lote para subagentes.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-tps mono text-center" style="white-space: nowrap;">${h.tpsStr}</td>`
+        title: 'Velocidade média em tokens por segundo (Throughput).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Indica velocidade de streaming e geração em lote para subagentes.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-tps mono text-center u-nowrap">${h.tpsStr}</td>`
       },
       ctx: {
         plainName: 'Janela & RULER',
         label: 'Janela & RULER',
         width: '160px',
         sortKey: 'ctx',
-        title: 'Capacidade máxima de janela de contexto e retenção Needle-in-a-Haystack / RULER.&#10;📈 Como Interpretar: Quanto MAIOR, melhor.&#10;Exibe o tamanho máximo e a taxa de retenção de fatos no contexto.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-ctx mono text-center" style="white-space: nowrap;">${h.ctxStr}</td>`
+        title: 'Capacidade máxima de janela de contexto e retenção Needle-in-a-Haystack / RULER.&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Exibe o tamanho máximo e a taxa de retenção de fatos no contexto.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-ctx mono text-center u-nowrap">${h.ctxStr}</td>`
       },
       prov: {
         plainName: 'Provedores',
         label: 'Provedores',
         width: '125px',
         sortKey: 'prov',
-        title: 'Provedores com modelo indexado e pronto para consumo via API.&#10;🧠 Nous: Disponível com créditos do Nous Portal.&#10;🔀 OR: Disponível via API OpenRouter.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-prov text-center" style="white-space: nowrap;">${h.provBadgesStr}</td>`
+        title: 'Provedores com modelo indexado e pronto para consumo via API.&#10;Nous: Disponível com créditos do Nous Portal.&#10;OR: Disponível via API OpenRouter.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-prov text-center u-nowrap">${h.provBadgesStr}</td>`
       }
     };
 
@@ -5100,9 +5591,9 @@
         const hiddenClass = isHidden ? 'col-hidden' : '';
 
         return `
-          <th class="text-center sortable-th th-col-${key} th-guide ${activeSortClass} ${hiddenClass}" 
+          <th class="text-center sortable-th th-col-${key} th-guide ${activeSortClass} ${hiddenClass} u-nowrap u-s-afa7d1" 
               data-col-key="${key}"
-              style="width: ${colDef.width}; min-width: ${colDef.width}; white-space: nowrap; cursor: grab;" 
+              style="width: ${colDef.width}; min-width: ${colDef.width};" 
               draggable="true" 
               ondragstart="handleColDragStart(event, '${key}')" 
               ondragover="handleColDragOver(event)" 
@@ -5112,7 +5603,7 @@
               ondrop="handleColDrop(event, '${key}')" 
               onclick="setTableSort('${colDef.sortKey}')" 
               title="${colDef.title}&#10;↔ Dica: Arraste para reposicionar esta coluna na tabela.">
-            <span style="opacity: 0.35; font-size: 0.60rem; margin-right: 3px; cursor: grab;" title="Arraste para mover">⋮⋮</span>
+            <span class="u-s-c63fe2" title="Arraste para mover">⋮⋮</span>
             ${colDef.label} 
             <span class="sort-icon" id="sort-icon-${colDef.sortKey}">${sortIcon}</span>
           </th>
@@ -5122,19 +5613,19 @@
       thead.innerHTML = `
         <tr>
           <!-- COLUNA 1: POSIÇÃO (CONGELADA / STICKY) -->
-          <th class="text-center sortable-th sticky-col-1 th-guide" style="width: 52px; min-width: 52px; max-width: 52px;" onclick="setTableSort('rank')" title="Posição no ranking canônico pelo perfil ativo.&#10;📉 Como Interpretar: Quanto MENOR o número, melhor (#1 é o topo).">
+          <th class="text-center sortable-th sticky-col-1 th-guide u-s-da4d32" onclick="setTableSort('rank')" title="Posição no ranking canônico pelo perfil ativo.&#10;Como Interpretar: Quanto MENOR o número, melhor (#1 é o topo).">
             # <span class="sort-icon" id="sort-icon-rank">↕</span>
           </th>
 
           <!-- COLUNA 2: MODELO / IDENTIFICADOR (CONGELADA / STICKY) -->
-          <th class="sortable-th sticky-col-2 th-guide" style="min-width: 310px; max-width: 420px;" onclick="setTableSort('name')" title="Identificador do modelo, fabricante e capacidades multimodais.&#10;Clique no botão de prancheta para copiar o ID canônico.">
+          <th class="sortable-th sticky-col-2 th-guide u-s-5f5daf" onclick="setTableSort('name')" title="Identificador do modelo, fabricante e capacidades multimodais.&#10;Clique no botão de prancheta para copiar o ID canônico.">
             Modelo / Identificador <span class="sort-icon" id="sort-icon-name">↕</span>
           </th>
 
           ${thCols}
 
           <!-- COLUNA FINAL: AÇÃO -->
-          <th class="text-center" style="width: 80px; min-width: 80px;">Ação</th>
+          <th class="text-center u-s-d275b3">Ação</th>
         </tr>
       `;
     }
@@ -5190,7 +5681,7 @@
     async function fetchCloudChampions() {
       const container = document.getElementById('cloud-podium-cards');
       if (container) {
-        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">Carregando campeões da Cloud Arena...</div>';
+        container.innerHTML = '<div class="u-text-center u-text-muted u-s-8d8b30">Carregando campeões da Cloud Arena...</div>';
       }
 
       await updateActiveHermesBanner();
@@ -5207,26 +5698,38 @@
         }
       } catch (e) {
         if (container) {
-          container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--red); padding: 24px;">Erro ao carregar Cloud Arena.</div>';
+          container.innerHTML = '<div class="u-text-center u-text-red u-s-8d8b30">Erro ao carregar Cloud Arena.</div>';
         }
       }
     }
 
     function selectProfile(profile) {
-      currentProfile = profile.toLowerCase();
-      document.querySelectorAll('#profile-pill-container .profile-pill').forEach(btn => btn.classList.remove('active'));
-      const activeBtn = Array.from(document.querySelectorAll('#profile-pill-container .profile-pill')).find(b => b.innerText.toLowerCase().includes(currentProfile === 'orchestrator' ? 'maestro' : currentProfile));
-      if (activeBtn) activeBtn.classList.add('active');
+      const normalized = (profile || 'executive').toLowerCase();
+      currentProfile = (normalized === 'orchestrator' || normalized === 'maestro' || normalized === 'brain')
+        ? 'executive'
+        : normalized;
+
+      document.querySelectorAll('#profile-pill-container .profile-pill').forEach(btn => {
+        const dp = (btn.getAttribute('data-profile') || '').toLowerCase();
+        if (dp === currentProfile) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
 
       const descBar = document.getElementById('cloud-profile-description-bar');
       if (descBar) {
         const descMap = {
-          orchestrator: '👑 <strong>Master Brain / Maestro:</strong> O modelo de fronteira all-around que orquestra o diálogo mestre, planeja cadeias agênticas e toma decisões executivas com raciocínio balanceado.',
-          coding: '💻 <strong>Coding / SWE:</strong> Otimizado para engenharia de software, refatoração de código bare-metal, testes automatizados e resolução de problemas complexos.',
-          agentic: '🤖 <strong>Agentic / Tools:</strong> Otimizado para chamada de ferramentas (MCP/Tool Calling), planejamento autônomo e orquestração de subagentes.',
-          reasoning: '🧠 <strong>Reasoning / Math:</strong> Otimizado para raciocínio analítico profundo, lógica formal, matemática avançada e auditoria minuciosa.',
-          fast: '⚡ <strong>Fast / Triage:</strong> Otimizado para altíssima velocidade (TPS), triagem de intenções em milissegundos e processamento em lote com custo irrisório.',
-          design: '🎨 <strong>Design / Frontend:</strong> Otimizado para interfaces modernas, arquitetura de componentes frontend, CSS sofisticado e compreensão multimodal.'
+          executive: uiIcon('crown', 'icon-xs') + ' <strong>Executive / Maestro (Master Brain):</strong> O modelo de fronteira all-around que orquestra o diálogo mestre, planeja cadeias agênticas e toma decisões executivas com raciocínio balanceado.',
+          coding: uiIcon('code', 'icon-xs') + ' <strong>Coding / SWE:</strong> Otimizado para engenharia de software, refatoração de código bare-metal, testes automatizados e resolução de problemas complexos.',
+          agentic: uiIcon('bot', 'icon-xs') + ' <strong>Agentic / Tools:</strong> Otimizado para chamada de ferramentas (MCP/Tool Calling), planejamento autônomo e orquestração de subagentes.',
+          reasoning: uiIcon('brain', 'icon-xs') + ' <strong>Reasoning / Math:</strong> Otimizado para raciocínio analítico profundo, lógica formal, matemática avançada e auditoria minuciosa.',
+          fast: uiIcon('zap', 'icon-xs') + ' <strong>Fast / Triage:</strong> Otimizado para altíssima velocidade (TPS), triagem de intenções em milissegundos e processamento em lote com custo irrisório.',
+          design: uiIcon('palette', 'icon-xs') + ' <strong>Design / Frontend:</strong> Otimizado para interfaces modernas, arquitetura de componentes frontend, CSS sofisticado e compreensão multimodal.',
+          research: uiIcon('microscope', 'icon-xs') + ' <strong>Research / RAG:</strong> Otimizado para síntese profunda em janelas longas (>= 200k tokens), ingestão de repositórios e extração rigorosa sem perda de atenção.',
+          security: uiIcon('shield', 'icon-xs') + ' <strong>Security / Audit:</strong> Otimizado para auditoria estática de vulnerabilidades, análise de race conditions, segurança de memória e validação de guardrails.',
+          curation: uiIcon('book', 'icon-xs') + ' <strong>Curation / Wiki:</strong> Otimizado para escrita técnica bilingue, aderência estrita a formatos (IFEval) e curadoria do cofre Obsidian.'
         };
         descBar.innerHTML = descMap[currentProfile] || `Perfil cognitivo selecionado: <strong>${currentProfile}</strong>`;
       }
@@ -5237,7 +5740,7 @@
 
     function setCloudProviderFilter(provider) {
       currentCloudProviderFilter = (provider || 'all').toLowerCase();
-      document.querySelectorAll('.filter-provider-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('#cloud-provider-filter-pills .filter-provider-btn').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.getElementById(`btn-cloud-prov-${currentCloudProviderFilter}`);
       if (activeBtn) activeBtn.classList.add('active');
 
@@ -5310,7 +5813,8 @@
     function renderCloudTable() {
       const container = document.getElementById('cloud-podium-cards');
       if (!container) return;
-      const profileReport = cloudChampionsData.find(c => c.profile.toLowerCase() === currentProfile);
+      const targetProf = (currentProfile === 'orchestrator') ? 'executive' : currentProfile;
+      const profileReport = cloudChampionsData.find(c => c.profile.toLowerCase() === targetProf);
       const filteredList = getFilteredCloudModelsList();
       const hasActiveFilters = (currentCloudProviderFilter !== 'all') || 
                                (currentCloudModalityFilter !== 'all') || 
@@ -5321,20 +5825,20 @@
       if (sublabel) {
         let filterParts = [];
         if (currentCloudProviderFilter !== 'all') {
-          filterParts.push(currentCloudProviderFilter === 'nous' ? '🟣 Nous Portal' : '🔀 OpenRouter');
+          filterParts.push(currentCloudProviderFilter === 'nous' ? uiIcon('brain', 'icon-xs') + ' Nous Portal' : uiIcon('git-branch', 'icon-xs') + ' OpenRouter');
         }
         if (currentCloudModalityFilter !== 'all') {
-          filterParts.push(currentCloudModalityFilter === 'multimodal' ? '👁️ Multimodal' : '📝 Texto Puro');
+          filterParts.push(currentCloudModalityFilter === 'multimodal' ? uiIcon('eye', 'icon-xs') + ' Multimodal' : uiIcon('file-text', 'icon-xs') + ' Texto Puro');
         }
         if (selectedManufacturers && selectedManufacturers.size > 0) {
-          filterParts.push(`🏢 ${selectedManufacturers.size} Fabricante(s)`);
+          filterParts.push(uiIcon('layers', 'icon-xs') + ` ${selectedManufacturers.size} Fabricante(s)`);
         }
         const filterStr = filterParts.length > 0 ? ` • Filtros Ativos: ${filterParts.join(' | ')}` : '';
         sublabel.innerHTML = `Recomendações canônicas de qualidade máxima, melhor ROI e menor custo${filterStr}`;
       }
 
       if (!profileReport && filteredList.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">Nenhum dado encontrado para o perfil ${currentProfile}.</div>`;
+        container.innerHTML = `<div class="u-text-center u-text-muted u-s-8d8b30">Nenhum dado encontrado para o perfil ${targetProf}.</div>`;
         return;
       }
 
@@ -5344,11 +5848,11 @@
         if (profileReport.quality_leader) {
           cards.push({
             roleType: 'quality',
-            badgeText: '🏆 Máxima Inteligência',
-            badgeIcon: '🏆',
-            roleSubtitle: currentProfile === 'orchestrator' ? 'Maestro Supremo' : 'Líder Absoluto',
+            badgeText: 'Máxima Inteligência',
+            badgeIcon: 'trophy',
+            roleSubtitle: targetProf === 'executive' ? 'Maestro Supremo' : 'Líder Absoluto',
             data: profileReport.quality_leader,
-            defaultDesc: currentProfile === 'orchestrator' 
+            defaultDesc: targetProf === 'executive' 
               ? 'Melhor capacidade de orquestração geral e discernimento executivo sem limites de orçamento.'
               : 'Melhor pontuação absoluta no perfil selecionado. Recomendado para tarefas críticas e sem limite financeiro.'
           });
@@ -5356,11 +5860,11 @@
         if (profileReport.best_value) {
           cards.push({
             roleType: 'value',
-            badgeText: '💎 Melhor Custo-Benefício',
-            badgeIcon: '💎',
+            badgeText: 'Melhor Custo-Benefício',
+            badgeIcon: 'sparkles',
             roleSubtitle: 'Ponto Ótimo de ROI',
             data: profileReport.best_value,
-            defaultDesc: currentProfile === 'orchestrator'
+            defaultDesc: targetProf === 'executive'
               ? 'Equilíbrio ideal entre inteligência de ponta e economia contínua de créditos no Nous Portal.'
               : 'Máximo retorno de inteligência por cada dólar investido. Ideal para fluxos operacionais contínuos.'
           });
@@ -5368,63 +5872,103 @@
         if (profileReport.ultra_low_cost) {
           cards.push({
             roleType: 'lowcost',
-            badgeText: '⚡ Ultra Econômico',
-            badgeIcon: '⚡',
+            badgeText: 'Ultra Econômico',
+            badgeIcon: 'zap',
             roleSubtitle: 'Velocidade & Volume',
             data: profileReport.ultra_low_cost,
             defaultDesc: 'Tarifa mínima com alta taxa de geração (TPS). Perfeito para subagentes em lote, resumos e triagem.'
           });
         }
       } else if (filteredList.length > 0) {
-        // Filtros ativos: recalcula os campeões em tempo real dinamicamente
-        const sortedByQuality = [...filteredList].sort((a, b) => (b.composite_score || 0) - (a.composite_score || 0));
-        const leader = sortedByQuality[0];
-        cards.push({
-          roleType: 'quality',
-          badgeText: '🏆 Máxima Inteligência',
-          badgeIcon: '🏆',
-          roleSubtitle: 'Líder dos Filtros',
-          data: leader,
-          defaultDesc: 'Modelo de mais alto desempenho técnico homologado dentro dos critérios selecionados.'
-        });
+        // Filtros ativos: recalcula os 3 campeões apenas com modelos verificados (exclui Estimated)
+        const verifiedPool = filteredList.filter(m => m.pareto_tag !== 'Estimated' && m.is_verified !== false);
 
-        const sortedByRoi = [...filteredList].sort((a, b) => (b.roi_index || 0) - (a.roi_index || 0));
-        const bestRoi = sortedByRoi.find(m => m.canonical_id !== leader.canonical_id) || sortedByRoi[0];
-        if (bestRoi) {
-          cards.push({
-            roleType: 'value',
-            badgeText: '💎 Melhor Custo-Benefício',
-            badgeIcon: '💎',
-            roleSubtitle: 'Maior ROI Filtrado',
-            data: bestRoi,
-            defaultDesc: 'A melhor relação entre capacidade cognitiva e custo dentro dos critérios selecionados.'
-          });
-        }
+        const getEffCost = (m) => {
+          if (currentCloudProviderFilter === 'nous' && m.nous_blended > 0) return m.nous_blended;
+          if (currentCloudProviderFilter === 'openrouter' && m.or_blended > 0) return m.or_blended;
+          return m.blended_cost || m.nous_blended || m.or_blended || 0;
+        };
+        const getEffRoi = (m, cost) => {
+          if (currentCloudProviderFilter === 'nous' || currentCloudProviderFilter === 'openrouter') {
+            return (m.composite_score || 0) / (1.0 + Math.log(1.0 + Math.max(cost, 0.001)));
+          }
+          return m.roi_index || 0;
+        };
+        const withProviderContext = (m) => {
+          const effCost = getEffCost(m);
+          const effRoi = getEffRoi(m, effCost);
+          const effProvider = currentCloudProviderFilter === 'nous'
+            ? 'nous_portal'
+            : (currentCloudProviderFilter === 'openrouter' ? 'openrouter_market' : m.provider);
+          return { ...m, blended_cost: effCost, roi_index: effRoi, provider: effProvider };
+        };
 
-        const validCostModels = filteredList.filter(m => (m.blended_cost > 0) || (m.nous_blended > 0) || (m.or_blended > 0));
-        const sortedByCost = (validCostModels.length > 0 ? validCostModels : filteredList).sort((a, b) => {
-          const costA = a.blended_cost || a.nous_blended || a.or_blended || 9999;
-          const costB = b.blended_cost || b.nous_blended || b.or_blended || 9999;
-          return costA - costB;
-        });
-        const lowestCost = sortedByCost.find(m => !cards.some(c => c.data.canonical_id === m.canonical_id)) || sortedByCost[0];
-        if (lowestCost) {
+        const enrichedPool = verifiedPool.map(withProviderContext);
+        if (enrichedPool.length > 0) {
+          const sortedByQuality = [...enrichedPool].sort((a, b) => (b.composite_score || 0) - (a.composite_score || 0));
+          const leader = (targetProf === 'executive'
+            ? sortedByQuality.find(m => (m.composite_score || 0) >= 85.0)
+            : null) || sortedByQuality[0];
+
           cards.push({
-            roleType: 'lowcost',
-            badgeText: '⚡ Ultra Econômico',
-            badgeIcon: '⚡',
-            roleSubtitle: 'Menor Tarifa Filtrada',
-            data: lowestCost,
-            defaultDesc: 'Opção mais econômica e veloz homologada dentro dos critérios selecionados.'
+            roleType: 'quality',
+            badgeText: 'Máxima Inteligência',
+            badgeIcon: 'trophy',
+            roleSubtitle: 'Líder dos Filtros',
+            data: leader,
+            defaultDesc: 'Modelo verificado de mais alto desempenho técnico dentro dos critérios selecionados.'
           });
+
+          const leaderScore = leader.composite_score || 0;
+          const leaderCost = leader.blended_cost || 0;
+          const distinctPool = enrichedPool.filter(m => m.canonical_id !== leader.canonical_id);
+
+          const highCapRoiPool = distinctPool
+            .filter(m => (m.composite_score || 0) >= 82.0 && (m.composite_score || 0) >= (leaderScore - 12.0) && (m.blended_cost || 0) < leaderCost)
+            .sort((a, b) => (b.roi_index || 0) - (a.roi_index || 0));
+
+          const bestRoi = highCapRoiPool[0] || distinctPool
+            .filter(m => (m.composite_score || 0) >= 78.0)
+            .sort((a, b) => ((b.composite_score * 0.6 + b.roi_index * 0.4) - (a.composite_score * 0.6 + a.roi_index * 0.4)))[0];
+
+          if (bestRoi) {
+            cards.push({
+              roleType: 'value',
+              badgeText: 'Melhor Custo-Benefício',
+              badgeIcon: 'sparkles',
+              roleSubtitle: 'Maior ROI Filtrado',
+              data: bestRoi,
+              defaultDesc: 'Melhor equilíbrio de alta capacidade e economia dentro dos critérios selecionados.'
+            });
+          }
+
+          const remainingPool = distinctPool.filter(m => !bestRoi || m.canonical_id !== bestRoi.canonical_id);
+          const lowCostPool = remainingPool
+            .filter(m => (m.composite_score || 0) >= 72.0 && (m.blended_cost || 0) > 0 && (m.blended_cost || 0) <= 0.60)
+            .sort((a, b) => (a.blended_cost - b.blended_cost) || (b.roi_index - a.roi_index));
+
+          const lowestCost = lowCostPool[0] || remainingPool
+            .filter(m => (m.composite_score || 0) >= 72.0 && (m.blended_cost || 0) > 0)
+            .sort((a, b) => (a.blended_cost - b.blended_cost) || (b.roi_index - a.roi_index))[0];
+
+          if (lowestCost) {
+            cards.push({
+              roleType: 'lowcost',
+              badgeText: 'Ultra Econômico',
+              badgeIcon: 'zap',
+              roleSubtitle: 'Menor Tarifa Filtrada',
+              data: lowestCost,
+              defaultDesc: 'Opção verificada mais econômica e veloz dentro dos critérios selecionados.'
+            });
+          }
         }
       }
 
       if (cards.length === 0) {
         container.innerHTML = `
-          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 28px; background: rgba(15,23,42,0.4); border-radius: var(--radius-md); border: 1px dashed var(--border-subtle);">
+          <div class="u-text-center u-text-muted u-s-1e3b82">
             Nenhum campeão encontrado para a combinação de filtros selecionada.<br>
-            <span style="font-size: 0.72rem; color: #64748b;">Dica: Experimente selecionar "Todas as Modalidades" ou marcar mais fabricantes no filtro.</span>
+            <span class="u-text-dark u-s-dbc8d1">Dica: Experimente selecionar "Todas as Modalidades" ou marcar mais fabricantes no filtro.</span>
           </div>
         `;
         return;
@@ -5449,9 +5993,9 @@
           <div class="cloud-champion-card ${c.roleType} ${isActive ? 'active-hermes-card' : ''}">
             <div>
               <div class="champion-card-top">
-                <span class="champion-badge ${c.roleType}">${c.badgeText}</span>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  ${isActive ? '<span class="badge badge-active-hermes">🟢 Ativo no Hermes</span>' : ''}
+                <span class="champion-badge ${c.roleType}">${uiIcon(c.badgeIcon, 'icon-xs')} ${c.badgeText}</span>
+                <div class="u-d-flex u-items-center u-gap-6p">
+                  ${isActive ? '<span class="badge badge-active-hermes">' + uiIcon('check-circle', 'icon-xs') + ' Ativo no Hermes</span>' : ''}
                   <span class="champion-role-tag">${c.roleSubtitle}</span>
                 </div>
               </div>
@@ -5463,9 +6007,9 @@
                 </div>
                 <div class="champion-model-name" title="${cid}">${friendlyName}</div>
                 <div class="champion-model-id-row">
-                  <code class="mono" style="word-break: break-all;">${cid}</code>
-                  <button class="btn" onclick="copyCloudModelId('${cid}')" title="Copiar ID do Modelo" style="padding: 1px 5px; font-size: 0.65rem; background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: var(--text-muted); cursor: pointer;">
-                    📋
+                  <code class="mono u-s-7ef263">${cid}</code>
+                  <button class="btn u-text-muted u-pointer u-s-7932db" onclick="copyCloudModelId('${cid}')" title="Copiar ID do Modelo">
+                    ${uiIcon("list", "icon-xs")}
                   </button>
                 </div>
               </div>
@@ -5489,7 +6033,7 @@
                 </div>
                 <div class="champion-metric-box">
                   <div class="metric-label">Custo-Benefício (ROI)</div>
-                  <div class="metric-value" style="color: var(--green);">${roi.toFixed(1)}x</div>
+                  <div class="metric-value u-text-green">${roi.toFixed(1)}x</div>
                   <div class="metric-hint">Retorno Multiobjetivo</div>
                 </div>
                 <div class="champion-metric-box">
@@ -5502,7 +6046,7 @@
 
             <div class="champion-card-footer">
               <button class="btn-apply-champion" onclick="openQuickApplyModal('${cid}', '${m.provider}', false)">
-                <span>⚡</span> ${isActive ? 'Reconfigurar no Hermes' : 'Usar este Modelo no Hermes'}
+                ${uiIcon('zap', 'icon-sm')} ${isActive ? 'Reconfigurar no Hermes' : 'Usar este Modelo no Hermes'}
               </button>
             </div>
           </div>
@@ -5515,7 +6059,7 @@
       const tbody = document.getElementById('cloud-ranked-tbody');
       if (!tbody) return;
 
-      tbody.innerHTML = '<tr><td colspan="19" style="text-align: center; color: var(--text-muted); padding: 24px;">Consultando até 200 modelos da arena com benchmarks, latências e tarifas no SQLite...</td></tr>';
+      tbody.innerHTML = '<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="19">Consultando até 200 modelos da arena com benchmarks, latências e tarifas no SQLite...</td></tr>';
 
       try {
         const res = await fetch(`/api/v1/cloud/models?profile=${profile || currentProfile}&limit=200`);
@@ -5527,10 +6071,10 @@
           renderCloudRankedTable(cachedCloudRankedModels);
           renderCloudTable();
         } else {
-          tbody.innerHTML = '<tr><td colspan="19" style="text-align: center; color: var(--red); padding: 20px;">Falha ao carregar ranking da Cloud Arena.</td></tr>';
+          tbody.innerHTML = '<tr><td class="u-text-center u-text-red u-s-f8d354" colspan="19">Falha ao carregar ranking da Cloud Arena.</td></tr>';
         }
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="19" style="text-align: center; color: var(--red); padding: 20px;">Erro de rede: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td class="u-text-center u-text-red u-s-f8d354" colspan="19">Erro de rede: ${e.message}</td></tr>`;
       }
     }
 
@@ -5612,7 +6156,7 @@
       }
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="19" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum modelo avaliado encontrado correspondente aos filtros.</td></tr>`;
+        tbody.innerHTML = `<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="19">Nenhum modelo avaliado encontrado correspondente aos filtros.</td></tr>`;
         return;
       }
 
@@ -5622,15 +6166,17 @@
 
         let statusBadge = '';
         if (isActive) {
-          statusBadge = '<span class="badge badge-active-hermes">🟢 Ativo no Hermes</span>';
+          statusBadge = '<span class="badge badge-active-hermes">' + uiIcon('check-circle', 'icon-xs') + ' Ativo no Hermes</span>';
         } else if (m.pareto_tag === 'Leader') {
-          statusBadge = '<span class="badge badge-champion" title="Líder Qualidade: Ponto ótimo não-dominado na Fronteira de Pareto">👑 Líder Qualidade</span>';
+          statusBadge = '<span class="badge badge-champion" title="Líder Qualidade: Ponto ótimo não-dominado na Fronteira de Pareto">' + uiIcon('crown', 'icon-xs') + ' Líder Qualidade</span>';
         } else if (m.pareto_tag === 'BestValue') {
-          statusBadge = '<span class="badge badge-value" title="Ponto Ótimo de ROI: Maior razão inteligência por dólar">💎 Melhor ROI</span>';
+          statusBadge = '<span class="badge badge-value" title="Ponto Ótimo de ROI: Maior razão inteligência por dólar">' + uiIcon('sparkles', 'icon-xs') + ' Melhor ROI</span>';
         } else if (m.pareto_tag === 'UltraLowCost') {
-          statusBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.5);" title="Ultra Econômico: Menor tarifa com alta taxa de geração">⚡ Ultra Econômico</span>';
+          statusBadge = '<span class="badge u-text-emerald u-s-a7da15" title="Ultra Econômico: Menor tarifa com alta taxa de geração">' + uiIcon('zap', 'icon-xs') + ' Ultra Econômico</span>';
+        } else if (m.pareto_tag === 'Estimated') {
+          statusBadge = '<span class="badge badge-alternative" style="opacity: 0.78; border-style: dashed;" title="Estimado por heurística: este modelo ainda não possui benchmark empírico auditado e não concorre ao Pódio">' + uiIcon('clock', 'icon-xs') + ' Estimado</span>';
         } else {
-          statusBadge = '<span class="badge badge-alternative" title="Modelo homologado disponível no catálogo">🔹 Homologado</span>';
+          statusBadge = '<span class="badge badge-alternative" title="Modelo homologado disponível no catálogo">' + uiIcon('sparkles', 'icon-xs') + ' Homologado</span>';
         }
 
         const ctxNum = m.context_window || 0;
@@ -5639,56 +6185,56 @@
         else if (ctxNum >= 200000) retentionPct = 99.4;
         else if (ctxNum >= 128000) retentionPct = 99.7;
         const ctxFormatted = formatContextTokens(ctxNum);
-        const ctxStr = `<span style="white-space: nowrap; font-weight: 600;">${ctxFormatted}</span> <span style="color: #34d399; font-size: 0.68rem; font-weight: 600; white-space: nowrap;" title="Taxa de Retenção de Contexto Needle-in-a-Haystack / RULER">(${retentionPct.toFixed(1)}%)</span>`;
+        const ctxStr = `<span class="u-nowrap u-fw-600">${ctxFormatted}</span> <span class="u-text-emerald u-fw-600 u-nowrap u-s-923ef2" title="Taxa de Retenção de Contexto Needle-in-a-Haystack / RULER">(${retentionPct.toFixed(1)}%)</span>`;
 
         // Sub-scores enriquecidos e contínuos
         const baseScore = m.composite_score || 80.0;
         
         // Inteligência
-        const intelVal = m.eval_reasoning || m.hard_prompts_elo || baseScore;
-        const intelScoreStr = `<span style="color: #f59e0b; font-weight: 600; white-space: nowrap;" title="LMSYS Arena ELO / Discernimento: ${intelVal.toFixed(1)}">${intelVal.toFixed(1)}</span>`;
+        const intelVal = m.general_elo || m.eval_executive || m.hard_prompts_elo || baseScore;
+        const intelScoreStr = `<span class="u-fw-600 u-nowrap u-s-aba882" title="Inteligência Geral (Artificial Analysis / LMSYS Arena ELO): ${intelVal.toFixed(1)}">${intelVal.toFixed(1)}</span>`;
 
         // Coding
         const codingVal = m.coding_elo || m.eval_coding || (baseScore * 0.96);
-        const codingScoreStr = `<span style="color: #38bdf8; font-weight: 600; white-space: nowrap;" title="SWE-bench / Code ELO: ${codingVal.toFixed(1)}">${codingVal.toFixed(1)}</span>`;
+        const codingScoreStr = `<span class="u-text-cyan u-fw-600 u-nowrap" title="SWE-bench / Code ELO: ${codingVal.toFixed(1)}">${codingVal.toFixed(1)}</span>`;
 
         // Tools
         const bfclVal = m.bfcl_score || m.eval_agentic || (baseScore * 0.92);
-        const bfclScoreStr = `<span style="color: #a78bfa; font-weight: 600; white-space: nowrap;" title="Berkeley Function Calling: ${bfclVal.toFixed(1)}">${bfclVal.toFixed(1)}</span>`;
+        const bfclScoreStr = `<span class="u-fw-600 u-nowrap u-s-2dc335" title="Berkeley Function Calling: ${bfclVal.toFixed(1)}">${bfclVal.toFixed(1)}</span>`;
 
         // Reasoning
         const reasoningVal = m.gpqa_score || m.hard_prompts_elo || m.eval_reasoning || (baseScore * 0.95);
-        const reasoningScoreStr = `<span style="color: #f472b6; font-weight: 600; white-space: nowrap;" title="GPQA Diamond / Hard Prompts: ${reasoningVal.toFixed(1)}">${reasoningVal.toFixed(1)}</span>`;
+        const reasoningScoreStr = `<span class="u-fw-600 u-nowrap u-s-23cce7" title="GPQA Diamond / Hard Prompts: ${reasoningVal.toFixed(1)}">${reasoningVal.toFixed(1)}</span>`;
 
         // Design UI/UX
         const designVal = m.eval_design || (baseScore * 0.94);
-        const designScoreStr = `<span style="color: #ec4899; font-weight: 600; white-space: nowrap;" title="Design UI/UX / Frontend Score: ${designVal.toFixed(1)}">${designVal.toFixed(1)}</span>`;
+        const designScoreStr = `<span class="u-fw-600 u-nowrap u-s-1d1159" title="Design UI/UX / Frontend Score: ${designVal.toFixed(1)}">${designVal.toFixed(1)}</span>`;
 
         // Visão / VQA
-        let visionScoreStr = '<span style="color: var(--text-muted); font-size: 0.72rem; white-space: nowrap;">--</span>';
+        let visionScoreStr = '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
         if (m.vqa_multimodal_score) {
-          visionScoreStr = `<span style="color: #c084fc; font-weight: 600; white-space: nowrap;" title="MMMU / ChartQA / Visão Multimodal: ${m.vqa_multimodal_score.toFixed(1)}">${m.vqa_multimodal_score.toFixed(1)}</span>`;
+          visionScoreStr = `<span class="u-fw-600 u-nowrap u-s-358e52" title="MMMU / ChartQA / Visão Multimodal: ${m.vqa_multimodal_score.toFixed(1)}">${m.vqa_multimodal_score.toFixed(1)}</span>`;
         } else if (m.is_multimodal) {
           const vVal = baseScore * 0.93;
-          visionScoreStr = `<span style="color: #c084fc; font-weight: 600; white-space: nowrap;" title="MMMU / Visão Multimodal: ${vVal.toFixed(1)}">${vVal.toFixed(1)}</span>`;
+          visionScoreStr = `<span class="u-fw-600 u-nowrap u-s-358e52" title="MMMU / Visão Multimodal: ${vVal.toFixed(1)}">${vVal.toFixed(1)}</span>`;
         }
 
         // Instrução (IFEval)
         const ifevalVal = m.ifeval_score || Math.round(((bfclVal * 0.5) + (codingVal * 0.5)) * 10) / 10;
-        const ifevalScoreStr = `<span style="color: #34d399; font-weight: 600; white-space: nowrap;" title="Instruction Following (IFEval): ${ifevalVal.toFixed(1)}">${ifevalVal.toFixed(1)}</span>`;
+        const ifevalScoreStr = `<span class="u-text-emerald u-fw-600 u-nowrap" title="Instruction Following (IFEval): ${ifevalVal.toFixed(1)}">${ifevalVal.toFixed(1)}</span>`;
 
         // TTFT (lado a lado com ms)
-        let ttftStr = '<span style="color: var(--text-muted); font-size: 0.72rem; white-space: nowrap;">--</span>';
+        let ttftStr = '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
         if (m.ttft_ms && m.ttft_ms > 0) {
           const ttftColor = m.ttft_ms < 400 ? '#34d399' : (m.ttft_ms < 800 ? '#38bdf8' : (m.ttft_ms < 1500 ? '#fbbf24' : '#f87171'));
-          ttftStr = `<span style="color: ${ttftColor}; font-weight: 600; white-space: nowrap;" title="Time To First Token: ${m.ttft_ms.toFixed(0)} ms">${m.ttft_ms.toFixed(0)} ms</span>`;
+          ttftStr = `<span class="u-fw-600 u-nowrap" style="color: ${ttftColor};" title="Time To First Token: ${m.ttft_ms.toFixed(0)} ms">${m.ttft_ms.toFixed(0)} ms</span>`;
         }
 
         // TPS (lado a lado com TPS)
-        const tpsStr = m.throughput_tps ? `<span style="color: var(--text-main); font-weight: 600; white-space: nowrap;">${m.throughput_tps.toFixed(0)} TPS</span>` : '<span style="color: var(--text-muted); font-size: 0.72rem; white-space: nowrap;">--</span>';
+        const tpsStr = m.throughput_tps ? `<span class="u-text-main u-fw-600 u-nowrap">${m.throughput_tps.toFixed(0)} TPS</span>` : '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
 
         // Tarifa Nous Portal com cor exclusiva #e879f9
-        let nousCostStr = '<span style="color: var(--text-muted); font-size: 0.72rem; white-space: nowrap;">--</span>';
+        let nousCostStr = '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
         let nousBlendedVal = null;
         if (m.nous_blended !== null && m.nous_blended !== undefined && m.nous_blended > 0) {
           nousBlendedVal = m.nous_blended;
@@ -5699,7 +6245,7 @@
         }
 
         // Tarifa OpenRouter com cor exclusiva #818cf8
-        let orCostStr = '<span style="color: var(--text-muted); font-size: 0.72rem; white-space: nowrap;">--</span>';
+        let orCostStr = '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
         let orBlendedVal = null;
         if (m.or_blended !== null && m.or_blended !== undefined && m.or_blended > 0) {
           orBlendedVal = m.or_blended;
@@ -5715,28 +6261,28 @@
 
         if (nousBlendedVal !== null && nousBlendedVal > 0) {
           const bStr = nousBlendedVal < 0.01 ? '$' + nousBlendedVal.toFixed(4) : '$' + nousBlendedVal.toFixed(2);
-          const star = nousCheaper ? `<span class="badge-cheaper" title="Menor tarifa entre provedores homologados ($${nousBlendedVal.toFixed(2)} vs $${orBlendedVal.toFixed(2)})">★</span>` : '';
-          nousCostStr = `<span style="color: #e879f9; font-weight: 700; white-space: nowrap;" title="Nous Portal: $${(m.nous_prompt_price || 0).toFixed(2)} prompt / $${(m.nous_completion_price || 0).toFixed(2)} completion por 1M">${bStr}</span>${star}`;
+          const star = nousCheaper ? `<span class="badge-cheaper" title="Menor tarifa entre provedores homologados ($${nousBlendedVal.toFixed(2)} vs $${orBlendedVal.toFixed(2)})">*</span>` : '';
+          nousCostStr = `<span class="u-fw-700 u-nowrap u-s-59b283" title="Nous Portal: $${(m.nous_prompt_price || 0).toFixed(2)} prompt / $${(m.nous_completion_price || 0).toFixed(2)} completion por 1M">${bStr}</span>${star}`;
         }
 
         if (orBlendedVal !== null && orBlendedVal > 0) {
           const bStr = orBlendedVal < 0.01 ? '$' + orBlendedVal.toFixed(4) : '$' + orBlendedVal.toFixed(2);
-          const star = orCheaper ? `<span class="badge-cheaper" title="Menor tarifa entre provedores homologados ($${orBlendedVal.toFixed(2)} vs $${nousBlendedVal.toFixed(2)})">★</span>` : '';
-          orCostStr = `<span style="color: #818cf8; font-weight: 700; white-space: nowrap;" title="OpenRouter: $${(m.or_prompt_price || 0).toFixed(2)} prompt / $${(m.or_completion_price || 0).toFixed(2)} completion por 1M">${bStr}</span>${star}`;
+          const star = orCheaper ? `<span class="badge-cheaper" title="Menor tarifa entre provedores homologados ($${orBlendedVal.toFixed(2)} vs $${nousBlendedVal.toFixed(2)})">*</span>` : '';
+          orCostStr = `<span class="u-fw-700 u-nowrap u-s-dd4993" title="OpenRouter: $${(m.or_prompt_price || 0).toFixed(2)} prompt / $${(m.or_completion_price || 0).toFixed(2)} completion por 1M">${bStr}</span>${star}`;
         }
 
         // Badges de disponibilidade de provedores
         let provBadges = [];
         if (m.has_nous) {
-          provBadges.push('<span class="badge badge-nous" title="Disponível na API do Nous Portal (Crédito Ativo Hermes)">🧠 Nous</span>');
+          provBadges.push('<span class="badge badge-nous" title="Disponível na API do Nous Portal (Crédito Ativo Hermes)">' + uiIcon('brain', 'icon-xs') + ' Nous</span>');
         }
         if (m.has_openrouter) {
-          provBadges.push('<span class="badge badge-openrouter" title="Disponível via API do OpenRouter">🔀 OR</span>');
+          provBadges.push('<span class="badge badge-openrouter" title="Disponível via API do OpenRouter">' + uiIcon('git-branch', 'icon-xs') + ' OR</span>');
         }
         if (provBadges.length === 0) {
-          provBadges.push(`<span class="badge" style="background: rgba(255,255,255,0.06);">${humanizeProviderName(m.provider)}</span>`);
+          provBadges.push(`<span class="badge u-s-99cb54">${humanizeProviderName(m.provider)}</span>`);
         }
-        const provBadgesStr = `<div style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">${provBadges.join('')}</div>`;
+        const provBadgesStr = `<div class="u-d-flex u-gap-1 u-justify-center u-flex-wrap">${provBadges.join('')}</div>`;
 
         // Tags de capacidade ao lado do nome do modelo
         let capTags = [];
@@ -5744,31 +6290,31 @@
         const modLower = (m.modality || '').toLowerCase();
         
         if (m.is_multimodal || modLower.includes('vision') || modLower.includes('image')) {
-          capTags.push('<span class="cap-tag cap-vision" title="Visão: Processa imagens, diagramas e OCR">👁️ Visão</span>');
+          capTags.push('<span class="cap-tag cap-vision" title="Visão: Processa imagens, diagramas e OCR">' + uiIcon('eye', 'icon-xs') + ' Visão</span>');
         }
         if (modLower.includes('image_gen') || cidLower.includes('flux') || cidLower.includes('dall-e') || cidLower.includes('midjourney') || cidLower.includes('imagen') || cidLower.includes('janus')) {
-          capTags.push('<span class="cap-tag" style="background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.35); font-size: 0.65rem; padding: 1px 5px; border-radius: 4px;" title="Geração de Imagens: Criação visual nativa a partir de prompt">🎨 Imagem</span>');
+          capTags.push('<span class="cap-tag u-s-489a40" title="Geração de Imagens: Criação visual nativa a partir de prompt">' + uiIcon('palette', 'icon-xs') + ' Imagem</span>');
         }
         if (modLower.includes('audio') || modLower.includes('speech') || modLower.includes('voice') || cidLower.includes('audio') || cidLower.includes('realtime')) {
-          capTags.push('<span class="cap-tag" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.35); font-size: 0.65rem; padding: 1px 5px; border-radius: 4px;" title="Áudio & Voz: Compreensão e fala conversacional nativa">🎙️ Áudio</span>');
+          capTags.push('<span class="cap-tag u-text-cyan u-s-6a9e5c" title="Áudio & Voz: Compreensão e fala conversacional nativa">' + uiIcon('mic', 'icon-xs') + ' Áudio</span>');
         }
         if (modLower.includes('video') || cidLower.includes('video') || cidLower.includes('sora') || cidLower.includes('wan') || cidLower.includes('kling')) {
-          capTags.push('<span class="cap-tag" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); font-size: 0.65rem; padding: 1px 5px; border-radius: 4px;" title="Vídeo: Compreensão temporal e dinâmica de frames">🎬 Vídeo</span>');
+          capTags.push('<span class="cap-tag u-s-63b8dd" title="Vídeo: Compreensão temporal e dinâmica de frames">' + uiIcon('play', 'icon-xs') + ' Vídeo</span>');
         }
         if (modLower.includes('world') || cidLower.includes('world') || cidLower.includes('genie') || cidLower.includes('cosmos') || cidLower.includes('oasis') || cidLower.includes('marble')) {
-          capTags.push('<span class="cap-tag" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35); font-size: 0.65rem; padding: 1px 5px; border-radius: 4px;" title="World Model: Simulação física e ambientes espaciais">🌍 Mundo</span>');
+          capTags.push('<span class="cap-tag u-s-384b69" title="World Model: Simulação física e ambientes espaciais">' + uiIcon('globe', 'icon-xs') + ' Mundo</span>');
         }
         if (modLower.includes('decision') || cidLower.includes('jev') || cidLower.includes('routing')) {
-          capTags.push('<span class="cap-tag" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.35); font-size: 0.65rem; padding: 1px 5px; border-radius: 4px;" title="Decisão Tipada: Motor não-autorregressivo (estilo Jev)">⚡ Decisão</span>');
+          capTags.push('<span class="cap-tag u-s-b9bacf" title="Decisão Tipada: Motor não-autorregressivo (estilo Jev)">' + uiIcon('zap', 'icon-xs') + ' Decisão</span>');
         }
         if (m.supports_caching) {
-          capTags.push('<span class="cap-tag cap-caching" title="Prompt Caching: Economia de até 80% em contexto repetido">⚡ Cache</span>');
+          capTags.push('<span class="cap-tag cap-caching" title="Prompt Caching: Economia de até 80% em contexto repetido">' + uiIcon('zap', 'icon-xs') + ' Cache</span>');
         }
         if (m.supports_tools) {
-          capTags.push('<span class="cap-tag cap-tools" title="Function Calling: Suporte nativo a chamadas de ferramentas e MCP">🤖 Tools</span>');
+          capTags.push('<span class="cap-tag cap-tools" title="Function Calling: Suporte nativo a chamadas de ferramentas e MCP">' + uiIcon('bot', 'icon-xs') + ' Tools</span>');
         }
         if (m.supports_structured_outputs) {
-          capTags.push('<span class="cap-tag cap-schema" title="Structured Outputs: Garante aderência estrita a schemas JSON">📑 JSON</span>');
+          capTags.push('<span class="cap-tag cap-schema" title="Structured Outputs: Garante aderência estrita a schemas JSON">' + uiIcon('file-text', 'icon-xs') + ' JSON</span>');
         }
 
         const helpers = {
@@ -5801,27 +6347,27 @@
         return `
           <tr class="${isActive ? 'active-hermes-row' : ''}">
             <!-- 1. RANKING (CONGELADO) -->
-            <td class="sticky-col-1 rank-cell ${isTop3 ? 'top3' : ''} text-center" style="${idx === 0 ? 'color: #fbbf24; font-weight: 800;' : (idx === 1 ? 'color: #cbd5e1; font-weight: 800;' : (idx === 2 ? 'color: #f59e0b; font-weight: 800;' : ''))}">#${idx + 1}</td>
+            <td class="sticky-col-1 rank-cell ${isTop3 ? 'top3' : ''} text-center" style="${idx === 0 ? 'color: #fbbf24; font-weight: 800;' : (idx === 1 ? 'color: #E4E4E7; font-weight: 800;' : (idx === 2 ? 'color: #f59e0b; font-weight: 800;' : ''))};">#${idx + 1}</td>
 
             <!-- 2. MODELO / IDENTIFICADOR (CONGELADO ANTES DO STATUS) -->
             <td class="sticky-col-2">
-              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; width: 100%; min-width: 0;">
-                <div style="min-width: 0; flex: 1; overflow: hidden;">
+              <div class="u-d-flex u-items-start u-justify-between u-gap-2 u-w-full u-min-w-0">
+                <div class="u-min-w-0 u-flex-1 u-overflow-hidden">
                   <!-- Linha 1: Apenas Capacidades e Recursos -->
-                  <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 4px;">
+                  <div class="u-d-flex u-items-center u-flex-wrap u-mb-1 u-s-0880e8">
                     ${capTags.join('')}
                   </div>
                   <!-- Linha 2: Badge do Fabricante posicionado imediatamente antes do Nome do Modelo -->
-                  <div class="model-name-title" title="${m.canonical_id}" style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #fff; font-size: 0.84rem; line-height: 1.3; overflow: hidden; max-width: 320px;">
+                  <div class="model-name-title u-d-flex u-items-center u-gap-6p u-fw-600 u-text-white u-overflow-hidden u-s-505f7e" title="${m.canonical_id}">
                     ${brandBadge}
-                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${friendlyName}</span>
+                    <span class="u-overflow-hidden u-nowrap u-s-9f3798">${friendlyName}</span>
                   </div>
-                  <div class="mono" style="font-size: 0.65rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 290px; margin-top: 1px;" title="${m.canonical_id}">
+                  <div class="mono u-text-muted u-overflow-hidden u-nowrap u-s-154d96" title="${m.canonical_id}">
                     ${m.canonical_id}
                   </div>
                 </div>
-                <button class="btn" onclick="copyCloudModelId('${m.canonical_id}')" title="Copiar ID do Modelo" style="padding: 2px 6px; font-size: 0.65rem; background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: var(--text-muted); cursor: pointer; flex-shrink: 0; margin-top: 2px;">
-                  📋
+                <button class="btn u-text-muted u-pointer u-shrink-0 u-mt-2p u-s-0385fb" onclick="copyCloudModelId('${m.canonical_id}')" title="Copiar ID do Modelo">
+                  ${uiIcon("list", "icon-xs")}
                 </button>
               </div>
             </td>
@@ -5829,9 +6375,9 @@
             ${dynamicTds}
 
             <!-- COLUNA FINAL: AÇÃO -->
-            <td class="text-center" style="white-space: nowrap;">
+            <td class="text-center u-nowrap">
               <button class="btn-apply-model" onclick="openQuickApplyModal('${m.canonical_id}', '${m.has_nous ? 'nous' : 'openrouter'}', false)" title="Aplicar este modelo no Hermes Agent">
-                <span>⚡</span> Usar
+                ${uiIcon('zap', 'icon-sm')} Usar
               </button>
             </td>
           </tr>
@@ -5847,7 +6393,7 @@
       const originalHtml = btn ? btn.innerHTML : '';
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span style="display: inline-block; animation: spin 1s linear infinite; margin-right: 4px;">🔄</span> Sincronizando...';
+        btn.innerHTML = '<span class="spin-icon u-d-inline-block u-s-043e24">' + uiIcon('refresh', 'icon-xs') + '</span> Sincronizando...';
       }
 
       showToast("Sincronizando tarifas do Nous Portal e OpenRouter na nuvem...", "warning");
@@ -5867,7 +6413,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = originalHtml || '<span>⚡</span> Sincronizar Tarifas na Nuvem';
+          btn.innerHTML = originalHtml || `${uiIcon('zap', 'icon-sm')} Sincronizar Tarifas na Nuvem`;
         }
       }
     }
@@ -5909,7 +6455,8 @@
       if (!modeSelect) return;
 
       const mode = modeSelect.value;
-      let suggestedPath = 'Z:\\souls_engine\\.souls_data';
+      const defaultDataPath = (window.soulsHostDefaults && window.soulsHostDefaults.default_souls_data_path) || '.souls_data';
+      let suggestedPath = defaultDataPath;
       let bannerHtml = '';
       let badgeText = '• Dev Drive ReFS Ativo (Linha Vermelha 4)';
       let badgeColor = 'var(--green)';
@@ -5921,8 +6468,8 @@
       let kpiText = 'Dev Drive ReFS (Zero-Leak)';
 
       if (mode === 'dev_drive') {
-        suggestedPath = 'Z:\\souls_engine\\.souls_data';
-        bannerHtml = '<strong style="color: var(--green);">💡 Modo Workstation (Dev Drive ReFS):</strong> Operando sobre volume dedicado ReFS com aceleração Copy-on-Write (CoW) em <code>Z:\\souls_engine\\.souls_data\\</code>. Taxas de I/O de até 4.5 GB/s para operações em lote nos índices SQLite WAL e LanceDB, com contenção absoluta (Linha Vermelha 4) e zero poluição no sistema operacional.';
+        suggestedPath = defaultDataPath;
+        bannerHtml = '<strong class="u-text-green">' + uiIcon('lightbulb', 'icon-xs') + ' Modo Workstation (Dev Drive ReFS):</strong> Operando sobre volume dedicado ReFS com aceleração Copy-on-Write (CoW) em <code>' + escapeHtml(defaultDataPath) + '</code>. Taxas de I/O de até 4.5 GB/s para operações em lote nos índices SQLite WAL e LanceDB, com contenção absoluta (Linha Vermelha 4) e zero poluição no sistema operacional.';
         badgeText = '• Dev Drive ReFS Ativo (Linha Vermelha 4)';
         badgeColor = 'var(--green)';
         badgeBg = 'rgba(16, 185, 129, 0.12)';
@@ -5933,7 +6480,7 @@
         kpiText = 'Dev Drive ReFS (Zero-Leak)';
       } else if (mode === 'localappdata') {
         suggestedPath = '%LOCALAPPDATA%\\SoulsEngine\\data';
-        bannerHtml = '<strong style="color: var(--cyan);">💡 Modo Padrão de Aplicação (%LOCALAPPDATA%):</strong> Operando no diretório nativo seguro <code>%LOCALAPPDATA%\\SoulsEngine\\data\\</code>. Ideal para instalações autônomas sem necessidade de partição Dev Drive, preservando 100% do isolamento de dados com sandbox rígida, validação atômica de código via Myers Diff e zero interferência em outras pastas do host.';
+        bannerHtml = '<strong class="u-text-cyan">' + uiIcon('lightbulb', 'icon-xs') + ' Modo Padrão de Aplicação (%LOCALAPPDATA%):</strong> Operando no diretório nativo seguro <code>%LOCALAPPDATA%\\SoulsEngine\\data\\</code>. Ideal para instalações autônomas sem necessidade de partição Dev Drive, preservando 100% do isolamento de dados com sandbox rígida, validação atômica de código via Myers Diff e zero interferência em outras pastas do host.';
         badgeText = '• Padrão Windows Ativo (Isolado)';
         badgeColor = 'var(--cyan)';
         badgeBg = 'rgba(6, 182, 212, 0.12)';
@@ -5944,7 +6491,7 @@
         kpiText = 'AppData Local (Zero-Leak)';
       } else if (mode === 'userprofile') {
         suggestedPath = '%USERPROFILE%\\.souls_data';
-        bannerHtml = '<strong style="color: var(--purple-light);">💡 Modo Pessoal do Usuário (%USERPROFILE%):</strong> Operando no repositório pessoal <code>%USERPROFILE%\\.souls_data\\</code>. Permite portabilidade facilitada de bancos SQLite e checkpoints entre perfis de login, mantendo contenção estrita no diretório raiz e proteções contra travamentos de terminal.';
+        bannerHtml = '<strong class="u-text-purple-light">' + uiIcon('lightbulb', 'icon-xs') + ' Modo Pessoal do Usuário (%USERPROFILE%):</strong> Operando no repositório pessoal <code>%USERPROFILE%\\.souls_data\\</code>. Permite portabilidade facilitada de bancos SQLite e checkpoints entre perfis de login, mantendo contenção estrita no diretório raiz e proteções contra travamentos de terminal.';
         badgeText = '• Modo Pessoal Ativo (Portável)';
         badgeColor = 'var(--purple-light)';
         badgeBg = 'rgba(168, 85, 247, 0.12)';
@@ -5994,7 +6541,7 @@
           statusEl.innerText = `${data.provisioned_count || 6} de 6 Prontos`;
           statusEl.style.color = 'var(--green)';
         }
-        showToast('✓ Estrutura física de 6 subpastas verificada e provisionada com sucesso!', 'success');
+        showToast('Estrutura física de 6 subpastas verificada e provisionada com sucesso!', 'success');
       } catch (err) {
         if (statusEl) {
           statusEl.innerText = 'Falha no provisionamento';
@@ -6005,83 +6552,105 @@
     }
 
     function cleanAstCache() {
-      showToast('✓ Caches AST Myers Diff limpos com sucesso. Espaço liberado!', 'success');
+      showToast('Caches AST Myers Diff limpos com sucesso. Espaço liberado!', 'success');
     }
 
     function setSandboxScenario(type) {
-      const inputEl = document.getElementById('sim-target-path');
+      const inputEl = document.getElementById('sim-sandbox-target') || document.getElementById('sim-target-path');
       if (!inputEl) return;
-      if (type === 'workspace_write') {
-        inputEl.value = 'Z:\\souls_engine\\crates\\souls_ast\\src\\lib.rs (Escrita Segura)';
-      } else if (type === 'forbidden_escape') {
+      const defaultDataPath = (window.soulsHostDefaults && window.soulsHostDefaults.default_souls_data_path) || '.souls_data';
+      if (type === 'workspace' || type === 'workspace_write') {
+        inputEl.value = `${defaultDataPath}\\scratch\\test_probe.tmp`;
+      } else if (type === 'forbidden' || type === 'forbidden_escape') {
         inputEl.value = 'C:\\Windows\\System32\\cmd.exe (Violação Linha Vermelha 4)';
-      } else if (type === 'timeout_loop') {
+      } else if (type === 'hang' || type === 'timeout_loop') {
         inputEl.value = 'while(true) { std::thread::sleep(); } (Loop Infinito)';
-      } else if (type === 'ast_surgery') {
-        inputEl.value = 'crates/souls_ast/src/parser.rs (Cirurgia Atômica Myers)';
+      } else if (type === 'ast' || type === 'ast_surgery') {
+        inputEl.value = 'crates/souls_ast/src/parser.rs (Cirurgia Atômica Myers Diff)';
       }
       runSandboxSimulation();
     }
 
     function runSandboxSimulation() {
-      const inputEl = document.getElementById('sim-target-path');
+      const inputEl = document.getElementById('sim-sandbox-target') || document.getElementById('sim-target-path');
       const target = inputEl ? inputEl.value.trim() : '';
-      const verdictEl = document.getElementById('sim-verdict-badge');
-      const reasonEl = document.getElementById('sim-verdict-reason');
-      const latencyEl = document.getElementById('sim-eval-latency');
-      const ruleEl = document.getElementById('sim-eval-rule');
+      const statusBadge = document.getElementById('sim-sandbox-status-badge');
+      const latencyEl = document.getElementById('sim-sandbox-latency');
+      const descEl = document.getElementById('sim-sandbox-desc');
+      const chipsEl = document.getElementById('sim-sandbox-chips');
+      const timeoutMs = Number(document.getElementById('cfg-sandbox-timeout')?.value || 5000);
+      const astDeHydration = document.getElementById('cfg-ast-dehydration')?.checked ?? true;
+      const myersDiff = document.getElementById('cfg-ast-myers-diff')?.checked ?? true;
 
-      if (latencyEl) latencyEl.innerText = '< 0.05 ms';
+      if (latencyEl) latencyEl.innerText = '< 0.08 ms';
 
       if (!target) {
-        if (verdictEl) {
-          verdictEl.innerText = 'AGUARDANDO ENTRADA';
-          verdictEl.style.background = 'rgba(255,255,255,0.05)';
-          verdictEl.style.color = 'var(--text-muted)';
-          verdictEl.style.borderColor = 'rgba(255,255,255,0.1)';
+        if (statusBadge) {
+          statusBadge.className = 'u-text-muted u-d-flex u-items-center u-s-0880e8';
+          statusBadge.innerHTML = `${uiIcon('info', 'icon-xs')} <span>AGUARDANDO ENTRADA</span>`;
         }
-        if (reasonEl) reasonEl.innerText = 'Digite um comando ou caminho para testar a contenção.';
-        if (ruleEl) ruleEl.innerText = '--';
+        if (descEl) descEl.innerText = 'Digite um caminho de arquivo ou comando para testar as barreiras de contenção NT/ReFS.';
+        if (chipsEl) chipsEl.innerHTML = '';
         return;
       }
 
       const lower = target.toLowerCase();
-      if (lower.includes('c:\\windows') || lower.includes('c:/windows') || lower.includes('%appdata%') || lower.includes('system32') || lower.includes('violação')) {
-        if (verdictEl) {
-          verdictEl.innerText = '🛡️ BLOQUEADO (ESCAPAMENTO DETECTADO)';
-          verdictEl.style.background = 'rgba(239, 68, 68, 0.15)';
-          verdictEl.style.color = '#ef4444';
-          verdictEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      if (lower.includes('c:\\windows') || lower.includes('c:/windows') || lower.includes('%appdata%') || lower.includes('%localappdata%') || lower.includes('system32') || lower.includes('violação')) {
+        if (statusBadge) {
+          statusBadge.className = 'u-text-red u-d-flex u-items-center u-s-0880e8';
+          statusBadge.innerHTML = `${uiIcon('shield', 'icon-xs')} <span>BLOQUEADO: Escapamento ReFS/NT Detectado</span>`;
         }
-        if (reasonEl) reasonEl.innerHTML = '<span style="color: #ef4444;">Intercepção de Linha Vermelha 4:</span> Acesso estritamente barrado fora da raiz de trabalho. O host rejeitou a operação com código de confinamento <code>EACCES_GUARDRAIL</code>.';
-        if (ruleEl) ruleEl.innerText = 'Linha Vermelha 4 (AGENTS.md §1.4)';
+        if (descEl) {
+          descEl.innerHTML = '<strong class="u-text-red">Intercepção de Linha Vermelha 4:</strong> Acesso barrado fora do workspace autorizado. O servidor retornou erro estruturado <code>EACCES_SANDBOX_VIOLATION</code> antes de qualquer chamada de sistema.';
+        }
+        if (chipsEl) {
+          chipsEl.innerHTML = `
+            <span class="badge u-text-red u-s-384e35">Linha Vermelha 4 (Bloqueio Estrito)</span>
+            <span class="badge u-text-amber u-s-d5ff6f">Auditor Zero-Trust NT</span>
+          `;
+        }
       } else if (lower.includes('while(true)') || lower.includes('loop') || lower.includes('sleep') || lower.includes('hang')) {
-        if (verdictEl) {
-          verdictEl.innerText = '⏱️ INTERROMPIDO (WATCHDOG 5.000ms)';
-          verdictEl.style.background = 'rgba(245, 158, 11, 0.15)';
-          verdictEl.style.color = '#f59e0b';
-          verdictEl.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        if (statusBadge) {
+          statusBadge.className = 'u-text-amber u-d-flex u-items-center u-s-0880e8';
+          statusBadge.innerHTML = `${uiIcon('clock', 'icon-xs')} <span>INTERROMPIDO: Watchdog Timeout (${timeoutMs.toLocaleString('pt-BR')} ms)</span>`;
         }
-        if (reasonEl) reasonEl.innerHTML = '<span style="color: #f59e0b;">Timeout do Shell:</span> Processo atingiu o teto configurado de 5.000 ms sem emitir sinal de progresso. Encerrado de forma limpa pelo Safe Sandbox.';
-        if (ruleEl) ruleEl.innerText = 'Safe Sandbox Watchdog';
-      } else if (lower.includes('myers') || lower.includes('ast') || lower.includes('cirurgia')) {
-        if (verdictEl) {
-          verdictEl.innerText = '⚡ AUTORIZADO (CIRURGIA MYERS DIFF)';
-          verdictEl.style.background = 'rgba(16, 185, 129, 0.15)';
-          verdictEl.style.color = '#10b981';
-          verdictEl.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        if (descEl) {
+          descEl.innerHTML = `<strong class="u-text-amber">Prevenção Anti-Hang:</strong> O processo atingiu o limite configurado de <code>${timeoutMs.toLocaleString('pt-BR')} ms</code> sem stdout válido e foi terminado pelo Job Object do Safe Sandbox com higienização ANSI.`;
         }
-        if (reasonEl) reasonEl.innerHTML = '<span style="color: #10b981;">Cirurgia Atômica:</span> Modificação sintática em memória aprovada. Myers Diff gerado com 100% de integridade e sem bypass de AST.';
-        if (ruleEl) ruleEl.innerText = 'Souls Code Surgeon (§5.4)';
+        if (chipsEl) {
+          chipsEl.innerHTML = `
+            <span class="badge u-text-amber u-s-d5ff6f">Timeout ${timeoutMs}ms Aplicado</span>
+            <span class="badge u-text-cyan u-s-3d1f06">Zero Zombie Process</span>
+          `;
+        }
+      } else if (lower.includes('myers') || lower.includes('ast') || lower.includes('cirurgia') || lower.includes('.rs') || lower.includes('.ts')) {
+        if (statusBadge) {
+          statusBadge.className = 'u-text-green u-d-flex u-items-center u-s-0880e8';
+          statusBadge.innerHTML = `${uiIcon('zap', 'icon-xs')} <span>AUTORIZADO: Cirurgia Sintática Tree-sitter</span>`;
+        }
+        if (descEl) {
+          descEl.innerHTML = `Edição sintática dentro do workspace aprovada. ${myersDiff ? 'Myers Diff atômico com verificação LF estrita ativo' : 'Patch direto'} e ${astDeHydration ? 'desidratação AST habilitada (70-85% economia de tokens)' : 'modo leitura completa'}.`;
+        }
+        if (chipsEl) {
+          chipsEl.innerHTML = `
+            <span class="badge u-text-green u-s-f211f7">${myersDiff ? 'Myers Diff LF Ativo' : 'Myers Diff Desligado'}</span>
+            <span class="badge u-text-cyan u-s-3d1f06">${astDeHydration ? 'AST Dehydration OK' : 'Sem Desidratação'}</span>
+          `;
+        }
       } else {
-        if (verdictEl) {
-          verdictEl.innerText = '✓ OPERAÇÃO SEGURA & AUTORIZADA';
-          verdictEl.style.background = 'rgba(16, 185, 129, 0.15)';
-          verdictEl.style.color = '#10b981';
-          verdictEl.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        if (statusBadge) {
+          statusBadge.className = 'u-text-green u-d-flex u-items-center u-s-0880e8';
+          statusBadge.innerHTML = `${uiIcon('check-circle', 'icon-xs')} <span>AUTORIZADO: Confinado no Workspace</span>`;
         }
-        if (reasonEl) reasonEl.innerHTML = '<span style="color: #10b981;">Confinamento em Raiz:</span> Operação dentro do workspace aprovada. Permissão de leitura/escrita validada com contenção no Dev Drive ReFS.';
-        if (ruleEl) ruleEl.innerText = 'Workspace Confinado (§1.4)';
+        if (descEl) {
+          descEl.innerHTML = 'O caminho reside estritamente dentro da partição autorizada (<code>.souls_data/</code> / workspace ativo). Gravação permitida com integridade Copy-on-Write.';
+        }
+        if (chipsEl) {
+          chipsEl.innerHTML = `
+            <span class="badge u-text-green u-s-f211f7">Linha Vermelha 4 Obedecida</span>
+            <span class="badge u-text-cyan u-s-3d1f06">ReFS CoW Protegido</span>
+          `;
+        }
       }
     }
 
@@ -6124,7 +6693,7 @@
         modeSelect.value = 'dev_drive';
         updateStoragePathSuggestion(true);
       }
-      showToast('✓ Defaults de segurança e confinamento NT restaurados!', 'success');
+      showToast('Defaults de segurança e confinamento NT restaurados!', 'success');
     }
 
     
@@ -6167,9 +6736,9 @@
       const cb = document.getElementById('cfg-obsidian-raw-ro');
       if (!cb) return;
       if (!cb.checked) {
-        const proceed = await appConfirm("⚠️ ATENÇÃO: A Lei 1 do AGENTS.md estabelece que as fontes brutas em raw/ são sagradas e estritamente Read-Only.\n\nDesativar esta proteção permite que ferramentas mutem, sobrescrevam ou apaguem notas originais.\n\nDeseja realmente liberar a gravação em raw/?", {
+        const proceed = await appConfirm("ATENÇÃO: A Lei 1 do AGENTS.md estabelece que as fontes brutas em raw/ são sagradas e estritamente Read-Only.\n\nDesativar esta proteção permite que ferramentas mutem, sobrescrevam ou apaguem notas originais.\n\nDeseja realmente liberar a gravação em raw/?", {
           title: 'Proteção Soberana raw/ (Lei 1)',
-          icon: '🛡️',
+          icon: 'shield',
           confirmText: 'Liberar Gravação',
           danger: true
         });
@@ -6199,7 +6768,7 @@
             pathInput.readOnly = true;
           }
           if (pathBadge) {
-            pathBadge.innerText = '☁️ OneDrive Conectado';
+            pathBadge.innerHTML = `${uiIcon('cloud', 'icon-xs')} OneDrive Conectado`;
             pathBadge.style.color = 'var(--green)';
             pathBadge.style.background = 'rgba(168, 85, 247, 0.12)';
             pathBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
@@ -6213,7 +6782,7 @@
             pathInput.readOnly = true;
           }
           if (pathBadge) {
-            pathBadge.innerText = '📁 Cofre Local Ativo';
+            pathBadge.innerHTML = `${uiIcon('folder', 'icon-xs')} Cofre Local Ativo`;
             pathBadge.style.color = 'var(--purple-light)';
             pathBadge.style.background = 'rgba(168, 85, 247, 0.12)';
             pathBadge.style.borderColor = 'rgba(168, 85, 247, 0.3)';
@@ -6229,7 +6798,7 @@
             }
           }
           if (pathBadge) {
-            pathBadge.innerText = '✏️ Caminho Customizado';
+            pathBadge.innerHTML = `${uiIcon('edit', 'icon-xs')} Caminho Customizado`;
             pathBadge.style.color = 'var(--amber)';
             pathBadge.style.background = 'rgba(245, 158, 11, 0.12)';
             pathBadge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
@@ -6247,13 +6816,13 @@
         if (rawCb.checked) {
           kpiRawVal.innerText = 'READ-ONLY TOTAL';
           kpiRawVal.style.color = 'var(--green)';
-          kpiRawSub.innerText = '🔒 Imutável & Sagrado (Lei 1)';
+          kpiRawSub.innerHTML = `${uiIcon('lock', 'icon-xs')} Imutável &amp; Sagrado (Lei 1)`;
           if (rawPill) {
             rawPill.innerText = 'LIGADO (IMUTÁVEL)';
             rawPill.className = 'state-pill on';
           }
         } else {
-          kpiRawVal.innerText = '⚠️ GRAVAÇÃO LIBERADA';
+          kpiRawVal.innerHTML = `${uiIcon('alert-triangle', 'icon-xs')} GRAVAÇÃO LIBERADA`;
           kpiRawVal.style.color = '#ef4444';
           kpiRawSub.innerText = 'Risco de Mutação em raw/';
           if (rawPill) {
@@ -6273,7 +6842,7 @@
         if (!privacyCb.checked) {
           kpiPrivVal.innerText = 'DESATIVADO';
           kpiPrivVal.style.color = '#ef4444';
-          kpiPrivSub.innerText = '⚠️ Alerta: Sem Redação PII';
+          kpiPrivSub.innerHTML = `${uiIcon('alert-triangle', 'icon-xs')} Alerta: Sem Redação PII`;
         } else {
           const mode = modeSelect ? modeSelect.value : 'hybrid';
           if (mode === 'hybrid') {
@@ -6283,7 +6852,7 @@
           } else {
             kpiPrivVal.innerText = 'AIR-GAP TOTAL';
             kpiPrivVal.style.color = 'var(--purple-light)';
-            kpiPrivSub.innerText = '100% Silício Local (RTX 2060m)';
+            kpiPrivSub.innerText = `100% Silício Local (${(window.soulsTelemetryState && window.soulsTelemetryState.gpuName) || 'dGPU Dedicada'})`;
           }
         }
       }
@@ -6334,15 +6903,15 @@
           statusEl.style.color = 'var(--green)';
         }
         if (badgeVaultConn) {
-          badgeVaultConn.innerText = `✓ ${data.conforming_count || 6}/6 Conforme`;
+          badgeVaultConn.innerHTML = `${uiIcon('check-circle', 'icon-xs')} ${data.conforming_count || 6}/6 Conforme`;
         }
         if (kpiIntSub) {
-          kpiIntSub.innerText = `✓ ${data.conforming_count || 6}/6 Pastas Íntegras`;
+          kpiIntSub.innerHTML = `${uiIcon('check-circle', 'icon-xs')} ${data.conforming_count || 6}/6 Pastas Íntegras`;
           setTimeout(() => {
             syncObsidianKpis();
           }, 2000);
         }
-        showToast('✓ Estrutura do cofre validada no disco com sucesso!', 'success');
+        showToast('Estrutura do cofre validada no disco com sucesso!', 'success');
       } catch (err) {
         if (statusEl) {
           statusEl.innerText = 'Falha na validação';
@@ -6354,7 +6923,7 @@
 
     function showVaultAuditLog() {
       const vPath = (window.soulsHostDefaults && window.soulsHostDefaults.default_onedrive_vault_path) || 'C:\\Users\\Default\\OneDrive\\Documentos\\Obsidian DB';
-      showToast(`📑 Auditoria: Registros gravados em ${vPath}\\wiki\\log.md`, 'info');
+      showToast(`Auditoria: Registros gravados em ${vPath}\\wiki\\log.md`, 'info');
     }
 
     async function loadRealVaultSample(category) {
@@ -6367,9 +6936,9 @@
             inputEl.value = data.sample_text;
           }
           if (data.is_real_vault_file) {
-            showToast(`📑 Carregada nota real do cofre: ${data.title}`, 'info');
+            showToast(`Carregada nota real do cofre: ${data.title}`, 'info');
           } else {
-            showToast(`✓ Cenário carregado: ${data.title}`, 'info');
+            showToast(`Cenário carregado: ${data.title}`, 'info');
           }
           await executeRealVaultSanitization();
         }
@@ -6393,7 +6962,7 @@
       if (!text) {
         if (verdictEl) {
           verdictEl.innerText = 'AGUARDANDO ENTRADA';
-          verdictEl.style.color = '#94a3b8';
+          verdictEl.style.color = '#A1A1AA';
         }
         return;
       }
@@ -6420,7 +6989,7 @@
           }
           if (latencyEl) {
             const ms = (data.latency_us / 1000).toFixed(3);
-            latencyEl.innerHTML = `Latência Bare-Metal: <strong style="color: var(--cyan);">${ms} ms (${data.latency_us} µs)</strong> &bull; Rust Engine`;
+            latencyEl.innerHTML = `Latência Bare-Metal: <strong class="u-text-cyan">${ms} ms (${data.latency_us} µs)</strong> &bull; Rust Engine`;
           }
           if (previewEl) {
             previewEl.innerText = data.sanitized_text;
@@ -6486,7 +7055,7 @@
       
       syncObsidianKpis();
       initSlidersMagneticSnap();
-      showToast('✓ Defaults do Cofre de Conhecimentos restaurados!', 'success');
+      showToast('Defaults do Cofre de Conhecimentos restaurados!', 'success');
     }
 
     function switchSettingsSubtab(subtabId) {
@@ -6517,44 +7086,192 @@
     // ========================================================
     let cachedToolsData = [];
     let currentToolsNamespace = 'all';
+    let currentToolsPermission = 'all';
+
+    function getDisabledToolsSet() {
+      try {
+        const raw = JSON.parse(localStorage.getItem('souls_disabled_mcp_tools') || '[]');
+        return new Set(Array.isArray(raw) ? raw : []);
+      } catch (_) {
+        return new Set();
+      }
+    }
+
+    function saveDisabledToolsSet(setObj) {
+      localStorage.setItem('souls_disabled_mcp_tools', JSON.stringify(Array.from(setObj)));
+    }
+
+    function classifyToolPermission(tool) {
+      const n = (tool.name || '').toLowerCase();
+      const d = (tool.description || '').toLowerCase();
+      if (
+        n.includes('execute') ||
+        n.includes('shell') ||
+        n.includes('route_subtask') ||
+        n.includes('delegate') ||
+        n.includes('sub_agent') ||
+        n === 'think' ||
+        n === 'thinking'
+      ) {
+        return 'exec';
+      }
+      if (
+        n.includes('edit') ||
+        n.includes('delta_diff') ||
+        n.includes('git_stage') ||
+        n.includes('git_commit') ||
+        n.includes('git_branch') ||
+        n.includes('store') ||
+        n.includes('create') ||
+        n.includes('update') ||
+        n.includes('delete') ||
+        n.includes('entity') ||
+        n.includes('relation') ||
+        n.includes('checkpoint') ||
+        n.includes('curate') ||
+        n.includes('sanitize') ||
+        n.includes('mirror') ||
+        n.includes('pin') ||
+        d.includes('persiste') ||
+        d.includes('modifica') ||
+        d.includes('muta')
+      ) {
+        return 'write';
+      }
+      return 'read';
+    }
+
+    function updateToolsSummaryMetrics() {
+      const disabled = getDisabledToolsSet();
+      const total = cachedToolsData.length || 55;
+      const activeCount = cachedToolsData.length > 0
+        ? cachedToolsData.filter(t => !disabled.has(t.name)).length
+        : Math.max(0, 55 - disabled.size);
+      const l0Count = cachedToolsData.filter(t => t.is_level_0).length || 8;
+      const dynCount = Math.max(0, total - l0Count);
+
+      const totEl = document.getElementById('tools-metric-total');
+      if (totEl) totEl.innerText = total;
+      const pctEl = document.getElementById('tools-metric-active-pct');
+      if (pctEl) pctEl.innerText = `(${activeCount} ativas)`;
+      const l0El = document.getElementById('tools-metric-level0');
+      if (l0El) l0El.innerText = l0Count;
+      const dynEl = document.getElementById('tools-metric-dynamic');
+      if (dynEl) dynEl.innerText = dynCount;
+    }
 
     async function fetchToolsCatalog(forceRefresh = false) {
       const grid = document.getElementById('tools-cards-grid');
       if (!grid) return;
       if (!forceRefresh && cachedToolsData.length > 0) {
-        renderToolsCards(cachedToolsData);
+        updateToolsSummaryMetrics();
+        filterToolsCatalog(document.getElementById('tools-search-input')?.value || '');
         return;
       }
 
-      grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.82rem;">⚡ Carregando 55 ferramentas nativas do Souls Engine via MCP...</div>';
+      grid.innerHTML = `<div class="u-text-center u-text-muted u-s-4c08f4">${uiIcon('zap', 'icon-xs')} Carregando 55 ferramentas nativas do Souls Engine via MCP...</div>`;
 
       try {
         const res = await fetch('/api/v1/tools/catalog');
         if (res.ok) {
           const json = await res.json();
           cachedToolsData = json.tools || [];
-          renderToolsCards(cachedToolsData);
+          updateToolsSummaryMetrics();
+          filterToolsCatalog(document.getElementById('tools-search-input')?.value || '');
         } else {
-          grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--red);">Falha ao obter catálogo de ferramentas MCP.</div>';
+          grid.innerHTML = '<div class="u-text-center u-text-red u-s-720583">Falha ao obter catálogo de ferramentas MCP.</div>';
         }
       } catch (err) {
-        grid.innerHTML = `<div style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--red);">Erro de conexão MCP: ${err.message}</div>`;
+        grid.innerHTML = `<div class="u-text-center u-text-red u-s-720583">Erro de conexão MCP: ${err.message}</div>`;
       }
     }
 
     function setToolsNamespaceFilter(ns, btn) {
-      currentToolsNamespace = ns;
+      currentToolsNamespace = ns || 'all';
       document.querySelectorAll('#tools-namespace-filters .filter-provider-btn').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
+      else {
+        const fallbackBtn = document.getElementById(`btn-ns-${currentToolsNamespace}`);
+        if (fallbackBtn) fallbackBtn.classList.add('active');
+      }
       filterToolsCatalog(document.getElementById('tools-search-input')?.value || '');
     }
 
+    function setToolsPermissionFilter(filter, btn) {
+      currentToolsPermission = filter || 'all';
+      document.querySelectorAll('#tools-permission-filters .filter-provider-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      else {
+        const fallbackBtn = document.getElementById(`btn-perm-${currentToolsPermission}`);
+        if (fallbackBtn) fallbackBtn.classList.add('active');
+      }
+      filterToolsCatalog(document.getElementById('tools-search-input')?.value || '');
+    }
+
+    function setSafeModeOnly() {
+      const disabled = getDisabledToolsSet();
+      let pausedCount = 0;
+      (cachedToolsData || []).forEach(t => {
+        const perm = classifyToolPermission(t);
+        if (perm === 'write' || perm === 'exec') {
+          disabled.add(t.name);
+          pausedCount++;
+        } else {
+          disabled.delete(t.name);
+        }
+      });
+      saveDisabledToolsSet(disabled);
+      updateToolsSummaryMetrics();
+      filterToolsCatalog(document.getElementById('tools-search-input')?.value || '');
+      showToast(`Modo Somente Leitura ativado: ${pausedCount} ferramentas de mutação/execução pausadas na governança UI.`, 'warning');
+    }
+
+    function enableAllTools() {
+      saveDisabledToolsSet(new Set());
+      updateToolsSummaryMetrics();
+      filterToolsCatalog(document.getElementById('tools-search-input')?.value || '');
+      showToast(`Todas as ${cachedToolsData.length || 55} ferramentas MCP nativas habilitadas!`, 'success');
+    }
+
+    function toggleToolEnabledState(toolName) {
+      if (!toolName) return;
+      const disabled = getDisabledToolsSet();
+      if (disabled.has(toolName)) {
+        disabled.delete(toolName);
+        showToast(`Ferramenta '${toolName}' habilitada.`, 'success');
+      } else {
+        disabled.add(toolName);
+        showToast(`Ferramenta '${toolName}' pausada na política de governança.`, 'info');
+      }
+      saveDisabledToolsSet(disabled);
+      updateToolsSummaryMetrics();
+      filterToolsCatalog(document.getElementById('tools-search-input')?.value || '');
+    }
+
+    window.setToolsPermissionFilter = setToolsPermissionFilter;
+    window.setToolsNamespaceFilter = setToolsNamespaceFilter;
+    window.setSafeModeOnly = setSafeModeOnly;
+    window.enableAllTools = enableAllTools;
+    window.toggleToolEnabledState = toggleToolEnabledState;
+
     function filterToolsCatalog(query) {
       const q = (query || '').toLowerCase().trim();
+      const disabled = getDisabledToolsSet();
       let filtered = cachedToolsData;
 
       if (currentToolsNamespace !== 'all') {
         filtered = filtered.filter(t => t.namespace.toLowerCase() === currentToolsNamespace.toLowerCase());
+      }
+
+      if (currentToolsPermission !== 'all') {
+        filtered = filtered.filter(t => {
+          const isDis = disabled.has(t.name);
+          if (currentToolsPermission === 'disabled') return isDis;
+          if (currentToolsPermission === 'l0') return Boolean(t.is_level_0);
+          if (currentToolsPermission === 'dyn') return !t.is_level_0;
+          const perm = classifyToolPermission(t);
+          return perm === currentToolsPermission;
+        });
       }
 
       if (q) {
@@ -6565,6 +7282,9 @@
         );
       }
 
+      const showingEl = document.getElementById('tools-showing-count');
+      if (showingEl) showingEl.innerText = filtered.length;
+
       renderToolsCards(filtered);
     }
 
@@ -6572,48 +7292,66 @@
       const grid = document.getElementById('tools-cards-grid');
       if (!grid) return;
 
+      const showingEl = document.getElementById('tools-showing-count');
+      if (showingEl) showingEl.innerText = tools ? tools.length : 0;
+
       if (!tools || tools.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1 / -1; padding: 30px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">Nenhuma ferramenta encontrada com os filtros selecionados.</div>';
+        grid.innerHTML = '<div class="u-text-center u-text-muted u-s-4f7781">Nenhuma ferramenta encontrada com os filtros selecionados.</div>';
         return;
       }
 
+      const disabled = getDisabledToolsSet();
       const nsIcons = {
-        code: '🧬',
-        memory: '💾',
-        sys: '⚡',
-        think: '🧠',
-        ops: '🛡️',
-        context: '📑',
-        core: '🎯'
+        code: 'dna',
+        memory: 'database',
+        sys: 'zap',
+        think: 'brain',
+        ops: 'shield',
+        context: 'file-text',
+        core: 'target'
+      };
+      const permLabels = {
+        read: { text: 'Leitura', cls: 'u-text-cyan' },
+        write: { text: 'Mutação', cls: 'u-text-amber' },
+        exec: { text: 'Execução', cls: 'u-text-purple' }
       };
 
       grid.innerHTML = tools.map(t => {
         const nsClass = `mcp-ns-${t.namespace.toLowerCase()}`;
-        const nsIcon = nsIcons[t.namespace.toLowerCase()] || '⚙️';
+        const nsIcon = nsIcons[t.namespace.toLowerCase()] || 'settings';
+        const perm = classifyToolPermission(t);
+        const permMeta = permLabels[perm] || permLabels.read;
+        const isDisabled = disabled.has(t.name);
         const bootBadge = t.is_level_0 
-          ? '<span class="mcp-boot-badge mcp-boot-l0" title="Injetada instantaneamente no handshake inicial">⚡ Boot Nível 0</span>'
-          : '<span class="mcp-boot-badge mcp-boot-dyn" title="Carregada sob demanda via tool_search">🔍 Sob Demanda</span>';
+          ? `<span class="mcp-boot-badge mcp-boot-l0" title="Injetada instantaneamente no handshake inicial">${uiIcon('zap', 'icon-xs')} Boot Nível 0</span>`
+          : `<span class="mcp-boot-badge mcp-boot-dyn" title="Carregada sob demanda via tool_search">${uiIcon('search', 'icon-xs')} Sob Demanda</span>`;
+        const permBadge = `<span class="badge ${permMeta.cls}" style="font-size:0.68rem;">${permMeta.text}</span>`;
+
+        const stateAction = isDisabled
+          ? `<button class="btn-micro u-text-amber" onclick="toggleToolEnabledState('${t.name}')" title="Clique para reabilitar esta ferramenta">${uiIcon('pause', 'icon-xs')} Pausada</button>`
+          : `<button class="btn-micro u-text-green" onclick="toggleToolEnabledState('${t.name}')" title="Clique para pausar temporariamente esta ferramenta">${uiIcon('check', 'icon-xs')} Habilitada</button>`;
 
         return `
-          <div class="mcp-tool-card">
+          <div class="mcp-tool-card ${isDisabled ? 'opacity-60' : ''}" data-perm="${perm}">
             <div>
               <div class="mcp-tool-header">
                 <div class="mcp-tool-name">
-                  <span>${nsIcon}</span>
+                  <span>${uiIcon(nsIcon, 'icon-sm')}</span>
                   <span>${t.name}</span>
                 </div>
                 <span class="mcp-ns-pill ${nsClass}">${t.namespace}</span>
               </div>
-              <div style="margin: 8px 0 6px 0;">
+              <div class="u-d-flex u-gap-1 u-items-center u-s-3d04a8">
                 ${bootBadge}
+                ${permBadge}
               </div>
               <div class="mcp-tool-desc">${t.description || 'Sem descrição cadastrada.'}</div>
             </div>
             <div class="mcp-tool-footer">
-              <button class="btn btn-sm" style="font-size: 0.68rem; padding: 4px 8px; justify-content: center; background: rgba(255,255,255,0.03);" onclick="openToolSchemaModal('${t.name}')">
-                <span>📋</span> Inspecionar Schema
+              <button class="btn btn-sm u-justify-center u-s-2a9d05" onclick="openToolSchemaModal('${t.name}')">
+                ${uiIcon('list', 'icon-xs')} Inspecionar Schema
               </button>
-              <span style="color: var(--green); font-size: 0.70rem; font-weight: 600;">✓ Habilitada</span>
+              ${stateAction}
             </div>
           </div>
         `;
@@ -6676,7 +7414,7 @@
         const isActive = (p.id === activePreset);
         const isMaster = (p.role === 'orchestrator');
         const roleClass = isMaster ? 'master' : 'subagent';
-        const roleLabel = isMaster ? '👑 Master Brain' : '🤖 Subagente';
+        const roleLabel = isMaster ? `${uiIcon('crown', 'icon-xs')} Master Brain` : `${uiIcon('bot', 'icon-xs')} Subagente`;
 
         const deleteBtn = !p.is_builtin ? `
           <button class="btn-delete-profile" title="Excluir Perfil de Trabalho" onclick="event.stopPropagation(); deleteCustomProfile('${p.id}')">
@@ -6685,34 +7423,34 @@
         ` : '';
 
         const activeHermesBadge = p.is_active ? `
-          <span class="active-hermes-pill" style="white-space: nowrap; flex-shrink: 0;">Ativo no Hermes</span>
+          <span class="active-hermes-pill u-nowrap">Ativo no Hermes</span>
         ` : '';
 
         const inspectingBadge = isActive ? `
-          <span class="inspecting-pill"><span>Inspecionando</span> <span style="font-size: 0.72rem;">➔</span></span>
+          <span class="inspecting-pill"><span>Inspecionando</span> <span class="u-d-inline-flex u-items-center u-s-dbc8d1">${uiIcon('chevron-right', 'icon-xs')}</span></span>
         ` : '';
 
         return `
-          <div class="preset-card ${isActive ? 'active' : ''}" id="preset-${p.id}" onclick="selectProfilePreset('${p.id}')" style="min-height: 195px; padding: 16px; border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
+          <div class="preset-card ${isActive ? 'active' : ''} u-d-flex u-flex-col u-justify-between u-s-256369" id="preset-${p.id}" onclick="selectProfilePreset('${p.id}')">
+            <div class="u-min-w-0">
               ${deleteBtn}
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <div class="u-d-flex u-items-center u-justify-between u-flex-wrap u-gap-1 u-mb-2">
                 <span class="role-badge ${roleClass}">${roleLabel}</span>
                 <span class="category-tag">${p.arena_category}</span>
               </div>
-              <div class="preset-title" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
-                <span style="font-weight: 700; font-size: 0.94rem; color: #fff; line-height: 1.3; flex: 1; min-width: 0;">${p.name}</span>
+              <div class="preset-title u-d-flex u-justify-between u-items-start u-flex-wrap u-gap-2 u-mb-2">
+                <span class="preset-title-name u-fw-700 u-text-white u-s-a2478c">${p.name}</span>
                 ${inspectingBadge}
               </div>
-              <div class="preset-desc" style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 10px;">${p.description}</div>
+              <div class="preset-desc u-text-muted u-mb-10p u-s-68e8c4">${p.description}</div>
             </div>
 
-            <div class="preset-defined-box" style="margin-top: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 8px 12px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span class="defined-label" style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); white-space: nowrap;">Modelo Definido:</span>
+            <div class="preset-defined-box u-mt-10p u-s-979478">
+              <div class="preset-defined-header u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-1 u-mb-1">
+                <span class="defined-label u-text-muted u-uppercase u-mono u-s-3b4cd3">Modelo Definido:</span>
                 ${activeHermesBadge}
               </div>
-              <span class="defined-model-code" style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--cyan); word-break: break-all; display: block;" title="${p.target_model}">${p.target_model || 'Auto (Best Value)'}</span>
+              <span class="defined-model-code u-mono u-text-cyan u-d-block u-s-2438c6" title="${p.target_model}">${p.target_model || 'Auto (Best Value)'}</span>
             </div>
           </div>
         `;
@@ -6720,10 +7458,10 @@
 
       // Card 2: Novo Perfil de Trabalho
       const addCardHtml = `
-        <div class="add-preset-card" onclick="openNewProfileModal()" style="min-height: 195px; padding: 16px; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border: 2px dashed rgba(168, 85, 247, 0.35); background: rgba(168, 85, 247, 0.04); cursor: pointer; transition: all 0.2s ease;">
-          <div style="font-size: 1.8rem; color: var(--purple-light); margin-bottom: 6px;">➕</div>
-          <div style="font-weight: 700; font-size: 0.92rem; color: #fff; margin-bottom: 4px;">Novo Perfil de Trabalho</div>
-          <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.35;">Especialista customizado p/ subagentes</div>
+        <div class="add-preset-card u-d-flex u-flex-col u-items-center u-justify-center u-text-center u-pointer u-s-8bd124" onclick="openNewProfileModal()">
+          <div class="u-text-purple-light u-mb-6p u-s-f697be">${uiIcon('plus', 'icon-md')}</div>
+          <div class="u-fw-700 u-text-white u-mb-1 u-s-13ccaf">Novo Perfil de Trabalho</div>
+          <div class="u-text-muted u-s-fd48ca">Especialista customizado p/ subagentes</div>
         </div>
       `;
 
@@ -6813,9 +7551,34 @@
           low: { canonical_id: "meta-llama/llama-3.2-3b-instruct", provider: "openrouter", score: 78.0, blended_cost: 0.06, roi: 1300.0, desc: "Triagem imediata e comandos pontuais por centavos de dólar." }
         },
         local_sovereign: {
-          leader: { canonical_id: "qwen2.5-coder-7b-instruct-q4_k_m.gguf", provider: "local_silicon", score: 85.0, blended_cost: 0.00, roi: 9999.0, desc: "100% no silício da NVIDIA RTX 2060m. Custo $0.00 e zero tráfego externo." },
+          leader: { canonical_id: "qwen2.5-coder-7b-instruct-q4_k_m.gguf", provider: "local_silicon", score: 85.0, blended_cost: 0.00, roi: 9999.0, desc: "100% no silício da dGPU dedicada. Custo $0.00 e zero tráfego externo." },
           best: { canonical_id: "deepseek-r1-distill-qwen-7b-q4_k_m.gguf", provider: "local_silicon", score: 86.2, blended_cost: 0.00, roi: 9999.0, desc: "Pensamento analítico local na GPU física sem sair da partição Dev Drive." },
           low: { canonical_id: "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf", provider: "local_silicon", score: 74.0, blended_cost: 0.00, roi: 9999.0, desc: "Ultra-leve para execução instantânea na CPU AVX2 ou GPU." }
+        },
+        ux_designer: {
+          leader: { canonical_id: "anthropic/claude-3-7-sonnet", provider: "nous", score: 94.5, blended_cost: 3.00, roi: 31.5, desc: "Frontend, CSS e componentes responsivos com alta fidelidade visual." },
+          best: { canonical_id: "google/gemini-2.5-pro", provider: "nous", score: 92.8, blended_cost: 1.75, roi: 53.0, desc: "Excelente compreensão multimodal e prototipação rápida." },
+          low: { canonical_id: "google/gemini-2.0-flash", provider: "nous", score: 87.5, blended_cost: 0.10, roi: 875.0, desc: "Prototipação instantânea de layouts HTML/CSS." }
+        },
+        web_researcher: {
+          leader: { canonical_id: "google/gemini-2.5-pro", provider: "nous", score: 95.0, blended_cost: 1.75, roi: 54.3, desc: "Contexto longo e síntese de múltiplas fontes web." },
+          best: { canonical_id: "google/gemini-2.0-flash", provider: "nous", score: 89.2, blended_cost: 0.10, roi: 892.0, desc: "Velocidade e escala para pipelines de pesquisa STORM." },
+          low: { canonical_id: "deepseek/deepseek-chat", provider: "nous", score: 88.0, blended_cost: 0.14, roi: 628.6, desc: "Síntese factual econômica com baixa latência." }
+        },
+        memory_curator: {
+          leader: { canonical_id: "anthropic/claude-3-7-sonnet", provider: "nous", score: 93.8, blended_cost: 3.00, roi: 31.2, desc: "Destilação fiel de wikis e relações ontológicas sem alucinações." },
+          best: { canonical_id: "deepseek/deepseek-chat", provider: "nous", score: 91.0, blended_cost: 0.14, roi: 650.0, desc: "Excelente custo-benefício para curadoria periódica de notas." },
+          low: { canonical_id: "google/gemini-2.0-flash", provider: "nous", score: 87.0, blended_cost: 0.10, roi: 870.0, desc: "Lote de extração rápida de links e entidades." }
+        },
+        security_auditor: {
+          leader: { canonical_id: "anthropic/claude-3-7-sonnet", provider: "nous", score: 96.2, blended_cost: 3.00, roi: 32.1, desc: "Análise rigorosa de superfícies de ataque e contratos Zero-Trust." },
+          best: { canonical_id: "deepseek/deepseek-r1", provider: "nous", score: 94.0, blended_cost: 0.55, roi: 170.9, desc: "Raciocínio defensivo profundo com excelente ROI." },
+          low: { canonical_id: "deepseek/deepseek-chat", provider: "nous", score: 88.5, blended_cost: 0.14, roi: 632.1, desc: "Triagem inicial de regras estáticas após Privacy Shield." }
+        },
+        agentic: {
+          leader: { canonical_id: "anthropic/claude-3-7-sonnet", provider: "nous", score: 95.2, blended_cost: 3.00, roi: 31.7, desc: "Tool calling determinístico e coordenação multi-step." },
+          best: { canonical_id: "deepseek/deepseek-chat", provider: "nous", score: 91.5, blended_cost: 0.14, roi: 653.6, desc: "Ótima aderência a JSON Schema MCP por centavos." },
+          low: { canonical_id: "google/gemini-2.0-flash", provider: "nous", score: 88.0, blended_cost: 0.10, roi: 880.0, desc: "Execução ágil de chamadas MCP em sequência." }
         }
       };
 
@@ -6823,13 +7586,18 @@
 
       // Refina com dados ao vivo da Cloud Arena se disponível
       const categoryToArena = {
-        master: "master",
+        master: "executive",
+        executive: "executive",
         coding: "coding",
-        reasoning: "math",
+        reasoning: "reasoning",
+        math: "reasoning",
         fast: "fast",
         agentic: "agentic",
-        design: "creative",
-        creative: "creative"
+        design: "design",
+        creative: "design",
+        research: "research",
+        security: "security",
+        curation: "curation"
       };
       let cat = currentProfile ? currentProfile.arena_category : activePreset;
       if (currentProfile && (currentProfile.role === 'orchestrator' || currentProfile.id === 'frontier_balanced')) {
@@ -6876,7 +7644,7 @@
 
         const definedBanner = isCurrentModel ? `
           <div class="defined-choice-banner">
-            <span>✓</span> OPÇÃO DEFINIDA NESTE PERFIL
+            <span>${uiIcon('check', 'icon-xs')}</span> OPÇÃO DEFINIDA NESTE PERFIL
           </div>
         ` : '';
 
@@ -6885,20 +7653,20 @@
           : `saveSubagentProfilePreset('${activePreset}', '${item.canonical_id}', '${item.provider}')`);
 
         const primaryBtn = isCurrentModel ? `
-          <button class="btn btn-green disabled" style="width: 100%; margin-top: 10px; justify-content: center; opacity: 0.95; cursor: default;" disabled>
-            ✓ Modelo Ativo / Definido
+          <button class="btn btn-green disabled u-w-full u-mt-10p u-justify-center u-s-6b2554" disabled>
+            ${uiIcon('check', 'icon-xs')} Modelo Ativo / Definido
           </button>
         ` : `
-          <button class="btn ${isFeatured ? 'btn-cyan' : role === 'low' ? 'btn-green' : 'btn-cyan'}" 
-                  style="width: 100%; margin-top: 10px; justify-content: center; ${isFeatured ? 'background: rgba(6, 182, 212, 0.25); border-color: var(--cyan);' : ''}" 
+          <button class="btn ${isFeatured ? 'btn-cyan' : role === 'low' ? 'btn-green' : 'btn-cyan'} u-w-full u-mt-10p u-justify-center" 
+                  style="${isFeatured ? 'background: rgba(6, 182, 212, 0.25); border-color: var(--cyan);' : ''};" 
                   onclick="${primaryAction}">
             ${isOrchestrator ? 'Ativar no Hermes Agent' : 'Definir para este Subagente'}
           </button>
         `;
 
         const promoteBtn = (!isOrchestrator && !isCurrentModel) ? `
-          <button class="btn" style="width: 100%; margin-top: 8px; font-size: 0.72rem; padding: 7px 10px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; font-weight: 600; border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.08); color: var(--amber);" onclick="promoteToMaster('${item.canonical_id}', '${item.provider}')">
-            <span>👑</span> Promover a Mestre no Hermes
+          <button class="btn u-w-full u-mt-2 u-d-flex u-items-center u-justify-center u-gap-2 u-text-center u-fw-600 u-text-amber u-s-4bd736" onclick="promoteToMaster('${item.canonical_id}', '${item.provider}')">
+            <span>${uiIcon('crown', 'icon-xs')}</span> Promover a Mestre no Hermes
           </button>
         ` : '';
 
@@ -6908,11 +7676,11 @@
               ${definedBanner}
               <span class="triad-badge ${badgeClass}">${title}</span>
               <div class="triad-model-name" title="${item.canonical_id}">${item.canonical_id}</div>
-              <div style="font-size: 0.73rem; color: var(--text-muted); margin-bottom: 8px;">${item.desc}</div>
+              <div class="u-text-muted u-mb-2 u-s-6444dd">${item.desc}</div>
             </div>
             <div>
               <div class="triad-meta">
-                <span>Score: <strong style="color: var(--cyan);">${item.score.toFixed(1)}</strong></span>
+                <span>Score: <strong class="u-text-cyan">${item.score.toFixed(1)}</strong></span>
                 <span>Tarifa: <strong style="color: ${item.blended_cost === 0 ? 'var(--cyan)' : 'var(--green)'};">${costStr}</strong></span>
               </div>
               ${primaryBtn}
@@ -6923,9 +7691,9 @@
       };
 
       grid.innerHTML = `
-        ${renderCard('leader', '👑 Quality Leader', 'gold', triad.leader, false)}
-        ${renderCard('best', '💎 Best Value ROI ★ Recomendado', 'cyan', triad.best, true)}
-        ${renderCard('low', '⚡ Ultra Low Cost', 'green', triad.low, false)}
+        ${renderCard('leader', `${uiIcon('crown', 'icon-xs')} Quality Leader`, 'gold', triad.leader, false)}
+        ${renderCard('best', `${uiIcon('sparkles', 'icon-xs')} Best Value ROI * Recomendado`, 'cyan', triad.best, true)}
+        ${renderCard('low', `${uiIcon('zap', 'icon-xs')} Ultra Low Cost`, 'green', triad.low, false)}
       `;
     }
 
@@ -6979,18 +7747,27 @@
       try {
         const prof = profilesData.find(p => p.id === profileId);
         if (prof) {
-          prof.default_model = modelId;
-          prof.default_provider = provider;
+          prof.target_model = modelId;
+          prof.provider = provider || prof.provider || 'nous';
           const res = await fetch('/api/v1/profiles', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(prof)
+            body: JSON.stringify({
+              id: prof.id,
+              name: prof.name,
+              description: prof.description,
+              role: prof.role,
+              arena_category: prof.arena_category,
+              target_model: modelId,
+              provider: prof.provider
+            })
           });
           const data = await res.json();
           if (res.ok && (data.status === 'ok' || data.status === 'success' || data.ok)) {
             showToast(`Perfil de trabalho '${prof.name}' configurado com ${modelId}!`, "success");
             await fetchProfiles();
             selectProfilePreset(profileId);
+            if (typeof fetchRouterMatrix === 'function') fetchRouterMatrix();
             return;
           }
         }
@@ -7047,8 +7824,8 @@
             description: desc || name,
             role: "subagent",
             arena_category: category,
-            default_model: model || "",
-            default_provider: category === 'local' ? 'local_silicon' : 'nous'
+            target_model: model || "deepseek/deepseek-chat",
+            provider: category === 'local' ? 'local_silicon' : 'nous'
           })
         });
         const data = await res.json();
@@ -7068,7 +7845,7 @@
     async function deleteCustomProfile(profileId) {
       const ok = await appConfirm(`Tem certeza que deseja excluir o perfil de trabalho '${profileId}'?`, {
         title: 'Excluir Perfil de Trabalho',
-        icon: '🗑️',
+        icon: 'trash',
         confirmText: 'Excluir Perfil',
         danger: true
       });
@@ -7109,6 +7886,7 @@
     // 8. PERSISTÊNCIA & FORMULÁRIO DE CONFIGURAÇÕES DOS SUBSISTEMAS
     // ========================================================
     let currentConfigData = null;
+    let isHydratingRawToml = false;
 
     async function fetchConfigToml() {
       try {
@@ -7119,9 +7897,14 @@
           window.soulsHostDefaults = data.host_defaults || {};
           const editor = document.getElementById('raw-toml-editor');
           if (editor && data.raw_toml) {
-            editor.value = data.raw_toml;
-            editor.dispatchEvent(new Event('input'));
-            updateTomlEditorMetrics(data.raw_toml);
+            isHydratingRawToml = true;
+            try {
+              editor.value = data.raw_toml;
+              editor.dispatchEvent(new Event('input'));
+              updateTomlEditorMetrics(data.raw_toml);
+            } finally {
+              isHydratingRawToml = false;
+            }
           }
           if (data.file_size_bytes) {
             const kb = (data.file_size_bytes / 1024).toFixed(1);
@@ -7142,6 +7925,44 @@
             const pEl = document.getElementById('footer-toml-path');
             if (pEl) pEl.innerText = data.path;
           }
+          const inferredDataFromConfig = data.path
+            ? data.path.replace(/[\\/]+config[\\/]+souls_config\.toml$/i, '').replace(/[\\/]+souls_config\.toml$/i, '')
+            : '';
+          const resolvedDataPath = (window.soulsHostDefaults && window.soulsHostDefaults.default_souls_data_path) || inferredDataFromConfig;
+          if (resolvedDataPath) {
+            const workspaceRoot = resolvedDataPath.replace(/[\\/]\.souls_data$/i, '') || resolvedDataPath;
+            const driveMatch = resolvedDataPath.match(/^([A-Za-z]:)/);
+            const driveLabel = driveMatch ? driveMatch[1].toUpperCase() : 'Local';
+
+            const cfgStoragePath = document.getElementById('cfg-storage-path');
+            if (cfgStoragePath && (!cfgStoragePath.value || cfgStoragePath.value.trim() === '.souls_data')) {
+              cfgStoragePath.value = resolvedDataPath;
+            }
+            const dispatchCwd = document.getElementById('dispatch-cwd-input');
+            if (dispatchCwd && (!dispatchCwd.value || dispatchCwd.value.trim() === '.')) {
+              dispatchCwd.value = workspaceRoot;
+            }
+            const connWorkspaceRoot = document.getElementById('conn-workspace-root');
+            if (connWorkspaceRoot) connWorkspaceRoot.innerText = workspaceRoot;
+
+            const metricMemoryDataPath = document.getElementById('metric-memory-data-path');
+            if (metricMemoryDataPath) metricMemoryDataPath.innerText = `${resolvedDataPath} (Volume Ativo)`;
+
+            const metricSandboxCwdSub = document.getElementById('metric-sandbox-cwd-sub');
+            if (metricSandboxCwdSub) metricSandboxCwdSub.innerText = `Confinado: ${workspaceRoot}`;
+
+            const simSandboxTarget = document.getElementById('sim-sandbox-target');
+            if (simSandboxTarget && (!simSandboxTarget.value || simSandboxTarget.value.trim().startsWith('.souls_data'))) {
+              simSandboxTarget.value = `${resolvedDataPath}\\scratch\\test_probe.tmp`;
+            }
+
+            const toolsMetricVolume = document.getElementById('tools-metric-volume');
+            if (toolsMetricVolume) toolsMetricVolume.innerText = `Volume ${driveLabel} Zero-Leak`;
+
+            if (typeof updateStoragePathSuggestion === 'function') {
+              updateStoragePathSuggestion(false);
+            }
+          }
           const savedEl = document.getElementById('footer-toml-last-saved');
           if (savedEl) savedEl.innerText = `Sincronizado: ${new Date().toLocaleTimeString('pt-BR')}`;
           
@@ -7155,9 +7976,10 @@
     }
 
     function onTomlEditorInput() {
+      if (isHydratingRawToml) return;
       const editor = document.getElementById('raw-toml-editor');
       if (!editor) return;
-      markSettingsUnsaved();
+      markSettingsUnsaved(true);
       updateTomlEditorMetrics(editor.value);
     }
 
@@ -7200,7 +8022,7 @@
         const linesBefore = text.substring(0, idx).split('\n').length;
         const lineHeight = 19;
         editor.scrollTop = Math.max(0, (linesBefore - 3) * lineHeight);
-        showToast(`📍 Seção ${sectionTag} localizada!`, 'info');
+        showToast(`Seção ${sectionTag} localizada!`, 'info');
       } else {
         showToast(`Seção ${sectionTag} não encontrada no arquivo`, 'warning');
       }
@@ -7223,7 +8045,7 @@
 
         if (data.valid) {
           if (badge) {
-            badge.innerText = '✓ Sintaxe Válida';
+            badge.innerHTML = `${uiIcon('check-circle', 'icon-xs')} Sintaxe Válida`;
             badge.style.color = 'var(--green)';
             badge.style.background = 'rgba(16, 185, 129, 0.12)';
             badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
@@ -7232,10 +8054,10 @@
             kpiValidity.innerText = 'TOML v1.0 ESTREITO';
             kpiValidity.style.color = 'var(--purple-light)';
           }
-          showToast(`✓ Validação TOML com Sucesso! ${data.section_count} seções válidas.`, 'success');
+          showToast(`Validação TOML com Sucesso! ${data.section_count} seções válidas.`, 'success');
         } else {
           if (badge) {
-            badge.innerText = '⚠️ Erro de Sintaxe';
+            badge.innerHTML = `${uiIcon('alert-triangle', 'icon-xs')} Erro de Sintaxe`;
             badge.style.color = '#ef4444';
             badge.style.background = 'rgba(239, 68, 68, 0.15)';
             badge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
@@ -7279,13 +8101,13 @@
 
       editor.value = formatted.join('\n');
       onTomlEditorInput();
-      showToast('✨ Buffer TOML formatado com sucesso!', 'info');
+      showToast('Buffer TOML formatado com sucesso!', 'info');
     }
 
     async function restoreTomlBackup() {
       const ok = await appConfirm('Deseja restaurar o arquivo de backup souls_config.toml.bak? As alterações não salvas serão sobrescritas.', {
         title: 'Restaurar Backup de Configuração',
-        icon: '↺',
+        icon: 'refresh',
         confirmText: 'Restaurar Backup'
       });
       if (!ok) {
@@ -7295,7 +8117,7 @@
         const res = await fetch('/api/v1/settings/config/restore', { method: 'POST' });
         const data = await res.json();
         if (res.ok && data.status === 'success') {
-          showToast('✓ Backup souls_config.toml.bak restaurado com sucesso!', 'success');
+          showToast('Backup souls_config.toml.bak restaurado com sucesso!', 'success');
           await fetchConfigToml();
           dismissUnsavedBanner();
         } else {
@@ -7325,10 +8147,60 @@
     }
 
     let hasUnsavedSettings = false;
-    function markSettingsUnsaved() {
+    let settingsAutoSaveTimer = null;
+    let settingsAutoSaveSeq = 0;
+
+    function setSettingsAutosaveState(state, message) {
+      const strip = document.getElementById('settings-autosave-status');
+      const textEl = document.getElementById('settings-autosave-text');
+      if (strip) {
+        strip.classList.remove('is-dirty', 'is-saving', 'is-error');
+        if (state === 'dirty') strip.classList.add('is-dirty');
+        else if (state === 'saving') strip.classList.add('is-saving');
+        else if (state === 'error') strip.classList.add('is-error');
+      }
+      if (textEl && message) {
+        textEl.innerText = message;
+      }
+    }
+
+    function scheduleSettingsAutoSave() {
+      if (settingsAutoSaveTimer) {
+        clearTimeout(settingsAutoSaveTimer);
+      }
+      const seq = ++settingsAutoSaveSeq;
+      setSettingsAutosaveState('dirty', '● Alterações pendentes...');
+      settingsAutoSaveTimer = setTimeout(async () => {
+        settingsAutoSaveTimer = null;
+        if (seq !== settingsAutoSaveSeq) return;
+        setSettingsAutosaveState('saving', 'Sincronizando...');
+        const ok = await saveSettings({ silent: true, seq });
+        if (ok && seq === settingsAutoSaveSeq) {
+          setSettingsAutosaveState('saved', '✓ Salvo instantaneamente');
+        }
+      }, 400);
+    }
+
+    function markSettingsUnsaved(sourceIsRawToml = false) {
       hasUnsavedSettings = true;
-      const banner = document.getElementById('unsaved-banner');
-      if (banner) banner.style.display = 'flex';
+      const isRawContext = Boolean(sourceIsRawToml) || Boolean(
+        document.activeElement && (
+          document.activeElement.id === 'raw-toml-editor' ||
+          document.activeElement.closest('#subtab-raw')
+        )
+      );
+      if (isRawContext) {
+        if (settingsAutoSaveTimer) {
+          clearTimeout(settingsAutoSaveTimer);
+          settingsAutoSaveTimer = null;
+        }
+        settingsAutoSaveSeq++;
+        setSettingsAutosaveState('dirty', 'Editor TOML: salve manualmente (Ctrl+S)');
+        const banner = document.getElementById('unsaved-banner');
+        if (banner) banner.style.display = 'flex';
+        return;
+      }
+      scheduleSettingsAutoSave();
     }
 
     function dismissUnsavedBanner() {
@@ -7366,7 +8238,11 @@
 
       // FinOps
       if (cfg.finops) {
-        setInput('cfg-vram-limit', cfg.finops.vram_hard_limit_mb);
+        if (cfg.finops.vram_hard_limit_mb !== undefined) {
+          setInput('cfg-vram-limit', cfg.finops.vram_hard_limit_mb);
+          const vEl = document.getElementById('val-vram-limit');
+          if (vEl) vEl.innerText = cfg.finops.vram_hard_limit_mb;
+        }
         setInput('cfg-watchdog-polling', cfg.finops.watchdog_polling_ms);
         if (cfg.finops.gpu_temp_preventive_c !== undefined) {
           setInput('cfg-temp-preventive', cfg.finops.gpu_temp_preventive_c);
@@ -7385,27 +8261,10 @@
         setCheck('cfg-router-pareto', cfg.router.pareto_dispatch_enabled, 'pill-router-pareto');
         setCheck('cfg-router-sovereignty', cfg.router.sovereign_cold_start_bias, 'pill-router-sovereignty');
         setInput('cfg-local-token-limit', cfg.router.local_token_limit);
-        if (cfg.router.weight_quality !== undefined) {
-          setInput('cfg-weight-quality', cfg.router.weight_quality);
-          const el = document.getElementById('val-weight-quality');
-          if (el) el.innerText = Number(cfg.router.weight_quality).toFixed(2);
-          const pct = document.getElementById('pct-weight-quality');
-          if (pct) pct.innerText = '(' + Math.round(Number(cfg.router.weight_quality) * 100) + '%)';
-        }
-        if (cfg.router.weight_cost !== undefined) {
-          setInput('cfg-weight-cost', cfg.router.weight_cost);
-          const el = document.getElementById('val-weight-cost');
-          if (el) el.innerText = Number(cfg.router.weight_cost).toFixed(2);
-          const pct = document.getElementById('pct-weight-cost');
-          if (pct) pct.innerText = '(' + Math.round(Number(cfg.router.weight_cost) * 100) + '%)';
-        }
-        if (cfg.router.weight_latency !== undefined) {
-          setInput('cfg-weight-latency', cfg.router.weight_latency);
-          const el = document.getElementById('val-weight-latency');
-          if (el) el.innerText = Number(cfg.router.weight_latency).toFixed(2);
-          const pct = document.getElementById('pct-weight-latency');
-          if (pct) pct.innerText = '(' + Math.round(Number(cfg.router.weight_latency) * 100) + '%)';
-        }
+        if (cfg.router.weight_quality !== undefined) setInput('cfg-weight-quality', cfg.router.weight_quality);
+        if (cfg.router.weight_cost !== undefined) setInput('cfg-weight-cost', cfg.router.weight_cost);
+        if (cfg.router.weight_latency !== undefined) setInput('cfg-weight-latency', cfg.router.weight_latency);
+        if (typeof updateRouterWeightsUI === 'function') updateRouterWeightsUI();
       }
 
       // Memory
@@ -7413,6 +8272,13 @@
         setCheck('cfg-memory-langevin', cfg.memory.langevin_decay_enabled, 'pill-memory-langevin');
         setInput('cfg-memory-half-life', cfg.memory.half_life_days);
         setInput('cfg-memory-rrf-k', cfg.memory.rrf_k);
+        if (cfg.memory.pii_redactor_enabled !== undefined) {
+          setCheck('cfg-memory-pii-redactor', cfg.memory.pii_redactor_enabled, 'pill-memory-pii');
+        }
+        if (cfg.memory.recall_mode) {
+          setInput('cfg-memory-recall-mode', cfg.memory.recall_mode);
+          if (typeof applyRecallModeUiOnly === 'function') applyRecallModeUiOnly(cfg.memory.recall_mode);
+        }
       }
 
       // AST & Sandbox
@@ -7449,8 +8315,17 @@
       }
     }
 
-    async function saveSettings() {
-      showToast("Salvando configurações dos 8 subsistemas em souls_config.toml...", "warning");
+    async function saveSettings(options = {}) {
+      const silent = Boolean(options && options.silent);
+      const callSeq = options && options.seq !== undefined ? options.seq : ++settingsAutoSaveSeq;
+      if (!silent && settingsAutoSaveTimer) {
+        clearTimeout(settingsAutoSaveTimer);
+        settingsAutoSaveTimer = null;
+      }
+      if (!silent) {
+        showToast("Salvando configurações dos 8 subsistemas em souls_config.toml...", "warning");
+        setSettingsAutosaveState('saving', 'Sincronizando...');
+      }
       
       const getCheck = (id, def) => {
         const el = document.getElementById(id);
@@ -7466,7 +8341,7 @@
       };
 
       const rawToml = `# souls_config.toml — SSOT de Configuração e Governança do Souls Engine v7
-# Dev Drive ReFS: Z:\\souls_engine\\.souls_data\\config\\souls_config.toml
+# Configuração Ativa: ${(currentConfigData && currentConfigData.path) || ((window.soulsHostDefaults && window.soulsHostDefaults.default_souls_data_path) ? window.soulsHostDefaults.default_souls_data_path + '\\config\\souls_config.toml' : 'souls_config.toml')}
 # Atualizado via Dashboard UI em ${new Date().toISOString()}
 
 [server]
@@ -7482,7 +8357,7 @@ trivial_task_bypass = ${getCheck('cfg-reasoning-bypass', true)}
 entropy_threshold = ${getNum('cfg-reasoning-threshold', 0.70).toFixed(2)}
 
 [finops]
-vram_hard_limit_mb = ${getNum('cfg-vram-limit', 5294)}
+vram_hard_limit_mb = ${getNum('cfg-vram-limit', (window.soulsTelemetryState && window.soulsTelemetryState.vramLimitMb) || 4096)}
 watchdog_polling_ms = ${getNum('cfg-watchdog-polling', 500)}
 gpu_temp_preventive_c = ${getNum('cfg-temp-preventive', 72.0).toFixed(1)}
 gpu_temp_throttle_c = ${getNum('cfg-temp-throttle', 78.0).toFixed(1)}
@@ -7501,6 +8376,8 @@ local_token_limit = ${getNum('cfg-local-token-limit', 8192)}
 langevin_decay_enabled = ${getCheck('cfg-memory-langevin', true)}
 half_life_days = ${getNum('cfg-memory-half-life', 30)}
 rrf_k = ${getNum('cfg-memory-rrf-k', 60)}
+recall_mode = "${getStr('cfg-memory-recall-mode', typeof currentRecallPreference !== 'undefined' ? currentRecallPreference : 'adaptive')}"
+pii_redactor_enabled = ${getCheck('cfg-memory-pii-redactor', true)}
 
 [ast]
 dehydration_enabled = ${getCheck('cfg-ast-dehydration', true)}
@@ -7521,24 +8398,59 @@ curator_batch_size = ${getNum('cfg-obsidian-batch-size', 3)}
 interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
 `;
 
+      // Preserve any persisted [profiles.*] custom sections from currentConfigData.raw_toml
+      let existingProfilesBlock = '';
+      const existingRaw = (currentConfigData && currentConfigData.raw_toml) || '';
+      if (existingRaw) {
+        const lines = existingRaw.split('\n');
+        let inProfile = false;
+        const kept = [];
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            inProfile = trimmed.startsWith('[profiles.');
+          }
+          if (inProfile) kept.push(line);
+        }
+        if (kept.length > 0) {
+          existingProfilesBlock = '\n' + kept.join('\n') + '\n';
+        }
+      }
+      const fullToml = rawToml + existingProfilesBlock;
+
       try {
         const res = await fetch('/api/v1/settings/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ raw_toml: rawToml })
+          body: JSON.stringify({ raw_toml: fullToml })
         });
         const data = await res.json();
         if (res.ok && (data.status === 'ok' || data.status === 'success' || data.ok)) {
-          showToast("Configurações gravadas com sucesso no souls_config.toml (.toml.bak criado)!", "success");
-          hasUnsavedSettings = false;
-          dismissUnsavedBanner();
+          if (currentConfigData) currentConfigData.raw_toml = fullToml;
+          if (!silent) {
+            showToast("Configurações gravadas com sucesso no souls_config.toml (.toml.bak criado)!", "success");
+          }
+          if (callSeq === settingsAutoSaveSeq) {
+            hasUnsavedSettings = false;
+            dismissUnsavedBanner();
+            setSettingsAutosaveState('saved', '✓ Salvo instantaneamente');
+          }
           const editor = document.getElementById('raw-toml-editor');
-          if (editor) editor.value = rawToml;
+          if (editor && document.activeElement !== editor) editor.value = fullToml;
+          return true;
         } else {
+          setSettingsAutosaveState('error', 'Falha ao salvar — tente manualmente');
+          const banner = document.getElementById('unsaved-banner');
+          if (banner) banner.style.display = 'flex';
           showToast(`Erro ao gravar configurações: ${data.error || data.message || 'Falha desconhecida'}`, "error");
+          return false;
         }
       } catch (e) {
+        setSettingsAutosaveState('error', 'Erro de rede — pendente de gravação');
+        const banner = document.getElementById('unsaved-banner');
+        if (banner) banner.style.display = 'flex';
         showToast(`Erro de rede ao salvar: ${e.message}`, "error");
+        return false;
       }
     }
 
@@ -7559,6 +8471,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
           showToast("Arquivo TOML salvo com sucesso e backup de segurança criado!", "success");
           hasUnsavedSettings = false;
           dismissUnsavedBanner();
+          setSettingsAutosaveState('saved', '✓ Salvo instantaneamente');
           fetchConfigToml();
         } else {
           showToast(`Erro ao salvar TOML: ${data.error || data.message || 'Sintaxe TOML inválida'}`, "error");
@@ -7702,20 +8615,34 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       if (modal) modal.classList.remove('active');
     }
 
-    function setRecallModePreference(mode) {
-      currentRecallPreference = mode;
+    function applyRecallModeUiOnly(mode) {
+      currentRecallPreference = mode || 'adaptive';
       ['adaptive', 'lean', 'expanded'].forEach(m => {
         const btn = document.getElementById('btn-recall-' + m);
-        if (btn) btn.classList.toggle('active', m === mode);
+        if (btn) btn.classList.toggle('active', m === currentRecallPreference);
       });
       const heroTxt = document.getElementById('hero-recall-mode-text');
       const labels = {
-        adaptive: '⚡ Adaptativo',
-        lean: '🎯 Enxuto (800c)',
-        expanded: '🧠 Expandido + Grafo (2400c)'
+        adaptive: 'Adaptativo',
+        lean: 'Enxuto (800c)',
+        expanded: 'Expandido + Grafo (2400c)'
       };
-      if (heroTxt) heroTxt.innerText = labels[mode] || labels.adaptive;
-      showToast(`Modo de Recall L3 ajustado para: ${labels[mode] || mode}`, 'success');
+      if (heroTxt) heroTxt.innerText = labels[currentRecallPreference] || labels.adaptive;
+      const cfgSel = document.getElementById('cfg-memory-recall-mode');
+      if (cfgSel && cfgSel.value !== currentRecallPreference) {
+        cfgSel.value = currentRecallPreference;
+      }
+      return labels;
+    }
+
+    async function setRecallModePreference(mode) {
+      const labels = applyRecallModeUiOnly(mode);
+      const saved = await saveSettings({ silent: true });
+      if (saved) {
+        showToast(`Modo de Recall L3 ajustado e salvo no souls_config.toml: ${labels[mode] || mode}`, 'success');
+      } else {
+        showToast(`Modo de Recall L3 ajustado para: ${labels[mode] || mode}`, 'info');
+      }
     }
 
     async function pinOrRefreshSnapshot(forceRefresh = true) {
@@ -7821,20 +8748,20 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhuma sessão encontrada para o filtro selecionado.</td></tr>`;
+        tbody.innerHTML = `<tr><td class="u-text-center u-text-muted u-s-ede515" colspan="6">Nenhuma sessão encontrada para o filtro selecionado.</td></tr>`;
         return;
       }
 
       let rowsHtml = '';
       for (const s of filtered) {
         const statusUpper = (s.status || 'SPAWNED').toUpperCase();
-        let statusBadge = '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.35);">SPAWNED</span>';
+        let statusBadge = '<span class="badge u-text-amber u-s-4fddd3">SPAWNED</span>';
         if (statusUpper === 'RUNNING') {
-          statusBadge = '<span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.35);">RUNNING ⚡</span>';
+          statusBadge = `<span class="badge u-text-cyan u-s-c6498b">RUNNING ${uiIcon('zap', 'icon-xs')}</span>`;
         } else if (statusUpper === 'COMPLETED') {
-          statusBadge = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.35);">COMPLETED ✅</span>';
+          statusBadge = `<span class="badge u-text-green u-s-cd9daa">COMPLETED ${uiIcon('check-circle', 'icon-xs')}</span>`;
         } else if (statusUpper === 'FAILED') {
-          statusBadge = '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.35);">FAILED ❌</span>';
+          statusBadge = `<span class="badge u-text-red u-s-384e35">FAILED ${uiIcon('x-circle', 'icon-xs')}</span>`;
         }
 
         const rawCreated = s.created_at;
@@ -7848,18 +8775,18 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
 
         rowsHtml += `
           <tr>
-            <td class="mono" style="font-size: 0.74rem; color: var(--cyan); font-weight: 600; white-space: nowrap;">
-              <div style="display: flex; align-items: center; gap: 6px;">
+            <td class="mono u-text-cyan u-fw-600 u-nowrap u-s-d3bc8d">
+              <div class="u-d-flex u-items-center u-gap-6p">
                 <span>${agentKey}</span>
-                <button class="btn" style="padding: 1px 5px; font-size: 0.62rem;" onclick="navigator.clipboard.writeText('${agentKey}')" title="Copiar Session ID">📋</button>
+                <button class="btn u-s-705703" onclick="navigator.clipboard.writeText('${agentKey}')" title="Copiar Session ID">${uiIcon('list', 'icon-xs')}</button>
               </div>
             </td>
             <td>
-              <div style="font-weight: 600; color: #fff; font-size: 0.82rem; display: flex; align-items: center; gap: 8px;">
+              <div class="u-fw-600 u-text-white u-d-flex u-items-center u-gap-2 u-s-5b9d54">
                 <span>${friendlyTitle}</span>
-                <span class="badge ${tierBadge}" style="font-size: 0.65rem;">${s.assigned_tier || 'Tier1'}</span>
+                <span class="badge ${tierBadge} u-s-3b4cd3">${s.assigned_tier || 'Tier1'}</span>
               </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; line-height: 1.4;">
+              <div class="u-text-muted u-mt-3p u-s-a3b8c7">
                 ${escapeHtml(s.task_description || 'Sessão Bare-Metal L3')}
               </div>
             </td>
@@ -7868,14 +8795,14 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
             </td>
             <td class="text-center">${statusBadge}</td>
             <td>
-              <div style="font-weight: 600; color: #cbd5e1; font-size: 0.76rem;">${dateStr}</div>
-              <div style="font-size: 0.70rem; color: var(--text-muted); margin-top: 2px;">
-                ⏱️ Duração: <strong style="color: var(--cyan);">${durationStr}</strong>
+              <div class="u-fw-600 u-text-slate u-s-c79ecd">${dateStr}</div>
+              <div class="u-text-muted u-mt-2p u-s-6262d0">
+                ${uiIcon('clock', 'icon-xs')} Duração: <strong class="u-text-cyan">${durationStr}</strong>
               </div>
             </td>
             <td class="text-center">
-              <button class="btn btn-purple" style="padding: 4px 10px; font-size: 0.72rem; border-radius: 6px;" onclick="inspectSubAgentHistory('${agentKey}')">
-                <span>📖</span> Diário & Handoff
+              <button class="btn btn-purple u-s-245e2b" onclick="inspectSubAgentHistory('${agentKey}')">
+                <span>${uiIcon('book', 'icon-xs')}</span> Diário &amp; Handoff
               </button>
             </td>
           </tr>
@@ -7914,37 +8841,49 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       }
     }
 
+    function viewSubagentResult(agentId) {
+      if (!agentId) return;
+      inspectSubAgentHistory(agentId);
+    }
+    function viewSubagentDiary(agentId) {
+      if (!agentId) return;
+      inspectSubAgentHistory(agentId);
+    }
+    window.viewSubagentResult = viewSubagentResult;
+    window.viewSubagentDiary = viewSubagentDiary;
+
     function renderSubagentHandoffsFeed() {
       const container = document.getElementById('subagents-handoffs-feed');
       if (!container) return;
       const completed = (cachedSubagentSessions || []).filter(s => (s.status || '').toUpperCase() === 'COMPLETED');
       if (completed.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 24px; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px dashed var(--border-subtle);">Nenhum handoff concluído no histórico recente.</div>`;
+        container.innerHTML = `<div class="u-text-center u-text-muted u-s-e896d8">Nenhum handoff concluído no histórico recente.</div>`;
         return;
       }
       container.innerHTML = completed.map(s => {
+        const agentKey = s.agent_id || s.id || '';
         const rawCreated = s.created_at;
         const ts = typeof rawCreated === 'number' && rawCreated < 10000000000 ? rawCreated * 1000 : rawCreated;
         const dateStr = ts ? new Date(ts).toLocaleString('pt-BR') : '--';
         const title = deriveFriendlySubagentTitle(s);
         return `
-          <div style="background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div class="u-d-flex u-justify-between u-items-center u-gap-3 u-flex-wrap u-s-d74c96">
             <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.35);">✅ Concluído</span>
-                <strong style="color: #fff; font-size: 0.88rem;">${title}</strong>
-                <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">${s.id}</span>
+              <div class="u-d-flex u-items-center u-gap-2 u-mb-1">
+                <span class="badge u-text-green u-s-cd9daa">${uiIcon('check-circle', 'icon-xs')} Concluído</span>
+                <strong class="u-text-white u-s-604fde">${title}</strong>
+                <span class="u-text-muted u-mono u-s-dbc8d1">${agentKey}</span>
               </div>
-              <div style="font-size: 0.75rem; color: #94a3b8;">
+              <div class="u-text-muted u-s-a2b44b">
                 Origem: <code class="mono">${s.parent_session_id || 'Hermes Chat'}</code> • Entregue em: <strong>${dateStr}</strong>
               </div>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-cyan" style="padding: 5px 12px; font-size: 0.74rem;" onclick="viewSubagentResult('${s.id}')">
-                <span>📦</span> Ver Resultado
+            <div class="u-d-flex u-gap-2">
+              <button class="btn btn-cyan u-s-71e49c" onclick="viewSubagentResult('${agentKey}')">
+                <span>${uiIcon('archive', 'icon-xs')}</span> Ver Resultado
               </button>
-              <button class="btn" style="padding: 5px 12px; font-size: 0.74rem;" onclick="viewSubagentDiary('${s.id}')">
-                <span>📖</span> Diário L3
+              <button class="btn u-s-71e49c" onclick="viewSubagentDiary('${agentKey}')">
+                <span>${uiIcon('book', 'icon-xs')}</span> Diário L3
               </button>
             </div>
           </div>
@@ -7968,34 +8907,34 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
     function formatOrchestratorBadge(parentId) {
       if (!parentId || parentId === 'Mestre (Chat)') {
         return `
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span class="badge" style="background: rgba(147, 51, 234, 0.12); color: var(--purple); border: 1px solid rgba(147, 51, 234, 0.3); font-size: 0.70rem;">🎯 Master Brain</span>
+          <div class="u-d-flex u-items-center u-gap-6p">
+            <span class="badge u-text-purple u-s-8fb674">${uiIcon('target', 'icon-xs')} Master Brain</span>
           </div>
-          <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">Direto / Local</div>
+          <div class="mono u-text-muted u-mt-2p u-s-923ef2">Direto / Local</div>
         `;
       }
       const lower = parentId.toLowerCase();
       if (lower.includes('hermes')) {
         return `
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.70rem;">🤖 Hermes Agent</span>
+          <div class="u-d-flex u-items-center u-gap-6p">
+            <span class="badge u-text-green u-s-1e3100">${uiIcon('bot', 'icon-xs')} Hermes Agent</span>
           </div>
-          <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;" title="${parentId}">${parentId}</div>
+          <div class="mono u-text-muted u-mt-2p u-s-923ef2" title="${parentId}">${parentId}</div>
         `;
       }
       if (lower.includes('antigravity') || lower.includes('cli') || lower.includes('sub_') || lower.includes('agent')) {
         return `
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.3); font-size: 0.70rem;">⚡ Antigravity / IDE</span>
+          <div class="u-d-flex u-items-center u-gap-6p">
+            <span class="badge u-text-cyan u-s-7d3461">${uiIcon('zap', 'icon-xs')} Antigravity / IDE</span>
           </div>
-          <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;" title="${parentId}">${parentId}</div>
+          <div class="mono u-text-muted u-mt-2p u-s-923ef2" title="${parentId}">${parentId}</div>
         `;
       }
       return `
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span class="badge" style="background: rgba(147, 51, 234, 0.12); color: var(--purple); border: 1px solid rgba(147, 51, 234, 0.3); font-size: 0.70rem;">🎯 Master Session</span>
+        <div class="u-d-flex u-items-center u-gap-6p">
+          <span class="badge u-text-purple u-s-8fb674">${uiIcon('target', 'icon-xs')} Master Session</span>
         </div>
-        <div class="mono" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;" title="${parentId}">${parentId}</div>
+        <div class="mono u-text-muted u-mt-2p u-s-923ef2" title="${parentId}">${parentId}</div>
       `;
     }
 
@@ -8031,7 +8970,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
 
       subtitleElem.textContent = `ID: ${sessionId}`;
       handoffsElem.textContent = 'Carregando envelopes de handoff...';
-      diariesContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem;">Carregando diários...</div>';
+      diariesContainer.innerHTML = '<div class="u-text-muted u-s-22b62c">Carregando diários...</div>';
       modal.classList.add('active');
 
       try {
@@ -8050,7 +8989,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         const receivedHdf = data.received_handoff;
         const returnHdf = data.return_handoff;
 
-        profileElem.innerHTML = `<strong>${s.agent_id}</strong> <span style="font-size: 0.75rem; color: var(--cyan); margin-left: 6px;">(${s.assigned_tier || 'Tier1'})</span><div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(s.task_description || '')}</div>`;
+        profileElem.innerHTML = `<strong>${s.agent_id}</strong> <span class="u-text-cyan u-s-6e68e7">(${s.assigned_tier || 'Tier1'})</span><div class="u-text-muted u-mt-2p u-s-d3bc8d">${escapeHtml(s.task_description || '')}</div>`;
         parentElem.textContent = s.parent_session_id || 'Mestre (Chat)';
         titleElem.textContent = `Diário & Handoff: ${s.agent_id}`;
 
@@ -8068,12 +9007,12 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
           const ts = typeof rawTime === 'number' && rawTime < 10000000000 ? rawTime * 1000 : rawTime;
           const timeStr = ts ? new Date(ts).toLocaleTimeString() : '';
           handoffHtml += `
-            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--green); font-weight: 700; margin-bottom: 6px;">
-                <span>🟢 Envelope de Retorno #${returnHdf.id} &bull; Para Mestre: <strong style="color: var(--cyan);">${returnHdf.target_agent_id}</strong></span>
+            <div class="u-mb-10p u-s-475e42">
+              <div class="u-d-flex u-justify-between u-text-green u-fw-700 u-mb-6p u-s-dbc8d1">
+                <span>${uiIcon('check-circle', 'icon-xs')} Envelope de Retorno #${returnHdf.id} &bull; Para Mestre: <strong class="u-text-cyan">${returnHdf.target_agent_id}</strong></span>
                 <span>${timeStr}</span>
               </div>
-              <div style="color: #a7f3d0; font-family: var(--font-mono); font-size: 0.78rem; white-space: pre-wrap; line-height: 1.5;">${escapeHtml(returnHdf.context_summary || returnHdf.summary_markdown || '')}</div>
+              <div class="u-mono u-pre-wrap u-s-d1e428">${escapeHtml(returnHdf.context_summary || returnHdf.summary_markdown || '')}</div>
             </div>
           `;
         }
@@ -8083,25 +9022,25 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
           const ts = typeof rawTime === 'number' && rawTime < 10000000000 ? rawTime * 1000 : rawTime;
           const timeStr = ts ? new Date(ts).toLocaleTimeString() : '';
           handoffHtml += `
-            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px; margin-bottom: 8px;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px;">
-                <span>📥 Envelope Inicial Recebido #${receivedHdf.id} (De: <strong style="color: var(--cyan);">${receivedHdf.source_session_id}</strong>)</span>
+            <div class="u-mb-2 u-s-0f11da">
+              <div class="u-d-flex u-justify-between u-text-muted u-mb-1 u-s-cb8a8e">
+                <span>${uiIcon('inbox', 'icon-xs')} Envelope Inicial Recebido #${receivedHdf.id} (De: <strong class="u-text-cyan">${receivedHdf.source_session_id}</strong>)</span>
                 <span>${timeStr}</span>
               </div>
-              <div style="color: #cbd5e1; font-family: var(--font-mono); font-size: 0.76rem; white-space: pre-wrap;">${escapeHtml(receivedHdf.context_summary || '')}</div>
+              <div class="u-text-slate u-mono u-pre-wrap u-s-c79ecd">${escapeHtml(receivedHdf.context_summary || '')}</div>
             </div>
           `;
         }
 
         if (!returnHdf && !receivedHdf) {
-          handoffHtml = `<span style="color: var(--text-muted);">Nenhum envelope de handoff emitido ainda. A sessão pode estar em andamento ou não ter emitido a ação <code>complete</code>.</span>`;
+          handoffHtml = `<span class="u-text-muted">Nenhum envelope de handoff emitido ainda. A sessão pode estar em andamento ou não ter emitido a ação <code>complete</code>.</span>`;
         }
         handoffsElem.innerHTML = handoffHtml;
 
         // Render Diários
         diariesCountElem.textContent = diaries.length;
         if (diaries.length === 0) {
-          diariesContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 6px;">Nenhum pensamento intermediário registrado nesta sessão.</div>';
+          diariesContainer.innerHTML = '<div class="u-text-muted u-s-7cdff0">Nenhum pensamento intermediário registrado nesta sessão.</div>';
         } else {
           diariesContainer.innerHTML = diaries.map((d, idx) => {
             const rawTime = d.created_at;
@@ -8109,14 +9048,14 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
             const timeStr = ts ? new Date(ts).toLocaleTimeString() : '';
             const thoughtText = d.content || d.thought_log || '';
             return `
-              <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-size: 0.72rem; font-weight: 700; color: var(--amber); font-family: var(--font-mono);">
+              <div class="u-s-4a79f0">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+                  <span class="u-fw-700 u-text-amber u-mono u-s-dbc8d1">
                     Passo ${idx + 1} / Entrada #${d.id}
                   </span>
-                  <span style="font-size: 0.7rem; color: var(--text-muted);">${timeStr}</span>
+                  <span class="u-text-muted u-s-cb8a8e">${timeStr}</span>
                 </div>
-                <div style="font-size: 0.78rem; color: #e2e8f0; line-height: 1.5; white-space: pre-wrap; font-family: var(--font-mono); background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px;">${escapeHtml(thoughtText)}</div>
+                <div class="u-text-slate-light u-pre-wrap u-mono u-s-0b65cf">${escapeHtml(thoughtText)}</div>
               </div>
             `;
           }).join('');
@@ -8171,37 +9110,42 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       const domainOverride = overrides[domainId] || {};
 
       document.getElementById('cfg-domain-id').value = domainId;
-      document.getElementById('cfg-domain-icon').textContent = domain.icon || '🎯';
+      const iconEl = document.getElementById('cfg-domain-icon'); if (iconEl) iconEl.innerHTML = uiIcon(domain.icon || 'target', 'icon-md');
       document.getElementById('cfg-domain-title').textContent = `Configurar: ${domain.category}`;
       document.getElementById('cfg-domain-desc').textContent = domain.description;
 
-      // Preenche select de modelos locais
+      // Preenche select de modelos locais a partir do inventário real em disco
       const localSelect = document.getElementById('cfg-select-local-model');
       localSelect.innerHTML = '';
-      
+
       const defaultLocalModel = domain.local_default.model;
       const currentSelectedLocal = domainOverride.local_model || defaultLocalModel;
 
-      const availableLocals = [
-        { id: defaultLocalModel, name: `${defaultLocalModel} (Padrão Recomendado)` },
-        { id: "qwen2.5-coder-7b-instruct-q4_k_m.gguf", name: "Qwen 2.5 Coder 7B (dGPU RTX 2060m)" },
-        { id: "smollm2-135m-instruct.gguf", name: "SmolLM2 135M Reasoning (CPU Host AVX2)" },
-        { id: "phi-4-mini-instruct-q4_k_m.gguf", name: "Phi-4 Mini 3.8B (dGPU RTX 2060m)" },
-        { id: "qwen2.5-vl-3b-instruct-q4_k_m.gguf", name: "Qwen 2.5 VL 3B Vision (dGPU RTX 2060m)" },
-        { id: "smollm2-360m-instruct.gguf", name: "SmolLM2 360M (CPU Host AVX2)" },
-        { id: "deepseek-coder-6.7b-instruct.gguf", name: "DeepSeek Coder 6.7B (dGPU)" }
-      ];
+      const availableLocals = [];
+      const addLocalOpt = (id, name) => {
+        if (!id) return;
+        if (!availableLocals.some(a => a.id.toLowerCase() === id.toLowerCase())) {
+          availableLocals.push({ id, name });
+        }
+      };
 
-      if (Array.isArray(localModelsList) && localModelsList.length > 0) {
-        localModelsList.forEach(m => {
-          const id = m.model || m.name || m.model_name || m.id;
-          if (id && !availableLocals.some(a => a.id.toLowerCase() === id.toLowerCase())) {
-            const friendly = humanizeModelName(id);
-            const sizeStr = m.size_mb ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(1) + ' GB' : m.size_mb.toFixed(0) + ' MB') : '';
-            availableLocals.push({ id: id, name: `${friendly} (${sizeStr ? sizeStr + ' • ' : ''}Detectado)` });
-          }
-        });
-      }
+      const scannedLocals = (Array.isArray(localModelsList) && localModelsList.length > 0)
+        ? localModelsList
+        : (Array.isArray(window.cachedInstalledLocalModels) ? window.cachedInstalledLocalModels : []);
+
+      scannedLocals.forEach(m => {
+        const id = m.model || m.id || m.file_name || m.name;
+        const friendly = humanizeModelName(id);
+        const sizeStr = m.size_mb
+          ? (m.size_mb > 1024 ? (m.size_mb / 1024).toFixed(1) + ' GB' : Math.round(m.size_mb) + ' MB')
+          : (m.size_gb ? m.size_gb.toFixed(1) + ' GB' : '');
+        const quant = m.quantization ? ` • ${m.quantization}` : '';
+        const tpsTag = m.tps ? ` • ${Number(m.tps).toFixed(1)} tok/s` : '';
+        addLocalOpt(id, `${friendly} (${sizeStr}${quant}${tpsTag} • Instalado)`);
+      });
+
+      addLocalOpt(defaultLocalModel, `${humanizeModelName(defaultLocalModel)} (Recomendado Domínio)`);
+      addLocalOpt(currentSelectedLocal, `${humanizeModelName(currentSelectedLocal)} (Atual)`);
 
       availableLocals.forEach(opt => {
         const el = document.createElement('option');
@@ -8213,27 +9157,52 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         localSelect.appendChild(el);
       });
 
-      // Preenche select de modelos cloud
+      // Preenche select de modelos cloud dinamicamente a partir dos campeões vivos da Cloud Arena
       const cloudSelect = document.getElementById('cfg-select-cloud-model');
       cloudSelect.innerHTML = '';
 
       const defaultCloudModel = domain.cloud_fallback.model;
       const currentSelectedCloud = domainOverride.cloud_model || defaultCloudModel;
 
-      const availableClouds = [
-        { id: defaultCloudModel, name: `${defaultCloudModel} (Padrão Recomendado)` },
-        { id: "anthropic/claude-3-7-sonnet", name: "Claude 3.7 Sonnet (Anthropic • Coding Champion)" },
-        { id: "deepseek/deepseek-chat", name: "DeepSeek-V3 Chat (Nous Portal • Custo Mínimo)" },
-        { id: "google/gemini-2.0-flash", name: "Gemini 2.0 Flash (Google • Velocidade Extrema)" },
-        { id: "openai/o3-mini", name: "OpenAI o3-mini (OpenAI • Raciocínio Profundo)" },
-        { id: "qwen/qwen-2.5-vl-72b-instruct", name: "Qwen 2.5 VL 72B Vision (Multimodal Frontier)" },
-        { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B Instruct (Meta OpenWeights)" },
-        { id: "deepseek/deepseek-r1", name: "DeepSeek R1 Reasoning (Matemática & Provas)" }
-      ];
+      const availableClouds = [];
+      const addCloudOpt = (id, name, provider) => {
+        if (!id) return;
+        if (!availableClouds.some(a => a.id.toLowerCase() === id.toLowerCase())) {
+          availableClouds.push({ id, name, provider: provider || 'nous' });
+        }
+      };
+
+      addCloudOpt(currentSelectedCloud, `${humanizeModelName(currentSelectedCloud)} (Ativo no Domínio)`, 'nous');
+      addCloudOpt(defaultCloudModel, `${humanizeModelName(defaultCloudModel)} (Campeão Recomendado)`, 'nous');
+
+      if (Array.isArray(cloudChampionsData) && cloudChampionsData.length > 0) {
+        const arenaCat = (domain.arena_category || domain.id || '').toLowerCase();
+        const domainReport = cloudChampionsData.find(c => (c.profile || '').toLowerCase() === arenaCat);
+        const orderedReports = domainReport
+          ? [domainReport, ...cloudChampionsData.filter(c => c !== domainReport)]
+          : cloudChampionsData;
+        orderedReports.forEach(rep => {
+          [
+            { item: rep.quality_leader, tag: 'Quality Leader' },
+            { item: rep.best_value, tag: 'Best ROI' },
+            { item: rep.ultra_low_cost, tag: 'Ultra Econômico' }
+          ].forEach(({ item, tag }) => {
+            if (item && item.canonical_id) {
+              const costLabel = item.blended_cost ? ` • $${Number(item.blended_cost).toFixed(2)}/1M` : '';
+              addCloudOpt(
+                item.canonical_id,
+                `${item.display_name || humanizeModelName(item.canonical_id)} (${rep.profile} ${tag}${costLabel})`,
+                item.provider || 'nous'
+              );
+            }
+          });
+        });
+      }
 
       availableClouds.forEach(opt => {
         const el = document.createElement('option');
         el.value = opt.id;
+        el.dataset.provider = opt.provider;
         el.textContent = opt.name;
         if (opt.id.toLowerCase() === currentSelectedCloud.toLowerCase()) {
           el.selected = true;
@@ -8259,18 +9228,22 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       currentConfiguringDomainId = null;
     }
 
-    function saveDomainConfiguration() {
+    async function saveDomainConfiguration() {
       const domainId = document.getElementById('cfg-domain-id').value;
       if (!domainId) return;
 
       const localModel = document.getElementById('cfg-select-local-model').value;
-      const cloudModel = document.getElementById('cfg-select-cloud-model').value;
+      const cloudSelect = document.getElementById('cfg-select-cloud-model');
+      const cloudModel = cloudSelect.value;
+      const selectedOpt = cloudSelect.options[cloudSelect.selectedIndex];
+      const cloudProvider = (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.provider) || 'nous';
       const paretoRule = document.getElementById('cfg-pareto-rule-input').value.trim();
 
       const overrides = JSON.parse(localStorage.getItem('souls_domain_overrides') || '{}');
       overrides[domainId] = {
         local_model: localModel,
         cloud_model: cloudModel,
+        cloud_provider: cloudProvider,
         pareto_rule: paretoRule,
         updated_at: new Date().toISOString()
       };
@@ -8278,13 +9251,37 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       localStorage.setItem('souls_domain_overrides', JSON.stringify(overrides));
       closeConfigureDomainModal();
 
-      showToast(`✓ Roteamento atualizado com sucesso!`, 'success');
-      if (window.cachedRouterMatrix) {
-        renderRouterMatrix(window.cachedRouterMatrix);
+      // Persist cloud model routing cleanly to backend souls_config.toml via /api/v1/profiles
+      const matrix = window.cachedRouterMatrix || [];
+      const domain = matrix.find(d => d.id === domainId);
+      const targetProfId = domainId === 'agentic'
+        ? 'agentic_dispatcher'
+        : ((domain && domain.profile_id) || `domain_${domainId}`);
+
+      try {
+        await fetch('/api/v1/profiles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: targetProfId,
+            name: (domain && domain.category) || domainId,
+            description: (domain && domain.description) || `Roteamento ${domainId}`,
+            role: domainId === 'executive' ? 'orchestrator' : 'subagent',
+            arena_category: (domain && domain.arena_category) || domainId,
+            target_model: cloudModel,
+            provider: cloudProvider
+          })
+        });
+        await fetchRouterMatrix();
+        if (typeof fetchProfiles === 'function') fetchProfiles();
+        showToast('Roteamento salvo em souls_config.toml com sucesso!', 'success');
+      } catch (e) {
+        if (window.cachedRouterMatrix) renderRouterMatrix(window.cachedRouterMatrix);
+        showToast(`Roteamento salvo localmente (${e.message})`, 'warning');
       }
     }
 
-    function resetDomainDefault() {
+    async function resetDomainDefault() {
       const domainId = document.getElementById('cfg-domain-id').value;
       if (!domainId) return;
 
@@ -8295,16 +9292,14 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       }
 
       closeConfigureDomainModal();
-      showToast(`✓ Domínio restaurado para os modelos padrão do sistema.`, 'success');
-      if (window.cachedRouterMatrix) {
-        renderRouterMatrix(window.cachedRouterMatrix);
-      }
+      await fetchRouterMatrix();
+      showToast(`Domínio restaurado para os campeões padrão da Arena.`, 'success');
     }
 
     // Card 3: Ações Interativas
     async function testLoopbackConnection() {
       const statusEl = document.getElementById('hermes-loopback-status');
-      if (statusEl) statusEl.innerHTML = '<span style="color: var(--cyan);">Sondando...</span>';
+      if (statusEl) statusEl.innerHTML = '<span class="u-text-cyan">Sondando...</span>';
 
       const t0 = performance.now();
       try {
@@ -8312,17 +9307,17 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         const elapsed = (performance.now() - t0).toFixed(1);
         if (res.ok) {
           if (statusEl) {
-            statusEl.innerHTML = `<span style="color: var(--green); font-weight: 700;">✅ Ativo (${elapsed}ms • 200 OK)</span>`;
+            statusEl.innerHTML = `<span class="u-text-green u-fw-700">${uiIcon('check-circle', 'icon-xs')} Ativo (${elapsed}ms • 200 OK)</span>`;
           }
           showToast(`Loopback MCP 127.0.0.1:9123 saudável (${elapsed}ms)`, 'success');
         } else {
           if (statusEl) {
-            statusEl.innerHTML = `<span style="color: var(--red);">Falha (${res.status})</span>`;
+            statusEl.innerHTML = `<span class="u-text-red">Falha (${res.status})</span>`;
           }
         }
       } catch (err) {
         if (statusEl) {
-          statusEl.innerHTML = `<span style="color: var(--red);">Offline</span>`;
+          statusEl.innerHTML = `<span class="u-text-red">Offline</span>`;
         }
         showToast(`Erro ao testar loopback: ${err.message}`, 'error');
       }
@@ -8340,7 +9335,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(config).then(() => {
-          showToast('✓ Configuração MCP copiada para o clipboard!', 'success');
+          showToast('Configuração MCP copiada para o clipboard!', 'success');
         }).catch(() => {
           fallbackExecCopy(config);
         });
@@ -8359,7 +9354,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        showToast('✓ Configuração copiada!', 'success');
+        showToast('Configuração copiada!', 'success');
       } catch (e) {
         showToast('Pressione Ctrl+C para copiar a configuração.', 'info');
       }
@@ -8386,42 +9381,53 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast('✓ Arquivo souls_mcp_config.json descarregado!', 'success');
+      showToast('Arquivo souls_mcp_config.json descarregado!', 'success');
     }
 
     // MCP Tools Catalog Modal
     const NATIVE_MCP_TOOLS = [
       // AST & Code
-      { name: "souls_ast_outline", domain: "AST & Code", icon: "🧩", desc: "Extrai esqueleto sintático (classes, traits, funções, assinaturas) poupando 80% dos tokens de contexto.", params: "path, language" },
-      { name: "souls_ast_slice", domain: "AST & Code", icon: "🧩", desc: "Extrai fatias sintáticas contíguas com numeração precisa de linhas para inspeção direcionada.", params: "path, start_line, end_line" },
-      { name: "souls_ast_symbol", domain: "AST & Code", icon: "🧩", desc: "Localiza símbolos e identidades no escopo do arquivo sem precisar ler o arquivo por inteiro.", params: "path, symbol_name" },
-      { name: "souls_ast_edit", domain: "AST & Code", icon: "🧩", desc: "Aplica mutações atômicas de código com verificação sintática pré-commit do Tree-sitter.", params: "path, target, replacement" },
-      { name: "souls_ast_delta_diff", domain: "AST & Code", icon: "🧩", desc: "Calcula e aplica Myers Diff estruturado preservando contagens exatas de bytes LF.", params: "path, patch" },
-      { name: "souls_blast_radius", domain: "AST & Code", icon: "💥", desc: "Mede o raio de impacto de alterações entre crates para prevenir quebras arquiteturais colaterais.", params: "crate_name, symbols" },
-      { name: "souls_frecency", domain: "AST & Code", icon: "🔥", desc: "Calcula mapa de calor de arquivos mais editados e com maior probabilidade de alteração.", params: "limit, days" },
+      { name: "souls_ast_outline", domain: "AST & Code", icon: "puzzle", desc: "Extrai esqueleto sintático (classes, traits, funções, assinaturas) poupando 80% dos tokens de contexto.", params: "path, language" },
+      { name: "souls_ast_slice", domain: "AST & Code", icon: "puzzle", desc: "Extrai fatias sintáticas contíguas com numeração precisa de linhas para inspeção direcionada.", params: "path, start_line, end_line" },
+      { name: "souls_ast_symbol", domain: "AST & Code", icon: "puzzle", desc: "Localiza símbolos e identidades no escopo do arquivo sem precisar ler o arquivo por inteiro.", params: "path, symbol_name" },
+      { name: "souls_ast_edit", domain: "AST & Code", icon: "puzzle", desc: "Aplica mutações atômicas de código com verificação sintática pré-commit do Tree-sitter.", params: "path, target, replacement" },
+      { name: "souls_ast_delta_diff", domain: "AST & Code", icon: "puzzle", desc: "Calcula e aplica Myers Diff estruturado preservando contagens exatas de bytes LF.", params: "path, patch" },
+      { name: "souls_blast_radius", domain: "AST & Code", icon: "zap", desc: "Mede o raio de impacto de alterações entre crates para prevenir quebras arquiteturais colaterais.", params: "crate_name, symbols" },
+      { name: "souls_frecency", domain: "AST & Code", icon: "flame", desc: "Calcula mapa de calor de arquivos mais editados e com maior probabilidade de alteração.", params: "limit, days" },
 
       // Memória L2 & Grafo
-      { name: "souls_memory_search", domain: "Memória L2", icon: "🧠", desc: "Busca híbrida vetorial RRF (LanceDB + SQLite FTS5) no hipocampo epistêmico do Souls Engine.", params: "query, limit, threshold" },
-      { name: "souls_memory_store", domain: "Memória L2", icon: "🧠", desc: "Persiste memórias de longo prazo com embeddings locais Qwen2 em FrankenSQLite STRICT WAL.", params: "content, tags, category" },
-      { name: "souls_memory_graph_entity", domain: "Memória L2", icon: "🕸️", desc: "Cria e atualiza nós ontológicos e observações clínicas no Grafo LadybugDB.", params: "entity_name, entity_type, props" },
-      { name: "souls_memory_graph_query", domain: "Memória L2", icon: "🕸️", desc: "Navega pelas arestas tipadas (depends_on, conflicts_with, implements) do cofre cognitivo.", params: "source_id, relation_type" },
-      { name: "souls_vault_query", domain: "Memória L2", icon: "🏛️", desc: "Consulta evidências empíricas de benchmarks TPS e VRAM no Heuristic Vault.", params: "model_id, domain" },
-      { name: "souls_obsidian_curate", domain: "Memória L2", icon: "📓", desc: "Curadoria automática de notas na pasta wiki/ do Obsidian com desidentificação de dados.", params: "source_path, target_wiki" },
+      { name: "souls_memory_search", domain: "Memória L2", icon: "brain", desc: "Busca híbrida vetorial RRF (LanceDB + SQLite FTS5) no hipocampo epistêmico do Souls Engine.", params: "query, limit, threshold" },
+      { name: "souls_memory_store", domain: "Memória L2", icon: "brain", desc: "Persiste memórias de longo prazo com embeddings locais Qwen2 em FrankenSQLite STRICT WAL.", params: "content, tags, category" },
+      { name: "souls_memory_graph_entity", domain: "Memória L2", icon: "network", desc: "Cria e atualiza nós ontológicos e observações clínicas no Grafo LadybugDB.", params: "entity_name, entity_type, props" },
+      { name: "souls_memory_graph_query", domain: "Memória L2", icon: "network", desc: "Navega pelas arestas tipadas (depends_on, conflicts_with, implements) do cofre cognitivo.", params: "source_id, relation_type" },
+      { name: "souls_vault_query", domain: "Memória L2", icon: "database", desc: "Consulta evidências empíricas de benchmarks TPS e VRAM no Heuristic Vault.", params: "model_id, domain" },
+      { name: "souls_obsidian_curate", domain: "Memória L2", icon: "book", desc: "Curadoria automática de notas na pasta wiki/ do Obsidian com desidentificação de dados.", params: "source_path, target_wiki" },
 
       // Thinking, Silício & FinOps
-      { name: "souls_socratic_deliberate", domain: "Thinking & Ops", icon: "🛡️", desc: "Freio cognitivo socrático: deliberação em grafo DAG antes de tocar em código de alta entropia.", params: "hypothesis, tradeoffs" },
-      { name: "souls_metrics", domain: "Thinking & Ops", icon: "📊", desc: "Telemetria bare-metal em tempo real: VRAM alocada (NVML), temperatura e TPS empírico.", params: "detailed" },
-      { name: "souls_hardware_watchdog", domain: "Thinking & Ops", icon: "🌡️", desc: "Guardião termodinâmico da RTX 2060m e margem física sob Windows DWM.", params: "action" },
-      { name: "souls_intent_probe", domain: "Thinking & Ops", icon: "🧭", desc: "Classificador de intenção e medição de entropia via Tier 0.5 SLM (Host CPU AVX2).", params: "prompt, context" },
-      { name: "souls_context_lean_compress", domain: "Thinking & Ops", icon: "🗜️", desc: "Compressão CCR em memória RAM poupando até 60% da janela de contexto.", params: "text, target_tokens" },
-      { name: "souls_switchboard_evaluate", domain: "Thinking & Ops", icon: "⚡", desc: "Roteador semântico two-stage: desvia tarefas entre dGPU local e Cloud Fallback em 1.4ms.", params: "query, available_models" }
+      { name: "souls_socratic_deliberate", domain: "Thinking & Ops", icon: "shield", desc: "Freio cognitivo socrático: deliberação em grafo DAG antes de tocar em código de alta entropia.", params: "hypothesis, tradeoffs" },
+      { name: "souls_metrics", domain: "Thinking & Ops", icon: "bar-chart", desc: "Telemetria bare-metal em tempo real: VRAM alocada (NVML), temperatura e TPS empírico.", params: "detailed" },
+      { name: "souls_hardware_watchdog", domain: "Thinking & Ops", icon: "thermometer", desc: "Guardião termodinâmico da dGPU local e margem física sob Windows DWM.", params: "action" },
+      { name: "souls_intent_probe", domain: "Thinking & Ops", icon: "compass", desc: "Classificador de intenção e medição de entropia via Tier 0.5 SLM (Host CPU AVX2).", params: "prompt, context" },
+      { name: "souls_context_lean_compress", domain: "Thinking & Ops", icon: "archive", desc: "Compressão CCR em memória RAM poupando até 60% da janela de contexto.", params: "text, target_tokens" },
+      { name: "souls_switchboard_evaluate", domain: "Thinking & Ops", icon: "zap", desc: "Roteador semântico two-stage: desvia tarefas entre dGPU local e Cloud Fallback em 1.4ms.", params: "query, available_models" }
     ];
 
-    function openMcpToolsModal() {
+    async function openMcpToolsModal() {
       const modal = document.getElementById('modal-mcp-tools');
       if (!modal) return;
-      renderMcpToolsCatalog(NATIVE_MCP_TOOLS);
       modal.classList.add('active');
+      if (!cachedToolsData || cachedToolsData.length === 0) {
+        const container = document.getElementById('mcp-tools-list-container');
+        if (container) container.innerHTML = `<div class="u-text-center u-text-muted u-s-4c08f4">${uiIcon('zap', 'icon-xs')} Carregando catálogo real de 55 ferramentas MCP...</div>`;
+        try {
+          const res = await fetch('/api/v1/tools/catalog');
+          if (res.ok) {
+            const json = await res.json();
+            cachedToolsData = json.tools || [];
+          }
+        } catch (_) {}
+      }
+      renderMcpToolsCatalog(cachedToolsData && cachedToolsData.length > 0 ? cachedToolsData : NATIVE_MCP_TOOLS);
     }
 
     function closeMcpToolsModal() {
@@ -8433,35 +9439,54 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       const container = document.getElementById('mcp-tools-list-container');
       if (!container) return;
 
-      container.innerHTML = tools.map(t => `
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
-          <div style="flex: 1;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span>${t.icon}</span>
-              <code class="mono" style="font-weight: 700; color: #fff; font-size: 0.82rem;">${t.name}</code>
-              <span class="badge ${t.domain.includes('AST') ? 'badge-champion' : (t.domain.includes('Memória') ? 'badge-value' : 'badge')}">${t.domain}</span>
+      const nsIcons = {
+        code: 'dna',
+        memory: 'database',
+        sys: 'zap',
+        think: 'brain',
+        ops: 'shield',
+        context: 'file-text',
+        core: 'target'
+      };
+
+      container.innerHTML = (tools || []).map(t => {
+        const ns = t.namespace || t.domain || 'mcp';
+        const icon = t.icon || nsIcons[String(ns).toLowerCase()] || 'wrench';
+        const desc = t.description || t.desc || 'Sem descrição.';
+        const props = t.input_schema && t.input_schema.properties ? Object.keys(t.input_schema.properties).join(', ') : '';
+        const paramsStr = t.params || props || 'sem parâmetros obrigatórios';
+        const badgeCls = (ns === 'code' || String(ns).includes('AST')) ? 'badge-champion' : ((ns === 'memory' || String(ns).includes('Memória')) ? 'badge-value' : 'badge');
+        return `
+        <div class="u-d-flex u-items-start u-justify-between u-gap-3 u-s-2a1093">
+          <div class="u-flex-1">
+            <div class="u-d-flex u-items-center u-gap-2 u-mb-1">
+              <span>${uiIcon(icon, 'icon-md')}</span>
+              <code class="mono u-fw-700 u-text-white u-s-5b9d54">${t.name}</code>
+              <span class="badge ${badgeCls}">${ns}${t.is_level_0 ? ' • L0' : ''}</span>
             </div>
-            <p style="font-size: 0.74rem; color: #94a3b8; line-height: 1.4; margin-bottom: 6px;">${t.desc}</p>
-            <div style="font-size: 0.68rem; color: #64748b; font-family: var(--font-mono);">
-              Parâmetros: <span style="color: #cbd5e1;">${t.params}</span>
+            <p class="u-text-muted u-mb-6p u-s-e197f7">${desc}</p>
+            <div class="u-text-dark u-mono u-s-923ef2">
+              Parâmetros: <span class="u-text-slate">${paramsStr}</span>
             </div>
           </div>
           <button class="btn-micro" onclick="copyToolName('${t.name}')" title="Copiar identificador da ferramenta MCP">
-            📋 Copiar
+            ${uiIcon('list', 'icon-xs')} Copiar
           </button>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       const countLabel = document.getElementById('mcp-tools-count-label');
-      if (countLabel) countLabel.textContent = `${tools.length} ferramenta(s) nativa(s) listada(s)`;
+      if (countLabel) countLabel.textContent = `${(tools || []).length} ferramenta(s) nativa(s) disponíveis no daemon`;
     }
 
     function filterMcpToolsList() {
-      const q = (document.getElementById('mcp-tools-search').value || '').toLowerCase().trim();
-      const filtered = NATIVE_MCP_TOOLS.filter(t => 
-        t.name.toLowerCase().includes(q) ||
-        t.domain.toLowerCase().includes(q) ||
-        t.desc.toLowerCase().includes(q)
+      const q = (document.getElementById('mcp-tools-search')?.value || '').toLowerCase().trim();
+      const source = (cachedToolsData && cachedToolsData.length > 0) ? cachedToolsData : NATIVE_MCP_TOOLS;
+      const filtered = source.filter(t => 
+        (t.name || '').toLowerCase().includes(q) ||
+        (t.namespace || t.domain || '').toLowerCase().includes(q) ||
+        (t.description || t.desc || '').toLowerCase().includes(q)
       );
       renderMcpToolsCatalog(filtered);
     }
@@ -8469,7 +9494,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
     function copyToolName(name) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(name).then(() => {
-          showToast(`✓ Ferramenta '${name}' copiada!`, 'success');
+          showToast(`Ferramenta '${name}' copiada!`, 'success');
         });
       } else {
         fallbackExecCopy(name);
@@ -8479,10 +9504,12 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
     async function testSiliconPing() {
       const t0 = performance.now();
       try {
-        const res = await fetch('/api/v1/metrics');
+        const res = await fetch('/api/v1/telemetry');
         const elapsed = (performance.now() - t0).toFixed(1);
         if (res.ok) {
-          showToast(`✅ Silício Ativo: NVML OK • VRAM Livre • Resposta em ${elapsed}ms`, 'success');
+          const tel = await res.json();
+          const tempStr = tel.gpu_temp_c ? `${Number(tel.gpu_temp_c).toFixed(0)}°C` : 'Nominal';
+          showToast(`Silício Ativo: NVML ${tempStr} • VRAM ${tel.vram_used_mb || 0}/${tel.vram_limit_mb || 0} MB • ${elapsed}ms`, 'success');
         } else {
           showToast(`Silício respondeu com status ${res.status} em ${elapsed}ms`, 'info');
         }
@@ -8490,6 +9517,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         showToast(`Erro ao testar silício: ${err.message}`, 'error');
       }
     }
+    window.testSiliconPing = testSiliconPing;
 
     async function runSimulateDispatch() {
       const input = document.getElementById('sim-task-input');
@@ -8497,11 +9525,11 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       if (!input || !resultBox) return;
       const query = input.value.trim();
       if (!query) {
-        resultBox.innerHTML = '<div style="color: var(--amber); font-size: 0.78rem;">Digite uma tarefa ou clique em uma das sugestões acima.</div>';
+        resultBox.innerHTML = '<div class="u-text-amber u-s-a768c1">Digite uma tarefa ou clique em uma das sugestões acima.</div>';
         return;
       }
 
-      resultBox.innerHTML = '<div style="color: var(--cyan); font-size: 0.78rem;">Sondando Two-Stage Semantic Switchboard (Host CPU AVX2)...</div>';
+      resultBox.innerHTML = '<div class="u-text-cyan u-s-a768c1">Sondando Two-Stage Semantic Switchboard (Host CPU AVX2)...</div>';
 
       try {
         const res = await fetch('/api/v1/switchboard/evaluate', {
@@ -8510,7 +9538,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
           body: JSON.stringify({ query: query })
         });
         if (!res.ok) {
-          resultBox.innerHTML = `<div style="color: var(--red); font-size: 0.78rem;">Erro ao consultar switchboard: HTTP ${res.status}</div>`;
+          resultBox.innerHTML = `<div class="u-text-red u-s-a768c1">Erro ao consultar switchboard: HTTP ${res.status}</div>`;
           return;
         }
         const data = await res.json();
@@ -8522,45 +9550,45 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         const entropy = d.entropy !== undefined ? d.entropy.toFixed(2) : '--';
         const stage = d.stage || 'fast_path_ram_cosine';
 
-        let toolsHtml = tools.map(t => `<span class="badge" style="background: rgba(6,182,212,0.12); color: var(--cyan); border: 1px solid rgba(6,182,212,0.3); font-size: 0.7rem;">${t.name}</span>`).join(' ');
+        let toolsHtml = tools.map(t => `<span class="badge u-text-cyan u-s-dff56c">${t.name}</span>`).join(' ');
 
         resultBox.innerHTML = `
-          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
+          <div class="u-s-538ff7">
+            <div class="u-d-flex u-justify-between u-items-center u-mb-10p u-s-2c1e9f">
               <div>
-                <span class="badge badge-champion" style="font-size: 0.72rem;">${stage}</span>
-                <span style="font-size: 0.74rem; color: var(--green); margin-left: 8px; font-weight: 600;">⚡ Latência: ${latency}</span>
+                <span class="badge badge-champion u-s-dbc8d1">${stage}</span>
+                <span class="u-text-green u-fw-600 u-s-78b0f8">${uiIcon('zap', 'icon-xs')} Latência: ${latency}</span>
               </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted);">
-                Confiança: <strong style="color: var(--cyan);">${conf}</strong> &bull; Entropia: <strong style="color: var(--amber);">${entropy}</strong>
+              <div class="u-text-muted u-s-dbc8d1">
+                Confiança: <strong class="u-text-cyan">${conf}</strong> &bull; Entropia: <strong class="u-text-amber">${entropy}</strong>
               </div>
             </div>
 
-            <div style="margin-bottom: 10px;">
-              <div style="font-size: 0.70rem; color: var(--text-muted); text-transform: uppercase;">Skill Canônica Selecionada</div>
-              <div style="font-size: 0.88rem; font-weight: 700; color: #fff; margin-top: 2px;">
-                🎯 ${skill.name || 'souls-general-orchestration'}
+            <div class="u-mb-10p">
+              <div class="u-text-muted u-uppercase u-s-6262d0">Skill Canônica Selecionada</div>
+              <div class="u-fw-700 u-text-white u-mt-2p u-s-604fde">
+                ${uiIcon('target', 'icon-xs')} ${skill.name || 'souls-general-orchestration'}
               </div>
-              <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">${skill.description || 'Orquestração de tarefas especializadas no Souls Engine.'}</div>
+              <div class="u-text-muted u-mt-2p u-s-d3bc8d">${skill.description || 'Orquestração de tarefas especializadas no Souls Engine.'}</div>
             </div>
 
-            <div style="margin-bottom: 10px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 8px;">
-              <div style="font-size: 0.70rem; color: var(--cyan); font-weight: 600;">⚖️ Decisão de Despacho ParetoBandit:</div>
-              <div style="font-size: 0.76rem; color: #cbd5e1; margin-top: 3px;">
+            <div class="u-mb-10p u-s-01b0e7">
+              <div class="u-text-cyan u-fw-600 u-s-6262d0">${uiIcon('scale', 'icon-xs')} Decisão de Despacho ParetoBandit:</div>
+              <div class="u-text-slate u-mt-3p u-s-c79ecd">
                 Despachar no <strong>Silício Local Bare-Metal ($0.00)</strong>. Entropia (${entropy}) está abaixo do limiar de desvio para Cloud.
               </div>
             </div>
 
             <div>
-              <div style="font-size: 0.70rem; color: var(--text-muted); margin-bottom: 4px;">Ferramentas MCP Vinculadas (${tools.length}):</div>
-              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                ${toolsHtml || '<span style="color: var(--text-muted); font-size: 0.72rem;">Nenhuma ferramenta restrita necessária.</span>'}
+              <div class="u-text-muted u-mb-1 u-s-6262d0">Ferramentas MCP Vinculadas (${tools.length}):</div>
+              <div class="u-d-flex u-flex-wrap u-gap-1">
+                ${toolsHtml || '<span class="u-text-muted u-s-dbc8d1">Nenhuma ferramenta restrita necessária.</span>'}
               </div>
             </div>
           </div>
         `;
       } catch (err) {
-        resultBox.innerHTML = `<div style="color: var(--red); font-size: 0.78rem;">Falha na simulação: ${err.message}</div>`;
+        resultBox.innerHTML = `<div class="u-text-red u-s-a768c1">Falha na simulação: ${err.message}</div>`;
       }
     }
 
@@ -8747,6 +9775,22 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       setupErgonomicEditor('insp-skill-editor', 'insp-skill-gutter', 'insp-skill-status');
       setupErgonomicEditor('forge-output-editor', 'forge-output-gutter', 'forge-output-status');
 
+      // Delegação Reativa de Auto-Save (400ms debounce) para controles visuais de #tab-settings (ignora TOML bruto e simuladores)
+      const settingsContainer = document.getElementById('tab-settings');
+      if (settingsContainer) {
+        const delegateSettingsAutoSave = (e) => {
+          const target = e.target;
+          if (!target || target.id === 'raw-toml-editor' || target.closest('#subtab-raw') || target.closest('.lab-drawer')) return;
+          if (!(target.id && target.id.startsWith('cfg-'))) return;
+          const inlineHandlers = `${target.getAttribute('oninput') || ''} ${target.getAttribute('onchange') || ''}`;
+          if (!inlineHandlers.includes('markSettingsUnsaved')) {
+            markSettingsUnsaved(false);
+          }
+        };
+        settingsContainer.addEventListener('input', delegateSettingsAutoSave);
+        settingsContainer.addEventListener('change', delegateSettingsAutoSave);
+      }
+
       // Barramento de Eventos Reativo Global (Zero CTRL+R)
       window.addEventListener('souls-state-changed', (e) => {
         const detail = e.detail || {};
@@ -8823,10 +9867,10 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
         navigator.clipboard.writeText(text).then(() => {
           showToast(msg || 'Texto copiado para a área de transferência!', 'success');
         }).catch(() => {
-          appPrompt('Copie o conteúdo abaixo:', text, { title: 'Copiar Conteúdo', icon: '📋' });
+          appPrompt('Copie o conteúdo abaixo:', text, { title: 'Copiar Conteúdo', icon: 'list' });
         });
       } else {
-        appPrompt('Copie o conteúdo abaixo:', text, { title: 'Copiar Conteúdo', icon: '📋' });
+        appPrompt('Copie o conteúdo abaixo:', text, { title: 'Copiar Conteúdo', icon: 'list' });
       }
     }
     window.copyToClipboard = copyToClipboard;
@@ -8860,7 +9904,10 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       const poll = document.getElementById('cfg-watchdog-polling');
       const prev = document.getElementById('cfg-temp-preventive');
       const throt = document.getElementById('cfg-temp-throttle');
-      if (vram) vram.value = 5294;
+      const defaultVram = (window.soulsTelemetryState && window.soulsTelemetryState.vramLimitMb) || 4096;
+      if (vram) vram.value = defaultVram;
+      const vEl = document.getElementById('val-vram-limit');
+      if (vEl) vEl.innerText = defaultVram;
       if (poll) poll.value = 500;
       if (prev) prev.value = 72.0;
       if (throt) throt.value = 78.0;
@@ -8900,71 +9947,115 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
     }
     window.resetReasoningDefaults = resetReasoningDefaults;
 
-    function applyRouterWeightPreset(preset) {
+    function updateRouterWeightsUI() {
+      const qEl = document.getElementById('cfg-weight-quality');
+      const cEl = document.getElementById('cfg-weight-cost');
+      const lEl = document.getElementById('cfg-weight-latency');
+      const wq = qEl ? Number(qEl.value) : 0.50;
+      const wc = cEl ? Number(cEl.value) : 0.30;
+      const wl = lEl ? Number(lEl.value) : 0.20;
+
+      const setTxt = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
+      setTxt('val-weight-quality', wq.toFixed(2));
+      setTxt('val-weight-cost', wc.toFixed(2));
+      setTxt('val-weight-latency', wl.toFixed(2));
+
+      const rawQ = Math.round(wq * 100);
+      const rawC = Math.round(wc * 100);
+      const rawL = Math.round(wl * 100);
+      setTxt('pct-weight-quality', `(${rawQ}%)`);
+      setTxt('pct-weight-cost', `(${rawC}%)`);
+      setTxt('pct-weight-latency', `(${rawL}%)`);
+      setTxt('lbl-qual-pct', `${rawQ}%`);
+      setTxt('lbl-cost-pct', `${rawC}%`);
+      setTxt('lbl-lat-pct', `${rawL}%`);
+
+      const total = Math.max(0.0001, wq + wc + wl);
+      const normQ = (wq / total) * 100;
+      const normC = (wc / total) * 100;
+      const normL = Math.max(0, 100 - normQ - normC);
+
+      const bQ = document.getElementById('bar-weight-qual'); if (bQ) bQ.style.width = `${normQ.toFixed(1)}%`;
+      const bC = document.getElementById('bar-weight-cost'); if (bC) bC.style.width = `${normC.toFixed(1)}%`;
+      const bL = document.getElementById('bar-weight-lat'); if (bL) bL.style.width = `${normL.toFixed(1)}%`;
+
+      const sumPct = rawQ + rawC + rawL;
+      setTxt('weights-sum-label', `Soma: ${sumPct}%`);
+      setTxt('metric-router-weights', `${Math.round(normQ)}% Q • ${Math.round(normC)}% C • ${Math.round(normL)}% L`);
+
+      const valBadge = document.getElementById('badge-weights-validation');
+      const sumMetric = document.getElementById('metric-router-sum');
+      if (Math.abs(sumPct - 100) <= 2) {
+        if (valBadge) {
+          valBadge.className = 'u-mono u-text-green u-s-db3f87';
+          valBadge.innerHTML = `${uiIcon('check', 'icon-xs')} 100% Calibrado`;
+        }
+        if (sumMetric) {
+          sumMetric.className = 'u-text-green u-mt-2p u-s-923ef2';
+          sumMetric.innerHTML = `${uiIcon('check', 'icon-xs')} Soma Normalizada (100%)`;
+        }
+      } else {
+        if (valBadge) {
+          valBadge.className = 'u-mono u-text-amber u-s-db3f87';
+          valBadge.innerHTML = `${uiIcon('alert-triangle', 'icon-xs')} Soma ${sumPct}% (Auto-normalizada)`;
+        }
+        if (sumMetric) {
+          sumMetric.className = 'u-text-amber u-mt-2p u-s-923ef2';
+          sumMetric.innerText = `Soma Bruta ${sumPct}% -> Escalarizada`;
+        }
+      }
+    }
+    window.updateRouterWeightsUI = updateRouterWeightsUI;
+
+    function applyRouterWeightPreset(wqOrPreset, wc, wl, label) {
       const q = document.getElementById('cfg-weight-quality');
       const c = document.getElementById('cfg-weight-cost');
       const l = document.getElementById('cfg-weight-latency');
-      if (preset === 'quality') {
-        if (q) q.value = 0.70;
-        if (c) c.value = 0.15;
-        if (l) l.value = 0.15;
-        showToast('Preset de Roteamento aplicado: Foco em Qualidade Máxima (70% Q)', 'info');
-      } else if (preset === 'cost') {
-        if (q) q.value = 0.20;
-        if (c) c.value = 0.60;
-        if (l) l.value = 0.20;
-        showToast('Preset de Roteamento aplicado: Foco em Custo Mínimo / FinOps (60% $)', 'info');
-      } else {
-        if (q) q.value = 0.50;
-        if (c) c.value = 0.30;
-        if (l) l.value = 0.20;
-        showToast('Preset de Roteamento aplicado: Equilibrado (50% Q / 30% $ / 20% L)', 'info');
+      let targetQ = 0.50, targetC = 0.30, targetL = 0.20, toastLabel = 'Equilíbrio Canônico (50/30/20)';
+
+      if (typeof wqOrPreset === 'number') {
+        targetQ = wqOrPreset;
+        targetC = typeof wc === 'number' ? wc : 0.30;
+        targetL = typeof wl === 'number' ? wl : 0.20;
+        toastLabel = label || `${Math.round(targetQ * 100)}/${Math.round(targetC * 100)}/${Math.round(targetL * 100)}`;
+      } else if (wqOrPreset === 'quality') {
+        targetQ = 0.80; targetC = 0.10; targetL = 0.10; toastLabel = 'Máxima Qualidade (80/10/10)';
+      } else if (wqOrPreset === 'cost') {
+        targetQ = 0.20; targetC = 0.60; targetL = 0.20; toastLabel = 'FinOps Zero-Cost (20/60/20)';
       }
-      ['quality', 'cost', 'latency'].forEach(k => {
-        const el = document.getElementById('val-weight-' + k);
-        const pct = document.getElementById('pct-weight-' + k);
-        const inp = document.getElementById('cfg-weight-' + k);
-        if (inp && el) el.innerText = Number(inp.value).toFixed(2);
-        if (inp && pct) pct.innerText = `(${Math.round(Number(inp.value) * 100)}%)`;
-      });
+
+      if (q) q.value = targetQ.toFixed(2);
+      if (c) c.value = targetC.toFixed(2);
+      if (l) l.value = targetL.toFixed(2);
+
+      updateRouterWeightsUI();
+      if (typeof initSlidersMagneticSnap === 'function') initSlidersMagneticSnap();
+      markSettingsUnsaved();
+      showToast(`Preset do Roteador aplicado: ${toastLabel}`, 'info');
     }
     window.applyRouterWeightPreset = applyRouterWeightPreset;
 
-    function setHardwarePreset(preset) {
-      const vram = document.getElementById('cfg-vram-limit');
-      const prev = document.getElementById('cfg-temp-preventive');
-      const throt = document.getElementById('cfg-temp-throttle');
-      if (preset === 'conservative') {
-        if (vram) vram.value = 4600;
-        if (prev) prev.value = 68.0;
-        if (throt) throt.value = 74.0;
-        showToast('Perfil de Hardware Conservador aplicado (Baixa temperatura e margem segura)', 'info');
-      } else if (preset === 'aggressive') {
-        if (vram) vram.value = 5400;
-        if (prev) prev.value = 75.0;
-        if (throt) throt.value = 80.0;
-        showToast('Perfil de Hardware Agressivo aplicado (Máximo aproveitamento do silício)', 'warning');
-      } else {
-        if (vram) vram.value = 5294;
-        if (prev) prev.value = 72.0;
-        if (throt) throt.value = 78.0;
-        showToast('Perfil de Hardware Padrão Nominal aplicado', 'info');
+    function setHardwarePreset(vramMbOrMode, label) {
+      const simInput = document.getElementById('sim-hw-vram-input');
+      const simLabel = document.getElementById('sim-hw-vram-label');
+
+      if (typeof vramMbOrMode === 'number') {
+        if (simInput) simInput.value = vramMbOrMode;
+        if (simLabel) {
+          simLabel.innerHTML = Number(vramMbOrMode).toLocaleString('pt-BR') + ' MB' +
+            (label ? ` <span class="u-text-muted u-fw-400">(${escapeHtml(label)})</span>` : '');
+        }
+        runHardwareSimulation();
+        return;
       }
+
+      // Legacy string fallback
+      const presetVal = vramMbOrMode === 'conservative' ? 1200 : (vramMbOrMode === 'aggressive' ? 4900 : 2450);
+      if (simInput) simInput.value = presetVal;
+      if (simLabel) simLabel.innerText = presetVal.toLocaleString('pt-BR') + ' MB';
+      runHardwareSimulation();
     }
     window.setHardwarePreset = setHardwarePreset;
-
-    function setSafeModeOnly(enabled) {
-      showToast(enabled ? 'Modo Seguro ativado: apenas ferramentas com isolamento de escrita permitidas.' : 'Modo Seguro flexibilizado.', 'info');
-    }
-    function enableAllTools() {
-      showToast('Todas as 25+ ferramentas MCP ativadas para os subagentes.', 'success');
-    }
-    function setToolsPermissionFilter(filter) {
-      showToast(`Filtro de catálogo aplicado: ${filter}`, 'info');
-    }
-    window.setSafeModeOnly = setSafeModeOnly;
-    window.enableAllTools = enableAllTools;
-    window.setToolsPermissionFilter = setToolsPermissionFilter;
 
     function downloadMcpConfigJson() {
       const config = {
@@ -8988,67 +10079,405 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
     }
     window.downloadMcpConfigJson = downloadMcpConfigJson;
 
-    async function testSiliconPing() {
-      const t0 = performance.now();
-      try {
-        const res = await fetch('/health');
-        const dt = (performance.now() - t0).toFixed(1);
-        if (res.ok) {
-          showToast(`⚡ Ping no Souls Engine OK! Latência de loopback: ${dt} ms`, 'success');
-        } else {
-          showToast(`Aviso no ping: status ${res.status}`, 'warning');
-        }
-      } catch (err) {
-        showToast(`Falha no ping de silício: ${err.message}`, 'error');
+    function setRouterSimScenario(cat, tokens, prompt) {
+      const typeEl = document.getElementById('sim-task-type');
+      const tokEl = document.getElementById('sim-task-tokens');
+      const promptEl = document.getElementById('sim-task-prompt');
+      if (typeEl && cat) {
+        typeEl.value = cat;
       }
-    }
-    window.testSiliconPing = testSiliconPing;
-
-    function setRouterSimScenario(scen) {
-      const qInp = document.getElementById('sim-router-task');
-      if (qInp) {
-        if (scen === 'coding') qInp.value = 'Refatorar parser AST Tree-sitter em Rust com teste unitário';
-        else if (scen === 'fast') qInp.value = 'Classificar sentimento e extrair entidades de tweet curto';
-        else qInp.value = 'Provar formalmente convergência do bandit Thompson Sampling';
+      if (tokEl && typeof tokens === 'number') {
+        tokEl.value = tokens;
+      }
+      if (promptEl && prompt) {
+        promptEl.value = prompt;
       }
       runRouterSimulator();
     }
-    function runRouterSimulator() {
-      const task = (document.getElementById('sim-router-task')?.value || 'Tarefa Geral').toLowerCase();
-      const resultBox = document.getElementById('sim-router-result');
-      if (!resultBox) return;
-      let chosen = 'Local Qwen 2.5 Coder 7B (dGPU)';
-      let cost = '$0.00 (Zero Custo)';
-      let reason = 'Alta pontuação de código e cabe confortavelmente na VRAM sob WDDM.';
-      if (task.includes('provar') || task.includes('matemática') || task.includes('deepseek')) {
-        chosen = 'DeepSeek R1 / Reasoning (Cloud Frontier)';
-        cost = '$0.002 / 1k tokens';
-        reason = 'Alta entropia matemática detectada; desviado para modelo de raciocínio profundo.';
-      } else if (task.includes('tweet') || task.includes('classificar') || task.includes('curto')) {
-        chosen = 'Local Llama 3.2 3B (CPU AVX2)';
-        cost = '$0.00 (Zero Custo)';
-        reason = 'Tarefa trivial de triagem; resolvida em 12ms sem consumir VRAM da dGPU.';
+
+    async function runRouterSimulator() {
+      const category = document.getElementById('sim-task-type')?.value || 'coding';
+      const tokens = Math.max(100, parseInt(document.getElementById('sim-task-tokens')?.value || '1200', 10));
+      const promptText = (document.getElementById('sim-task-prompt')?.value || '').trim();
+      const localLimit = Number(document.getElementById('cfg-local-token-limit')?.value || 8192);
+      const sovBias = document.getElementById('cfg-router-sovereignty')?.checked ?? true;
+
+      const rawQ = Number(document.getElementById('cfg-weight-quality')?.value || 0.50);
+      const rawC = Number(document.getElementById('cfg-weight-cost')?.value || 0.30);
+      const rawL = Number(document.getElementById('cfg-weight-latency')?.value || 0.20);
+      const wSum = Math.max(0.0001, rawQ + rawC + rawL);
+      const wq = rawQ / wSum, wc = rawC / wSum, wl = rawL / wSum;
+
+      const tempC = Number(window.soulsTelemetryState?.gpuTempC || 58);
+      const tempPrev = Number(document.getElementById('cfg-temp-preventive')?.value || 72.0);
+      const tempThrot = Number(document.getElementById('cfg-temp-throttle')?.value || 78.0);
+      const phiPenalty = tempC >= tempThrot ? 0.35 : (tempC >= tempPrev ? ((tempC - tempPrev) / Math.max(1, tempThrot - tempPrev)) * 0.25 : 0.0);
+
+      let candidates = [];
+      // 1. Add best physical local model from installed inventory if within context limit or local mode
+      const locals = (Array.isArray(localModelsList) && localModelsList.length > 0)
+        ? localModelsList
+        : (Array.isArray(window.cachedInstalledLocalModels) ? window.cachedInstalledLocalModels : []);
+      if (locals.length > 0) {
+        const isSmallFast = category === 'fast' || tokens <= 500;
+        const bestLocal = (isSmallFast
+          ? locals.find(m => !(m.target || '').includes('dGPU') || (m.tier || '').includes('Tier 0'))
+          : locals.find(m => (category === 'coding' ? (m.model || '').includes('coder') : true) && (m.target || '').includes('dGPU')))
+          || locals[0];
+        const isGpu = (bestLocal.target || '').includes('dGPU') || bestLocal.is_gpu_accelerated;
+        const tps = Number(bestLocal.tps || bestLocal.estimated_tps || (isGpu ? 42 : 28));
+        const latMs = (1000 / Math.max(5, tps)) * 4 + (isGpu ? 35 : 18);
+        const contextOver = tokens > localLimit;
+        const qNorm = Math.min(0.95, Math.max(0.70, (Number(bestLocal.e3_score || 84) / 100) + (sovBias ? 0.05 : 0)));
+        const lNorm = Math.max(0.2, 1 - (latMs / 800));
+        const util = Math.max(0.1, (wq * qNorm + wc * 1.0 + wl * lNorm) - (isGpu ? phiPenalty : 0) - (contextOver ? 0.30 : 0));
+
+        candidates.push({
+          model_id: bestLocal.model || bestLocal.name || 'local_silicon',
+          tier: isGpu ? `Tier 1 (${window.soulsTelemetryState?.gpuName || 'dGPU Local'})` : `Tier 0.5 (${window.detectedCpuSimd || 'CPU AVX2'})`,
+          utility: util,
+          q_score: qNorm,
+          cost_usd: 0.0,
+          latency_ms: latMs,
+          vram_mb: isGpu ? Math.round(bestLocal.size_mb || 2200) : 0,
+          rationale: contextOver
+            ? `Contexto (${tokens} tok) excede teto local (${localLimit} tok) -> penalizado para evitar spillover WDDM.`
+            : `Silício local custo $0.00${sovBias ? ' com prior soberano Beta(5,1)' : ''}.`
+        });
       }
-      resultBox.innerHTML = `
-        <div style="padding: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px;">
-          <div style="font-size: 0.82rem; font-weight: 700; color: #fff;">Rota Escolhida: <span style="color: var(--cyan);">${chosen}</span></div>
-          <div style="font-size: 0.74rem; color: var(--green); margin-top: 2px;">Custo Estimado: ${cost}</div>
-          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">Racional: ${reason}</div>
-        </div>
-      `;
-      showToast('Simulação preditiva de rota executada!', 'info');
+
+      // 2. Query real backend fallback chain for Cloud Arena candidates
+      try {
+        const res = await fetch('/api/v1/router/fallback/chain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task_id: 'settings_sim_' + Date.now(),
+            category: category === 'local' ? 'coding' : category,
+            estimated_input_tokens: tokens,
+            estimated_cached_input_tokens: Math.round(tokens * 0.4),
+            estimated_output_tokens: 1000,
+            max_fallbacks: 4
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const chain = [data.primary, ...(data.fallbacks || [])].filter(Boolean);
+          chain.forEach((arm, idx) => {
+            const estCost = Number(arm.estimated_cost_usd || arm.cost_usd || (0.0015 * (idx + 1)));
+            const qNorm = Math.max(0.75, Math.min(0.99, Number(arm.quality_score || (0.96 - idx * 0.03))));
+            const cNorm = Math.max(0.1, 1.0 - Math.min(0.9, estCost * 120));
+            const latMs = Number(arm.expected_latency_ms || (140 + idx * 90));
+            const lNorm = Math.max(0.2, 1.0 - (latMs / 1500));
+            const util = category === 'local' ? 0.15 : (wq * qNorm + wc * cNorm + wl * lNorm);
+            candidates.push({
+              model_id: arm.model_id || arm.canonical_id || `cloud-arm-${idx + 1}`,
+              tier: `Cloud (${arm.provider || 'Nous Portal'})`,
+              utility: util,
+              q_score: qNorm,
+              cost_usd: estCost,
+              latency_ms: latMs,
+              vram_mb: 0,
+              rationale: `Cloud Frontier via ${arm.provider || 'Nous Portal'} • Custo estimado $${estCost.toFixed(5)}/req.`
+            });
+          });
+        }
+      } catch (_) {}
+
+      if (candidates.length === 0) {
+        candidates.push({
+          model_id: 'tier0_onnx_cpu',
+          tier: 'Tier 0.5 (CPU AVX2)',
+          utility: 0.91,
+          q_score: 0.88,
+          cost_usd: 0.0,
+          latency_ms: 25.0,
+          vram_mb: 0,
+          rationale: 'Fallback determinístico local a 0 MB VRAM.'
+        });
+      }
+
+      candidates.sort((a, b) => b.utility - a.utility);
+      const winner = candidates[0];
+
+      const setTxt = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
+      setTxt('router-sim-winner-name', winner.model_id);
+      setTxt('router-sim-tier-badge', winner.tier);
+      setTxt('router-sim-utility', winner.utility.toFixed(4));
+      setTxt('router-sim-cost', winner.cost_usd <= 0 ? '$0.00 (Silício)' : `$${winner.cost_usd.toFixed(5)}`);
+      setTxt('router-sim-lat', `${winner.latency_ms.toFixed(1)} ms`);
+      setTxt('router-sim-phi', `${phiPenalty.toFixed(2)} (${tempC.toFixed(0)}°C)`);
+      setTxt('router-sim-vram', winner.vram_mb > 0 ? `${winner.vram_mb} MB (dGPU)` : '0 MB (Host/Cloud)');
+      setTxt('router-sim-zone', window.soulsTelemetryState?.vramLimitMb ? `WDDM Safe (${window.soulsTelemetryState.vramLimitMb} MB)` : 'Zona Segura WDDM');
+      setTxt('router-sim-rationale', `[${category.toUpperCase()} • ${tokens} tok] Pesos (${Math.round(wq*100)}/${Math.round(wc*100)}/${Math.round(wl*100)}) -> ${winner.rationale}`);
+
+      const listEl = document.getElementById('router-sim-candidates-list');
+      if (listEl) {
+        listEl.innerHTML = candidates.slice(0, 5).map((cand, i) => {
+          const pct = Math.min(100, Math.max(12, Math.round(cand.utility * 100)));
+          const barColor = i === 0 ? 'var(--cyan)' : 'var(--purple)';
+          return `
+            <div style="background:rgba(15,23,42,0.55); border:1px solid rgba(148,163,184,0.16); border-radius:8px; padding:8px 10px;">
+              <div class="u-d-flex u-justify-between u-items-center u-mb-1 u-mono" style="font-size:0.75rem;">
+                <span class="u-fw-700 ${i === 0 ? 'u-text-cyan' : 'u-text-white'}">#${i + 1} ${escapeHtml(cand.model_id)}</span>
+                <span class="u-text-muted">${escapeHtml(cand.tier)} • U=${cand.utility.toFixed(3)}</span>
+              </div>
+              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+                <div style="width:${pct}%; height:100%; background:${barColor};"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
-    function setMemorySimScenario(scen) {
+
+    function setMemorySimScenario(query, mode) {
+      const qEl = document.getElementById('sim-memory-query');
+      const mEl = document.getElementById('sim-memory-mode');
+      if (qEl && query) qEl.value = query;
+      if (mEl && mode) mEl.value = mode;
       runMemorySimulator();
     }
-    function runMemorySimulator() {
-      showToast('Simulação do Hipocampo L3 calculada: Langevin decay ponderado com sucesso.', 'info');
+
+    async function runMemorySimulator() {
+      const query = (document.getElementById('sim-memory-query')?.value || '').trim();
+      const mode = document.getElementById('sim-memory-mode')?.value || 'adaptive';
+      const redactPii = document.getElementById('cfg-memory-pii-redactor')?.checked ?? true;
+      const statusBadge = document.getElementById('sim-mem-status-badge');
+      const blockEl = document.getElementById('sim-mem-formatted-block');
+      const matchesList = document.getElementById('sim-mem-matches-list');
+      const ontList = document.getElementById('sim-mem-ontology-list');
+
+      if (!query) {
+        showToast('Digite uma consulta para testar o Hipocampo L2/L3.', 'warning');
+        return;
+      }
+
+      if (statusBadge) statusBadge.innerText = 'Consultando FrankenSQLite + FTS5...';
+      if (blockEl) blockEl.innerText = 'Executando recall híbrido...';
+
+      try {
+        const res = await fetch('/api/v1/memory/recall', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: 'dashboard_sim',
+            query,
+            mode,
+            redact_pii: redactPii
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.status !== 'success') {
+          if (statusBadge) statusBadge.innerText = 'Erro na Consulta RRF';
+          if (blockEl) blockEl.innerText = data.message || 'Falha desconhecida ao consultar /api/v1/memory/recall';
+          return;
+        }
+
+        if (statusBadge) statusBadge.innerText = 'Recall Híbrido RRF Concluído';
+        const modeEl = document.getElementById('sim-mem-mode-used');
+        if (modeEl) modeEl.innerText = `modo: ${data.mode_used || mode}`;
+        const cntEl = document.getElementById('sim-mem-match-count');
+        if (cntEl) cntEl.innerText = `${data.count || 0} fato(s) recuperado(s)`;
+        const piiEl = document.getElementById('sim-mem-pii-count');
+        if (piiEl) piiEl.innerText = `${data.pii_redactions || 0} PII redigido(s)`;
+
+        if (blockEl) {
+          blockEl.innerText = (data.formatted_block && data.formatted_block.trim())
+            ? data.formatted_block
+            : `<souls-l3-recall mode="${data.mode_used || mode}">\n  <!-- Nenhum fato correspondente encontrado para esta consulta ainda. -->\n</souls-l3-recall>`;
+        }
+
+        const matches = data.matches || [];
+        if (matchesList) {
+          matchesList.innerHTML = matches.length === 0
+            ? '<div class="u-text-muted u-s-dbc8d1">Nenhum fato encontrado nesta consulta. Tente expandir a consulta ou usar termos do projeto.</div>'
+            : matches.map((m, idx) => `
+              <div style="background:rgba(15,23,42,0.55); border:1px solid rgba(16,185,129,0.22); border-radius:6px; padding:7px 9px;">
+                <div class="u-d-flex u-justify-between u-items-center u-mono u-mb-1" style="font-size:0.72rem;">
+                  <span class="u-text-green u-fw-700">#${idx + 1} [${escapeHtml(m.partition || 'EVOLVING')}]</span>
+                  <span class="u-text-cyan">RRF ${(Number(m.rrf_score || m.score || 0)).toFixed(4)}</span>
+                </div>
+                <div class="u-text-slate-light" style="font-size:0.78rem;">${escapeHtml(m.content || '')}</div>
+              </div>
+            `).join('');
+        }
+
+        const rels = data.ontology_relations || [];
+        const ontCountEl = document.getElementById('sim-mem-ontology-count');
+        if (ontCountEl) ontCountEl.innerText = `${rels.length} aresta(s) retornada(s)`;
+        if (ontList) {
+          ontList.innerHTML = rels.length === 0
+            ? '<span class="u-text-muted u-mono" style="font-size:0.72rem;">' + (data.mode_used === 'expanded' ? 'Nenhuma aresta vizinha nesta consulta.' : 'Modo "Expanded" ativa expansão no grafo LadybugDB.') + '</span>'
+            : rels.map(r => `<span class="badge u-text-purple u-mono" style="font-size:0.70rem;">(${escapeHtml(r.src_label)}) --[${escapeHtml(r.relation)}]--> (${escapeHtml(r.dst_label)})</span>`).join('');
+        }
+      } catch (err) {
+        if (statusBadge) statusBadge.innerText = 'Erro de Rede';
+        if (blockEl) blockEl.innerText = `Erro ao consultar /api/v1/memory/recall: ${err.message}`;
+      }
     }
-    function runReasoningSimulator() {
-      showToast('Simulação de entropia concluída: limiar 0.70 validado.', 'info');
+
+    function runReasoningSimulator(presetPrompt) {
+      const inputEl = document.getElementById('sim-prompt-input');
+      if (typeof presetPrompt === 'string' && inputEl) {
+        inputEl.value = presetPrompt;
+      }
+      const prompt = (inputEl?.value || '').trim();
+      if (!prompt) {
+        showToast('Digite um prompt para calcular a entropia de Shannon.', 'warning');
+        return;
+      }
+
+      const dynamicOn = document.getElementById('cfg-reasoning-dynamic')?.checked ?? true;
+      const bypassOn = document.getElementById('cfg-reasoning-bypass')?.checked ?? true;
+      const socraticOn = document.getElementById('cfg-reasoning-socratic')?.checked ?? true;
+      const socraticMode = document.getElementById('cfg-reasoning-socratic-mode')?.value || 'autonomous';
+      const maxEffort = document.getElementById('cfg-reasoning-max-effort')?.value || 'ultra';
+      const highThresh = Number(document.getElementById('cfg-reasoning-threshold')?.value || 0.70);
+      const grillThresh = Number(document.getElementById('cfg-reasoning-grill-threshold')?.value || 0.75);
+      const cycles = Number(document.getElementById('cfg-reasoning-socratic-cycles')?.value || 3);
+
+      // Compute normalized Shannon entropy across token diversity + structural signals
+      const lower = prompt.toLowerCase();
+      const tokens = lower.split(/\s+/).filter(Boolean);
+      const counts = {};
+      tokens.forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+      const n = Math.max(1, tokens.length);
+      let hTokens = 0;
+      Object.values(counts).forEach(c => {
+        const p = c / n;
+        hTokens -= p * Math.log2(p);
+      });
+      const maxH = tokens.length > 1 ? Math.log2(tokens.length) : 1;
+      const lexicalDiv = Math.min(1, hTokens / Math.max(1, maxH));
+
+      const isTrivial = /(formatar|json|indent|traduz|resumir lista|corrigir erro de digita)/i.test(lower) && tokens.length <= 22;
+      const isArchitecture = /(refator|parser|ast|myers|crate|arquitet|concorr|vazamento|contrato)/i.test(lower);
+      const isAmbiguous = /(melhorar|geral|otimiz|sugira|como faço|melhor forma|tudo)/i.test(lower) && !isTrivial;
+
+      let intent = 'GENERAL';
+      if (isTrivial) intent = 'TRIVIAL / FORMAT';
+      else if (isArchitecture) intent = 'CODE / AST SURGERY';
+      else if (/(prova|teorema|matem|cohomolog|formal)/i.test(lower)) intent = 'MATH / FORMAL LOGIC';
+      else if (isAmbiguous) intent = 'AMBIGUOUS / OPEN';
+
+      let entropy = 0.25 + lexicalDiv * 0.35 + Math.min(0.25, tokens.length / 80);
+      if (isTrivial) entropy = Math.min(0.28, entropy * 0.45);
+      if (isArchitecture) entropy = Math.max(0.82, Math.min(0.95, entropy + 0.24));
+      if (isAmbiguous) entropy = Math.max(0.76, Math.min(0.96, entropy + 0.22));
+      entropy = Math.max(0.05, Math.min(0.99, entropy));
+
+      const ladder = [
+        { key: 'none', tokens: 0, effort: 'none' },
+        { key: 'minimal', tokens: 512, effort: 'low' },
+        { key: 'low', tokens: 1024, effort: 'low' },
+        { key: 'medium', tokens: 4096, effort: 'medium' },
+        { key: 'high', tokens: 16384, effort: 'high' },
+        { key: 'xhigh', tokens: 24576, effort: 'high' },
+        { key: 'ultra', tokens: 32768, effort: 'max' }
+      ];
+      const maxIdx = Math.max(1, ladder.findIndex(x => x.key === maxEffort));
+      let chosenIdx = 3;
+      if (!dynamicOn) {
+        chosenIdx = 3;
+      } else if (bypassOn && entropy < 0.35) {
+        chosenIdx = 0;
+      } else if (entropy >= highThresh + 0.16) {
+        chosenIdx = 6;
+      } else if (entropy >= highThresh + 0.08) {
+        chosenIdx = 5;
+      } else if (entropy >= highThresh) {
+        chosenIdx = 4;
+      } else if (entropy >= 0.50) {
+        chosenIdx = 3;
+      } else {
+        chosenIdx = 2;
+      }
+      chosenIdx = Math.min(chosenIdx, maxIdx);
+      const chosen = ladder[chosenIdx];
+
+      const setTxt = (id, txt) => { const e = document.getElementById(id); if (e) e.innerText = txt; };
+      setTxt('sim-entropy-score', `${entropy.toFixed(3)} H`);
+      setTxt('sim-entropy-tag', entropy >= highThresh ? 'Alta Incerteza' : (entropy < 0.35 ? 'Baixa Incerteza (Determinístico)' : 'Incerteza Moderada'));
+      const bar = document.getElementById('sim-entropy-bar');
+      if (bar) bar.style.width = `${Math.round(entropy * 100)}%`;
+
+      const intentBadge = document.getElementById('sim-intent-badge');
+      if (intentBadge) intentBadge.innerHTML = `${uiIcon('target', 'icon-xs')} Intenção: ${intent}`;
+      const effBadge = document.getElementById('sim-effort-badge');
+      if (effBadge) effBadge.innerHTML = `${uiIcon('layers', 'icon-xs')} Thinking: ${chosen.key.toUpperCase()} (${chosen.tokens.toLocaleString('pt-BR')} tokens)`;
+      const socBadge = document.getElementById('sim-socratic-badge');
+      if (socBadge) {
+        const triggerGrill = socraticOn && (entropy >= grillThresh || isAmbiguous);
+        socBadge.innerHTML = `${uiIcon('git-branch', 'icon-xs')} ${chosen.tokens === 0 ? 'Bypass Ativo (0 Thinking Tokens)' : (triggerGrill ? `Freio Socrático: /grill-me (${cycles} ciclos DAG)` : `Modo Socrático: ${socraticMode} (${cycles} ciclos)`)}`;
+      }
+      setTxt('sim-latency', '0.042 ms');
+      setTxt('sim-vram', '0.0 MB (CPU AVX2)');
+      setTxt('sim-rationale', `Entropy=${entropy.toFixed(3)} vs threshold=${highThresh.toFixed(2)} (grill=${grillThresh.toFixed(2)}) -> bucket ${chosen.key.toUpperCase()} (${chosen.tokens} tok).`);
+
+      const payloadsEl = document.getElementById('sim-payloads-json');
+      if (payloadsEl) {
+        const payloadObj = chosen.tokens === 0
+          ? { anthropic: { type: 'disabled' }, openai_reasoning_effort: 'none', gemini_thinking_config: { thinking_budget: 0 }, openrouter: { reasoning: { excluded: true } } }
+          : { anthropic: { type: 'enabled', budget_tokens: chosen.tokens }, openai_reasoning_effort: chosen.effort, gemini_thinking_config: { thinking_budget: chosen.tokens }, openrouter: { effort: chosen.effort, max_tokens: chosen.tokens } };
+        payloadsEl.innerText = JSON.stringify(payloadObj, null, 2);
+      }
     }
+
     function runHardwareSimulation() {
-      showToast('Simulação termodinâmica concluída: margem nominal de 5.2GB confirmada.', 'info');
+      const reqVram = Number(document.getElementById('sim-hw-vram-input')?.value || 2450);
+      const hardLimit = Number(document.getElementById('cfg-vram-limit')?.value || window.soulsTelemetryState?.vramLimitMb || 5170);
+      const currentUsed = Number(window.soulsTelemetryState?.vramUsedMb || 950);
+      const gpuTemp = Number(window.soulsTelemetryState?.gpuTempC || 58);
+      const prevTemp = Number(document.getElementById('cfg-temp-preventive')?.value || 72);
+      const throtTemp = Number(document.getElementById('cfg-temp-throttle')?.value || 78);
+      const cpuFallback = document.getElementById('cfg-cpu-fallback')?.checked ?? true;
+      const gpuName = window.soulsTelemetryState?.gpuName || 'dGPU Dedicada';
+
+      const totalProjected = reqVram === 0 ? currentUsed : currentUsed + reqVram;
+      const wddmFreeBeforeLoad = Math.max(0, hardLimit - currentUsed);
+      const headroomAfter = hardLimit - totalProjected;
+      const resultEl = document.getElementById('sim-hw-result');
+      if (!resultEl) return;
+
+      let titleHtml = `${uiIcon('check-circle', 'icon-xs')} Aprovado na ${escapeHtml(gpuName)} (Zero-Spillover)`;
+      let titleCls = 'u-text-green';
+      let tpsEst = reqVram === 0 ? '~85 tokens/s (CPU)' : (reqVram <= 2000 ? '~58 tokens/s' : '~38 tokens/s');
+      let decision = 'Alocar 100% em VRAM Dedicada';
+      let reason = `Alocação de <strong>${reqVram.toLocaleString('pt-BR')} MB</strong> + base WDDM (${currentUsed.toLocaleString('pt-BR')} MB) = <strong>${totalProjected.toLocaleString('pt-BR')} MB</strong> dentro do teto seguro (${hardLimit.toLocaleString('pt-BR')} MB).`;
+
+      if (reqVram === 0) {
+        titleHtml = `${uiIcon('cpu', 'icon-xs')} Execução Soberana na Host CPU AVX2`;
+        decision = 'CPU Host RAM (0 MB VRAM)';
+        reason = 'Modelo Tier 0/0.5 executa inteiramente na memória RAM do sistema com latência sub-50ms sem tocar na placa gráfica.';
+      } else if (gpuTemp >= throtTemp) {
+        titleHtml = `${uiIcon('alert-triangle', 'icon-xs')} Bloqueio Térmico NVML (${gpuTemp.toFixed(0)}°C ≥ ${throtTemp}°C)`;
+        titleCls = 'u-text-red';
+        tpsEst = cpuFallback ? '~14 tokens/s (Resgate CPU)' : 'Pausado';
+        decision = cpuFallback ? 'Desviado para CPU Host AVX2' : 'Fila Pausada';
+        reason = `Temperatura acima da Barreira Crítica (${throtTemp}°C). Despachos CUDA bloqueados para preservar o silício.`;
+      } else if (headroomAfter < 250) {
+        titleHtml = `${uiIcon('alert-triangle', 'icon-xs')} Risco de Spillover PCIe Detectado!`;
+        titleCls = 'u-text-amber';
+        tpsEst = cpuFallback ? '~11 tokens/s (CPU AVX2)' : '< 1.5 tokens/s (PCIe)';
+        decision = cpuFallback ? 'Desvio Preventivo para CPU AVX2' : 'Risco Crítico WDDM';
+        reason = `Carga solicitada (<strong>${reqVram.toLocaleString('pt-BR')} MB</strong>) + base DWM/IDE (${currentUsed.toLocaleString('pt-BR')} MB) = ${totalProjected.toLocaleString('pt-BR')} MB ultrapassa margem livre WDDM (${wddmFreeBeforeLoad.toLocaleString('pt-BR')} MB disponíveis).`;
+      } else if (gpuTemp >= prevTemp) {
+        reason += ` Atenção: temperatura em Zona Preventiva (${gpuTemp.toFixed(0)}°C ≥ ${prevTemp}°C).`;
+      }
+
+      resultEl.innerHTML = `
+        <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+          <strong class="${titleCls} u-d-flex u-items-center u-gap-6p">${titleHtml}</strong>
+          <span class="mono u-text-cyan u-s-739509">${tpsEst}</span>
+        </div>
+        <div class="u-text-slate u-mb-6p u-s-dbc8d1">${reason}</div>
+        <div class="u-d-flex u-gap-3 u-text-muted u-mono u-s-ac0643 u-flex-wrap">
+          <span>Decisão: <strong class="u-text-white">${decision}</strong></span>
+          <span>FinOps: <strong class="u-text-green">$0.00 / 1M</strong></span>
+          <span>Folga Projetada: <strong class="${headroomAfter >= 250 ? 'u-text-cyan' : 'u-text-red'}">${reqVram === 0 ? wddmFreeBeforeLoad : headroomAfter} MB</strong></span>
+        </div>
+      `;
     }
     window.setRouterSimScenario = setRouterSimScenario;
     window.runRouterSimulator = runRouterSimulator;
@@ -9056,3 +10485,137 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
     window.runMemorySimulator = runMemorySimulator;
     window.runReasoningSimulator = runReasoningSimulator;
     window.runHardwareSimulation = runHardwareSimulation;
+
+    // ========================================================
+    // MILESTONE v0.9.1-A: GLOBAL COMMAND PALETTE (CTRL+K / CMD+K)
+    // ========================================================
+    const COMMAND_PALETTE_ITEMS = [
+      { id: 'nav-overview', title: 'Ir para Cockpit & Overview', desc: 'Pulso pessoal, telemetria de silício e status do Master Brain', category: 'Navegação', action: () => switchTab('tab-overview') },
+      { id: 'nav-research', title: 'Ir para Pesquisa & Conhecimento', desc: 'Missões STORM, Deep Research e biblioteca verificada', category: 'Navegação', action: () => switchTab('tab-research') },
+      { id: 'act-new-research', title: 'Iniciar Nova Pesquisa Profunda', desc: 'Abrir formulário de scoping STORM com preview FinOps', category: 'Ação Rápida', action: () => { switchTab('tab-research'); if (typeof switchResearchSubtab === 'function') switchResearchSubtab('new-mission'); } },
+      { id: 'nav-personas', title: 'Ir para Personas & Governança', desc: 'Gerenciar assistentes Hermes, SOUL.md e privacidade', category: 'Navegação', action: () => switchTab('tab-personas') },
+      { id: 'nav-subagents', title: 'Ir para Subagentes & Fila', desc: 'Monitorar sessões Pareto e handoffs L3', category: 'Navegação', action: () => switchTab('tab-subagents') },
+      { id: 'nav-skills', title: 'Ir para Skills & MCP Tools', desc: 'Catálogo local, marketplace 101k+ e Forge', category: 'Navegação', action: () => switchTab('tab-skills') },
+      { id: 'nav-local', title: 'Ir para Modelos & Arena', desc: 'Silício local, Cloud Arena, Model Hub e Provedores', category: 'Navegação', action: () => switchTab('tab-local') },
+      { id: 'nav-fallback', title: 'Ver Provedores Cloud & Fallback Chains', desc: 'Circuit breaker, quarentenas 429 e resolução <150ms', category: 'Navegação', action: () => { switchTab('tab-local'); if (typeof switchLocalSubtab === 'function') switchLocalSubtab('fallback'); } },
+      { id: 'nav-connections', title: 'Ir para Conexões, Cofre & CLIs', desc: 'Google Universe Vault, NotebookLM e agy/claude/codex', category: 'Navegação', action: () => switchTab('tab-connections') },
+      { id: 'nav-set-brain', title: 'Configurar Master Brain & Presets', desc: 'Alternar modelo mestre e tríade Pareto', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-brain'); } },
+      { id: 'nav-set-router', title: 'Configurar Roteador ParetoBandit', desc: 'Thresholds e priors bayesianas de despacho', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-router'); } },
+      { id: 'nav-set-reasoning', title: 'Configurar Raciocínio & Modo Socrático', desc: 'Thinking budget e detecção de entropia', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-reasoning'); } },
+      { id: 'nav-set-memory', title: 'Configurar Memória L2/L3 & LadybugDB', desc: 'Retenção, decay e cofre híbrido', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-memory'); } },
+      { id: 'nav-set-obsidian', title: 'Configurar Cofre de Conhecimentos (Obsidian)', desc: 'Curadoria raw/ -> wiki/ e Privacy Shield', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-obsidian'); } },
+      { id: 'nav-set-finops', title: 'Configurar Aceleração Local & FinOps', desc: 'Teto WDDM, proteção térmica NVML e CPU AVX2', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-finops'); } },
+      { id: 'nav-set-sandbox', title: 'Configurar Segurança & Sandbox', desc: 'Confinamento de caminhos e guardrails', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-sandbox'); } },
+      { id: 'nav-set-tools', title: 'Inspecionar 55 Ferramentas MCP', desc: 'Permissões, schemas e catálogo switchboard', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-tools'); } },
+      { id: 'nav-set-raw', title: 'Abrir Editor TOML (souls_config.toml)', desc: 'Edição direta da configuração persistida', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-raw'); } },
+      { id: 'act-sync-pulse', title: 'Sincronizar Pulso do Ecossistema', desc: 'Atualizar KPIs de evolução, FinOps e telemetria', category: 'Ação Rápida', action: () => { if (typeof fetchEcosystemPulse === 'function') fetchEcosystemPulse(); if (typeof fetchTelemetry === 'function') fetchTelemetry(); showToast('Telemetria e pulso sincronizados!', 'success'); } },
+      { id: 'act-ping-silicon', title: 'Testar Latência do Motor (Ping Loopback)', desc: 'Medir resposta HTTP em 127.0.0.1:9123/health', category: 'Ação Rápida', action: () => testSiliconPing() },
+      { id: 'act-doctor-research', title: 'Executar Diagnóstico Doctor (Pesquisa)', desc: 'Verificar prontidão de perfis e motor Research Hub', category: 'Diagnóstico', action: () => { switchTab('tab-research'); if (typeof switchResearchSubtab === 'function') switchResearchSubtab('doctor'); } },
+      { id: 'act-open-agents-md', title: 'Ler Hermes AGENTS.md (Invariantes)', desc: 'Visualizar regras constitucionais e prompt caching', category: 'Documentação', action: () => { if (typeof openAgentsMdModal === 'function') openAgentsMdModal('hermes'); } }
+    ];
+
+    let cmdPaletteFiltered = COMMAND_PALETTE_ITEMS.slice();
+    let cmdPaletteSelectedIndex = 0;
+
+    function openCommandPalette() {
+      const modal = document.getElementById('cmd-palette-modal');
+      const input = document.getElementById('cmd-palette-input');
+      if (!modal) return;
+      modal.classList.add('active');
+      if (input) {
+        input.value = '';
+        filterCommandPalette('');
+        setTimeout(() => input.focus(), 30);
+      }
+    }
+
+    function closeCommandPalette() {
+      const modal = document.getElementById('cmd-palette-modal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function filterCommandPalette(query) {
+      const q = (query || '').trim().toLowerCase();
+      cmdPaletteFiltered = !q
+        ? COMMAND_PALETTE_ITEMS.slice()
+        : COMMAND_PALETTE_ITEMS.filter(item =>
+            item.title.toLowerCase().includes(q) ||
+            item.desc.toLowerCase().includes(q) ||
+            item.category.toLowerCase().includes(q)
+          );
+      cmdPaletteSelectedIndex = 0;
+      renderCommandPaletteResults();
+    }
+
+    function renderCommandPaletteResults() {
+      const container = document.getElementById('cmd-palette-results');
+      if (!container) return;
+      if (cmdPaletteFiltered.length === 0) {
+        container.innerHTML = '<div class="cmd-palette-empty">Nenhum comando correspondente encontrado.</div>';
+        return;
+      }
+      container.innerHTML = cmdPaletteFiltered.map((item, idx) => `
+        <button class="cmd-palette-item ${idx === cmdPaletteSelectedIndex ? 'is-selected' : ''}" onclick="executeCommandPaletteIndex(${idx})">
+          <div class="cmd-palette-item-left">
+            <div>
+              <div class="cmd-palette-item-title">${item.title}</div>
+              <div class="cmd-palette-item-desc">${item.desc}</div>
+            </div>
+          </div>
+          <span class="cmd-palette-item-cat">${item.category}</span>
+        </button>
+      `).join('');
+    }
+
+    function executeCommandPaletteIndex(idx) {
+      const item = cmdPaletteFiltered[idx];
+      if (!item) return;
+      closeCommandPalette();
+      if (typeof item.action === 'function') item.action();
+    }
+
+    function handleCommandPaletteKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeCommandPalette();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (cmdPaletteFiltered.length > 0) {
+          cmdPaletteSelectedIndex = (cmdPaletteSelectedIndex + 1) % cmdPaletteFiltered.length;
+          renderCommandPaletteResults();
+        }
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (cmdPaletteFiltered.length > 0) {
+          cmdPaletteSelectedIndex = (cmdPaletteSelectedIndex - 1 + cmdPaletteFiltered.length) % cmdPaletteFiltered.length;
+          renderCommandPaletteResults();
+        }
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        executeCommandPaletteIndex(cmdPaletteSelectedIndex);
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const modal = document.getElementById('cmd-palette-modal');
+        if (modal && modal.classList.contains('active')) {
+          closeCommandPalette();
+        } else {
+          openCommandPalette();
+        }
+      }
+    });
+
+    window.openCommandPalette = openCommandPalette;
+    window.closeCommandPalette = closeCommandPalette;
+    window.filterCommandPalette = filterCommandPalette;
+    window.executeCommandPaletteIndex = executeCommandPaletteIndex;
+    window.handleCommandPaletteKey = handleCommandPaletteKey;

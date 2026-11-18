@@ -2,151 +2,147 @@
     <!-- ABA 7: RESEARCH HUB & COGNIÇÃO PROFUNDA (v0.7.0) -->
     <!-- ========================================== -->
     <div id="tab-research" class="tab-pane">
-      <div class="content-header" style="margin-bottom: 16px;">
+      <div class="content-header u-mb-4">
         <div>
-          <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-            <span>🔬</span> Pesquisa Profunda & Cognição Hermética
-            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.7rem; padding: 2px 8px; border-radius: 9999px;">v0.7.0 SSOT</span>
+          <h2 class="u-fw-600 u-text-white u-d-flex u-items-center u-gap-2 u-s-76085d">
+            <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-microscope"></use></svg> Pesquisa Profunda &amp; Conhecimento
           </h2>
-          <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">
-            Plano de controle para missões de investigação com árvore recursiva, decomposição em Tiers FinOps e verificação factual.
+          <p class="u-text-muted u-mt-2p u-s-22b62c">
+            Missões investigativas recursivas, decomposição FinOps em Tiers e verificação factual.
           </p>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="u-d-flex u-gap-2 u-items-center">
           <button class="btn btn-sm btn-outline" onclick="loadResearchHubMissions()" title="Recarregar acervo de missões">
-            <span>🔄</span> Atualizar
-          </button>
-          <button class="btn btn-sm btn-primary" onclick="switchResearchSubtab('new-mission')">
-            <span>➕</span> Nova Missão
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar
           </button>
         </div>
       </div>
 
       <!-- SUBTABS BAR -->
-      <div class="subtabs-bar" id="research-subtabs-bar" style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+      <div class="subtabs-bar u-mb-4 u-d-flex u-gap-2 u-flex-wrap" id="research-subtabs-bar">
         <button class="subtab-btn active" id="btn-research-subtab-new" onclick="switchResearchSubtab('new-mission')">
-          <span>🚀 Nova Missão</span>
+          <span><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-rocket"></use></svg> Nova Missão</span>
         </button>
         <button class="subtab-btn" id="btn-research-subtab-active" onclick="switchResearchSubtab('active')">
-          <span>📡 Missões Ativas & Fila</span>
+          <span><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-radio"></use></svg> Missões Ativas & Fila</span>
           <span class="tab-count-badge" id="badge-research-active-count">0</span>
         </button>
         <button class="subtab-btn" id="btn-research-subtab-library" onclick="switchResearchSubtab('library')">
-          <span>📚 Biblioteca & Relatórios</span>
+          <span><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-book"></use></svg> Biblioteca & Relatórios</span>
           <span class="tab-count-badge" id="badge-research-library-count">0</span>
         </button>
         <button class="subtab-btn" id="btn-research-subtab-quality" onclick="switchResearchSubtab('quality')">
-          <span>🧪 Qualidade & Reputação</span>
+          <span><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-flask"></use></svg> Qualidade & Reputação</span>
         </button>
         <button class="subtab-btn" id="btn-research-subtab-doctor" onclick="switchResearchSubtab('doctor')">
-          <span>⚙️ Motor & Prontidão</span>
-          <span class="tab-count-badge" id="badge-research-doctor-status" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Check</span>
+          <span><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-settings"></use></svg> Motor & Prontidão</span>
+          <span class="tab-count-badge u-text-green u-s-084638" id="badge-research-doctor-status">Check</span>
         </button>
       </div>
 
       <!-- PAINEL 1: NOVA MISSÃO (SCOPING & FINOPS PREVIEW) -->
       <div id="panel-research-new" class="research-subtab-panel">
-        <div class="grid grid-2" style="grid-template-columns: 1.2fr 0.8fr; gap: 16px;">
+        <div class="grid grid-2 u-gap-4 u-s-dc6215">
           <!-- Coluna Esquerda: Elaboração do Brief -->
-          <div class="card" style="padding: 20px;">
-            <div class="card-title" style="margin-bottom: 14px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
-              <span>📝 Definir Pergunta & Escopo</span>
-              <span id="label-effort-badge" class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">L2 Comparativo</span>
+          <div class="card u-s-f8d354">
+            <div class="card-title u-mb-14p u-fw-600 u-d-flex u-justify-between u-items-center u-s-221324">
+              <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-edit"></use></svg> Definir Pergunta & Escopo</span>
+              <span id="label-effort-badge" class="badge u-text-cyan u-s-deee0a">L2 Comparativo</span>
             </div>
 
-            <div style="margin-bottom: 14px;">
-              <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; font-weight: 600;">PERGUNTA PRINCIPAL DA PESQUISA:</label>
-              <textarea id="input-research-question" rows="3" class="input-base" style="width: 100%; resize: vertical; font-size: 0.85rem;" placeholder="Ex: Compare a arquitetura do Tokio vs Glommio para I/O bare-metal no Windows..."></textarea>
+            <div class="u-mb-14p">
+              <label class="u-d-block u-text-muted u-mb-6p u-fw-600 u-s-a2b44b">PERGUNTA PRINCIPAL DA PESQUISA:</label>
+              <textarea id="input-research-question" rows="3" class="input-base u-w-full u-resize-y u-s-933a8e" placeholder="Ex: Compare a arquitetura do Tokio vs Glommio para I/O bare-metal no Windows..."></textarea>
             </div>
 
-            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <div class="u-d-flex u-gap-2 u-mb-4">
               <button class="btn btn-sm btn-primary" onclick="generateResearchDraftPlan()">
-                <span>⚡ Gerar Plano Editável (Tier 0)</span>
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Gerar Plano Editável (Tier 0)
               </button>
               <button class="btn btn-sm btn-outline" onclick="applyResearchTemplate('tech_benchmark')">
-                <span>📋 Exemplo Técnico</span>
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg> Exemplo Técnico
               </button>
               <button class="btn btn-sm btn-outline" onclick="applyResearchTemplate('market_review')">
-                <span>📊 Exemplo Mercado</span>
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-bar-chart"></use></svg> Exemplo Mercado
               </button>
             </div>
 
-            <div id="box-editable-brief" style="display: none; border-top: 1px solid var(--border-color, #334155); padding-top: 16px;">
-              <div style="margin-bottom: 12px;">
-                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">PERSPECTIVAS DISCIPLINARES (STORM PATTERN):</label>
-                <div id="list-brief-perspectives" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            <div class="u-s-93d567 is-hidden" id="box-editable-brief">
+              <div class="u-mb-3">
+                <label class="u-d-block u-text-muted u-mb-1 u-fw-600 u-s-a2b44b">PERSPECTIVAS DISCIPLINARES (STORM PATTERN):</label>
+                <div class="u-d-flex u-flex-col u-gap-6p" id="list-brief-perspectives"></div>
               </div>
 
-              <div style="margin-bottom: 12px;">
-                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">SUB-TÓPICOS DE EXPLORAÇÃO ATÔMICA:</label>
-                <div id="list-brief-subtopics" style="display: flex; flex-direction: column; gap: 6px;"></div>
+              <div class="u-mb-3">
+                <label class="u-d-block u-text-muted u-mb-1 u-fw-600 u-s-a2b44b">SUB-TÓPICOS DE EXPLORAÇÃO ATÔMICA:</label>
+                <div class="u-d-flex u-flex-col u-gap-6p" id="list-brief-subtopics"></div>
               </div>
 
-              <div style="margin-bottom: 12px;">
-                <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 600;">FRONTEIRAS DE EXCLUSÃO (ANTI-RUÍDO):</label>
-                <div id="list-brief-exclusions" style="display: flex; flex-direction: column; gap: 6px;"></div>
+              <div class="u-mb-3">
+                <label class="u-d-block u-text-muted u-mb-1 u-fw-600 u-s-a2b44b">FRONTEIRAS DE EXCLUSÃO (ANTI-RUÍDO):</label>
+                <div class="u-d-flex u-flex-col u-gap-6p" id="list-brief-exclusions"></div>
               </div>
 
-              <div style="display: flex; gap: 12px; margin-top: 16px;">
-                <div style="flex: 1;">
-                  <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Largura (Breadth):</label>
-                  <input type="number" id="input-brief-breadth" min="1" max="6" value="3" class="input-base" style="width: 100%;">
+              <div class="u-d-flex u-gap-3 u-mt-4">
+                <div class="u-flex-1">
+                  <label class="u-text-muted u-d-block u-mb-1 u-s-a2b44b">Largura (Breadth):</label>
+                  <input type="number" id="input-brief-breadth" min="1" max="6" value="3" class="input-base u-w-full">
                 </div>
-                <div style="flex: 1;">
-                  <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Profundidade (Depth):</label>
-                  <input type="number" id="input-brief-depth" min="1" max="4" value="2" class="input-base" style="width: 100%;">
+                <div class="u-flex-1">
+                  <label class="u-text-muted u-d-block u-mb-1 u-s-a2b44b">Profundidade (Depth):</label>
+                  <input type="number" id="input-brief-depth" min="1" max="4" value="2" class="input-base u-w-full">
                 </div>
-                <div style="flex: 1;">
-                  <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Teto FinOps (USD):</label>
-                  <input type="number" id="input-brief-cap" step="0.10" min="0.20" max="15.00" value="1.50" class="input-base" style="width: 100%;">
+                <div class="u-flex-1">
+                  <label class="u-text-muted u-d-block u-mb-1 u-s-a2b44b">Teto FinOps (USD):</label>
+                  <input type="number" id="input-brief-cap" step="0.10" min="0.20" max="15.00" value="1.50" class="input-base u-w-full">
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Coluna Direita: Painel FinOps & Lançamento -->
-          <div class="card" style="padding: 20px;">
-            <div class="card-title" style="margin-bottom: 14px; font-weight: 600; color: #f8fafc;">
-              <span>💸 Prévia FinOps & Lançamento</span>
+          <div class="card u-s-f8d354">
+            <div class="card-title u-mb-14p u-fw-600 u-s-221324">
+              <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-dollar"></use></svg> Prévia FinOps & Lançamento</span>
             </div>
 
-            <div id="box-finops-preview" style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
-                <span style="color: #94a3b8;">Nível de Esforço:</span>
-                <strong id="finops-effort" style="color: #38bdf8;">--</strong>
+            <div class="u-mb-4 u-s-975082" id="box-finops-preview">
+              <div class="u-d-flex u-justify-between u-mb-2 u-s-22b62c">
+                <span class="u-text-muted">Nível de Esforço:</span>
+                <strong class="u-text-cyan" id="finops-effort">--</strong>
               </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
-                <span style="color: #94a3b8;">Turnos Estimados:</span>
-                <strong id="finops-turns" style="color: #f8fafc;">--</strong>
+              <div class="u-d-flex u-justify-between u-mb-2 u-s-22b62c">
+                <span class="u-text-muted">Turnos Estimados:</span>
+                <strong class="u-s-221324" id="finops-turns">--</strong>
               </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
-                <span style="color: #94a3b8;">Tokens Poupados (Tier 0 BM25):</span>
-                <strong id="finops-tokens-t0" style="color: #10b981;">--</strong>
+              <div class="u-d-flex u-justify-between u-mb-2 u-s-22b62c">
+                <span class="u-text-muted">Tokens Poupados (Tier 0 BM25):</span>
+                <strong class="u-text-green" id="finops-tokens-t0">--</strong>
               </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
-                <span style="color: #94a3b8;">Tokens Fast-Scout (Tier 2):</span>
-                <strong id="finops-tokens-t2" style="color: #cbd5e1;">--</strong>
+              <div class="u-d-flex u-justify-between u-mb-2 u-s-22b62c">
+                <span class="u-text-muted">Tokens Fast-Scout (Tier 2):</span>
+                <strong class="u-text-slate" id="finops-tokens-t2">--</strong>
               </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
-                <span style="color: #94a3b8;">Faixa de Custo Estimada:</span>
-                <strong id="finops-cost-range" style="color: #facc15;">$0.20 - $0.75</strong>
+              <div class="u-d-flex u-justify-between u-mb-2 u-s-22b62c">
+                <span class="u-text-muted">Faixa de Custo Estimada:</span>
+                <strong class="u-s-0e5a67" id="finops-cost-range">$0.20 - $0.75</strong>
               </div>
-              <div style="border-top: 1px dashed #334155; padding-top: 8px; margin-top: 8px; font-size: 0.7rem; color: #64748b;">
-                Teto máximo de segurança: <span id="finops-hard-cap" style="color: #ef4444; font-weight: 600;">$1.50</span> (força síntese se atingido).
+              <div class="u-mt-2 u-text-dark u-s-398f26">
+                Teto máximo de segurança: <span class="u-text-red u-fw-600" id="finops-hard-cap">$1.50</span> (força síntese se atingido).
               </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <button class="btn btn-success" style="width: 100%; justify-content: center; padding: 10px;" onclick="submitNewResearchMission(true)">
-                <span>📥 Enfileirar para Hermes Agent</span>
+            <div class="u-d-flex u-flex-col u-gap-2">
+              <button class="btn btn-success u-w-full u-justify-center u-s-801160" onclick="submitNewResearchMission(true)">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-download"></use></svg> Enfileirar para Hermes Agent
               </button>
-              <button class="btn btn-outline" style="width: 100%; justify-content: center;" onclick="submitNewResearchMission(false)">
-                <span>💾 Salvar como Rascunho</span>
+              <button class="btn btn-outline u-w-full u-justify-center" onclick="submitNewResearchMission(false)">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-database"></use></svg> Salvar como Rascunho
               </button>
-              <div id="box-copy-command" style="display: none; margin-top: 10px; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #1e293b;">
-                <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 4px;">Comando para invocar no chat do Hermes:</span>
-                <div style="display: flex; gap: 6px;">
-                  <code id="text-copy-command" style="flex: 1; font-size: 0.75rem; color: #38bdf8; background: #020617; padding: 4px 8px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></code>
+              <div class="u-mt-10p u-s-4c7bfd is-hidden" id="box-copy-command">
+                <span class="u-text-muted u-d-block u-mb-1 u-s-cb8a8e">Comando para invocar no chat do Hermes:</span>
+                <div class="u-d-flex u-gap-6p">
+                  <code class="u-flex-1 u-text-cyan u-overflow-hidden u-nowrap u-s-a3a937" id="text-copy-command"></code>
                   <button class="btn btn-xs btn-outline" onclick="copyResearchCommand()">Copiar</button>
                 </div>
               </div>
@@ -156,27 +152,27 @@
       </div>
 
       <!-- PAINEL 2: MISSÕES ATIVAS & FILA DE ESPERA -->
-      <div id="panel-research-active" class="research-subtab-panel" style="display: none;">
-        <div id="container-active-missions" style="display: flex; flex-direction: column; gap: 14px;">
+      <div id="panel-research-active" class="research-subtab-panel is-hidden">
+        <div class="u-d-flex u-flex-col u-gap-14p" id="container-active-missions">
           <!-- Preenchido via research_hub.js -->
-          <div style="text-align: center; padding: 40px; color: #64748b;">Carregando missões ativas...</div>
+          <div class="u-text-center u-text-dark u-s-73fc9c">Carregando missões ativas...</div>
         </div>
       </div>
 
       <!-- PAINEL 3: BIBLIOTECA & LEITOR EPISTÊMICO -->
-      <div id="panel-research-library" class="research-subtab-panel" style="display: none;">
-        <div class="grid grid-2" style="grid-template-columns: 320px 1fr; gap: 16px;">
+      <div id="panel-research-library" class="research-subtab-panel is-hidden">
+        <div class="grid grid-2 u-gap-4 u-s-be2b68">
           <!-- Lista de Relatórios -->
-          <div class="card" style="padding: 14px;">
-            <input type="text" id="input-search-library" class="input-base" placeholder="🔍 Filtrar relatórios..." style="width: 100%; margin-bottom: 10px; font-size: 0.8rem;" oninput="filterLibraryMissions()">
-            <div id="list-library-items" style="display: flex; flex-direction: column; gap: 6px; max-height: 600px; overflow-y: auto;">
+          <div class="card u-s-bb27b9">
+            <input type="text" id="input-search-library" class="input-base u-w-full u-mb-10p u-s-22b62c" placeholder="Filtrar relatórios..." oninput="filterLibraryMissions()">
+            <div class="u-d-flex u-flex-col u-gap-6p u-scroll-y u-s-eb6e6d" id="list-library-items">
               <!-- Itens da biblioteca -->
             </div>
           </div>
 
           <!-- Visualizador do Relatório Selecionado -->
-          <div class="card" style="padding: 20px;" id="box-library-viewer">
-            <div style="text-align: center; padding: 60px; color: #64748b;">
+          <div class="card u-s-f8d354" id="box-library-viewer">
+            <div class="u-text-center u-text-dark u-s-9f5153">
               Selecione uma missão ou relatório na lista à esquerda para inspecionar evidências, tags epistêmicas e fontes.
             </div>
           </div>
@@ -184,74 +180,74 @@
       </div>
 
       <!-- PAINEL 4: QUALIDADE & REPUTAÇÃO -->
-      <div id="panel-research-quality" class="research-subtab-panel" style="display: none;">
-        <div class="card" style="padding: 20px;">
-          <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
-            <span>🧪 Scorecard Epistêmico E³ & Reputação de Fontes</span>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-sm btn-outline" onclick="loadResearchScorecard()"><span>🔄</span> Atualizar Métricas</button>
-              <button class="btn btn-sm btn-primary" onclick="generateSkillPatchProposal()"><span>✨</span> Gerar Auto-Patch de Skill</button>
+      <div id="panel-research-quality" class="research-subtab-panel is-hidden">
+        <div class="card u-s-f8d354">
+          <div class="card-title u-mb-3 u-fw-600 u-d-flex u-justify-between u-items-center u-s-221324">
+            <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-flask"></use></svg> Scorecard Epistêmico E³ & Reputação de Fontes</span>
+            <div class="u-d-flex u-gap-2">
+              <button class="btn btn-sm btn-outline" onclick="loadResearchScorecard()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar Métricas</button>
+              <button class="btn btn-sm btn-primary" onclick="generateSkillPatchProposal()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Gerar Auto-Patch de Skill</button>
             </div>
           </div>
-          <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
+          <p class="u-text-muted u-mb-4 u-s-22b62c">
             Métricas consolidadas de fidelidade factual, ratio E³ (Epistemic Efficiency & Evidence) e governança dinâmica de domínios confiáveis e bloqueados.
           </p>
 
           <!-- Métricas E³ Cards -->
-          <div class="grid grid-4" style="gap: 12px; margin-bottom: 20px;">
-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
-              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Pontuação E³ Global</span>
-              <strong id="metric-e3-score" style="font-size: 1.5rem; color: #10b981;">--</strong>
+          <div class="grid grid-4 u-gap-4 u-mb-5">
+            <div class="metric-tile">
+              <span class="metric-label">Pontuação E³ Global</span>
+              <strong class="metric-value" id="metric-e3-score">--</strong>
             </div>
-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
-              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Acurácia Epistêmica</span>
-              <strong id="metric-accuracy-rate" style="font-size: 1.5rem; color: #38bdf8;">--</strong>
+            <div class="metric-tile">
+              <span class="metric-label">Acurácia Epistêmica</span>
+              <strong class="metric-value" id="metric-accuracy-rate">--</strong>
             </div>
-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
-              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Afirmações Auditadas</span>
-              <strong id="metric-claims-evaluated" style="font-size: 1.5rem; color: #facc15;">--</strong>
+            <div class="metric-tile">
+              <span class="metric-label">Afirmações Auditadas</span>
+              <strong class="metric-value" id="metric-claims-evaluated">--</strong>
             </div>
-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 14px; border-radius: 8px;">
-              <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Custo Médio / Evidência</span>
-              <strong id="metric-cost-per-verified" style="font-size: 1.5rem; color: #a855f7;">--</strong>
+            <div class="metric-tile">
+              <span class="metric-label">Custo Médio / Evidência</span>
+              <strong class="metric-value" id="metric-cost-per-verified">--</strong>
             </div>
           </div>
 
           <!-- Caixa de Proposta de Auto-Patch -->
-          <div id="box-skill-patch-proposal" style="display: none; margin-bottom: 20px; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; border-radius: 8px; padding: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <strong style="color: #38bdf8; font-size: 0.9rem;">📝 Proposta de Patch Gerada para a Skill 'deepsoul-research'</strong>
+          <div class="u-mb-5 u-s-5d2d65 is-hidden" id="box-skill-patch-proposal">
+            <div class="u-d-flex u-justify-between u-items-center u-mb-10p">
+              <strong class="u-text-cyan u-s-27895a"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-file-text"></use></svg> Proposta de Patch Gerada para a Skill 'deepsoul-research'</strong>
               <button class="btn btn-xs btn-outline" onclick="document.getElementById('box-skill-patch-proposal').style.display='none'">Fechar</button>
             </div>
-            <p id="skill-patch-target" style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px; font-family: monospace;"></p>
-            <pre id="skill-patch-content" style="background: #090d16; padding: 12px; border-radius: 6px; font-size: 0.75rem; color: #e2e8f0; max-height: 200px; overflow-y: auto; border: 1px solid #1e293b;"></pre>
+            <p class="u-text-muted u-mb-2 u-mono u-s-a2b44b" id="skill-patch-target"></p>
+            <pre class="u-text-slate-light u-scroll-y u-s-6d2da1" id="skill-patch-content"></pre>
           </div>
 
           <!-- Livro-Razão de Reputação de Domínios -->
-          <div style="border-top: 1px solid #334155; padding-top: 16px; margin-top: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span style="font-weight: 600; font-size: 0.9rem; color: #e2e8f0;">🌐 Livro-Razão de Confiança de Domínios (Domain Trust Ledger)</span>
-              <div style="display: flex; gap: 8px;">
-                <input type="text" id="input-add-domain" class="input-base" placeholder="Ex: arxiv.org ou site.com" style="width: 220px; font-size: 0.75rem;">
-                <select id="select-add-tier" class="input-base" style="width: 110px; font-size: 0.75rem;">
-                  <option value="boost">🌟 Boost</option>
-                  <option value="allow" selected>⚪ Allow</option>
-                  <option value="block">🚫 Block</option>
+          <div class="u-mt-4 u-s-d3dc49">
+            <div class="u-d-flex u-justify-between u-items-center u-mb-3">
+              <span class="u-fw-600 u-text-slate-light u-s-27895a"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> Livro-Razão de Confiança de Domínios (Domain Trust Ledger)</span>
+              <div class="u-d-flex u-gap-2">
+                <input type="text" id="input-add-domain" class="input-base u-s-4fa77e" placeholder="Ex: arxiv.org ou site.com">
+                <select id="select-add-tier" class="input-base u-s-b501b7">
+                  <option value="boost">Boost</option>
+                  <option value="allow" selected>Allow</option>
+                  <option value="block">Block</option>
                 </select>
                 <button class="btn btn-sm btn-primary" onclick="addNewDomainTrust()">Adicionar</button>
               </div>
             </div>
 
-            <div style="overflow-x: auto;">
-              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+            <div class="u-s-42d445">
+              <table class="u-w-full u-text-left u-s-64df4e">
                 <thead>
-                  <tr style="border-bottom: 1px solid #334155; color: #94a3b8;">
-                    <th style="padding: 8px;">Domínio</th>
-                    <th style="padding: 8px;">Tier</th>
-                    <th style="padding: 8px;">Trust Score</th>
-                    <th style="padding: 8px;">Claims Auditadas</th>
-                    <th style="padding: 8px;">Alucinações</th>
-                    <th style="padding: 8px; text-align: right;">Ações</th>
+                  <tr class="u-text-muted u-s-cd184a">
+                    <th class="u-s-cb92ec">Domínio</th>
+                    <th class="u-s-cb92ec">Tier</th>
+                    <th class="u-s-cb92ec">Trust Score</th>
+                    <th class="u-s-cb92ec">Claims Auditadas</th>
+                    <th class="u-s-cb92ec">Alucinações</th>
+                    <th class="u-text-right u-s-cb92ec">Ações</th>
                   </tr>
                 </thead>
                 <tbody id="tbody-domain-ledger">
@@ -264,62 +260,62 @@
       </div>
 
       <!-- PAINEL 5: MOTOR & PRONTIDÃO (DOCTOR & CONFIG) -->
-      <div id="panel-research-doctor" class="research-subtab-panel" style="display: none;">
-        <div class="grid grid-2" style="grid-template-columns: 1fr 340px; gap: 16px;">
+      <div id="panel-research-doctor" class="research-subtab-panel is-hidden">
+        <div class="grid grid-2 u-gap-4 u-s-0e9bca">
           <!-- Prontidão & Doctor -->
-          <div class="card" style="padding: 20px;">
-            <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
-              <span>⚙️ Diagnóstico de Prontidão do Ecossistema</span>
-              <div style="display: flex; gap: 8px;">
-                <button class="btn btn-sm btn-primary" onclick="triggerProvisioningFlow(true)"><span>🎛️</span> Provisionar em 1 Clique (Prévia)</button>
-                <button class="btn btn-sm btn-outline" onclick="loadResearchDoctorReport()"><span>🔄</span> Re-verificar</button>
+          <div class="card u-s-f8d354">
+            <div class="card-title u-mb-3 u-fw-600 u-d-flex u-justify-between u-items-center u-s-221324">
+              <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Diagnóstico de Prontidão do Ecossistema</span>
+              <div class="u-d-flex u-gap-2">
+                <button class="btn btn-sm btn-primary" onclick="triggerProvisioningFlow(true)"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sliders"></use></svg> Provisionar em 1 Clique (Prévia)</button>
+                <button class="btn btn-sm btn-outline" onclick="loadResearchDoctorReport()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Re-verificar</button>
               </div>
             </div>
-            <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
+            <p class="u-text-muted u-mb-4 u-s-22b62c">
               Audita a presença do Hermes Agent, perfis de subagentes, chaves de busca web e integridade do repositório no Dev Drive ReFS.
             </p>
-            <div id="box-provisioning-diff" style="display: none; margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; border-radius: 8px; padding: 14px;">
+            <div class="u-mb-4 u-s-55f49d is-hidden" id="box-provisioning-diff">
               <!-- Renderizado via research_hub.js -->
             </div>
-            <div id="list-doctor-checks" style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="u-d-flex u-flex-col u-gap-2" id="list-doctor-checks">
               <!-- Checagens preenchidas via research_hub.js -->
             </div>
           </div>
 
           <!-- Configurações Globais do Hub -->
-          <div class="card" style="padding: 20px;">
-            <div class="card-title" style="margin-bottom: 12px; font-weight: 600; color: #f8fafc;">
-              <span>🎚️ Parâmetros Globais & FinOps</span>
+          <div class="card u-s-f8d354">
+            <div class="card-title u-mb-3 u-fw-600 u-s-221324">
+              <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sliders"></use></svg> Parâmetros Globais & FinOps</span>
             </div>
-            <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 14px;">
+            <p class="u-text-muted u-mb-14p u-s-a2b44b">
               Regras padrão aplicadas na criação e auditoria de novas missões.
             </p>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="u-d-flex u-flex-col u-gap-3">
               <div>
-                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Teto Orçamentário Padrão ($ USD)</label>
-                <input type="number" id="setting-max-budget" class="input-base" step="0.5" style="width: 100%; font-size: 0.8rem;">
+                <label class="u-text-muted u-d-block u-mb-1 u-s-a2b44b">Teto Orçamentário Padrão ($ USD)</label>
+                <input type="number" id="setting-max-budget" class="input-base u-w-full u-s-22b62c" step="0.5">
               </div>
               <div>
-                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Nível de Esforço Padrão</label>
-                <select id="setting-default-effort" class="input-base" style="width: 100%; font-size: 0.8rem;">
+                <label class="u-text-muted u-d-block u-mb-1 u-s-a2b44b">Nível de Esforço Padrão</label>
+                <select id="setting-default-effort" class="input-base u-w-full u-s-22b62c">
                   <option value="L1FactFinding">L1 - Verificação Factual</option>
                   <option value="L2Comparative" selected>L2 - Análise Comparativa</option>
                   <option value="L3Exhaustive">L3 - Investigação Exaustiva</option>
                 </select>
               </div>
               <div>
-                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Profundidade de Pesquisa (Depth)</label>
-                <input type="number" id="setting-default-depth" class="input-base" min="1" max="5" style="width: 100%; font-size: 0.8rem;">
+                <label class="u-text-muted u-d-block u-mb-1 u-s-a2b44b">Profundidade de Pesquisa (Depth)</label>
+                <input type="number" id="setting-default-depth" class="input-base u-w-full u-s-22b62c" min="1" max="5">
               </div>
               <div>
-                <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 4px;">Lease Timeout (Segundos)</label>
-                <input type="number" id="setting-lease-timeout" class="input-base" min="30" max="600" style="width: 100%; font-size: 0.8rem;">
+                <label class="u-text-muted u-d-block u-mb-1 u-s-a2b44b">Lease Timeout (Segundos)</label>
+                <input type="number" id="setting-lease-timeout" class="input-base u-w-full u-s-22b62c" min="30" max="600">
               </div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                <input type="checkbox" id="setting-auto-obsidian" style="cursor: pointer;">
-                <label for="setting-auto-obsidian" style="font-size: 0.75rem; color: #e2e8f0; cursor: pointer;">Auto-promover para Obsidian ao Concluir</label>
+              <div class="u-d-flex u-items-center u-gap-2 u-mt-1">
+                <input class="u-pointer" type="checkbox" id="setting-auto-obsidian">
+                <label class="u-text-slate-light u-pointer u-s-a2b44b" for="setting-auto-obsidian">Auto-promover para Obsidian ao Concluir</label>
               </div>
-              <button class="btn btn-sm btn-primary" onclick="saveResearchSettings()" style="margin-top: 8px;">Salvar Parâmetros</button>
+              <button class="btn btn-sm btn-primary u-mt-2" onclick="saveResearchSettings()">Salvar Parâmetros</button>
             </div>
           </div>
         </div>

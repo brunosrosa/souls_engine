@@ -9,6 +9,7 @@ pub const DASHBOARD_HTML: &str = concat!(
     "  <style>\n",
     include_str!("styles.css"),
     include_str!("base_body_start.html"),
+    include_str!("components/icons.svg"),
     include_str!("components/topbar.html"),
     include_str!("components/navigation.html"),
     include_str!("tabs/overview.html"),

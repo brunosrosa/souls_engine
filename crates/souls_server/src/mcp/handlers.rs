@@ -1355,6 +1355,8 @@ pub async fn handle_cloud_champions(
 
     let filtered: Vec<_> = if profile_filter == "all" {
         champions
+    } else if let Some(target_kind) = souls_llm_cloud_arena::TaskProfileKind::from_str_lossy(profile_filter) {
+        champions.into_iter().filter(|c| c.profile == target_kind).collect()
     } else {
         champions.into_iter().filter(|c| c.profile.as_str() == profile_filter).collect()
     };

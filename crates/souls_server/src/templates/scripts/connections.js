@@ -35,45 +35,45 @@ function renderClis(clis) {
   if (badgeSection) badgeSection.textContent = `${installedCount} de ${clis.length} Instaladas`;
 
   if (clis.length === 0) {
-    container.innerHTML = '<div style="color: var(--text-muted); padding: 10px;">Nenhuma CLI catalogada.</div>';
+    container.innerHTML = '<div class="u-text-muted u-s-801160">Nenhuma CLI catalogada.</div>';
     return;
   }
 
   container.innerHTML = clis.map(cli => {
     const isInst = cli.is_installed;
-    const statusColor = isInst ? '#22c55e' : '#64748b';
+    const statusColor = isInst ? '#22c55e' : '#71717A';
     const statusText = isInst ? 'Disponível no Host' : 'Não Instalada';
     const borderStyle = isInst ? 'border-color: rgba(34, 197, 94, 0.3);' : 'border-color: rgba(255, 255, 255, 0.08); opacity: 0.8;';
     const versionDisplay = cli.version ? `v${cli.version}` : (isInst ? 'v1.x' : '--');
     const pathDisplay = cli.resolved_path ? cli.resolved_path : 'Não encontrada no PATH';
 
     const modesBadges = (cli.supported_modes || []).map(m =>
-      `<span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: #cbd5e1; font-family: monospace;">${m}</span>`
+      `<span class="u-text-slate u-mono u-s-e34342">${m}</span>`
     ).join(' ');
 
     return `
-      <div style="background: #0f141c; border: 1px solid #30363d; border-radius: 8px; padding: 16px; ${borderStyle} transition: transform 0.15s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+      <div class="u-s-907208" style="${borderStyle} transition: transform 0.15s ease;">
+        <div class="u-d-flex u-justify-between u-items-start u-mb-10p">
           <div>
-            <h4 style="margin: 0 0 4px 0; font-size: 1.05rem; color: #fff;">${cli.display_name}</h4>
-            <div style="font-family: monospace; font-size: 0.78rem; color: var(--cyan);">${cli.binary_name}</div>
+            <h4 class="u-text-white u-s-c6b43a">${cli.display_name}</h4>
+            <div class="u-mono u-text-cyan u-s-a768c1">${cli.binary_name}</div>
           </div>
-          <span style="background: ${isInst ? 'rgba(34, 197, 94, 0.15)' : 'rgba(100, 116, 139, 0.15)'}; color: ${statusColor}; border: 1px solid ${statusColor}; border-radius: 4px; font-size: 0.72rem; padding: 3px 8px; font-weight: 600;">
+          <span class="u-fw-600 u-s-463ae6" style="background: ${isInst ? 'rgba(34, 197, 94, 0.15)' : 'rgba(100, 116, 139, 0.15)'}; color: ${statusColor}; border: 1px solid ${statusColor};">
             ${statusText}
           </span>
         </div>
 
-        <div style="font-size: 0.82rem; margin-bottom: 8px; display: flex; justify-content: space-between;">
-          <span style="color: var(--text-muted);">Versão:</span>
-          <strong style="color: #fff;">${versionDisplay}</strong>
+        <div class="u-mb-2 u-d-flex u-justify-between u-s-5b9d54">
+          <span class="u-text-muted">Versão:</span>
+          <strong class="u-text-white">${versionDisplay}</strong>
         </div>
 
-        <div style="font-size: 0.78rem; margin-bottom: 10px; color: var(--text-muted); word-break: break-all; background: rgba(0,0,0,0.25); padding: 6px 8px; border-radius: 4px; font-family: monospace;">
+        <div class="u-mb-10p u-text-muted u-mono u-s-6244d7">
           ${pathDisplay}
         </div>
 
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Modos Suportados:</div>
-        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <div class="u-text-muted u-mb-1 u-s-22b62c">Modos Suportados:</div>
+        <div class="u-d-flex u-gap-6p u-flex-wrap">
           ${modesBadges}
         </div>
       </div>
@@ -90,7 +90,7 @@ function renderProviders(providers) {
   if (badgeSection) badgeSection.textContent = `${providers.length} Provedores Homologados`;
 
   if (providers.length === 0) {
-    container.innerHTML = '<div style="color: var(--text-muted); padding: 10px;">Nenhum provedor retornado.</div>';
+    container.innerHTML = '<div class="u-text-muted u-s-801160">Nenhum provedor retornado.</div>';
     return;
   }
 
@@ -98,52 +98,52 @@ function renderProviders(providers) {
     const isConfig = p.is_configured;
     const statusColor = isConfig ? '#22c55e' : '#f59e0b';
     const statusLabel = isConfig ? 'Ativo (Chave Detectada)' : 'Aguardando Chave';
-    const keyInfo = p.masked_key ? `<code style="color: var(--cyan);">${p.masked_key}</code>` : `<code style="color: #f59e0b;">$${p.auth_header_env}</code>`;
+    const keyInfo = p.masked_key ? `<code class="u-text-cyan">${p.masked_key}</code>` : `<code class="u-s-aba882">$${p.auth_header_env}</code>`;
     const cachePct = Math.round(p.default_cache_discount * 100);
 
     const modelsList = (p.models || []).slice(0, 3).map(m => `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); font-size: 0.78rem;">
-        <span style="color: #e2e8f0; font-family: monospace;">${m.model_id}</span>
-        <span style="color: var(--emerald);">$${m.cost_input_per_m.toFixed(2)} / $${m.cost_output_per_m.toFixed(2)}</span>
+      <div class="u-d-flex u-justify-between u-items-center u-s-69f3f1">
+        <span class="u-text-slate-light u-mono">${m.model_id}</span>
+        <span class="u-text-green">$${m.cost_input_per_m.toFixed(2)} / $${m.cost_output_per_m.toFixed(2)}</span>
       </div>
     `).join('');
 
     return `
-      <div style="background: #0f141c; border: 1px solid #30363d; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+      <div class="u-d-flex u-flex-col u-justify-between u-s-907208">
         <div>
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <div class="u-d-flex u-justify-between u-items-start u-mb-2">
             <div>
-              <h4 style="margin: 0 0 2px 0; font-size: 1.05rem; color: #fff;">${p.name}</h4>
-              <div style="font-family: monospace; font-size: 0.75rem; color: var(--text-muted); word-break: break-all;">${p.base_url}</div>
+              <h4 class="u-text-white u-s-d6b5d4">${p.name}</h4>
+              <div class="u-mono u-text-muted u-s-ecd7f5">${p.base_url}</div>
             </div>
-            <span style="background: ${isConfig ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)'}; color: ${statusColor}; border: 1px solid ${statusColor}; border-radius: 4px; font-size: 0.72rem; padding: 2px 7px; font-weight: 600; white-space: nowrap;">
+            <span class="u-fw-600 u-nowrap u-s-deb014" style="background: ${isConfig ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)'}; color: ${statusColor}; border: 1px solid ${statusColor};">
               ${statusLabel}
             </span>
           </div>
 
-          <div style="background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; margin: 10px 0; font-size: 0.8rem;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span style="color: var(--text-muted);">Credencial (${p.auth_header_env}):</span>
+          <div class="u-s-45aaa6">
+            <div class="u-d-flex u-justify-between u-mb-1">
+              <span class="u-text-muted">Credencial (${p.auth_header_env}):</span>
               <span>${keyInfo}</span>
             </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span style="color: var(--text-muted);">Desconto Prompt Cache:</span>
-              <strong style="color: var(--cyan);">${cachePct}% OFF</strong>
+            <div class="u-d-flex u-justify-between">
+              <span class="u-text-muted">Desconto Prompt Cache:</span>
+              <strong class="u-text-cyan">${cachePct}% OFF</strong>
             </div>
           </div>
 
-          <div style="margin-bottom: 8px; font-size: 0.8rem; color: var(--text-muted);">
+          <div class="u-mb-2 u-text-muted u-s-22b62c">
             Modelos Canônicos (${p.models_count}):
           </div>
-          <div style="margin-bottom: 12px;">
+          <div class="u-mb-3">
             ${modelsList}
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; margin-top: 6px;">
-          <span id="ping-res-${p.slug}" style="font-size: 0.78rem; color: var(--text-muted);">Latência: --</span>
-          <button class="btn btn-secondary" onclick="testProviderPing('${p.slug}', this)" style="padding: 4px 10px; font-size: 0.78rem;">
-            ⚡ Testar Ping
+        <div class="u-d-flex u-justify-between u-items-center u-mt-6p u-s-2f8642">
+          <span class="u-text-muted u-s-a768c1" id="ping-res-${p.slug}">Latência: --</span>
+          <button class="btn btn-secondary u-s-7a00b7" onclick="testProviderPing('${p.slug}', this)">
+            ${uiIcon('zap', 'icon-xs')} Testar Ping
           </button>
         </div>
       </div>
@@ -206,7 +206,10 @@ async function dispatchCliTask() {
   }
 
   const cli = cliSelect ? cliSelect.value : 'agy';
-  const cwd = cwdInput ? cwdInput.value.trim() : 'Z:\\souls_engine';
+  const defaultRoot = (window.soulsHostDefaults && window.soulsHostDefaults.default_souls_data_path)
+    ? window.soulsHostDefaults.default_souls_data_path.replace(/[\\/]\.souls_data$/i, '')
+    : '.';
+  const cwd = cwdInput && cwdInput.value.trim() ? cwdInput.value.trim() : defaultRoot;
   const timeout = timeoutSelect ? parseInt(timeoutSelect.value, 10) : 300;
   const autoRestore = restoreCheck ? restoreCheck.checked : true;
 
@@ -292,17 +295,17 @@ async function checkGoogleSession() {
 
     if (badge) {
       if (data.is_authenticated && !data.is_expired) {
-        badge.textContent = '✅ Sessão Ativa';
+        badge.innerHTML = `${uiIcon('check-circle', 'icon-xs')} Sessão Ativa`;
         badge.style.background = 'rgba(34, 197, 94, 0.15)';
         badge.style.color = '#22c55e';
         badge.style.borderColor = '#22c55e';
       } else if (data.is_expired) {
-        badge.textContent = '⚠️ Sessão Expirada';
+        badge.innerHTML = `${uiIcon('alert-triangle', 'icon-xs')} Sessão Expirada`;
         badge.style.background = 'rgba(234, 179, 8, 0.15)';
         badge.style.color = '#eab308';
         badge.style.borderColor = '#eab308';
       } else {
-        badge.textContent = '🔒 Desconectado';
+        badge.innerHTML = `${uiIcon('lock', 'icon-xs')} Desconectado`;
         badge.style.background = 'rgba(239, 68, 68, 0.15)';
         badge.style.color = '#ef4444';
         badge.style.borderColor = '#ef4444';
@@ -415,7 +418,7 @@ async function testJulesMigration() {
 
   if (box) box.style.display = 'block';
   if (label) {
-    label.textContent = 'Roteador de Migração Jules ➔ agy';
+    label.textContent = 'Roteador de Migração Jules -> agy';
     label.style.color = 'var(--cyan)';
   }
 

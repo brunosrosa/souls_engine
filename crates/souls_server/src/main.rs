@@ -1247,7 +1247,7 @@ impl FixtureService {
         let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(val["status"], "success");
-        assert_eq!(val["profiles_count"], 6);
+        assert_eq!(val["profiles_count"], 9);
 
         // 2. MCP tools/call cloud_champions
         let mcp_payload = serde_json::json!({
@@ -3390,5 +3390,46 @@ model:
         assert_eq!(val_hit["lean_path"], "Desktop.Button[Salvar]");
         assert_eq!(val_hit["click_coords"][0], 140.0);
         assert_eq!(val_hit["click_coords"][1], 115.0);
+    }
+
+    #[test]
+    fn test_milestone_v091_precision_dark_svg_and_zero_hardcodes() {
+        let html = crate::templates::DASHBOARD_HTML;
+
+        // 1. Sprite SVG Duotone embutido e sistema de icones
+        assert!(html.contains(r#"xmlns="http://www.w3.org/2000/svg" class="svg-sprite-defs""#));
+        assert!(html.contains(r#"<symbol id="icon-"#));
+
+        // 2. Navegacao por Pilares + Command Palette (Ctrl+K)
+        assert!(html.contains(r#"id="cmd-palette-modal""#));
+        assert!(html.contains(r#"id="pillar-subnav-agents""#));
+        assert!(html.contains(r#"id="pillar-subnav-system""#));
+
+        // 3. 6 Lab Drawers colapsaveis (fechados por padrao)
+        for drawer_id in [
+            "drawer-lab-finops",
+            "drawer-lab-memory",
+            "drawer-lab-sandbox",
+            "drawer-lab-reasoning",
+            "drawer-lab-router",
+            "drawer-lab-fallback",
+        ] {
+            assert!(
+                html.contains(drawer_id),
+                "Expected collapsible lab drawer ID '{drawer_id}' in DASHBOARD_HTML"
+            );
+        }
+
+        // 4. Precision Dark OKLCH & Auto-Save + Estabilidade CLS
+        assert!(html.contains("oklch("));
+        assert!(html.contains(r#"id="settings-autosave-status""#));
+        assert!(html.contains("scheduleSettingsAutoSave"));
+        assert!(html.contains("contain: layout style;"));
+
+        // 5. Purga de hardware especifico e caminhos absolutos hardcoded
+        assert!(!html.contains("RTX 2060"));
+        assert!(!html.contains("9980HK"));
+        assert!(!html.contains(r"Z:\souls_engine"));
+        assert!(!html.contains(r"Z:\\souls_engine"));
     }
 }

@@ -3,104 +3,104 @@
       <!-- BANNER HERO DO MASTER BRAIN GERAL -->
       <div class="brain-hero">
         <div class="brain-info">
-          <div class="brain-avatar">🧠</div>
+          <div class="brain-avatar"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-brain"></use></svg></div>
           <div class="brain-details">
             <h3>
               <span>Master Brain Geral:</span>
-              <span id="hero-brain-model" style="color: var(--cyan);">deepseek/deepseek-chat</span>
+              <span class="u-text-cyan" id="hero-brain-model">deepseek/deepseek-chat</span>
               <span class="brain-badge badge-cloud" id="hero-brain-badge">Cloud API</span>
-              <span class="badge badge-champion" id="hero-snapshot-badge" style="font-size: 0.68rem; margin-left: 6px;" title="FrozenMemorySnapshot Imutável (Prefix Cache >95%)">🔒 Snap Ativo</span>
+              <span class="badge badge-champion u-s-60c951" id="hero-snapshot-badge" title="FrozenMemorySnapshot Imutável (Prefix Cache >95%)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg> Snap Ativo</span>
             </h3>
             <div class="brain-meta">
-              <span>Provedor: <strong id="hero-brain-provider" style="color: #fff;">nous</strong></span>
+              <span>Provedor: <strong class="u-text-white" id="hero-brain-provider">nous</strong></span>
               <span>&bull;</span>
-              <span>Janela: <strong id="hero-brain-ctx" style="color: #fff;">64,000 tokens</strong></span>
+              <span>Janela: <strong class="u-text-white" id="hero-brain-ctx">64,000 tokens</strong></span>
               <span>&bull;</span>
-              <span>Recall L3: <strong style="color: var(--cyan);" id="hero-recall-mode-text">⚡ Adaptativo</strong></span>
+              <span>Recall L3: <strong class="u-text-cyan" id="hero-recall-mode-text"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Adaptativo</strong></span>
               <span>&bull;</span>
-              <span>Status: <strong style="color: var(--green);" id="hero-brain-status">Conectado / Saudável</strong></span>
+              <span>Status: <strong class="u-text-green" id="hero-brain-status">Conectado / Saudável</strong></span>
               <span>&bull;</span>
-              <span style="color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
+              <span class="u-text-muted u-d-inline-flex u-items-center u-gap-6p">
                 Modelo fixo durante o diálogo &bull; Governança:
                 <button class="agents-doc-link" onclick="openAgentsMdModal('hermes')" title="Clique para ler o AGENTS.md do Hermes Agent (Invariantes de Prompt Caching e Arquitetura)">
-                  📄 Hermes AGENTS.md
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg> Hermes AGENTS.md
                 </button>
               </span>
             </div>
           </div>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
-          <button class="btn" style="white-space: nowrap; height: 38px; padding: 0 16px;" onclick="pinOrRefreshSnapshot(true)" title="Recarregar MEMORY.md e USER.md na próxima sessão">
-            <span>📌</span> Atualizar Snapshot
+        <div class="brain-hero-actions">
+          <button class="btn u-nowrap u-s-486f51" onclick="pinOrRefreshSnapshot(true)" title="Recarregar MEMORY.md e USER.md na próxima sessão">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-pin"></use></svg> Atualizar Snapshot
           </button>
-          <button class="btn btn-cyan" style="white-space: nowrap; height: 38px; padding: 0 16px;" onclick="switchTab('tab-settings')">
-            <span>⚙️</span> Alternar Preset do Brain
+          <button class="btn btn-cyan u-nowrap u-s-486f51" onclick="switchTab('tab-settings')">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Alternar Preset do Brain
           </button>
         </div>
       </div>
 
       <!-- PAINEL CENTRAL: EVOLUÇÃO PESSOAL & PULSO DO ECOSSISTEMA -->
-      <div class="card card-highlight" style="margin-bottom: 24px;">
-        <div class="card-header" style="margin-bottom: 12px;">
+      <div class="card card-highlight u-mb-6">
+        <div class="card-header u-mb-3">
           <div class="card-title">
-            <div class="card-icon icon-cyan">🌱</div>
+            <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-seedling"></use></svg></div>
             <div>
-              <div style="font-size: 1.05rem; font-weight: 700; color: #fff;">Evolução Pessoal & Pulso do Ecossistema</div>
-              <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
+              <div class="u-fw-700 u-text-white u-s-7a04c0">Evolução Pessoal & Pulso do Ecossistema</div>
+              <div class="u-text-muted u-mt-2p u-s-d3bc8d">
                 Seu cofre cognitivo aprende e amadurece a cada interação, economizando tokens e blindando seus dados soberanos.
               </div>
             </div>
           </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="u-d-flex u-gap-2 u-items-center">
             <span class="badge badge-champion" id="pulse-level-badge">Nível 2 — Curadoria Ativa</span>
-            <button class="btn btn-sm" onclick="fetchEcosystemPulse()" title="Sincronizar métricas de evolução">
-              <span>🔄</span> Atualizar
+            <button class="btn btn-sm qa-btn qa-cyan" id="btn-pulse-refresh" onclick="fetchEcosystemPulse(true)" title="Sincronizar métricas de evolução">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar
             </button>
           </div>
         </div>
 
         <!-- 4 KPIS DE ALTO IMPACTO HUMANO -->
-        <div class="stat-row" style="margin-top: 0; margin-bottom: 16px;">
-          <div class="stat-box" style="flex: 1; min-width: 180px;" title="Nível cognitivo do ecossistema pessoal">
-            <div class="stat-lbl">📈 Nível de Maturidade</div>
-            <div class="stat-num" id="pulse-evolution-score" style="color: var(--cyan); font-size: 1.15rem;">Nível 3 &bull; 65/100</div>
-            <div id="pulse-evolution-sub" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">Ecossistema Aumentado</div>
+        <div class="stat-row stat-row-4 u-mb-4" id="pulse-kpi-grid">
+          <div class="stat-box u-flex-1 u-s-d369d4" title="Nível cognitivo do ecossistema pessoal">
+            <div class="stat-lbl"><svg class="ui-icon icon-xs u-text-cyan" aria-hidden="true"><use href="#icon-trending-up"></use></svg> Nível de Maturidade</div>
+            <div class="stat-num u-text-cyan u-s-ff0d51" id="pulse-evolution-score">Nível 3 &bull; 65/100</div>
+            <div class="u-text-muted u-mt-1 u-s-923ef2" id="pulse-evolution-sub">Ecossistema Aumentado</div>
           </div>
-          <div class="stat-box" style="flex: 1; min-width: 180px;" title="Economia consolidada em dólares">
-            <div class="stat-lbl">💰 Economia FinOps Total</div>
-            <div class="stat-num" id="pulse-finops-saved" style="color: var(--green); font-size: 1.15rem;">$14.20 USD</div>
-            <div id="pulse-cache-eff" style="font-size: 0.68rem; color: var(--green); margin-top: 4px;">88.4% via Cache & Silício Local</div>
+          <div class="stat-box u-flex-1 u-s-d369d4" title="Economia consolidada em dólares">
+            <div class="stat-lbl"><svg class="ui-icon icon-xs u-text-green" aria-hidden="true"><use href="#icon-dollar"></use></svg> Economia FinOps Total</div>
+            <div class="stat-num u-text-green u-s-ff0d51" id="pulse-finops-saved">$14.20 USD</div>
+            <div class="u-text-green u-mt-1 u-s-923ef2" id="pulse-cache-eff">88.4% via Cache & Silício Local</div>
           </div>
-          <div class="stat-box" style="flex: 1; min-width: 180px;" title="Total de entidades e fatos catalogados">
-            <div class="stat-lbl">🧠 Conhecimento Soberano</div>
-            <div class="stat-num" id="pulse-entities-count" style="color: var(--purple); font-size: 1.15rem;">158 Fatos / Nós</div>
-            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">Cofre Seguro (Zero Vazamento)</div>
+          <div class="stat-box u-flex-1 u-s-d369d4" title="Total de entidades e fatos catalogados">
+            <div class="stat-lbl"><svg class="ui-icon icon-xs u-text-purple" aria-hidden="true"><use href="#icon-brain"></use></svg> Conhecimento Soberano</div>
+            <div class="stat-num u-text-purple u-s-ff0d51" id="pulse-entities-count">158 Fatos / Nós</div>
+            <div class="u-text-muted u-mt-1 u-s-923ef2">Cofre Seguro (Zero Vazamento)</div>
           </div>
-          <div class="stat-box" style="flex: 1; min-width: 180px;" title="Estado das acelerações e provedores">
-            <div class="stat-lbl">⚡ Prontidão de Hardware</div>
-            <div class="stat-num" id="pulse-hw-readiness" style="color: #38bdf8; font-size: 1.15rem;">Nominal / Pronto</div>
-            <div id="pulse-providers-active" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">Provedores Conectados</div>
+          <div class="stat-box u-flex-1 u-s-d369d4" title="Estado das acelerações e provedores">
+            <div class="stat-lbl"><svg class="ui-icon icon-xs u-text-amber" aria-hidden="true"><use href="#icon-zap"></use></svg> Prontidão de Hardware</div>
+            <div class="stat-num u-text-cyan u-s-ff0d51" id="pulse-hw-readiness">Estável / Pronto</div>
+            <div class="u-text-muted u-mt-1 u-s-923ef2" id="pulse-providers-active">Provedores Conectados</div>
           </div>
         </div>
 
         <!-- AÇÕES RÁPIDAS EM 1 CLIQUE -->
-        <div style="border-top: 1px solid var(--border-subtle); padding-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-          <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Ações Rápidas do Produto:</span>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="btn btn-sm btn-cyan" onclick="switchTab('tab-research')" title="Iniciar pesquisa de mercado ou técnica">
-              <span>🔬</span> Nova Pesquisa Profunda
+        <div class="quick-actions-strip u-s-0c5bf3">
+          <span class="quick-actions-label u-text-muted u-fw-600 u-uppercase u-s-13664d">Ações Rápidas do Produto:</span>
+          <div class="quick-actions-buttons">
+            <button class="btn btn-sm qa-btn qa-cyan" onclick="switchTab('tab-research')" title="Iniciar pesquisa de mercado ou técnica">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-microscope"></use></svg> Nova Pesquisa Profunda
             </button>
-            <button class="btn btn-sm" onclick="switchTab('tab-personas')" title="Ajustar tom e diretrizes do agente">
-              <span>🎭</span> Personalizar Persona
+            <button class="btn btn-sm qa-btn qa-purple" onclick="switchTab('tab-personas')" title="Ajustar tom e diretrizes do agente">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-masks"></use></svg> Personalizar Persona
             </button>
-            <button class="btn btn-sm" onclick="switchTab('tab-skills')" title="Explorar ou aprovar habilidades">
-              <span>🧩</span> Gerenciar Habilidades
+            <button class="btn btn-sm qa-btn qa-emerald" onclick="switchTab('tab-skills')" title="Explorar ou aprovar habilidades">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-puzzle"></use></svg> Gerenciar Habilidades
             </button>
-            <button class="btn btn-sm" onclick="switchTab('tab-local')" title="Testar velocidade do silício">
-              <span>⚡</span> Modelos & Arena
+            <button class="btn btn-sm qa-btn qa-amber" onclick="switchTab('tab-local')" title="Testar velocidade do silício">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Modelos & Arena
             </button>
-            <button class="btn btn-sm btn-secondary" onclick="switchTab('tab-connections')" title="Configurar chaves de API e CLIs">
-              <span>🔌</span> Conexões & Chaves
+            <button class="btn btn-sm qa-btn qa-indigo" onclick="switchTab('tab-connections')" title="Configurar chaves de API e CLIs">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-plug"></use></svg> Conexões & Chaves
             </button>
           </div>
         </div>
@@ -113,10 +113,10 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">
-              <div class="card-icon icon-cyan">🎮</div>
+              <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-gamepad"></use></svg></div>
               <div>
                 <div>Hardware Local</div>
-                <div class="card-subtitle" id="hw-local-subtitle">NVIDIA GeForce RTX 2060 &bull; Intel Core i9 CPU</div>
+                <div class="card-subtitle" id="hw-local-subtitle">Detectando dGPU Local &bull; Host CPU AVX2</div>
               </div>
             </div>
             <span class="badge badge-champion" id="zone-badge">Nominal Zone</span>
@@ -124,12 +124,12 @@
 
           <div class="metric-gauge-group">
             <div class="gauge-label">
-              <span>Alocação de VRAM sob WDDM (Físico 6.00 GB)</span>
-              <strong id="vram-text">-- GB / 5.17 GB WDDM</strong>
+              <span id="vram-gauge-label">Alocação de VRAM sob WDDM</span>
+              <strong id="vram-text">-- GB / -- GB WDDM</strong>
             </div>
             <div class="gauge-bar-bg">
               <div class="gauge-bar-fill" id="vram-bar" style="width: 12%;"></div>
-              <div class="gauge-marker" id="vram-wddm-marker" style="left: 86%;" title="Teto Útil WDDM (5.17 GB / 5294 MB)"></div>
+              <div class="gauge-marker" id="vram-wddm-marker" style="left: 86%;" title="Teto Útil WDDM Seguro"></div>
             </div>
           </div>
 
@@ -147,18 +147,18 @@
           <div class="stat-row">
             <div class="stat-box" title="Leitura física em tempo real do controlador EC (ATKACPI) e NVML">
               <div class="stat-lbl" id="cooling-lbl">Coolers (CPU / GPU)</div>
-              <div class="stat-num" id="fan-speed" style="font-size: 0.92rem; color: var(--green);">CPU: 2100 RPM</div>
-              <div id="fan-sub" style="font-size: 0.65rem; color: var(--amber); margin-top: 2px;">GPU: 0 RPM (Exaustor)</div>
+              <div class="stat-num u-text-green u-s-13ccaf" id="fan-speed">CPU: 2100 RPM</div>
+              <div class="u-text-amber u-mt-2p u-s-3b4cd3" id="fan-sub">GPU: 0 RPM (Exaustor)</div>
             </div>
             <div class="stat-box">
               <div class="stat-lbl">Power Draw</div>
               <div class="stat-num" id="power-draw">-- W</div>
-              <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">NVML Live Sensor</div>
+              <div class="u-text-muted u-mt-2p u-s-3b4cd3">NVML Live Sensor</div>
             </div>
             <div class="stat-box">
               <div class="stat-lbl">Host CPU</div>
               <div class="stat-num" id="cpu-threads">16T AVX2</div>
-              <div id="cpu-name-sub" style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">Intel Core i9</div>
+              <div class="u-text-muted u-mt-2p u-s-3b4cd3" id="cpu-name-sub">Host CPU AVX2</div>
             </div>
           </div>
         </div>
@@ -167,34 +167,34 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">
-              <div class="card-icon icon-green">💰</div>
+              <div class="card-icon icon-green"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-dollar"></use></svg></div>
               <div>
                 <div>FinOps & Eficiência de Silício (E³)</div>
                 <div class="card-subtitle" id="finops-period-subtitle">Métricas reais extraídas do SQLite &bull; Últimos 30 Dias (Mensal)</div>
               </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                <button class="filter-provider-btn" id="btn-finops-day" onclick="setFinopsPeriod('day')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais das últimas 24 horas">Dia</button>
-                <button class="filter-provider-btn active" id="btn-finops-month" onclick="setFinopsPeriod('month')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais dos últimos 30 dias">Mês</button>
-                <button class="filter-provider-btn" id="btn-finops-year" onclick="setFinopsPeriod('year')" style="padding: 4px 10px; font-size: 0.7rem;" title="Filtrar métricas reais acumuladas nos últimos 365 dias">Ano</button>
+            <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+              <div class="filter-pills-group u-s-22eebb">
+                <button class="filter-provider-btn u-s-2ef2ca" id="btn-finops-day" onclick="setFinopsPeriod('day')" title="Filtrar métricas reais das últimas 24 horas">Dia</button>
+                <button class="filter-provider-btn active u-s-2ef2ca" id="btn-finops-month" onclick="setFinopsPeriod('month')" title="Filtrar métricas reais dos últimos 30 dias">Mês</button>
+                <button class="filter-provider-btn u-s-2ef2ca" id="btn-finops-year" onclick="setFinopsPeriod('year')" title="Filtrar métricas reais acumuladas nos últimos 365 dias">Ano</button>
               </div>
               <span class="badge badge-value" id="finops-arena-runs-badge">137 Ensaios Locais</span>
             </div>
           </div>
 
-          <div class="stat-row" style="margin-top: 0; margin-bottom: 14px;">
+          <div class="stat-row u-mb-14p u-s-c31228">
             <div class="stat-box" title="Total real de tokens processados no período selecionado (Arena + Checkpoints L3 + Diários + Telemetria)">
               <div class="stat-lbl" id="tokens-period-lbl">Tokens (Mês)</div>
               <div class="stat-num" id="tokens-today">--</div>
             </div>
             <div class="stat-box" title="Economia real calculada sobre execuções locais vs tarifa média Cloud Frontier no período">
               <div class="stat-lbl" id="usd-period-lbl">Economia USD</div>
-              <div class="stat-num" id="usd-saved" style="color: var(--green);">$--</div>
+              <div class="stat-num u-text-green" id="usd-saved">$--</div>
             </div>
             <div class="stat-box" title="Média empírica de eficiência E³ dos 14 modelos homologados no Heuristic Vault">
               <div class="stat-lbl">E³ Score Médio</div>
-              <div class="stat-num" id="e3-score" style="color: var(--cyan);">--</div>
+              <div class="stat-num u-text-cyan" id="e3-score">--</div>
             </div>
           </div>
 
@@ -204,7 +204,7 @@
               <strong id="local-share-text">--% Local (Silício $0)</strong>
             </div>
             <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" id="local-share-bar" style="width: 85%; background: var(--green);"></div>
+              <div class="gauge-bar-fill u-s-94eeef" id="local-share-bar" style="width: 85%;"></div>
             </div>
           </div>
 
@@ -214,7 +214,7 @@
               <strong id="ast-savings-text">--% Tokens Poupados</strong>
             </div>
             <div class="gauge-bar-bg">
-              <div class="gauge-bar-fill" id="ast-savings-bar" style="width: 80.5%; background: var(--purple);"></div>
+              <div class="gauge-bar-fill u-s-a8f8f5" id="ast-savings-bar" style="width: 80.5%;"></div>
             </div>
           </div>
         </div>
@@ -223,50 +223,50 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">
-              <div class="card-icon icon-purple">🧠</div>
+              <div class="card-icon icon-purple"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-brain"></use></svg></div>
               <div>
                 <div>Memória de Longo Prazo & Cofre Pessoal</div>
                 <div class="card-subtitle">Hipocampo L3 &bull; Ponte Bidirecional Hermes &bull; Partição ReFS</div>
               </div>
             </div>
-            <span class="badge badge-champion" id="sqlite-vault-size-badge" title="Tamanho físico real dos bancos SQLite (modo STRICT WAL de alta integridade) gravados no Dev Drive Z:\">💾 Banco Z:\ &bull; 4.75 MB</span>
+            <span class="badge badge-champion" id="sqlite-vault-size-badge" title="Tamanho físico real dos bancos SQLite (modo STRICT WAL de alta integridade) gravados no diretório de dados ativo"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-database"></use></svg> Cofre WAL &bull; -- MB</span>
           </div>
 
-          <div class="stat-row" style="margin-top: 0; margin-bottom: 12px;">
+          <div class="stat-row u-mb-3 u-s-c31228">
             <div class="stat-box" title="Memórias Epistêmicas Imutáveis (STABLE) vs Aprendizados Dinâmicos (EVOLVING)">
               <div class="stat-lbl">Partições L3</div>
-              <div class="stat-num" id="l3-partitions-stat" style="font-size: 0.95rem; color: var(--cyan);">-- STABLE / -- EVOLV</div>
+              <div class="stat-num u-text-cyan u-s-e1fb4b" id="l3-partitions-stat">-- STABLE / -- EVOLV</div>
             </div>
             <div class="stat-box" title="Grafo Causal Ontológico LadybugDB em RAM + SQLite">
               <div class="stat-lbl">Grafo LadybugDB</div>
-              <div class="stat-num" id="ladybug-nodes" style="font-size: 0.95rem;">-- nós • -- arestas</div>
+              <div class="stat-num u-s-e1fb4b" id="ladybug-nodes">-- nós • -- arestas</div>
             </div>
             <div class="stat-box" title="Notas brutas imutáveis (raw/) e páginas destiladas (wiki/) no Cofre Obsidian">
               <div class="stat-lbl">Cofre Obsidian</div>
-              <div class="stat-num" id="obsidian-vault-stat" style="font-size: 0.95rem;">-- raw • -- wiki</div>
+              <div class="stat-num u-s-e1fb4b" id="obsidian-vault-stat">-- raw • -- wiki</div>
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 12px; background: rgba(15, 23, 42, 0.55); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 10px;">
-            <div style="font-size: 0.74rem; color: var(--text-muted); font-weight: 500;">
+          <div class="u-d-flex u-items-center u-justify-between u-gap-10p u-mb-10p u-s-6d6f76">
+            <div class="u-text-muted u-fw-500 u-s-d3bc8d">
               Modo de Recall L3:
             </div>
-            <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
-              <button class="filter-provider-btn active" id="btn-recall-adaptive" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('adaptive')" title="Alterna automaticamente entre Enxuto (800c) e Expandido + Grafo (2400c) conforme o prompt">
-                <span>⚡</span><span>Adaptativo</span>
+            <div class="filter-pills-group u-gap-1 u-s-22eebb">
+              <button class="filter-provider-btn active u-s-c0672e" id="btn-recall-adaptive" onclick="setRecallModePreference('adaptive')" title="Alterna automaticamente entre Enxuto (800c) e Expandido + Grafo (2400c) conforme o prompt">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg><span>Adaptativo</span>
               </button>
-              <button class="filter-provider-btn" id="btn-recall-lean" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('lean')" title="Recall Enxuto: top-4 memórias diretas (800 chars)">
-                <span>🎯</span><span>Enxuto</span>
+              <button class="filter-provider-btn u-s-c0672e" id="btn-recall-lean" onclick="setRecallModePreference('lean')" title="Recall Enxuto: top-4 memórias diretas (800 chars)">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-target"></use></svg><span>Enxuto</span>
               </button>
-              <button class="filter-provider-btn" id="btn-recall-expanded" style="padding: 5px 12px; font-size: 0.72rem;" onclick="setRecallModePreference('expanded')" title="Recall Expandido: top-8 memórias + Grafo Ontológico LadybugDB (2400 chars)">
-                <span>🧠</span><span>Expandido</span>
+              <button class="filter-provider-btn u-s-c0672e" id="btn-recall-expanded" onclick="setRecallModePreference('expanded')" title="Recall Expandido: top-8 memórias + Grafo Ontológico LadybugDB (2400 chars)">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg><span>Expandido</span>
               </button>
             </div>
           </div>
 
-          <div style="font-size: 0.73rem; color: var(--text-muted); line-height: 1.45; display: flex; justify-content: space-between; align-items: center;">
+          <div class="u-text-muted u-d-flex u-justify-between u-items-center u-s-14aac2">
             <span id="l3-snapshot-summary-line">&bull; Snapshot Imutável: carregando...</span>
-            <span class="mono" style="color: var(--green);" id="l3-checkpoints-count-label">0 Checkpoints v2</span>
+            <span class="mono u-text-green" id="l3-checkpoints-count-label">0 Checkpoints v2</span>
           </div>
         </div>
 
@@ -274,26 +274,26 @@
         <div class="card">
           <div class="card-header">
             <div class="card-title">
-              <div class="card-icon icon-amber">🤖</div>
+              <div class="card-icon icon-amber"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-bot"></use></svg></div>
               Atividade Agêntica & Roteamento Real
             </div>
             <span class="badge badge-lowcost">MCP Loopback :9123</span>
           </div>
 
-          <div style="font-size: 0.75rem; color: var(--text-muted);">
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); gap: 10px;">
+          <div class="u-text-muted u-s-a2b44b">
+            <div class="u-d-flex u-justify-between u-gap-10p u-s-0993c7">
               <span>Última Tarefa / Prova Registrada:</span>
-              <strong class="mono" id="act-last-task" style="color: var(--cyan); text-align: right; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Carregando...</strong>
+              <strong class="mono u-text-cyan u-text-right u-overflow-hidden u-nowrap u-s-5a408e" id="act-last-task">Carregando...</strong>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); gap: 10px;">
+            <div class="u-d-flex u-justify-between u-gap-10p u-s-0993c7">
               <span>Último Modelo no Silício:</span>
-              <strong class="mono" id="act-last-model" style="color: #fff; text-align: right;">Carregando...</strong>
+              <strong class="mono u-text-white u-text-right" id="act-last-model">Carregando...</strong>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+            <div class="u-d-flex u-justify-between u-s-0993c7">
               <span>Throughput Médio Empírico (14 GGUFs):</span>
-              <strong class="mono" id="act-avg-tps" style="color: var(--green);">-- tokens/s</strong>
+              <strong class="mono u-text-green" id="act-avg-tps">-- tokens/s</strong>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+            <div class="u-d-flex u-justify-between u-s-39ffdc">
               <span>Uptime do Daemon & Conexões Ativas:</span>
               <strong class="mono" id="server-uptime">-- min</strong>
             </div>
@@ -303,20 +303,22 @@
       </div>
 
       <!-- CARD 5: ATALHO DIRETO PARA SUBAGENTS ROUTER -->
-      <div class="card card-highlight" style="margin-top: 24px;">
-        <div class="card-header" style="flex-wrap: wrap; gap: 14px;">
-          <div>
-            <div class="card-title">
-              <div class="card-icon icon-amber">🤖</div>
-              Orquestrador de Subagentes, Roteamento Pareto & Handoff (L3 Vault)
+      <div class="card card-highlight u-s-ef7a9d">
+        <div class="card-header u-flex-wrap u-gap-14p">
+          <div class="card-header-media">
+            <div class="card-icon icon-amber"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-bot"></use></svg></div>
+            <div class="card-header-text">
+              <div class="card-title">
+                Orquestrador de Subagentes, Roteamento Pareto &amp; Handoff (L3 Vault)
+              </div>
+              <p class="u-text-muted u-mt-1 u-mb-0 u-s-a768c1">
+                Gerencie os 9 domínios cognitivos de subagentes, selecione entre silício local (<strong class="u-text-cyan">dGPU Bare-Metal $0</strong>) e Cloud, e inspecione diários de pensamento confinados no L3.
+              </p>
             </div>
-            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-              Gerencie os 9 domínios cognitivos de subagentes, selecione entre silício local (<strong style="color: var(--cyan);">RTX 2060m Bare-Metal $0</strong>) e Cloud, e inspecione diários de pensamento confinados no L3.
-            </p>
           </div>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <button class="btn btn-cyan" onclick="switchTab('tab-subagents')" style="padding: 8px 18px; font-weight: 600;">
-              <span>🤖</span> Abrir Subagents Router ➔
+          <div class="card-header-actions">
+            <button class="btn btn-cyan u-fw-600 u-s-940887" onclick="switchTab('tab-subagents')">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-bot"></use></svg> Abrir Subagents Router &rarr;
             </button>
           </div>
         </div>

@@ -8,15 +8,19 @@ use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::collections::{HashMap, HashSet};
 use std::convert::Infallible;
 use std::time::Duration;
+use tokio::task::JoinSet;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::{Stream, StreamExt};
 
 use crate::state::AppState;
 use souls_llm_inventory::{
-    delete_model_file, get_curated_catalog, get_recommended_triad, probe_hardware,
-    resolve_canonical_models_dir, scan_local_models,
+    build_dynamic_hf_catalog_item, delete_model_file, estimate_variant_throughput_tps,
+    get_curated_catalog_from_models, get_recommended_triad_from_models, probe_hardware,
+    resolve_canonical_models_dir, scan_local_models, HardwareDiagnostic, HardwareFit, HfModelFile,
+    HfSearchResult, HuggingFaceClient, HuggingFaceModelItem,
 };
 
 fn derive_gpu_architecture(gpu_name: &str) -> &'static str {
@@ -130,26 +134,213 @@ pub async fn inventory_hardware_handler(State(state): State<AppState>) -> Json<V
     }))
 }
 
-/// Curated recommendations and recommended 3-tier triad.
-pub async fn inventory_recommendations_handler(State(state): State<AppState>) -> Json<Value> {
+#[derive(Debug, Default, Deserialize)]
+pub struct RecommendationsQuery {
+    pub sync: Option<bool>,
+    pub mode: Option<String>,
+}
+
+fn is_elite_hf_author(repo_id: &str) -> bool {
+    let org = repo_id
+        .split('/')
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    matches!(
+        org.as_str(),
+        "qwen"
+            | "bartowski"
+            | "unsloth"
+            | "google"
+            | "meta-llama"
+            | "microsoft"
+            | "nousresearch"
+            | "deepseek-ai"
+            | "nvidia"
+            | "huggingfacetb"
+            | "mistralai"
+            | "lmstudio-community"
+            | "ggml-org"
+    )
+}
+
+async fn fetch_repo_files_batch(
+    hf_client: &HuggingFaceClient,
+    repo_ids: &[String],
+) -> HashMap<String, Vec<HfModelFile>> {
+    let mut set = JoinSet::new();
+    for repo in repo_ids.iter().take(10) {
+        let client = hf_client.clone();
+        let repo_id = repo.clone();
+        set.spawn(async move {
+            let res = tokio::time::timeout(
+                Duration::from_secs(6),
+                client.get_repo_gguf_files(&repo_id),
+            )
+            .await;
+            let files = res.ok().and_then(|r| r.ok()).unwrap_or_default();
+            (repo_id, files)
+        });
+    }
+
+    let mut map = HashMap::new();
+    while let Some(joined) = set.join_next().await {
+        if let Ok((repo_id, files)) = joined {
+            if !files.is_empty() {
+                map.insert(repo_id.to_ascii_lowercase(), files);
+            }
+        }
+    }
+    map
+}
+
+/// Deduplicates raw HF search items and builds dynamic catalog items with real file trees for top hits.
+async fn hydrate_hf_catalog_items(
+    hf_client: &HuggingFaceClient,
+    diag: &HardwareDiagnostic,
+    raw_items: Vec<HfSearchResult>,
+    installed_filenames: &[String],
+    is_trending: bool,
+    exclude_repo_ids: &HashSet<String>,
+    max_items: usize,
+) -> Vec<HuggingFaceModelItem> {
+    let mut seen = HashSet::new();
+    let mut filtered_raw = Vec::new();
+    for r in raw_items {
+        let key = r.repo_id.to_ascii_lowercase();
+        if exclude_repo_ids.contains(&key) || !seen.insert(key) {
+            continue;
+        }
+        if r.downloads < 25 && r.likes < 2 {
+            continue;
+        }
+        filtered_raw.push(r);
+        if filtered_raw.len() >= max_items * 2 {
+            break;
+        }
+    }
+
+    // Prioritize elite authors for sync mode while keeping trending order for trending mode
+    if !is_trending {
+        filtered_raw.sort_by(|a, b| {
+            let ea = is_elite_hf_author(&a.repo_id);
+            let eb = is_elite_hf_author(&b.repo_id);
+            eb.cmp(&ea).then_with(|| b.downloads.cmp(&a.downloads))
+        });
+    }
+
+    let preselected: Vec<HfSearchResult> = filtered_raw
+        .into_iter()
+        .filter(|r| {
+            build_dynamic_hf_catalog_item(diag, r, installed_filenames, is_trending, None)
+                .map(|m| m.parameter_count <= 45_000_000_000 || m.is_moe)
+                .unwrap_or(false)
+        })
+        .take(max_items)
+        .collect();
+
+    let repo_ids: Vec<String> = preselected.iter().map(|r| r.repo_id.clone()).collect();
+    let files_map = fetch_repo_files_batch(hf_client, &repo_ids).await;
+
+    preselected
+        .into_iter()
+        .filter_map(|r| {
+            let real_files = files_map
+                .get(&r.repo_id.to_ascii_lowercase())
+                .map(|v| v.as_slice());
+            build_dynamic_hf_catalog_item(diag, &r, installed_filenames, is_trending, real_files)
+        })
+        .collect()
+}
+
+/// Curated recommendations, evolutionary 3-tier triad, and optional live HF sync / trending feed.
+pub async fn inventory_recommendations_handler(
+    State(state): State<AppState>,
+    Query(params): Query<RecommendationsQuery>,
+) -> Json<Value> {
     let _guard = state.acquire_connection();
     let diag = probe_hardware();
     let root = resolve_canonical_models_dir();
 
     let installed_models = scan_local_models(&root, &diag).unwrap_or_default();
     let installed_filenames: Vec<String> = installed_models
-        .into_iter()
-        .map(|m| m.file_name)
+        .iter()
+        .map(|m| m.file_name.clone())
         .collect();
 
-    let triad = get_recommended_triad(&diag, &installed_filenames);
-    let catalog = get_curated_catalog(&diag, &installed_filenames);
+    let triad = get_recommended_triad_from_models(&diag, &installed_models);
+    let mut catalog = get_curated_catalog_from_models(&diag, &installed_models);
+    let mut existing_repos: HashSet<String> = catalog
+        .iter()
+        .map(|m| m.repo_id.to_ascii_lowercase())
+        .collect();
+
+    let mut synced_live = false;
+    if params.sync == Some(true) {
+        let (qwen3, r1, gemma3, llama32) = tokio::join!(
+            state.hf_client.search_models_ext("Qwen3 GGUF", "downloads", 10),
+            state.hf_client.search_models_ext("DeepSeek-R1 GGUF", "downloads", 8),
+            state.hf_client.search_models_ext("gemma-3 GGUF", "downloads", 8),
+            state.hf_client.search_models_ext("Llama-3.2 GGUF", "downloads", 8),
+        );
+        let mut combined_raw = Vec::new();
+        for res in [qwen3, r1, gemma3, llama32] {
+            if let Ok(items) = res {
+                combined_raw.extend(items);
+            }
+        }
+        let discovered = hydrate_hf_catalog_items(
+            &state.hf_client,
+            &diag,
+            combined_raw,
+            &installed_filenames,
+            false,
+            &existing_repos,
+            10,
+        )
+        .await;
+        if !discovered.is_empty() {
+            synced_live = true;
+            for item in discovered {
+                existing_repos.insert(item.repo_id.to_ascii_lowercase());
+                catalog.push(item);
+            }
+        }
+    }
+
+    let mut trending_catalog = Vec::new();
+    if params.mode.as_deref() == Some("trending") {
+        let (trend_res, recent_qwen, recent_r1) = tokio::join!(
+            state.hf_client.search_models_ext("", "trending", 24),
+            state.hf_client.search_models_ext("Qwen3", "recent", 8),
+            state.hf_client.search_models_ext("DeepSeek", "recent", 6),
+        );
+        let mut raw_trending = Vec::new();
+        for res in [trend_res, recent_qwen, recent_r1] {
+            if let Ok(items) = res {
+                raw_trending.extend(items);
+            }
+        }
+        let empty_set = HashSet::new();
+        trending_catalog = hydrate_hf_catalog_items(
+            &state.hf_client,
+            &diag,
+            raw_trending,
+            &installed_filenames,
+            true,
+            &empty_set,
+            16,
+        )
+        .await;
+    }
 
     Json(json!({
         "status": "success",
         "hardware": enrich_hardware_diagnostic(diag),
         "triad": triad,
         "catalog": catalog,
+        "trending_catalog": trending_catalog,
+        "synced_live": synced_live,
         "installed_count": installed_filenames.len()
     }))
 }
@@ -174,18 +365,153 @@ pub async fn inventory_models_handler(State(state): State<AppState>) -> Json<Val
 pub struct SearchQuery {
     pub q: Option<String>,
     pub query: Option<String>,
+    pub param_filter: Option<String>,
+    pub task_filter: Option<String>,
+    pub sort: Option<String>,
     pub limit: Option<usize>,
+    pub autocomplete: Option<bool>,
 }
 
-/// On-demand search query against the Hugging Face Hub.
+fn matches_search_filters(
+    item: &HuggingFaceModelItem,
+    raw: &HfSearchResult,
+    param_filter: &str,
+    task_filter: &str,
+) -> bool {
+    let t = item.parameter_count as f64 / 1_000_000_000.0;
+    let param_ok = match param_filter {
+        "all" | "" => true,
+        "fit_gpu" => item
+            .variants
+            .iter()
+            .any(|v| v.hardware_fit == HardwareFit::OptimalVram),
+        "sub1b" => t < 1.0 && !item.is_moe,
+        "1b" => (1.0..2.0).contains(&t) && !item.is_moe,
+        "2b" => (2.0..3.0).contains(&t) && !item.is_moe,
+        "3b" => (3.0..4.0).contains(&t) && !item.is_moe,
+        "4b" => (4.0..5.0).contains(&t) && !item.is_moe,
+        "5b" => (5.0..6.0).contains(&t),
+        "6b" => (6.0..7.0).contains(&t),
+        "7b" => (7.0..8.0).contains(&t),
+        "8b" => (8.0..9.0).contains(&t),
+        "9b" => (9.0..10.0).contains(&t),
+        "10b_12b" => (10.0..=12.5).contains(&t),
+        "14b" => t > 12.5 && t <= 16.0,
+        "32b" => t > 16.0 && t <= 45.0,
+        "70b_plus" => t > 45.0,
+        _ => true,
+    };
+    if !param_ok {
+        return false;
+    }
+
+    let r = raw.repo_id.to_ascii_lowercase();
+    let tags_joined = raw.tags.join(" ").to_ascii_lowercase();
+    match task_filter {
+        "all" | "" => true,
+        "coding" => {
+            item.cognitive_profile == "coding"
+                || r.contains("code")
+                || r.contains("coder")
+                || tags_joined.contains("code")
+        }
+        "reasoning" => {
+            item.cognitive_profile == "reasoning"
+                || r.contains("r1")
+                || r.contains("reason")
+                || r.contains("think")
+                || r.contains("qwq")
+                || tags_joined.contains("reasoning")
+        }
+        "agentic" | "tools" => {
+            item.cognitive_profile == "agentic"
+                || r.contains("agent")
+                || r.contains("tool")
+                || r.contains("xlam")
+                || r.contains("hermes")
+                || tags_joined.contains("function-calling")
+        }
+        "vision" => item.is_multimodal_vlm || item.cognitive_profile == "vision",
+        "fast" => item.parameter_count <= 2_000_000_000,
+        "general" | "chat" => {
+            r.contains("instruct")
+                || r.contains("chat")
+                || tags_joined.contains("conversational")
+                || item.cognitive_profile == "agentic"
+        }
+        _ => true,
+    }
+}
+
+fn build_hf_search_query(raw_q: &str, param_filter: &str, task_filter: &str) -> String {
+    let clean_q = raw_q.trim();
+    if !clean_q.is_empty() {
+        return clean_q.to_string();
+    }
+
+    let mut parts: Vec<&str> = Vec::new();
+    match task_filter {
+        "coding" => parts.push("coder"),
+        "reasoning" => parts.push("R1 reasoning"),
+        "agentic" | "tools" => parts.push("function calling"),
+        "vision" => parts.push("VL vision"),
+        "fast" => parts.push("1B instruct"),
+        "general" | "chat" => parts.push("Instruct"),
+        _ => {}
+    }
+    match param_filter {
+        "sub1b" => parts.push("0.5B"),
+        "1b" => parts.push("1B"),
+        "2b" => parts.push("2B"),
+        "3b" => parts.push("3B"),
+        "4b" => parts.push("4B"),
+        "5b" => parts.push("5B"),
+        "6b" => parts.push("6B"),
+        "7b" => parts.push("7B"),
+        "8b" => parts.push("8B"),
+        "9b" => parts.push("9B"),
+        "10b_12b" => parts.push("12B"),
+        "14b" => parts.push("14B"),
+        "32b" => parts.push("32B"),
+        "70b_plus" => parts.push("70B"),
+        "fit_gpu" => {
+            if parts.is_empty() {
+                parts.push("Qwen3");
+            }
+        }
+        _ => {}
+    }
+
+    if parts.is_empty() {
+        "Instruct".to_string()
+    } else {
+        parts.join(" ")
+    }
+}
+
+/// Combined live search against the Hugging Face Hub with hardware-fit and cognitive enrichment.
 pub async fn inventory_search_handler(
     State(state): State<AppState>,
     Query(query): Query<SearchQuery>,
 ) -> Json<Value> {
     let _guard = state.acquire_connection();
     let search_term = query.q.or(query.query).unwrap_or_default();
+    let param_filter = query
+        .param_filter
+        .as_deref()
+        .unwrap_or("all")
+        .trim()
+        .to_ascii_lowercase();
+    let task_filter = query
+        .task_filter
+        .as_deref()
+        .unwrap_or("all")
+        .trim()
+        .to_ascii_lowercase();
+    let sort_mode = query.sort.as_deref().unwrap_or("downloads");
+    let limit = query.limit.unwrap_or(24).clamp(1, 50);
 
-    if search_term.trim().is_empty() {
+    if search_term.trim().is_empty() && param_filter == "all" && task_filter == "all" {
         return Json(json!({
             "status": "success",
             "query": "",
@@ -193,18 +519,146 @@ pub async fn inventory_search_handler(
         }));
     }
 
-    match state.hf_client.search_models(&search_term, query.limit.unwrap_or(20)).await {
-        Ok(results) => Json(json!({
-            "status": "success",
-            "query": search_term,
-            "results": results
-        })),
-        Err(e) => Json(json!({
-            "status": "error",
-            "message": e.to_string(),
-            "results": []
-        })),
+    let effective_query = build_hf_search_query(&search_term, &param_filter, &task_filter);
+    let fetch_limit = if param_filter != "all" || task_filter != "all" {
+        48
+    } else {
+        limit
+    };
+
+    let primary_res = state
+        .hf_client
+        .search_models_ext(&effective_query, sort_mode, fetch_limit)
+        .await;
+
+    let mut raw_results = match primary_res {
+        Ok(items) => items,
+        Err(e) => {
+            return Json(json!({
+                "status": "error",
+                "message": e.to_string(),
+                "results": []
+            }))
+        }
+    };
+
+    // When user provided free-text query plus param/task filters, augment with a targeted query so narrow bands still match
+    if !search_term.trim().is_empty() && (task_filter != "all" || (param_filter != "all" && param_filter != "fit_gpu")) {
+        let task_hint = match task_filter.as_str() {
+            "coding" => Some("coder"),
+            "reasoning" => Some("reasoning"),
+            "vision" => Some("VL"),
+            "agentic" | "tools" => Some("tool"),
+            _ => None,
+        };
+        let param_hint = match param_filter.as_str() {
+            "sub1b" => Some("0.5B"),
+            "1b" => Some("1B"),
+            "2b" => Some("2B"),
+            "3b" => Some("3B"),
+            "4b" => Some("4B"),
+            "5b" => Some("5B"),
+            "6b" => Some("6B"),
+            "7b" => Some("7B"),
+            "8b" => Some("8B"),
+            "9b" => Some("9B"),
+            "10b_12b" => Some("12B"),
+            "14b" => Some("14B"),
+            "32b" => Some("32B"),
+            "70b_plus" => Some("70B"),
+            _ => None,
+        };
+        let mut extra_terms = vec![search_term.trim()];
+        if let Some(p) = param_hint {
+            if !search_term.to_ascii_lowercase().contains(&p.to_ascii_lowercase()) {
+                extra_terms.push(p);
+            }
+        }
+        if let Some(t) = task_hint {
+            if !search_term.to_ascii_lowercase().contains(t) {
+                extra_terms.push(t);
+            }
+        }
+        if extra_terms.len() > 1 {
+            let augmented = extra_terms.join(" ");
+            if let Ok(extra) = state
+                .hf_client
+                .search_models_ext(&augmented, sort_mode, 25)
+                .await
+            {
+                let mut combined = extra;
+                combined.extend(raw_results);
+                raw_results = combined;
+            }
+        }
     }
+
+    let diag = probe_hardware();
+    let installed_filenames: Vec<String> = if query.autocomplete == Some(true) {
+        Vec::new()
+    } else {
+        let root = resolve_canonical_models_dir();
+        scan_local_models(&root, &diag)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|m| m.file_name)
+            .collect()
+    };
+
+    let is_trending = sort_mode.eq_ignore_ascii_case("trending");
+    let mut seen = HashSet::new();
+    let mut enriched_results = Vec::new();
+
+    for r in raw_results {
+        let key = r.repo_id.to_ascii_lowercase();
+        if !seen.insert(key) {
+            continue;
+        }
+        let Some(item) =
+            build_dynamic_hf_catalog_item(&diag, &r, &installed_filenames, is_trending, None)
+        else {
+            continue;
+        };
+        if !matches_search_filters(&item, &r, &param_filter, &task_filter) {
+            continue;
+        }
+
+        let primary_var = item
+            .variants
+            .iter()
+            .find(|v| v.is_recommended_fit)
+            .or_else(|| item.variants.first());
+        let primary_fit = primary_var
+            .map(|v| v.hardware_fit)
+            .unwrap_or(HardwareFit::PartialCpuOffload);
+
+        let mut val = serde_json::to_value(&r).unwrap_or_else(|_| json!({}));
+        if let Some(obj) = val.as_object_mut() {
+            obj.insert("hardware_fit".to_string(), json!(primary_fit));
+            obj.insert(
+                "estimated_tps".to_string(),
+                json!(item.benchmark_scores.speed_tokens_sec_estimate),
+            );
+            obj.insert("parameter_count".to_string(), json!(item.parameter_count));
+            obj.insert("is_moe".to_string(), json!(item.is_moe));
+            obj.insert("cognitive_profile".to_string(), json!(item.cognitive_profile));
+            obj.insert("category_role".to_string(), json!(item.category_role));
+            obj.insert("is_downloaded".to_string(), json!(item.is_downloaded));
+            obj.insert("local_file_path".to_string(), json!(item.local_file_path));
+            obj.insert("catalog_item".to_string(), json!(item));
+        }
+        enriched_results.push(val);
+        if enriched_results.len() >= limit {
+            break;
+        }
+    }
+
+    Json(json!({
+        "status": "success",
+        "query": search_term.trim(),
+        "effective_query": effective_query,
+        "results": enriched_results
+    }))
 }
 
 #[derive(Debug, Deserialize)]
@@ -219,19 +673,35 @@ pub async fn inventory_repo_files_handler(
 ) -> Json<Value> {
     let _guard = state.acquire_connection();
     let diag = probe_hardware();
+    let root = resolve_canonical_models_dir();
+    let installed_models = scan_local_models(&root, &diag).unwrap_or_default();
 
     match state.hf_client.get_repo_gguf_files(&query.repo_id).await {
         Ok(files) => {
             let files_with_fit: Vec<Value> = files
                 .into_iter()
                 .map(|f| {
-                    let (total_params, _, _) = souls_llm_inventory::parse_model_params_from_name(&f.file_name, Some(f.size_bytes));
+                    let (total_params, active_params, _) =
+                        souls_llm_inventory::parse_model_params_from_name(
+                            &f.file_name,
+                            Some(f.size_bytes),
+                        );
+                    let eval_params = active_params.unwrap_or(total_params);
                     let fit = souls_llm_inventory::evaluate_model_fit(
                         &diag,
                         f.size_bytes,
                         8192,
                         total_params,
                     );
+                    let estimated_tps = estimate_variant_throughput_tps(
+                        &diag,
+                        fit,
+                        f.size_bytes,
+                        eval_params,
+                    );
+                    let matched_local = installed_models.iter().find(|im| {
+                        im.file_name.eq_ignore_ascii_case(&f.file_name)
+                    });
                     json!({
                         "file_name": f.file_name,
                         "size_bytes": f.size_bytes,
@@ -239,7 +709,10 @@ pub async fn inventory_repo_files_handler(
                         "download_url": f.download_url,
                         "sha256": f.sha256,
                         "quant_tag": f.quant_tag,
-                        "hardware_fit": fit
+                        "hardware_fit": fit,
+                        "estimated_tps": estimated_tps,
+                        "is_installed": matched_local.is_some(),
+                        "installed_file_name": matched_local.map(|m| m.file_name.clone()),
                     })
                 })
                 .collect();
@@ -508,5 +981,55 @@ mod tests {
         assert_eq!(params_70b, 70_000_000_000);
         let fit_70b = souls_llm_inventory::evaluate_model_fit(&diag, 40_000_000_000, 8192, params_70b);
         assert!(!matches!(fit_70b, souls_llm_inventory::HardwareFit::OptimalVram));
+    }
+
+    #[test]
+    fn test_combined_hf_search_query_and_fit_filters() {
+        assert_eq!(build_hf_search_query("bartowski", "4b", "coding"), "bartowski");
+        assert_eq!(build_hf_search_query("", "4b", "coding"), "coder 4B");
+        assert_eq!(build_hf_search_query("", "fit_gpu", "all"), "Qwen3");
+
+        let diag = HardwareDiagnostic {
+            has_dedicated_gpu: true,
+            gpu_name: "NVIDIA GeForce RTX 2060".to_string(),
+            cpu_name: "Intel Core i9".to_string(),
+            vram_total_mb: 6144,
+            vram_free_mb: 5000,
+            vram_safe_usable_mb: 5294,
+            host_ram_total_mb: 32768,
+            host_ram_available_mb: 24000,
+            host_ram_safe_usable_mb: 20000,
+            cpu_cores_physical: 8,
+            cpu_cores_logical: 16,
+            has_avx2: true,
+            has_avx512: false,
+        };
+
+        let raw_4b = HfSearchResult {
+            repo_id: "Qwen/Qwen3-4B-Coder-GGUF".to_string(),
+            author: Some("Qwen".to_string()),
+            downloads: 12000,
+            likes: 90,
+            last_modified: None,
+            pipeline_tag: Some("text-generation".to_string()),
+            tags: vec!["gguf".to_string(), "code".to_string()],
+        };
+        let item_4b = build_dynamic_hf_catalog_item(&diag, &raw_4b, &[], false, None).unwrap();
+        assert!(matches_search_filters(&item_4b, &raw_4b, "fit_gpu", "coding"));
+        assert!(matches_search_filters(&item_4b, &raw_4b, "4b", "coding"));
+        assert!(!matches_search_filters(&item_4b, &raw_4b, "14b", "coding"));
+
+        let raw_32b = HfSearchResult {
+            repo_id: "Qwen/Qwen2.5-Coder-32B-Instruct-GGUF".to_string(),
+            author: Some("Qwen".to_string()),
+            downloads: 50000,
+            likes: 300,
+            last_modified: None,
+            pipeline_tag: Some("text-generation".to_string()),
+            tags: vec!["gguf".to_string()],
+        };
+        let item_32b = build_dynamic_hf_catalog_item(&diag, &raw_32b, &[], false, None).unwrap();
+        assert!(!matches_search_filters(&item_32b, &raw_32b, "fit_gpu", "all"));
+        assert!(matches_search_filters(&item_32b, &raw_32b, "32b", "coding"));
     }
 }

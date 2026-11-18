@@ -241,11 +241,8 @@ pub fn resolve_triad_for_category(
     }
 
     let kind = match cat_lower.as_str() {
-        "coding" | "swe" => TaskProfileKind::Coding,
-        "reasoning" | "math" | "logic" => TaskProfileKind::Reasoning,
-        "fast" | "quick" => TaskProfileKind::Fast,
-        "design" | "vision" => TaskProfileKind::Design,
-        _ => TaskProfileKind::Agentic,
+        "master" | "balanced" | "frontier_balanced" => TaskProfileKind::Executive,
+        other => TaskProfileKind::from_str_lossy(other).unwrap_or(TaskProfileKind::Agentic),
     };
 
     if let Some(rep) = reports.iter().find(|r| r.profile == kind) {
@@ -562,114 +559,98 @@ pub async fn get_available_profiles(state: &AppState) -> Vec<MasterBrainProfile>
         });
     }
 
-    // Injeta perfis canônicos se a lista estiver curta (< 3)
-    if configured_profiles.len() <= 1 {
-        configured_profiles.push(MasterBrainProfile {
-            id: "deep_swe".to_string(),
-            name: "Deep SWE 🚀".to_string(),
-            description: "Engenharia de software complexa, refatoração de AST e arquitetura de código bare-metal.".to_string(),
-            role: "subagent".to_string(),
-            arena_category: "coding".to_string(),
-            target_model: "anthropic/claude-3-7-sonnet".to_string(),
-            provider: "nous".to_string(),
-            target_type: "Cloud API".to_string(),
-            is_active: false,
-            is_builtin: true,
-            triad: None,
-        });
-        configured_profiles.push(MasterBrainProfile {
-            id: "deep_reasoning".to_string(),
-            name: "Deep Math 🧠".to_string(),
-            description:
-                "Provas formais, raciocínio analítico, lógica matemática e auditoria criptográfica."
-                    .to_string(),
-            role: "subagent".to_string(),
-            arena_category: "reasoning".to_string(),
-            target_model: "openai/o3-mini-high".to_string(),
-            provider: "nous".to_string(),
-            target_type: "Cloud API".to_string(),
-            is_active: false,
-            is_builtin: true,
-            triad: None,
-        });
-        configured_profiles.push(MasterBrainProfile {
-            id: "ultra_fast".to_string(),
-            name: "Ultra Fast ⚡".to_string(),
-            description: "Triagem imediata, subagentes ágeis e ferramentas de baixa latência a centavos de custo.".to_string(),
-            role: "subagent".to_string(),
-            arena_category: "fast".to_string(),
-            target_model: "google/gemini-2.0-flash-001".to_string(),
-            provider: "nous".to_string(),
-            target_type: "Cloud API".to_string(),
-            is_active: false,
-            is_builtin: true,
-            triad: None,
-        });
-        configured_profiles.push(MasterBrainProfile {
-            id: "ux_designer".to_string(),
-            name: "UX & Frontend 🎨".to_string(),
-            description: "Geração de componentes de interface, design responsivo, protótipos e estilização CSS.".to_string(),
-            role: "subagent".to_string(),
-            arena_category: "design".to_string(),
-            target_model: "anthropic/claude-3-7-sonnet".to_string(),
-            provider: "nous".to_string(),
-            target_type: "Cloud API".to_string(),
-            is_active: false,
-            is_builtin: true,
-            triad: None,
-        });
-        configured_profiles.push(MasterBrainProfile {
-            id: "web_researcher".to_string(),
-            name: "Web Intelligence 🔎".to_string(),
-            description: "Pesquisa autônoma, síntese de fontes web, raspagem limpa na RAM e verificação factual.".to_string(),
-            role: "subagent".to_string(),
-            arena_category: "agentic".to_string(),
-            target_model: "google/gemini-2.0-flash-001".to_string(),
-            provider: "nous".to_string(),
-            target_type: "Cloud API".to_string(),
-            is_active: false,
-            is_builtin: true,
-            triad: None,
-        });
-        configured_profiles.push(MasterBrainProfile {
-            id: "memory_curator".to_string(),
-            name: "Memory & Graph 💾".to_string(),
-            description: "Curadoria epistêmica L2/L3, extração de entidades no LadybugDB e síntese do cofre Obsidian.".to_string(),
-            role: "subagent".to_string(),
-            arena_category: "agentic".to_string(),
-            target_model: "deepseek/deepseek-chat".to_string(),
-            provider: "nous".to_string(),
-            target_type: "Cloud API".to_string(),
-            is_active: false,
-            is_builtin: true,
-            triad: None,
-        });
-        configured_profiles.push(MasterBrainProfile {
-            id: "security_auditor".to_string(),
-            name: "Security & Guardrails 🛡️".to_string(),
-            description: "Auditoria de segurança, sandbox NT no ReFS, higienização PII e blindagem de execução.".to_string(),
-            role: "subagent".to_string(),
-            arena_category: "agentic".to_string(),
-            target_model: "anthropic/claude-3-7-sonnet".to_string(),
-            provider: "nous".to_string(),
-            target_type: "Cloud API".to_string(),
-            is_active: false,
-            is_builtin: true,
-            triad: None,
-        });
-        configured_profiles.push(MasterBrainProfile {
-            id: "local_sovereign".to_string(),
-            name: "Local Sovereign 💻".to_string(),
-            description: "100% no silício físico local (GPU/CPU AVX2). Soberania absoluta e custo zero ($0.00).".to_string(),
-            role: "subagent".to_string(),
-            arena_category: "local".to_string(),
-            target_model: "qwen3.5-coder-3b-instruct".to_string(),
-            provider: "custom".to_string(),
-            target_type: "Silício Bare-Metal".to_string(),
-            is_active: false,
-            is_builtin: true,
-            triad: None,
-        });
+    // Injeta perfis canônicos ausentes (mantém os 9 built-in mesmo após customizações em souls_config.toml)
+    let builtin_workers = [
+        (
+            "deep_swe",
+            "Deep SWE 🚀",
+            "Engenharia de software complexa, refatoração de AST e arquitetura de código bare-metal.",
+            "coding",
+            "anthropic/claude-3-7-sonnet",
+            "nous",
+            "Cloud API",
+        ),
+        (
+            "deep_reasoning",
+            "Deep Math 🧠",
+            "Provas formais, raciocínio analítico, lógica matemática e auditoria criptográfica.",
+            "reasoning",
+            "openai/o3-mini-high",
+            "nous",
+            "Cloud API",
+        ),
+        (
+            "ultra_fast",
+            "Ultra Fast ⚡",
+            "Triagem imediata, subagentes ágeis e ferramentas de baixa latência a centavos de custo.",
+            "fast",
+            "google/gemini-2.0-flash-001",
+            "nous",
+            "Cloud API",
+        ),
+        (
+            "ux_designer",
+            "UX & Frontend 🎨",
+            "Geração de componentes de interface, design responsivo, protótipos e estilização CSS.",
+            "design",
+            "anthropic/claude-3-7-sonnet",
+            "nous",
+            "Cloud API",
+        ),
+        (
+            "web_researcher",
+            "Web Intelligence 🔎",
+            "Pesquisa autônoma, síntese de fontes web, raspagem limpa na RAM e verificação factual.",
+            "research",
+            "google/gemini-2.0-flash-001",
+            "nous",
+            "Cloud API",
+        ),
+        (
+            "memory_curator",
+            "Memory & Graph 💾",
+            "Curadoria epistêmica L2/L3, extração de entidades no LadybugDB e síntese do cofre Obsidian.",
+            "curation",
+            "deepseek/deepseek-chat",
+            "nous",
+            "Cloud API",
+        ),
+        (
+            "security_auditor",
+            "Security & Guardrails 🛡️",
+            "Auditoria de segurança, sandbox NT no ReFS, higienização PII e blindagem de execução.",
+            "security",
+            "anthropic/claude-3-7-sonnet",
+            "nous",
+            "Cloud API",
+        ),
+        (
+            "local_sovereign",
+            "Local Sovereign 💻",
+            "100% no silício físico local (GPU/CPU AVX2). Soberania absoluta e custo zero ($0.00).",
+            "local",
+            "qwen3.5-coder-3b-instruct",
+            "custom",
+            "Silício Bare-Metal",
+        ),
+    ];
+
+    for (id, name, desc, cat, model, prov, ttype) in builtin_workers {
+        if !configured_profiles.iter().any(|p| p.id == id) {
+            configured_profiles.push(MasterBrainProfile {
+                id: id.to_string(),
+                name: name.to_string(),
+                description: desc.to_string(),
+                role: "subagent".to_string(),
+                arena_category: cat.to_string(),
+                target_model: model.to_string(),
+                provider: prov.to_string(),
+                target_type: ttype.to_string(),
+                is_active: false,
+                is_builtin: true,
+                triad: None,
+            });
+        }
     }
 
     // 3. Popula a Tríade da Cloud Arena e define o estado ativo

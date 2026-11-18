@@ -30,20 +30,20 @@
     };
 
     const SKILL_CATEGORY_LABELS = {
-      'code': '💻 Código & Dev',
-      'mcp': '🔌 Integração MCP',
-      'security': '🛡️ Segurança',
-      'finance': '💰 Finanças',
-      'health': '🩺 Saúde',
-      'notes': '📝 Notas & Docs',
-      'automation': '🤖 Automação',
-      'ai-data': '🧠 IA & Dados',
-      'productivity': '⚡ Produtividade',
-      'general': '📦 Geral'
+      'code': 'Código & Dev',
+      'mcp': 'Integração MCP',
+      'security': 'Segurança',
+      'finance': 'Finanças',
+      'health': 'Saúde',
+      'notes': 'Notas & Docs',
+      'automation': 'Automação',
+      'ai-data': 'IA & Dados',
+      'productivity': 'Produtividade',
+      'general': 'Geral'
     };
 
     function formatCategoryLabel(cat) {
-      if (!cat) return '📦 Geral';
+      if (!cat) return 'Geral';
       const clean = String(cat).toLowerCase();
       return SKILL_CATEGORY_LABELS[clean] || cat;
     }
@@ -52,7 +52,7 @@
       const t = String(trust || '').toLowerCase();
       if (t === 'builtin' || t === 'official') return { label: 'Oficial', color: '#4ade80', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.3)' };
       if (t === 'trusted' || t === 'verified') return { label: 'Verificada', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.3)' };
-      return { label: 'Comunidade', color: '#cbd5e1', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.26)' };
+      return { label: 'Comunidade', color: '#E4E4E7', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.26)' };
     }
 
     function formatSourceLabel(src) {
@@ -231,7 +231,7 @@
       const ws = avail.find(a => a.group === 'workspace');
       return {
         hasWorkspace: !!ws,
-        workspaceLabel: ws ? ws.label.replace(/^🦀\s*/, '').replace(/^📦\s*/, '') : 'Souls Local',
+        workspaceLabel: ws ? ws.label.replace(/^[\u{1F980}\u{1F4E6}]\s*/u, '') : 'Souls Local',
         workspaceBadge: ws ? (ws.short_badge || 'WS') : 'WS',
         hasHermes: avail.some(a => a.group === 'hermes_global'),
         hasPersonas: avail.some(a => a.group === 'personas'),
@@ -246,16 +246,16 @@
       const pills = [
         { key: 'all', label: 'Todas' }
       ];
-      if (g.hasWorkspace) pills.push({ key: 'workspace', label: `🦀 ${g.workspaceLabel}` });
-      if (g.hasHermes) pills.push({ key: 'hermes_global', label: '🧠 Hermes' });
-      if (g.hasPersonas) pills.push({ key: 'personas', label: `🎭 Personas (${(skillsHubState.personas || []).length})` });
-      if (g.hasAntigravity) pills.push({ key: 'antigravity', label: '🚀 Antigravity' });
+      if (g.hasWorkspace) pills.push({ key: 'workspace', icon: 'cpu', label: g.workspaceLabel });
+      if (g.hasHermes) pills.push({ key: 'hermes_global', icon: 'bot', label: 'Hermes' });
+      if (g.hasPersonas) pills.push({ key: 'personas', icon: 'masks', label: `Personas (${(skillsHubState.personas || []).length})` });
+      if (g.hasAntigravity) pills.push({ key: 'antigravity', icon: 'rocket', label: 'Antigravity' });
 
       const driftCount = (skillsHubState.skills || []).filter(s => !s.in_sync).length;
       const pausedCount = (skillsHubState.skills || []).filter(s => s.enabled === false).length;
-      if (driftCount > 0) pills.push({ key: 'drift', label: `⚡ Diferentes (${driftCount})` });
-      if (pausedCount > 0) pills.push({ key: 'paused', label: `⏸️ Pausadas (${pausedCount})` });
-      pills.push({ key: 'pinned', label: '📌 Fixadas' });
+      if (driftCount > 0) pills.push({ key: 'drift', icon: 'zap', label: `Diferentes (${driftCount})` });
+      if (pausedCount > 0) pills.push({ key: 'paused', icon: 'pause', label: `Pausadas (${pausedCount})` });
+      pills.push({ key: 'pinned', icon: 'pin', label: 'Fixadas' });
 
       // Reset filter if previously selected filter no longer exists
       if (!pills.some(p => p.key === skillsHubState.surfaceFilter)) {
@@ -264,7 +264,8 @@
 
       bar.innerHTML = pills.map(p => {
         const active = skillsHubState.surfaceFilter === p.key ? 'active' : '';
-        return `<button class="subtab-btn ${active}" style="padding:5px 10px; font-size:0.74rem;" onclick="setSkillsSurfaceFilter('${p.key}')">${escapeSkillsHtml(p.label)}</button>`;
+        const iconHtml = p.icon ? uiIcon(p.icon, 'icon-xs') + ' ' : '';
+        return `<button class="subtab-btn ${active} u-s-3ada9a" onclick="setSkillsSurfaceFilter('${p.key}')">${iconHtml}${escapeSkillsHtml(p.label)}</button>`;
       }).join('');
     }
 
@@ -365,49 +366,29 @@
       const g = getInstalledHostGroups();
       const targets = new Set((s.surfaces || []).map(x => x.target_key));
       const personaCount = (s.surfaces || []).filter(x => String(x.target_key || '').startsWith('persona:')).length;
-      const pills = [];
+      const items = [];
 
-      const mkBadge = (present, text, activeStyle, title) => {
+      const mkItem = (present, text, title) => {
         if (present) {
-          return `<span title="${escapeSkillsHtml(title)}" style="padding:2px 6px; border-radius:5px; font-size:0.68rem; font-weight:700; ${activeStyle}">${escapeSkillsHtml(text)}</span>`;
+          return `<span class="u-mono u-fw-600 u-text-white" title="${escapeSkillsHtml(title)}">${escapeSkillsHtml(text)}</span>`;
         }
-        return `<span title="${escapeSkillsHtml(title)} (não instalada aqui)" style="padding:2px 6px; border-radius:5px; font-size:0.68rem; color:#475569; border:1px solid rgba(148,163,184,0.12); background:rgba(15,23,42,0.35); opacity:0.55;">${escapeSkillsHtml(text)}</span>`;
+        return `<span class="u-mono u-text-dark" style="opacity:0.45;" title="${escapeSkillsHtml(title)} (não instalada aqui)">${escapeSkillsHtml(text)}</span>`;
       };
 
       if (g.hasWorkspace) {
-        pills.push(mkBadge(
-          targets.has('workspace'),
-          g.workspaceBadge,
-          'background:rgba(56,189,248,0.14); color:#38bdf8; border:1px solid rgba(56,189,248,0.35);',
-          g.workspaceLabel
-        ));
+        items.push(mkItem(targets.has('workspace'), g.workspaceBadge, g.workspaceLabel));
       }
       if (g.hasHermes) {
-        pills.push(mkBadge(
-          targets.has('hermes_global'),
-          'HG',
-          'background:rgba(192,132,252,0.14); color:#c084fc; border:1px solid rgba(192,132,252,0.35);',
-          'Hermes Principal'
-        ));
+        items.push(mkItem(targets.has('hermes_global'), 'HG', 'Hermes Principal'));
       }
       if (g.hasPersonas) {
-        pills.push(mkBadge(
-          personaCount > 0,
-          personaCount > 0 ? `P:${personaCount}` : 'P',
-          'background:rgba(244,114,182,0.14); color:#f472b6; border:1px solid rgba(244,114,182,0.35);',
-          personaCount > 0 ? `Ativa em ${personaCount} Persona(s)` : 'Personas Hermes'
-        ));
+        items.push(mkItem(personaCount > 0, personaCount > 0 ? `P:${personaCount}` : 'P', personaCount > 0 ? `Ativa em ${personaCount} Persona(s)` : 'Personas Hermes'));
       }
       if (g.hasAntigravity) {
-        pills.push(mkBadge(
-          targets.has('antigravity'),
-          'AGY',
-          'background:rgba(52,211,153,0.14); color:#34d399; border:1px solid rgba(52,211,153,0.35);',
-          'Antigravity Global'
-        ));
+        items.push(mkItem(targets.has('antigravity'), 'AGY', 'Antigravity Global'));
       }
 
-      return `<div style="display:flex; justify-content:center; gap:4px; flex-wrap:nowrap; white-space:nowrap;">${pills.join('')}</div>`;
+      return `<div class="u-d-flex u-justify-center u-items-center u-nowrap" style="gap:6px; font-size:0.72rem;">${items.join('<span class="u-text-dark">&middot;</span>')}</div>`;
     }
 
     function buildFriendlySecurityBadge(s) {
@@ -416,18 +397,18 @@
       const summary = s.security_human_summary || 'Habilidade verificada sem alertas.';
 
       if (verdict === 'dangerous') {
-        return `<span onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${escapeSkillsHtml(summary)} — Clique para ver os detalhes" style="cursor:pointer; display:inline-block; padding:3px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; background:rgba(239,68,68,0.16); color:#f87171; border:1px solid rgba(239,68,68,0.4);">🛑 Revisar</span>`;
+        return `<span class="u-pointer u-d-inline-flex u-items-center u-gap-1 u-fw-600 u-s-095580" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${escapeSkillsHtml(summary)} — Clique para ver os detalhes"><span class="status-dot status-danger"></span> Revisar</span>`;
       }
       if (verdict === 'caution' && !winOk) {
-        return `<span onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${escapeSkillsHtml(summary)} — Clique para entender o motivo" style="cursor:pointer; display:inline-block; padding:3px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.38);">⚠️ Atenção • Mac/Linux</span>`;
+        return `<span class="u-pointer u-d-inline-flex u-items-center u-gap-1 u-fw-600 u-text-amber-light" style="font-size:0.74rem;" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${escapeSkillsHtml(summary)} — Clique para entender o motivo"><span class="status-dot status-warn"></span> Mac/Linux</span>`;
       }
       if (verdict === 'caution') {
-        return `<span onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${escapeSkillsHtml(summary)} — Clique para entender o motivo" style="cursor:pointer; display:inline-block; padding:3px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.38);">⚠️ Atenção</span>`;
+        return `<span class="u-pointer u-d-inline-flex u-items-center u-gap-1 u-fw-600 u-text-amber-light" style="font-size:0.74rem;" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${escapeSkillsHtml(summary)} — Clique para entender o motivo"><span class="status-dot status-warn"></span> Atenção</span>`;
       }
       if (!winOk) {
-        return `<span onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${escapeSkillsHtml(summary)} — Clique para ver detalhes" style="cursor:pointer; display:inline-block; padding:3px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; background:rgba(56,189,248,0.14); color:#38bdf8; border:1px solid rgba(56,189,248,0.35);">🐧 Só Mac/Linux</span>`;
+        return `<span class="u-pointer u-d-inline-flex u-items-center u-gap-1 u-text-muted" style="font-size:0.74rem;" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${escapeSkillsHtml(summary)} — Clique para ver detalhes">Mac/Linux</span>`;
       }
-      return `<span title="${escapeSkillsHtml(summary)}" style="display:inline-block; padding:3px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; background:rgba(34,197,94,0.13); color:#4ade80; border:1px solid rgba(34,197,94,0.3);">✓ Verificada</span>`;
+      return `<span class="u-d-inline-flex u-items-center u-gap-1 u-text-muted" style="font-size:0.74rem;" title="${escapeSkillsHtml(summary)}"><span class="status-dot status-ok"></span> OK</span>`;
     }
 
     function renderInstalledSkillsTable() {
@@ -460,7 +441,7 @@
 
       const sorted = sortInstalledSkills(filtered);
       if (sorted.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:26px; color:#64748b;">Nenhuma habilidade encontrada com os filtros atuais.</td></tr>`;
+        tbody.innerHTML = `<tr><td class="u-text-center u-text-dark u-s-3d2313" colspan="8">Nenhuma habilidade encontrada com os filtros atuais.</td></tr>`;
         return;
       }
 
@@ -469,59 +450,59 @@
         const isPinned = !!(s.usage && s.usage.pinned);
         const descLen = s.description_len || (s.description || '').length;
         const descWarn = (!isPaused && descLen > 60)
-          ? ` <span title="Resumo acima de 60 caracteres aumenta o consumo fixo da IA. Clique em Editar -> Corrigir Automaticamente." style="color:#fbbf24; font-size:0.69rem; font-weight:600;">(${descLen} caracteres)</span>`
+          ? ` <span class="u-text-amber-light u-fw-600 u-s-29b3bb" title="Resumo acima de 60 caracteres aumenta o consumo fixo da IA. Clique em Editar -> Corrigir Automaticamente.">(${descLen} caracteres)</span>`
           : '';
 
         const catBadge = s.category
-          ? `<span style="margin-left:6px; padding:1px 7px; border-radius:999px; font-size:0.68rem; background:rgba(139,92,246,0.14); color:#c4b5fd; border:1px solid rgba(139,92,246,0.28);">${escapeSkillsHtml(s.category)}</span>`
+          ? `<span class="u-s-d0c4ab">${escapeSkillsHtml(s.category)}</span>`
           : '';
 
-        const pinIcon = isPinned ? '<span title="Fixada" style="margin-right:4px;">📌</span>' : '';
+        const pinIcon = isPinned ? `<span class="u-s-043e24" title="Fixada">${uiIcon('pin', 'icon-xs')}</span>` : '';
 
         let stateHtml = '';
         if (isPaused) {
-          stateHtml = `<span title="Pausada temporariamente — não consome memória da IA" style="display:inline-block; white-space:nowrap; padding:2px 8px; border-radius:999px; font-size:0.7rem; background:rgba(148,163,184,0.14); color:#94a3b8; border:1px solid rgba(148,163,184,0.28);">⏸️ Pausada</span>`;
+          stateHtml = `<span class="u-d-inline-block u-nowrap u-text-muted u-s-1eed83" title="Pausada temporariamente — não consome memória da IA">${uiIcon('pause', 'icon-xs')} Pausada</span>`;
         } else if (s.in_sync) {
-          stateHtml = `<span title="Mesmo conteúdo em todos os ambientes instalados" style="display:inline-block; white-space:nowrap; padding:2px 8px; border-radius:999px; font-size:0.7rem; background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.28);">✓ Em dia</span>`;
+          stateHtml = `<span class="u-d-inline-block u-nowrap u-s-36e3ce" title="Mesmo conteúdo em todos os ambientes instalados">${uiIcon('check', 'icon-xs')} Em dia</span>`;
         } else {
-          stateHtml = `<span onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${s.unique_hashes_count} versões diferentes entre seus ambientes — clique para sincronizar" style="cursor:pointer; display:inline-block; white-space:nowrap; padding:2px 8px; border-radius:999px; font-size:0.7rem; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.35);">⚡ Diferente</span>`;
+          stateHtml = `<span class="u-pointer u-d-inline-block u-nowrap u-text-amber-light u-s-f4da9b" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')" title="${s.unique_hashes_count} versões diferentes entre seus ambientes — clique para sincronizar">${uiIcon('zap', 'icon-xs')} Diferente</span>`;
         }
 
         const weightHtml = isPaused
-          ? `<span style="color:#64748b; font-size:0.74rem;" title="Pausada: 0 tokens fixos no início das conversas">0 tk <span style="font-size:0.66rem;">(pausada)</span></span>`
-          : `<span title="Consumo fixo na abertura: ${s.level1_tokens} tokens • Texto completo quando usada: ${s.level2_tokens} tokens"><strong style="color:#38bdf8;">${s.level1_tokens}</strong> <span style="color:#64748b;">/ ${s.level2_tokens}</span></span>`;
+          ? `<span class="u-text-dark u-s-d3bc8d" title="Pausada: 0 tokens fixos no início das conversas">0 tk <span class="u-s-fa7df8">(pausada)</span></span>`
+          : `<span title="Consumo fixo na abertura: ${s.level1_tokens} tokens • Texto completo quando usada: ${s.level2_tokens} tokens"><strong class="u-text-cyan">${s.level1_tokens}</strong> <span class="u-text-dark">/ ${s.level2_tokens}</span></span>`;
 
         const useCount = (s.usage && s.usage.use_count) || 0;
         const score = s.quality_score || 0;
         const scoreColor = score >= 85 ? '#4ade80' : (score >= 65 ? '#fbbf24' : '#f87171');
 
-        const pauseBtnIcon = isPaused ? '▶️' : '⏸️';
+        const pauseBtnIcon = isPaused ? uiIcon('play', 'icon-xs') : uiIcon('pause', 'icon-xs');
         const pauseBtnTitle = isPaused
           ? 'Reativar esta skill nos ambientes'
           : 'Pausar temporariamente (economiza memória da IA sem apagar arquivos)';
 
         return `<tr class="${isPaused ? 'skills-row-paused' : ''}">
           <td>
-            <div style="font-weight:700; color:#f1f5f9; font-size:0.84rem; cursor:pointer;" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')">
+            <div class="u-fw-700 u-pointer u-s-491b89" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')">
               ${pinIcon}${escapeSkillsHtml(s.slug)}${catBadge}
             </div>
-            <div style="color:#94a3b8; font-size:0.75rem; margin-top:3px; line-height:1.35;">
+            <div class="u-text-muted u-mt-3p u-s-2f1532">
               ${escapeSkillsHtml(s.description || 'Sem resumo cadastrado.')}${descWarn}
             </div>
           </td>
-          <td style="text-align:center;">${buildSurfaceMatrixBadges(s)}</td>
-          <td style="text-align:center;">${stateHtml}</td>
-          <td style="text-align:right; font-family:'JetBrains Mono',monospace; font-size:0.76rem;">${weightHtml}</td>
-          <td style="text-align:right; font-family:'JetBrains Mono',monospace; font-size:0.76rem; color:${useCount > 0 ? '#e2e8f0' : '#64748b'};">${useCount}x</td>
-          <td style="text-align:center; font-weight:800; color:${scoreColor}; font-size:0.84rem;">${score}</td>
-          <td style="text-align:center;">${buildFriendlySecurityBadge(s)}</td>
-          <td style="text-align:right; white-space:nowrap;">
-            <div style="display:inline-flex; gap:4px;">
-              <button class="btn-action" style="padding:4px 8px; font-size:0.74rem;" title="Abrir editor, ver diagnósticos e corrigir automaticamente" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')">✏️</button>
-              <button class="btn-action" style="padding:4px 8px; font-size:0.74rem;" title="${pauseBtnTitle}" onclick="toggleSkillDisabled('${escapeSkillsHtml(s.slug)}', ${!isPaused})">${pauseBtnIcon}</button>
-              <button class="btn-action" style="padding:4px 8px; font-size:0.74rem;" title="Evoluir ou adaptar no Estúdio de Criação" onclick="openInstalledInForge('${escapeSkillsHtml(s.slug)}')">✨</button>
-              <button class="btn-action" style="padding:4px 8px; font-size:0.74rem; ${isPinned ? 'border-color:#38bdf8; color:#38bdf8;' : ''}" title="${isPinned ? 'Desafixar do topo' : 'Fixar skill favorita'}" onclick="toggleSkillPin('${escapeSkillsHtml(s.slug)}', ${!isPinned})">📌</button>
-              <button class="btn-action" style="padding:4px 8px; font-size:0.74rem; color:#fca5a5;" title="Excluir skill (salva cópia de segurança no Histórico antes)" onclick="confirmAndDeleteSkill('${escapeSkillsHtml(s.slug)}')">🗑️</button>
+          <td class="u-text-center">${buildSurfaceMatrixBadges(s)}</td>
+          <td class="u-text-center">${stateHtml}</td>
+          <td class="u-text-right u-s-9997fd">${weightHtml}</td>
+          <td class="u-text-right u-s-9997fd" style="color:${useCount > 0 ? '#F4F4F5' : '#71717A'};">${useCount}x</td>
+          <td class="u-text-center u-s-5fc6fa" style="color:${scoreColor};">${score}</td>
+          <td class="u-text-center">${buildFriendlySecurityBadge(s)}</td>
+          <td class="u-text-right u-nowrap">
+            <div class="u-d-inline-flex u-gap-1">
+              <button class="btn-action u-s-a8b384" title="Abrir editor, ver diagnósticos e corrigir automaticamente" onclick="inspectSkill('${escapeSkillsHtml(s.slug)}')">${uiIcon('edit', 'icon-xs')}</button>
+              <button class="btn-action u-s-a8b384" title="${pauseBtnTitle}" onclick="toggleSkillDisabled('${escapeSkillsHtml(s.slug)}', ${!isPaused})">${pauseBtnIcon}</button>
+              <button class="btn-action u-s-a8b384" title="Evoluir ou adaptar no Estúdio de Criação" onclick="openInstalledInForge('${escapeSkillsHtml(s.slug)}')">${uiIcon('sparkles', 'icon-xs')}</button>
+              <button class="btn-action u-s-a8b384" style="${isPinned ? 'border-color:#38bdf8; color:#38bdf8;' : ''};" title="${isPinned ? 'Desafixar do topo' : 'Fixar skill favorita'}" onclick="toggleSkillPin('${escapeSkillsHtml(s.slug)}', ${!isPinned})">${uiIcon('pin', 'icon-xs')}</button>
+              <button class="btn-action u-s-a8e3fd" title="Excluir skill (salva cópia de segurança no Histórico antes)" onclick="confirmAndDeleteSkill('${escapeSkillsHtml(s.slug)}')">${uiIcon('trash', 'icon-xs')}</button>
             </div>
           </td>
         </tr>`;
@@ -537,11 +518,11 @@
         }));
       }
       const fallback = [
-        { key: 'workspace', label: '🦀 Souls Local' },
-        { key: 'hermes_global', label: '🧠 Hermes Principal' }
+        { key: 'workspace', label: 'Souls Local' },
+        { key: 'hermes_global', label: 'Hermes Principal' }
       ];
       (skillsHubState.personas || []).forEach(p => {
-        fallback.push({ key: 'persona:' + p, label: '🎭 Persona: ' + p });
+        fallback.push({ key: 'persona:' + p, label: 'Persona: ' + p });
       });
       return fallback;
     }
@@ -554,7 +535,7 @@
 
       box.innerHTML = targets.map(t => {
         const checked = checkedSet.has(t.key) ? 'checked' : '';
-        return `<label style="display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:6px; background:rgba(15,23,42,0.65); border:1px solid rgba(148,163,184,0.2); font-size:0.74rem; color:#e2e8f0; cursor:pointer;">
+        return `<label class="u-d-inline-flex u-items-center u-text-slate-light u-pointer u-s-b5be9b">
           <input type="checkbox" value="${escapeSkillsHtml(t.key)}" ${checked} />
           <span>${escapeSkillsHtml(t.label)}</span>
         </label>`;
@@ -589,7 +570,7 @@
           card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        document.getElementById('insp-skill-title').textContent = `✏️ Editando: ${rec.slug}`;
+        document.getElementById('insp-skill-title').innerHTML = `${uiIcon('edit', 'icon-sm')} Editando: ${escapeSkillsHtml(rec.slug)}`;
         const scoreBadge = document.getElementById('insp-skill-score-badge');
         if (scoreBadge) {
           scoreBadge.textContent = `Qualidade ${rec.quality_score}/100`;
@@ -610,11 +591,11 @@
         const pauseBtn = document.getElementById('btn-insp-toggle-pause');
         if (pauseBtn) {
           if (rec.enabled === false) {
-            pauseBtn.textContent = '▶️ Reativar Skill';
+            pauseBtn.innerHTML = `${uiIcon('play', 'icon-xs')} Reativar Skill`;
             pauseBtn.style.borderColor = 'rgba(34,197,94,0.4)';
             pauseBtn.style.color = '#4ade80';
           } else {
-            pauseBtn.textContent = '⏸️ Pausar';
+            pauseBtn.innerHTML = `${uiIcon('pause', 'icon-xs')} Pausar`;
             pauseBtn.style.borderColor = '';
             pauseBtn.style.color = '';
           }
@@ -658,8 +639,8 @@
         if (toolsBox) {
           const tools = rec.mcp_tools_detected || [];
           toolsBox.innerHTML = tools.length > 0
-            ? tools.map(t => `<span style="padding:2px 8px; border-radius:999px; font-size:0.72rem; font-family:'JetBrains Mono',monospace; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.28);">${escapeSkillsHtml(t)}</span>`).join('')
-            : '<span style="color:#64748b; font-size:0.76rem;">Nenhuma ferramenta externa específica detectada.</span>';
+            ? tools.map(t => `<span class="u-text-cyan u-s-d8e7c7">${escapeSkillsHtml(t)}</span>`).join('')
+            : '<span class="u-text-dark u-s-c79ecd">Nenhuma ferramenta externa específica detectada.</span>';
         }
 
         const auxBox = document.getElementById('insp-aux-files-list');
@@ -720,27 +701,27 @@
       box.style.display = 'block';
 
       const headerTitle = isDanger
-        ? '🛑 Por que esta habilidade pede revisão cuidadosa?'
+        ? `${uiIcon('alert-triangle', 'icon-xs')} Por que esta habilidade pede revisão cuidadosa?`
         : (!rec.win11_compatible && rec.security_verdict === 'safe'
-            ? '🐧 Compatibilidade de Sistema Operacional (Mac / Linux)'
-            : '💡 Por que esta habilidade recebeu o aviso "Atenção"?');
+            ? `${uiIcon('terminal', 'icon-xs')} Compatibilidade de Sistema Operacional (Mac / Linux)`
+            : `${uiIcon('lightbulb', 'icon-xs')} Por que esta habilidade recebeu o aviso "Atenção"?`);
 
       const summaryStr = String(rec.security_human_summary || '').trim();
       const itemsHtml = reasons.slice(0, 5).map(f => {
         const loc = f.line > 0 ? ` (linha ${f.line})` : '';
         const recText = String(f.recommendation || f.category || '').trim();
         const sameAsSummary = recText && recText === summaryStr;
-        const snip = f.snippet ? `<code style="display:block; margin-top:3px; padding:3px 7px; border-radius:5px; background:rgba(15,23,42,0.65); color:#cbd5e1; font-size:0.72rem; overflow-x:auto;">${escapeSkillsHtml(f.snippet)}</code>` : '';
-        return `<li style="margin-bottom:6px;">
-          ${sameAsSummary ? `<span style="color:#94a3b8; font-size:0.73rem;">Origem: ${escapeSkillsHtml(f.file || 'SKILL.md')}${loc}</span>` : `<strong>${escapeSkillsHtml(recText)}</strong> <span style="color:#94a3b8; font-size:0.72rem;">— ${escapeSkillsHtml(f.file || 'SKILL.md')}${loc}</span>`}
+        const snip = f.snippet ? `<code class="u-d-block u-mt-3p u-text-slate u-s-2ba998">${escapeSkillsHtml(f.snippet)}</code>` : '';
+        return `<li class="u-mb-6p">
+          ${sameAsSummary ? `<span class="u-text-muted u-s-6444dd">Origem: ${escapeSkillsHtml(f.file || 'SKILL.md')}${loc}</span>` : `<strong>${escapeSkillsHtml(recText)}</strong> <span class="u-text-muted u-s-dbc8d1">— ${escapeSkillsHtml(f.file || 'SKILL.md')}${loc}</span>`}
           ${snip}
         </li>`;
       }).join('');
 
       box.innerHTML = `
-        <div style="font-weight:700; color:#f8fafc; margin-bottom:4px;">${headerTitle}</div>
-        <div style="color:#e2e8f0; margin-bottom:${itemsHtml ? '8px' : '0'};">${escapeSkillsHtml(summaryStr)}</div>
-        ${itemsHtml ? `<ul style="margin:0; padding-left:18px; color:#cbd5e1; font-size:0.76rem;">${itemsHtml}</ul>` : ''}
+        <div class="u-fw-700 u-mb-1 u-s-221324">${headerTitle}</div>
+        <div class="u-text-slate-light" style="margin-bottom:${itemsHtml ? '8px' : '0'};">${escapeSkillsHtml(summaryStr)}</div>
+        ${itemsHtml ? `<ul class="u-m-0 u-text-slate u-s-d6f02b">${itemsHtml}</ul>` : ''}
       `;
     }
 
@@ -751,8 +732,8 @@
 
       if (!issues || issues.length === 0) {
         if (inlineBtn) inlineBtn.style.display = 'none';
-        box.innerHTML = `<div style="padding:8px 10px; border-radius:7px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.28); color:#4ade80; font-size:0.77rem;">
-          ✓ Tudo ótimo! Cabeçalho enxuto, estrutura clara e formatação limpa.
+        box.innerHTML = `<div class="u-s-dc21d4">
+          ${uiIcon('check-circle', 'icon-xs')} Tudo ótimo! Cabeçalho enxuto, estrutura clara e formatação limpa.
         </div>`;
         return;
       }
@@ -769,7 +750,7 @@
         const isWarn = i.severity === 'warning';
         const col = isErr ? '#f87171' : (isWarn ? '#fbbf24' : '#38bdf8');
         const bg = isErr ? 'rgba(239,68,68,0.1)' : (isWarn ? 'rgba(245,158,11,0.1)' : 'rgba(56,189,248,0.08)');
-        const icon = isErr ? '🛑' : (isWarn ? '💡' : 'ℹ️');
+        const iconName = isErr ? 'alert-triangle' : (isWarn ? 'lightbulb' : 'info');
 
         // Extração de linha para salto ergonômico no editor
         let lineNum = null;
@@ -781,11 +762,11 @@
         }
 
         const jumpBtn = (lineNum && typeof jumpEditorToLine === 'function')
-          ? `<button class="editor-jump-btn" onclick="jumpEditorToLine('insp-skill-editor', ${lineNum})" title="Ir diretamente para a linha ${lineNum} no editor"><span>📍</span> Ir para Linha ${lineNum}</button>`
+          ? `<button class="editor-jump-btn" onclick="jumpEditorToLine('insp-skill-editor', ${lineNum})" title="Ir diretamente para a linha ${lineNum} no editor">${uiIcon('pin', 'icon-xs')} Ir para Linha ${lineNum}</button>`
           : '';
 
-        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:6px; background:${bg}; border-left:3px solid ${col}; font-size:0.76rem; color:#e2e8f0; gap:8px;">
-          <div>${icon} ${escapeSkillsHtml(i.message)}</div>
+        return `<div class="u-d-flex u-justify-between u-items-center u-text-slate-light u-gap-2 u-s-aab4cd" style="background:${bg}; border-left:3px solid ${col};">
+          <div>${uiIcon(iconName, 'icon-xs')} ${escapeSkillsHtml(i.message)}</div>
           ${jumpBtn}
         </div>`;
       }).join('');
@@ -795,17 +776,17 @@
       const box = document.getElementById('insp-history-list');
       if (!box) return;
       if (!historyList || historyList.length === 0) {
-        box.innerHTML = '<div style="color:#64748b;">Nenhuma versão anterior salva ainda.</div>';
+        box.innerHTML = '<div class="u-text-dark">Nenhuma versão anterior salva ainda.</div>';
         return;
       }
       box.innerHTML = historyList.slice(0, 8).map(h => {
         const dt = h.timestamp_epoch ? new Date(h.timestamp_epoch * 1000).toLocaleString('pt-BR') : h.snapshot_id;
-        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 8px; border-radius:6px; background:rgba(15,23,42,0.55); border:1px solid rgba(148,163,184,0.12);">
+        return `<div class="u-d-flex u-justify-between u-items-center u-s-ae58f5">
           <div>
-            <span style="color:#e2e8f0; font-weight:600;">${escapeSkillsHtml(dt)}</span>
-            <span style="color:#94a3b8; margin-left:6px;">(${escapeSkillsHtml(h.reason || 'backup')})</span>
+            <span class="u-text-slate-light u-fw-600">${escapeSkillsHtml(dt)}</span>
+            <span class="u-text-muted u-s-09f9b3">(${escapeSkillsHtml(h.reason || 'backup')})</span>
           </div>
-          <button class="btn-action" style="padding:2px 8px; font-size:0.7rem;" onclick="rollbackSkillToSnapshot('${escapeSkillsHtml(slug)}', '${escapeSkillsHtml(h.snapshot_id)}')">⏪ Restaurar</button>
+          <button class="btn-action u-s-cd187d" onclick="rollbackSkillToSnapshot('${escapeSkillsHtml(slug)}', '${escapeSkillsHtml(h.snapshot_id)}')">${uiIcon('history', 'icon-xs')} Restaurar</button>
         </div>`;
       }).join('');
     }
@@ -819,7 +800,7 @@
       const origLabel = btn ? btn.textContent : '';
       if (btn) {
         btn.disabled = true;
-        btn.textContent = '⏳ Ajustando com cuidado...';
+        btn.innerHTML = `${uiIcon('clock', 'icon-xs')} Ajustando com cuidado...`;
       }
 
       try {
@@ -852,7 +833,7 @@
         const guaranteeEl = document.getElementById('insp-autofix-guarantee');
         if (guaranteeEl) {
           const fixesText = (data.applied_fixes || []).join(' • ');
-          guaranteeEl.textContent = `✓ Correção pronta (${fixesText}). Todas as instruções originais da skill foram 100% preservadas — clique em Salvar abaixo para aplicar.`;
+          guaranteeEl.innerHTML = `${uiIcon('check-circle', 'icon-xs')} Correção pronta (${escapeSkillsHtml(fixesText)}). Todas as instruções originais da skill foram 100% preservadas — clique em Salvar abaixo para aplicar.`;
           guaranteeEl.style.display = 'block';
         }
 
@@ -863,7 +844,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.textContent = origLabel || '✨ Corrigir Automaticamente';
+          btn.innerHTML = origLabel || `${uiIcon('sparkles', 'icon-xs')} Corrigir Automaticamente`;
         }
       }
     }
@@ -967,7 +948,7 @@
       const ok = window.appConfirm ? await window.appConfirm(
         `Deseja realmente excluir a habilidade "${slug}" dos seus ambientes?\n\n` +
         `Fique tranquilo: uma cópia automática de segurança será guardada no Histórico caso precise recuperá-la depois.`,
-        { title: 'Excluir Habilidade', icon: '🗑️', confirmText: 'Excluir com Backup', danger: true }
+        { title: 'Excluir Habilidade', icon: 'trash', confirmText: 'Excluir com Backup', danger: true }
       ) : window.confirm(
         `Deseja realmente excluir a habilidade "${slug}" dos seus ambientes?\n\n` +
         `Fique tranquilo: uma cópia automática de segurança será guardada no Histórico caso precise recuperá-la depois.`
@@ -1140,7 +1121,7 @@
         if (pill) {
           const lat = Number(data.latency_ms || 0).toFixed(1);
           const idxTotal = Number(data.indexed_total || 0).toLocaleString('pt-BR');
-          pill.textContent = `⚡ ${lat} ms • ${idxTotal} disponíveis`;
+          pill.innerHTML = `${uiIcon('zap', 'icon-xs')} ${lat} ms • ${idxTotal} disponíveis`;
         }
 
         renderMarketplaceResultsTable(data.results || []);
@@ -1166,13 +1147,13 @@
         const repoText = item.repo || formatSourceLabel(item.source);
         return `<div class="skills-rec-card">
           <div>
-            <span class="skills-rec-reason">${escapeSkillsHtml(r.reason_label || '✨ Recomendada')}</span>
-            <div style="font-weight:700; color:#f8fafc; font-size:0.84rem;">${escapeSkillsHtml(slugName)}</div>
-            <div class="skills-mp-desc-clamp" style="margin-top:4px; font-size:0.74rem;">${escapeSkillsHtml(item.description || '')}</div>
+            <span class="skills-rec-reason">${uiIcon('sparkles', 'icon-xs')} ${escapeSkillsHtml((r.reason_label || 'Recomendada').replace(/^[\u2728]\s*/, ''))}</span>
+            <div class="u-fw-700 u-s-f92d87">${escapeSkillsHtml(slugName)}</div>
+            <div class="skills-mp-desc-clamp u-mt-1 u-s-d3bc8d">${escapeSkillsHtml(item.description || '')}</div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:4px; padding-top:6px; border-top:1px solid rgba(148,163,184,0.12);">
-            <span style="font-size:0.69rem; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeSkillsHtml(repoText)}">${escapeSkillsHtml(repoText)}</span>
-            <button class="btn-action primary" style="padding:3px 9px; font-size:0.72rem; flex-shrink:0;" onclick="fetchCatalogItemToQuarantine('${escapeSkillsHtml(item.identifier)}', '${escapeSkillsHtml(item.repo || '')}', '${escapeSkillsHtml(item.path || '')}')">🛡️ Analisar</button>
+          <div class="u-d-flex u-justify-between u-items-center u-gap-2 u-mt-1 u-s-601b65">
+            <span class="u-text-muted u-overflow-hidden u-nowrap u-s-f7d4e0" title="${escapeSkillsHtml(repoText)}">${escapeSkillsHtml(repoText)}</span>
+            <button class="btn-action primary u-shrink-0 u-s-106324" onclick="fetchCatalogItemToQuarantine('${escapeSkillsHtml(item.identifier)}', '${escapeSkillsHtml(item.repo || '')}', '${escapeSkillsHtml(item.path || '')}')">${uiIcon('shield', 'icon-xs')} Analisar</button>
           </div>
         </div>`;
       }).join('');
@@ -1183,7 +1164,7 @@
       if (!tbody) return;
 
       if (!list || list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:26px; color:#64748b;">Nenhuma habilidade encontrada para este filtro. Tente outro termo ou tema acima.</td></tr>`;
+        tbody.innerHTML = `<tr><td class="u-text-center u-text-dark u-s-3d2313" colspan="6">Nenhuma habilidade encontrada para este filtro. Tente outro termo ou tema acima.</td></tr>`;
       } else {
         tbody.innerHTML = list.map(item => {
           const cleanName = String(item.name || '').toLowerCase();
@@ -1194,25 +1175,25 @@
           const repoDisplay = item.repo ? item.repo : srcLabel;
 
           const actionHtml = alreadyInstalled
-            ? `<span style="display:inline-block; padding:4px 9px; border-radius:999px; font-size:0.71rem; font-weight:600; background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.28);">✓ Já instalada</span>`
-            : `<button class="btn-action primary" style="padding:4px 10px; font-size:0.73rem;" onclick="fetchCatalogItemToQuarantine('${escapeSkillsHtml(item.identifier)}', '${escapeSkillsHtml(item.repo || '')}', '${escapeSkillsHtml(item.path || '')}')">🛡️ Analisar</button>`;
+            ? `<span class="u-d-inline-block u-fw-600 u-s-17fb4b">${uiIcon('check', 'icon-xs')} Já instalada</span>`
+            : `<button class="btn-action primary u-s-42d134" onclick="fetchCatalogItemToQuarantine('${escapeSkillsHtml(item.identifier)}', '${escapeSkillsHtml(item.repo || '')}', '${escapeSkillsHtml(item.path || '')}')">${uiIcon('shield', 'icon-xs')} Analisar</button>`;
 
           return `<tr>
-            <td style="overflow:hidden; text-overflow:ellipsis;">
-              <div style="font-weight:700; color:#f1f5f9; font-size:0.83rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeSkillsHtml(item.identifier)}">${escapeSkillsHtml(item.name || item.identifier)}</div>
-              <div style="font-size:0.69rem; color:#94a3b8; margin-top:2px;">${escapeSkillsHtml(catLabel)}</div>
+            <td class="u-overflow-hidden u-s-9f3798">
+              <div class="u-fw-700 u-nowrap u-overflow-hidden u-s-f5c1ae" title="${escapeSkillsHtml(item.identifier)}">${escapeSkillsHtml(item.name || item.identifier)}</div>
+              <div class="u-text-muted u-mt-2p u-s-29b3bb">${escapeSkillsHtml(catLabel)}</div>
             </td>
             <td>
               <div class="skills-mp-desc-clamp" title="${escapeSkillsHtml(item.description || '')}">
                 ${escapeSkillsHtml(item.description || 'Sem descrição informada pelo autor.')}
               </div>
             </td>
-            <td style="text-align:center; font-size:0.74rem; color:#38bdf8; white-space:nowrap;">${escapeSkillsHtml(srcLabel)}</td>
-            <td style="text-align:center;">
-              <span style="padding:2px 8px; border-radius:999px; font-size:0.69rem; font-weight:600; color:${trustObj.color}; background:${trustObj.bg}; border:1px solid ${trustObj.border};">${escapeSkillsHtml(trustObj.label)}</span>
+            <td class="u-text-center u-text-cyan u-nowrap u-s-d3bc8d">${escapeSkillsHtml(srcLabel)}</td>
+            <td class="u-text-center">
+              <span class="u-fw-600 u-s-967875" style="color:${trustObj.color}; background:${trustObj.bg}; border:1px solid ${trustObj.border};">${escapeSkillsHtml(trustObj.label)}</span>
             </td>
             <td class="skills-mp-repo-cell" title="${escapeSkillsHtml(repoDisplay)}">${escapeSkillsHtml(repoDisplay)}</td>
-            <td style="text-align:right; white-space:nowrap;">${actionHtml}</td>
+            <td class="u-text-right u-nowrap">${actionHtml}</td>
           </tr>`;
         }).join('');
       }
@@ -1325,11 +1306,11 @@
       if (pillsBox) {
         pillsBox.innerHTML = items.map(i => {
           const active = i.slug === item.slug ? 'active' : '';
-          const vIcon = i.scan_report?.verdict === 'dangerous' ? '🛑' : (i.scan_report?.verdict === 'caution' ? '⚠️' : '✓');
+          const vIconName = i.scan_report?.verdict === 'dangerous' ? 'alert-triangle' : (i.scan_report?.verdict === 'caution' ? 'alert-triangle' : 'check');
           return `
-            <div class="subtab-btn ${active}" style="padding:4px 9px; font-size:0.75rem; display:inline-flex; align-items:center; gap:6px;">
-              <span style="cursor:pointer;" onclick="selectQuarantineItem('${escapeSkillsHtml(i.slug)}')">${vIcon} ${escapeSkillsHtml(i.slug)}</span>
-              <span style="opacity:0.6; cursor:pointer; font-weight:700; padding: 0 3px;" onclick="event.stopPropagation(); discardQuarantineSkill('${escapeSkillsHtml(i.slug)}')" title="Descartar da quarentena">✕</span>
+            <div class="subtab-btn ${active} u-d-inline-flex u-items-center u-gap-6p u-s-5b4829">
+              <span class="u-pointer" onclick="selectQuarantineItem('${escapeSkillsHtml(i.slug)}')">${uiIcon(vIconName, 'icon-xs')} ${escapeSkillsHtml(i.slug)}</span>
+              <span class="u-pointer u-fw-700 u-s-64f600" onclick="event.stopPropagation(); discardQuarantineSkill('${escapeSkillsHtml(i.slug)}')" title="Descartar da quarentena">${uiIcon('x', 'icon-xs')}</span>
             </div>
           `;
         }).join('');
@@ -1348,19 +1329,19 @@
           summaryEl.style.background = 'rgba(239,68,68,0.14)';
           summaryEl.style.border = '1px solid rgba(239,68,68,0.4)';
           summaryEl.style.color = '#fca5a5';
-          summaryEl.innerHTML = '<strong>🛑 Atenção Redobrada:</strong> Encontramos comandos potencialmente sensíveis nesta skill. Recomendamos adaptá-la no Estúdio antes de instalar.';
+          summaryEl.innerHTML = `<strong>${uiIcon('alert-triangle', 'icon-xs')} Atenção Redobrada:</strong> Encontramos comandos potencialmente sensíveis nesta skill. Recomendamos adaptá-la no Estúdio antes de instalar.`;
         } else if (verdict === 'caution' || !winOk) {
           summaryEl.style.background = 'rgba(245,158,11,0.13)';
           summaryEl.style.border = '1px solid rgba(245,158,11,0.38)';
           summaryEl.style.color = '#fde68a';
           summaryEl.innerHTML = !winOk
-            ? '<strong>🐧 Aviso de Compatibilidade:</strong> Esta skill menciona comandos de Mac/Linux. Você pode clicar em "Adaptar no Estúdio" para convertê-la para Windows 11!'
-            : '<strong>⚠️ Revisão Leve:</strong> A skill usa comandos de terminal ou variáveis de ambiente. Confira os itens abaixo antes de aprovar.';
+            ? `<strong>${uiIcon('terminal', 'icon-xs')} Aviso de Compatibilidade:</strong> Esta skill menciona comandos de Mac/Linux. Você pode clicar em "Adaptar no Estúdio" para convertê-la para Windows 11!`
+            : `<strong>${uiIcon('alert-triangle', 'icon-xs')} Revisão Leve:</strong> A skill usa comandos de terminal ou variáveis de ambiente. Confira os itens abaixo antes de aprovar.`;
         } else {
           summaryEl.style.background = 'rgba(34,197,94,0.12)';
           summaryEl.style.border = '1px solid rgba(34,197,94,0.3)';
           summaryEl.style.color = '#86efac';
-          summaryEl.innerHTML = '<strong>✓ Tudo Limpo:</strong> Nenhum comportamento suspeito encontrado e totalmente compatível com Windows 11.';
+          summaryEl.innerHTML = `<strong>${uiIcon('check-circle', 'icon-xs')} Tudo Limpo:</strong> Nenhum comportamento suspeito encontrado e totalmente compatível com Windows 11.`;
         }
       }
 
@@ -1368,11 +1349,11 @@
       if (findingsBox) {
         const findings = item.scan_report?.findings || [];
         if (findings.length === 0) {
-          findingsBox.innerHTML = '<div style="font-size:0.76rem; color:#94a3b8;">Nenhum alerta de segurança nos arquivos analisados.</div>';
+          findingsBox.innerHTML = '<div class="u-text-muted u-s-c79ecd">Nenhum alerta de segurança nos arquivos analisados.</div>';
         } else {
-          findingsBox.innerHTML = findings.map(f => `<div style="padding:7px 9px; border-radius:6px; background:rgba(15,23,42,0.6); border-left:3px solid #fbbf24; font-size:0.75rem; color:#e2e8f0;">
-            <div><strong>${escapeSkillsHtml(f.recommendation)}</strong> <span style="color:#94a3b8;">(linha ${f.line})</span></div>
-            <code style="display:block; margin-top:3px; color:#cbd5e1; font-size:0.71rem;">${escapeSkillsHtml(f.snippet)}</code>
+          findingsBox.innerHTML = findings.map(f => `<div class="u-text-slate-light u-s-3a4ebf">
+            <div><strong>${escapeSkillsHtml(f.recommendation)}</strong> <span class="u-text-muted">(linha ${f.line})</span></div>
+            <code class="u-d-block u-mt-3p u-text-slate u-s-c433ac">${escapeSkillsHtml(f.snippet)}</code>
           </div>`).join('');
         }
       }
@@ -1604,16 +1585,16 @@
       );
 
       if (tools.length === 0) {
-        box.innerHTML = '<span style="color:#64748b; font-size:0.74rem;">Nenhuma ferramenta correspondente.</span>';
+        box.innerHTML = '<span class="u-text-dark u-s-d3bc8d">Nenhuma ferramenta correspondente.</span>';
         return;
       }
 
       box.innerHTML = tools.map(t => {
         const active = skillsHubState.forgeSelectedTools.has(t.name);
-        const bg = active ? 'rgba(56,189,248,0.2)' : 'rgba(15,23,42,0.6)';
+        const bg = active ? 'rgba(56,189,248,0.2)' : 'rgba(17, 17, 19,0.6)';
         const border = active ? 'rgba(56,189,248,0.55)' : 'rgba(148,163,184,0.18)';
-        const col = active ? '#38bdf8' : '#cbd5e1';
-        return `<button type="button" onclick="toggleForgeToolSelection('${escapeSkillsHtml(t.name)}')" title="${escapeSkillsHtml(t.description || '')}" style="padding:3px 8px; border-radius:999px; font-size:0.71rem; font-family:'JetBrains Mono',monospace; background:${bg}; border:1px solid ${border}; color:${col}; cursor:pointer;">${active ? '✓ ' : '+ '}${escapeSkillsHtml(t.name)}</button>`;
+        const col = active ? '#38bdf8' : '#E4E4E7';
+        return `<button class="u-pointer u-s-016646" type="button" onclick="toggleForgeToolSelection('${escapeSkillsHtml(t.name)}')" title="${escapeSkillsHtml(t.description || '')}" style="background:${bg}; border:1px solid ${border}; color:${col};">${active ? uiIcon('check', 'icon-xs') : uiIcon('plus', 'icon-xs')} ${escapeSkillsHtml(t.name)}</button>`;
       }).join('');
     }
 
@@ -1675,7 +1656,7 @@
       const origTxt = btn ? btn.textContent : '';
       if (btn) {
         btn.disabled = true;
-        btn.textContent = '⏳ Criando rascunho inteligente...';
+        btn.innerHTML = `${uiIcon('clock', 'icon-xs')} Criando rascunho inteligente...`;
       }
 
       try {
@@ -1715,7 +1696,7 @@
         document.getElementById('forge-out-tokens').textContent = `Peso: ${data.level1_tokens} tk fixos`;
         const verdEl = document.getElementById('forge-out-verdict');
         if (verdEl) {
-          verdEl.textContent = data.scan_report?.verdict === 'safe' ? '✓ Verificada' : '⚠️ Revisar';
+          verdEl.innerHTML = data.scan_report?.verdict === 'safe' ? `${uiIcon('check-circle', 'icon-xs')} Verificada` : `${uiIcon('alert-triangle', 'icon-xs')} Revisar`;
         }
         document.getElementById('forge-engine-note').textContent = data.engine_note || '';
 
@@ -1723,8 +1704,8 @@
         if (lintBox) {
           const issues = data.lint_issues || [];
           lintBox.innerHTML = issues.length === 0
-            ? '<span style="color:#4ade80;">✓ Habilidade pronta, enxuta e dentro das melhores práticas!</span>'
-            : issues.map(i => `<div style="color:#fbbf24;">💡 ${escapeSkillsHtml(i.message)}</div>`).join('');
+            ? `<span class="u-s-80aa08">${uiIcon('check-circle', 'icon-xs')} Habilidade pronta, enxuta e dentro das melhores práticas!</span>`
+            : issues.map(i => `<div class="u-text-amber-light">${uiIcon('lightbulb', 'icon-xs')} ${escapeSkillsHtml(i.message)}</div>`).join('');
         }
 
         if (data.diff) {
@@ -1740,7 +1721,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.textContent = origTxt || '✨ Gerar Habilidade';
+          btn.innerHTML = origTxt || `${uiIcon('sparkles', 'icon-xs')} Gerar Habilidade`;
         }
       }
     }
@@ -1807,7 +1788,7 @@
         const prev = sel.value;
         sel.innerHTML = `<option value="">-- Selecione uma habilidade instalada --</option>` +
           (skillsHubState.skills || []).map(s => {
-            const tag = !s.in_sync ? ' ⚡ (diferente entre ambientes)' : '';
+            const tag = !s.in_sync ? ' (diferente entre ambientes)' : '';
             return `<option value="${escapeSkillsHtml(s.slug)}">${escapeSkillsHtml(s.slug)}${tag}</option>`;
           }).join('');
         if (prev) sel.value = prev;
@@ -1824,11 +1805,12 @@
         if (!s.in_sync) {
           cards.push({
             prio: 1,
+            icon: 'zap',
             border: 'rgba(245,158,11,0.4)',
             bg: 'rgba(245,158,11,0.08)',
-            title: `⚡ ${s.slug} — versões diferentes nos seus ambientes`,
+            title: `${s.slug} — versões diferentes nos seus ambientes`,
             desc: `Encontramos ${s.unique_hashes_count} versões diferentes desta skill entre seus ambientes. Compare lado a lado para escolher a melhor.`,
-            actionHtml: `<button class="btn-action primary" style="padding:4px 10px; font-size:0.73rem;" onclick="inspectHealthDriftFor('${escapeSkillsHtml(s.slug)}')">🔍 Comparar Versões</button>`
+            actionHtml: `<button class="btn-action primary u-s-42d134" onclick="inspectHealthDriftFor('${escapeSkillsHtml(s.slug)}')">${uiIcon('search', 'icon-xs')} Comparar Versões</button>`
           });
         }
 
@@ -1837,13 +1819,14 @@
           const isMac = s.win11_compatible === false && s.security_verdict === 'safe';
           cards.push({
             prio: 2,
+            icon: isMac ? 'terminal' : 'alert-triangle',
             border: isMac ? 'rgba(56,189,248,0.35)' : 'rgba(245,158,11,0.35)',
             bg: isMac ? 'rgba(56,189,248,0.07)' : 'rgba(245,158,11,0.07)',
-            title: `${isMac ? '🐧' : '⚠️'} ${s.slug} — ${isMac ? 'feita originalmente para Mac/Linux' : 'aviso preventivo'}`,
+            title: `${s.slug} — ${isMac ? 'feita originalmente para Mac/Linux' : 'aviso preventivo'}`,
             desc: s.security_human_summary || 'Clique para ver o motivo detalhado.',
             actionHtml: isMac
-              ? `<button class="btn-action" style="padding:4px 10px; font-size:0.73rem;" onclick="openInstalledInForge('${escapeSkillsHtml(s.slug)}')">✨ Adaptar p/ Windows</button>`
-              : `<button class="btn-action" style="padding:4px 10px; font-size:0.73rem;" onclick="inspectSkillAndSwitch('${escapeSkillsHtml(s.slug)}')">✏️ Ver Motivo</button>`
+              ? `<button class="btn-action u-s-42d134" onclick="openInstalledInForge('${escapeSkillsHtml(s.slug)}')">${uiIcon('sparkles', 'icon-xs')} Adaptar p/ Windows</button>`
+              : `<button class="btn-action u-s-42d134" onclick="inspectSkillAndSwitch('${escapeSkillsHtml(s.slug)}')">${uiIcon('edit', 'icon-xs')} Ver Motivo</button>`
           });
         }
 
@@ -1851,11 +1834,12 @@
         if ((s.description_len || 0) > 60) {
           cards.push({
             prio: 3,
+            icon: 'scissors',
             border: 'rgba(192,132,252,0.35)',
             bg: 'rgba(192,132,252,0.07)',
-            title: `✂️ ${s.slug} — resumo com ${s.description_len} caracteres`,
+            title: `${s.slug} — resumo com ${s.description_len} caracteres`,
             desc: `Encurtar o resumo para até 60 caracteres economiza memória fixa da IA sem alterar nenhuma instrução da skill.`,
-            actionHtml: `<button class="btn-action primary" style="padding:4px 10px; font-size:0.73rem;" onclick="quickAutofixAndOpen('${escapeSkillsHtml(s.slug)}')">✨ Ajustar Resumo</button>`
+            actionHtml: `<button class="btn-action primary u-s-42d134" onclick="quickAutofixAndOpen('${escapeSkillsHtml(s.slug)}')">${uiIcon('sparkles', 'icon-xs')} Ajustar Resumo</button>`
           });
         }
       });
@@ -1865,29 +1849,30 @@
       unusedList.forEach(s => {
         cards.push({
           prio: 4,
+          icon: 'clock',
           border: 'rgba(148,163,184,0.22)',
-          bg: 'rgba(15,23,42,0.5)',
-          title: `💤 ${s.slug} — ainda sem uso registrado`,
+          bg: 'rgba(17, 17, 19,0.5)',
+          title: `${s.slug} — ainda sem uso registrado`,
           desc: `Se você não estiver usando esta skill no momento, pode pausá-la para economizar ${s.level1_tokens} tokens fixos e reativá-la quando quiser.`,
-          actionHtml: `<button class="btn-action" style="padding:4px 10px; font-size:0.73rem;" onclick="toggleSkillDisabled('${escapeSkillsHtml(s.slug)}', true)">⏸️ Pausar</button>`
+          actionHtml: `<button class="btn-action u-s-42d134" onclick="toggleSkillDisabled('${escapeSkillsHtml(s.slug)}', true)">${uiIcon('pause', 'icon-xs')} Pausar</button>`
         });
       });
 
       cards.sort((a, b) => a.prio - b.prio);
 
       if (cards.length === 0) {
-        oppBox.innerHTML = `<div style="padding:18px; text-align:center; color:#4ade80; background:rgba(34,197,94,0.08); border-radius:8px; border:1px solid rgba(34,197,94,0.25);">
-          ✓ Seu conjunto de habilidades está super enxuto, sincronizado e em dia!
+        oppBox.innerHTML = `<div class="u-text-center u-s-aad33a">
+          ${uiIcon('check-circle', 'icon-xs')} Seu conjunto de habilidades está super enxuto, sincronizado e em dia!
         </div>`;
         return;
       }
 
-      oppBox.innerHTML = cards.map(c => `<div style="padding:10px 12px; border-radius:8px; background:${c.bg}; border:1px solid ${c.border}; display:flex; justify-content:space-between; align-items:center; gap:12px;">
-        <div style="min-width:0;">
-          <div style="font-weight:700; color:#f1f5f9; font-size:0.81rem;">${escapeSkillsHtml(c.title)}</div>
-          <div style="color:#cbd5e1; font-size:0.74rem; margin-top:3px; line-height:1.4;">${escapeSkillsHtml(c.desc)}</div>
+      oppBox.innerHTML = cards.map(c => `<div class="u-d-flex u-justify-between u-items-center u-gap-3 u-s-c65645" style="background:${c.bg}; border:1px solid ${c.border};">
+        <div class="u-min-w-0">
+          <div class="u-fw-700 u-s-1b12a4">${c.icon ? uiIcon(c.icon, 'icon-xs') + ' ' : ''}${escapeSkillsHtml(c.title)}</div>
+          <div class="u-text-slate u-mt-3p u-s-e197f7">${escapeSkillsHtml(c.desc)}</div>
         </div>
-        <div style="flex-shrink:0;">${c.actionHtml}</div>
+        <div class="u-shrink-0">${c.actionHtml}</div>
       </div>`).join('');
     }
 
@@ -1901,7 +1886,7 @@
       const box = document.getElementById('health-timeline-box');
       if (!box) return;
       if (!slug) {
-        box.innerHTML = '<div style="color:#64748b;">Escolha uma skill acima para ver o histórico de versões salvas.</div>';
+        box.innerHTML = '<div class="u-text-dark">Escolha uma skill acima para ver o histórico de versões salvas.</div>';
         return;
       }
 
@@ -1911,14 +1896,14 @@
         if (data.status !== 'success') return;
         const hist = data.history || [];
         if (hist.length === 0) {
-          box.innerHTML = `<div style="color:#94a3b8;">"${escapeSkillsHtml(slug)}" ainda não possui versões anteriores gravadas no histórico.</div>`;
+          box.innerHTML = `<div class="u-text-muted">"${escapeSkillsHtml(slug)}" ainda não possui versões anteriores gravadas no histórico.</div>`;
           return;
         }
         box.innerHTML = hist.map(h => {
           const dt = h.timestamp_epoch ? new Date(h.timestamp_epoch * 1000).toLocaleString('pt-BR') : h.snapshot_id;
-          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 8px; margin-bottom:4px; border-radius:6px; background:rgba(15,23,42,0.6); border:1px solid rgba(148,163,184,0.14);">
-            <span><strong>${escapeSkillsHtml(dt)}</strong> <span style="color:#94a3b8;">(${escapeSkillsHtml(h.reason)})</span></span>
-            <button class="btn-action" style="padding:2px 8px; font-size:0.7rem;" onclick="rollbackSkillToSnapshot('${escapeSkillsHtml(slug)}', '${escapeSkillsHtml(h.snapshot_id)}')">⏪ Restaurar</button>
+          return `<div class="u-d-flex u-justify-between u-items-center u-mb-1 u-s-95ee69">
+            <span><strong>${escapeSkillsHtml(dt)}</strong> <span class="u-text-muted">(${escapeSkillsHtml(h.reason)})</span></span>
+            <button class="btn-action u-s-cd187d" onclick="rollbackSkillToSnapshot('${escapeSkillsHtml(slug)}', '${escapeSkillsHtml(h.snapshot_id)}')">${uiIcon('history', 'icon-xs')} Restaurar</button>
           </div>`;
         }).join('');
       } catch (err) {
@@ -1985,7 +1970,7 @@
         const metricsEl = document.getElementById('health-diff-metrics');
         if (metricsEl) {
           metricsEl.textContent = report.unchanged
-            ? `✓ As cópias de "${slug}" em ${leftSurf} e ${rightSurf} são idênticas!`
+            ? `As cópias de "${slug}" em ${leftSurf} e ${rightSurf} são idênticas!`
             : `Comparando ${leftSurf} ↔ ${rightSurf}: +${report.additions} linhas / -${report.deletions} linhas • Qualidade ${report.before_score} → ${report.after_score}`;
         }
         renderMyersDiffInto('health-diff-viewer', report);
@@ -2003,22 +1988,22 @@
         return;
       }
       if (report.unchanged) {
-        box.innerHTML = `<div style="color:#4ade80; padding:8px;">✓ Os arquivos são 100% idênticos!</div>`;
+        box.innerHTML = `<div class="u-s-7c5b7c">${uiIcon('check-circle', 'icon-xs')} Os arquivos são 100% idênticos!</div>`;
         return;
       }
 
-      const header = `<div style="padding:6px 8px; margin-bottom:8px; border-radius:6px; background:rgba(30,41,59,0.75); color:#cbd5e1; font-size:0.73rem;">
+      const header = `<div class="u-mb-2 u-text-slate u-s-bb0c24">
         <strong>Resumo:</strong> +${report.additions || 0} adições / -${report.deletions || 0} remoções • Qualidade: ${report.before_score ?? '-'} → ${report.after_score ?? '-'}
       </div>`;
 
       const linesHtml = report.lines.slice(0, 400).map(ln => {
         if (ln.tag === 'insert') {
-          return `<div style="background:rgba(34,197,94,0.14); color:#86efac; padding:1px 6px; white-space:pre-wrap;">+ ${escapeSkillsHtml(ln.text)}</div>`;
+          return `<div class="u-pre-wrap u-s-cda35a">+ ${escapeSkillsHtml(ln.text)}</div>`;
         }
         if (ln.tag === 'delete') {
-          return `<div style="background:rgba(239,68,68,0.14); color:#fca5a5; padding:1px 6px; white-space:pre-wrap;">- ${escapeSkillsHtml(ln.text)}</div>`;
+          return `<div class="u-pre-wrap u-s-16928d">- ${escapeSkillsHtml(ln.text)}</div>`;
         }
-        return `<div style="color:#94a3b8; padding:1px 6px; white-space:pre-wrap;">  ${escapeSkillsHtml(ln.text)}</div>`;
+        return `<div class="u-text-muted u-pre-wrap u-s-7e80e0">  ${escapeSkillsHtml(ln.text)}</div>`;
       }).join('');
 
       box.innerHTML = header + linesHtml;

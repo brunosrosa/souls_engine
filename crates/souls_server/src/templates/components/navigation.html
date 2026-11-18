@@ -1,45 +1,60 @@
-  <!-- TAB NAVIGATION -->
+  <!-- TAB NAVIGATION (6 PILARES DE PRODUTO) -->
   <nav class="tabbar-container">
     <div class="tabs-track">
       <button class="tab-btn active" id="btn-tab-overview" onclick="switchTab('tab-overview')">
-        <span>🎯 Overview</span>
-      </button>
-      <button class="tab-btn" id="btn-tab-personas" onclick="switchTab('tab-personas')">
-        <span>🎭 Personas</span>
-        <span class="tab-count-badge" id="badge-personas-count">--</span>
-      </button>
-      <button class="tab-btn" id="btn-tab-subagents" onclick="switchTab('tab-subagents')">
-        <span>🤖 Subagentes & Fila</span>
-        <span class="tab-count-badge" id="badge-subagents-count">--</span>
-      </button>
-      <button class="tab-btn" id="btn-tab-skills" onclick="switchTab('tab-skills')">
-        <span>🧩 Skills & Tools</span>
-        <span class="tab-count-badge" id="badge-skills-count">--</span>
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-target"></use></svg> Cockpit &amp; Overview</span>
       </button>
       <button class="tab-btn" id="btn-tab-research" onclick="switchTab('tab-research')">
-        <span>🔬 Pesquisa Profunda</span>
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-microscope"></use></svg> Pesquisa &amp; Conhecimento</span>
         <span class="tab-count-badge" id="badge-research-count">0</span>
       </button>
+      <button class="tab-btn" id="btn-tab-personas" onclick="switchTab('tab-personas')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-masks"></use></svg> Agentes &amp; Personas</span>
+        <span class="tab-count-badge" id="badge-personas-count">--</span>
+      </button>
+      <button class="tab-btn" id="btn-tab-skills" onclick="switchTab('tab-skills')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-puzzle"></use></svg> Skills &amp; MCP Tools</span>
+        <span class="tab-count-badge" id="badge-skills-count">--</span>
+      </button>
       <button class="tab-btn" id="btn-tab-local" onclick="switchTab('tab-local')">
-        <span>⚡ Modelos & Arena</span>
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Modelos &amp; Arena</span>
         <span class="tab-count-badge" id="badge-local-count">--</span>
       </button>
-      <button class="tab-btn" id="btn-tab-connections" onclick="switchTab('tab-connections')">
-        <span>🔌 Conexões & CLIs</span>
-        <span class="tab-count-badge" id="badge-clis-count">--</span>
-      </button>
       <button class="tab-btn" id="btn-tab-settings" onclick="switchTab('tab-settings')">
-        <span>⚙️ Settings</span>
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Conexões &amp; Settings</span>
       </button>
     </div>
-    <div class="telemetry-pill" id="pill-active-preset" onclick="switchTab('tab-settings')" title="Clique para alternar o Preset operacional ativo do Master Brain" style="cursor: pointer;">
-      <span>🎛️ Preset Ativo:</span>
-      <strong id="top-active-preset" style="color: var(--cyan);">Frontier Balanced (Master Brain)</strong>
+    <div class="telemetry-pill pillar-preset-pill" id="pill-active-preset" onclick="switchTab('tab-settings')" title="Clique para alternar o Preset operacional ativo do Master Brain">
+      <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sliders"></use></svg> Preset</span>
+      <strong id="top-active-preset">Frontier Balanced (Master Brain)</strong>
     </div>
   </nav>
 
   <!-- CONTENT -->
   <main class="content-area">
+    <!-- SUB-NAVEGAÇÃO CONTEXTUAL DO PILAR: AGENTES & PERSONAS -->
+    <div class="pillar-subnav is-hidden" id="pillar-subnav-agents">
+      <span class="pillar-subnav-label">Pilar Agentes:</span>
+      <button class="pillar-subnav-btn active" id="btn-pillar-personas" onclick="switchTab('tab-personas')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-masks"></use></svg> Personas &amp; Governança</span>
+      </button>
+      <button class="pillar-subnav-btn" id="btn-pillar-subagents" onclick="switchTab('tab-subagents')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-bot"></use></svg> Subagentes &amp; Fila</span>
+        <span class="tab-count-badge" id="badge-subagents-count">--</span>
+      </button>
+    </div>
+
+    <!-- SUB-NAVEGAÇÃO CONTEXTUAL DO PILAR: CONEXÕES & SETTINGS -->
+    <div class="pillar-subnav is-hidden" id="pillar-subnav-system">
+      <span class="pillar-subnav-label">Pilar Sistema:</span>
+      <button class="pillar-subnav-btn" id="btn-pillar-connections" onclick="switchTab('tab-connections')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-plug"></use></svg> Conexões &amp; CLIs</span>
+        <span class="tab-count-badge" id="badge-clis-count">--</span>
+      </button>
+      <button class="pillar-subnav-btn active" id="btn-pillar-settings" onclick="switchTab('tab-settings')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Configurações &amp; Engine</span>
+      </button>
+    </div>
 
     <!-- ========================================== -->
     <!-- ABA 1: OVERVIEW & INTEGRADOR PARETO -->

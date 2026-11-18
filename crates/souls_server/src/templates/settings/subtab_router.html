@@ -1,117 +1,121 @@
       <div class="settings-subpane" id="subtab-router">
         <!-- HEADER DO PAINEL -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; flex-wrap: wrap; gap: 12px;">
+        <div class="u-d-flex u-justify-between u-items-start u-mb-14p u-flex-wrap u-gap-3">
           <div>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 3px;">
-              <span style="font-size: 1.35rem;">🔀</span>
-              <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff; margin: 0;">ParetoBandit & Roteamento Agêntico Inteligente</h2>
-              <span class="info-icon" style="z-index: 100;">i
-                <span class="tooltip-box" style="width: 380px;">
-                  <strong>Thompson Sampling Multi-Armed Bandit</strong>
-                  Roteia subagentes e microtarefas (`delegate_task` / `route_subtask`) balanceando Qualidade ($E^3$), Custo FinOps e Latência em tempo real.
-                  <div class="tooltip-impact">💡 Função de utilidade escalarizada: U = Wq·Q + Wc·C + Wl·L - Φ</div>
-                  <div class="tooltip-def">Decaimento temporal geométrico γ = 0.995 e prior bayesiano Beta(α, β).</div>
+            <div class="u-d-flex u-items-start u-gap-10p u-s-6c1e6a">
+              <svg class="ui-icon icon-md u-text-cyan u-shrink-0" style="margin-top: 2px;" aria-hidden="true"><use href="#icon-git-branch"></use></svg>
+              <h2 class="u-fw-700 u-text-white u-m-0 u-s-76085d">
+                <span class="card-title-inline">
+                  ParetoBandit &amp; Roteamento Agêntico Inteligente
+                  <span class="info-icon u-s-a1eb51">i
+                    <span class="tooltip-box u-s-949ee7">
+                      <strong>Thompson Sampling Multi-Armed Bandit</strong>
+                      Roteia subagentes e microtarefas (`delegate_task` / `route_subtask`) balanceando Qualidade ($E^3$), Custo FinOps e Latência em tempo real.
+                      <div class="tooltip-impact"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lightbulb"></use></svg> Função de utilidade escalarizada: U = Wq·Q + Wc·C + Wl·L - Φ</div>
+                      <div class="tooltip-def">Decaimento temporal geométrico γ = 0.995 e prior bayesiano Beta(α, β).</div>
+                    </span>
+                  </span>
                 </span>
-              </span>
+              </h2>
             </div>
-            <p style="font-size: 0.77rem; color: var(--text-muted); margin: 0; text-wrap: balance;">
-              Distribuição estocástica de microtarefas e subagentes entre Silício Local (RTX 2060m / CPU AVX2) e Provedores Cloud via Fronteira de Pareto.
+            <p class="u-text-muted u-m-0 u-balance u-s-a3d012">
+              Distribuição estocástica de microtarefas e subagentes entre Silício Local (dGPU Local / CPU AVX2) e Provedores Cloud via Fronteira de Pareto.
             </p>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-sm btn-ghost" onclick="resetRouterDefaults()" title="Restaurar proporções canônicas 50/30/20">
-              <span>⚡</span> Defaults do Roteador
+          <div class="card-header-actions">
+            <button class="btn btn-sm btn-outline" onclick="resetRouterDefaults()" title="Restaurar proporções canônicas 50/30/20">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Defaults do Roteador
             </button>
             <button class="btn btn-green" onclick="saveSettings()">
-              <span>💾</span> Salvar Configurações
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-database"></use></svg> Salvar Configurações
             </button>
           </div>
         </div>
 
         <!-- 4 CARDS DE KPI MÉTRICAS SUPERIORES (CENTRALIZADOS) -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 14px;">
-          <div class="card" style="margin-bottom: 0; padding: 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cyan); margin-bottom: 4px;">
-              🔀 ALGORITMO ATIVO
+        <div class="u-d-grid u-gap-3 u-mb-14p u-s-ab1b65">
+          <div class="card u-mb-0 u-text-center u-d-flex u-flex-col u-items-center u-justify-center u-s-b5edc1">
+            <div class="u-fw-700 u-uppercase u-text-cyan u-mb-1 u-s-fe2c9f">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-git-branch"></use></svg> ALGORITMO ATIVO
             </div>
-            <div class="mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+            <div class="mono u-fw-700 u-text-white u-s-ff0d51">
               Thompson Sampling
             </div>
-            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+            <div class="u-text-muted u-mt-2p u-s-923ef2">
               Amostragem Beta(&alpha;, &beta;) Estocástica
             </div>
           </div>
 
-          <div class="card" style="margin-bottom: 0; padding: 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--purple); margin-bottom: 4px;">
-              🎯 TRÍADE DE PESOS
+          <div class="card u-mb-0 u-text-center u-d-flex u-flex-col u-items-center u-justify-center u-s-b5edc1">
+            <div class="u-fw-700 u-uppercase u-text-purple u-mb-1 u-s-fe2c9f">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-target"></use></svg> TRÍADE DE PESOS
             </div>
-            <div id="metric-router-weights" class="mono" style="font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap;">
+            <div id="metric-router-weights" class="mono u-fw-700 u-text-white u-nowrap u-s-7a04c0">
               50% Q • 30% C • 20% L
             </div>
-            <div id="metric-router-sum" style="font-size: 0.68rem; color: var(--green); margin-top: 2px;">
-              ✓ Soma Normalizada (100%)
+            <div class="u-text-green u-mt-2p u-s-923ef2" id="metric-router-sum">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg> Soma Normalizada (100%)
             </div>
           </div>
 
-          <div class="card" style="margin-bottom: 0; padding: 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--green); margin-bottom: 4px;">
-              ⏱️ LATÊNCIA DE DECISÃO
+          <div class="card u-mb-0 u-text-center u-d-flex u-flex-col u-items-center u-justify-center u-s-b5edc1">
+            <div class="u-fw-700 u-uppercase u-text-green u-mb-1 u-s-fe2c9f">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg> LATÊNCIA DE DECISÃO
             </div>
-            <div class="mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+            <div class="mono u-fw-700 u-text-white u-s-ff0d51">
               &lt; 0.08 ms
             </div>
-            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+            <div class="u-text-muted u-mt-2p u-s-923ef2">
               Despacho Bare-Metal (0 MB VRAM)
             </div>
           </div>
 
-          <div class="card" style="margin-bottom: 0; padding: 12px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--amber); margin-bottom: 4px;">
-              🛡️ SALVAGUARDA HERMES
+          <div class="card u-mb-0 u-text-center u-d-flex u-flex-col u-items-center u-justify-center u-s-b5edc1">
+            <div class="u-fw-700 u-uppercase u-text-amber u-mb-1 u-s-fe2c9f">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-shield"></use></svg> SALVAGUARDA HERMES
             </div>
-            <div class="mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+            <div class="mono u-fw-700 u-text-white u-s-ff0d51">
               Master Brain Fixo
             </div>
-            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+            <div class="u-text-muted u-mt-2p u-s-923ef2">
               Lei 3: Imutável no Diálogo Mestre
             </div>
           </div>
         </div>
 
         <!-- BANNER DE GOVERNANÇA & FRONTEIRA DE PARETO -->
-        <div style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 10px; font-size: 0.76rem; color: #cbd5e1; line-height: 1.42; flex: 1; min-width: 280px;">
-            <span style="font-size: 1.2rem;">💡</span>
+        <div class="u-mb-14p u-d-flex u-items-center u-justify-between u-gap-14p u-flex-wrap u-s-458039">
+          <div class="u-d-flex u-items-center u-gap-10p u-text-slate u-flex-1 u-s-340aca">
+            <svg class="ui-icon icon-md u-text-cyan" aria-hidden="true"><use href="#icon-lightbulb"></use></svg>
             <span>
-              <strong style="color: var(--cyan);">Governança Agêntica & Fronteira de Pareto:</strong> O ParetoBandit atua <strong>exclusivamente</strong> na fronteira de microtarefas e subagentes (`delegate_task` / `auxiliary.*`). O modelo do chat interativo mestre (Master Brain) permanece imutável durante todo o diálogo (Lei Arquitetural #3). O algoritmo equilibra qualidade técnica, custo FinOps e latência de rede com decaimento temporal geométrico <strong>γ = 0.995</strong>.
+              <strong class="u-text-cyan">Governança Agêntica & Fronteira de Pareto:</strong> O ParetoBandit atua <strong>exclusivamente</strong> na fronteira de microtarefas e subagentes (`delegate_task` / `auxiliary.*`). O modelo do chat interativo mestre (Master Brain) permanece imutável durante todo o diálogo (Lei Arquitetural #3). O algoritmo equilibra qualidade técnica, custo FinOps e latência de rede com decaimento temporal geométrico <strong>γ = 0.995</strong>.
             </span>
           </div>
-          <div style="text-align: right; flex-shrink: 0;">
-            <span id="badge-router-engine-state" style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--cyan); background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.3); padding: 3px 8px; border-radius: 4px; display: inline-block;">● Dispatcher Autônomo Ativo</span>
+          <div class="u-text-right u-shrink-0">
+            <span class="u-mono u-text-cyan u-d-inline-block u-s-9f8814" id="badge-router-engine-state">● Dispatcher Autônomo Ativo</span>
           </div>
         </div>
 
         <!-- GRID PRINCIPAL DE 2 COLUNAS -->
-        <div style="display: grid; grid-template-columns: 1.12fr 0.88fr; gap: 16px; align-items: start;">
+        <div class="u-d-grid u-gap-4 u-s-87e080">
           <!-- COLUNA 1: POLÍTICAS E HEURÍSTICAS DO ROTEADOR -->
-          <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="u-d-flex u-flex-col u-gap-14p">
             <!-- CARD 1: GOVERNANÇA & SALVAGUARDAS -->
-            <div class="card card-highlight" style="margin-bottom: 0;">
-              <div class="card-header" style="padding-bottom: 8px;">
-                <div class="card-title" style="font-size: 0.86rem;">
-                  <div class="card-icon icon-cyan" style="width: 24px; height: 24px; font-size: 0.88rem;">🔀</div>
+            <div class="card card-highlight u-mb-0">
+              <div class="card-header u-s-a2525a">
+                <div class="card-title u-s-63dea9">
+                  <div class="card-icon icon-cyan u-s-327c17"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-git-branch"></use></svg></div>
                   Políticas de Despacho & Salvaguardas Agênticas
                 </div>
               </div>
 
-              <div class="setting-list" style="display: flex; flex-direction: column; gap: 11px;">
+              <div class="setting-list u-d-flex u-flex-col u-s-2d890a">
                 <!-- ITEM 1: PARETO DISPATCHING -->
                 <div class="setting-item">
                   <div class="setting-header">
                     <div class="setting-title">
                       Pareto Dispatching Ativo
-                      <span class="info-icon" style="z-index: 95;">i
+                      <span class="info-icon u-s-aaed6f">i
                         <span class="tooltip-box">
                           <strong>Roteamento Dinâmico de Subagentes</strong>
                           Habilita o algoritmo de escolha multi-objetivo nas fronteiras agênticas (`delegate_task`). Quando desligado, usa o modelo estático configurado no perfil.
@@ -127,7 +131,7 @@
                       </label>
                     </div>
                   </div>
-                  <div class="setting-desc" style="text-wrap: balance;">Seleciona autonomamente o trabalhador ideal (Local RTX 2060m, CPU AVX2 ou Nuvem) a cada microtarefa.</div>
+                  <div class="setting-desc u-balance">Seleciona autonomamente o trabalhador ideal (dGPU Local, CPU AVX2 ou Nuvem) a cada microtarefa.</div>
                 </div>
 
                 <!-- ITEM 2: VIÉS SOBERANO -->
@@ -135,10 +139,10 @@
                   <div class="setting-header">
                     <div class="setting-title">
                       Viés Soberano em Cold Start
-                      <span class="info-icon" style="z-index: 95;">i
+                      <span class="info-icon u-s-aaed6f">i
                         <span class="tooltip-box">
                           <strong>Prior Local com Proteção de Privacidade</strong>
-                          Atribui Beta(5, 1) a modelos locais na RTX 2060m vs Beta(2, 2) em nuvem quando não há histórico acumulado no banco SQLite.
+                          Atribui Beta(5, 1) a modelos locais na dGPU dedicada vs Beta(2, 2) em nuvem quando não há histórico acumulado no banco SQLite.
                           <div class="tooltip-def">Padrão: Ativo (true)</div>
                         </span>
                       </span>
@@ -151,7 +155,7 @@
                       </label>
                     </div>
                   </div>
-                  <div class="setting-desc" style="text-wrap: balance;">Garante prioridade ao processamento local e confidencialidade de dados antes do acúmulo de métricas.</div>
+                  <div class="setting-desc u-balance">Garante prioridade ao processamento local e confidencialidade de dados antes do acúmulo de métricas.</div>
                 </div>
 
                 <!-- ITEM 3: PENALIZAÇÃO TÉRMICA -->
@@ -159,7 +163,7 @@
                   <div class="setting-header">
                     <div class="setting-title">
                       Barreira Térmica & Penalização NVML
-                      <span class="info-icon" style="z-index: 95;">i
+                      <span class="info-icon u-s-aaed6f">i
                         <span class="tooltip-box">
                           <strong>Penalização Dinâmica de Silício</strong>
                           Aplica uma penalidade Phi proporcional à temperatura da GPU se ela ultrapassar o limiar preventivo (72°C), forçando o desvio para CPU AVX2.
@@ -174,7 +178,7 @@
                       </label>
                     </div>
                   </div>
-                  <div class="setting-desc" style="text-wrap: balance;">Reduz despachos para a GPU física quando a temperatura sobe, prevenindo o thermal throttling.</div>
+                  <div class="setting-desc u-balance">Reduz despachos para a GPU física quando a temperatura sobe, prevenindo o thermal throttling.</div>
                 </div>
 
                 <!-- ITEM 4: TETO DE CONTEXTO LOCAL -->
@@ -182,10 +186,10 @@
                   <div class="setting-header">
                     <div class="setting-title">
                       Teto de Contexto Local (Tokens)
-                      <span class="info-icon" style="z-index: 95;">i
+                      <span class="info-icon u-s-aaed6f">i
                         <span class="tooltip-box">
                           <strong>Janela Máxima de Conforto da GPU</strong>
-                          Prompts que excedem este valor são automaticamente direcionados a modelos de nuvem para resguardar a VRAM útil da RTX 2060m.
+                          Prompts que excedem este valor são automaticamente direcionados a modelos de nuvem para resguardar a VRAM útil da dGPU local.
                           <div class="tooltip-def">Padrão: 8.192 tokens</div>
                         </span>
                       </span>
@@ -201,88 +205,88 @@
                     <input type="range" id="cfg-local-token-limit" min="2048" max="16384" step="1024" value="8192" data-default="8192" data-snap-delta="512" oninput="document.getElementById('val-local-tokens').innerText = this.value; markSettingsUnsaved();">
                     <div class="slider-default-tick at-default" data-slider="cfg-local-token-limit" style="left: calc(8px + (100% - 16px) * 0.4286);" title="Padrão canônico: 8.192 tok (Clique ou aproxime para restaurar)"></div>
                   </div>
-                  <div class="setting-desc" style="text-wrap: balance;">Previne estouros de VRAM limitando o tamanho de prompts despachados para a dGPU local.</div>
+                  <div class="setting-desc u-balance">Previne estouros de VRAM limitando o tamanho de prompts despachados para a dGPU local.</div>
                 </div>
               </div>
             </div>
 
             <!-- CARD 2: TRÍADE DE PESOS MULTI-OBJETIVO -->
-            <div class="card" style="margin-bottom: 0;">
-              <div class="card-header" style="padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div class="card-title" style="font-size: 0.86rem;">
-                  <div class="card-icon icon-purple" style="width: 24px; height: 24px; font-size: 0.88rem;">⚖️</div>
+            <div class="card u-mb-0">
+              <div class="card-header u-d-flex u-justify-between u-items-center u-s-a2525a">
+                <div class="card-title u-s-63dea9">
+                  <div class="card-icon icon-purple u-s-327c17"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-scale"></use></svg></div>
                   Calibração da Tríade de Pesos Multi-Objetivo
-                  <span class="info-icon" style="z-index: 95;">i
+                  <span class="info-icon u-s-aaed6f">i
                     <span class="tooltip-box">
                       <strong>Escalarização de Utilidade</strong>
                       A soma dos pesos Qualidade + Custo + Latência deve idealmente totalizar 1.0 (100%). Os botões de presets rápidos aplicam configurações ideais com 1 clique.
                     </span>
                   </span>
                 </div>
-                <div id="badge-weights-validation" style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--green); background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 7px; border-radius: 4px;">
-                  ✓ 100% Calibrado
+                <div class="u-mono u-text-green u-s-db3f87" id="badge-weights-validation">
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg> 100% Calibrado
                 </div>
               </div>
 
               <!-- PRESETS RÁPIDOS DA TRÍADE -->
-              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+              <div class="u-d-flex u-gap-6p u-flex-wrap u-mb-10p">
                 <button class="sim-preset-btn" onclick="applyRouterWeightPreset(0.50, 0.30, 0.20, 'Equilíbrio Canônico')">
-                  <span>⚖️</span> Equilíbrio Canônico (50/30/20)
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-scale"></use></svg> Equilíbrio Canônico (50/30/20)
                 </button>
                 <button class="sim-preset-btn" onclick="applyRouterWeightPreset(0.20, 0.60, 0.20, 'FinOps Zero-Cost')">
-                  <span>💰</span> FinOps Zero-Cost (20/60/20)
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-dollar"></use></svg> FinOps Zero-Cost (20/60/20)
                 </button>
                 <button class="sim-preset-btn" onclick="applyRouterWeightPreset(0.80, 0.10, 0.10, 'Máxima Qualidade')">
-                  <span>👑</span> Máxima Qualidade (80/10/10)
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-crown"></use></svg> Máxima Qualidade (80/10/10)
                 </button>
                 <button class="sim-preset-btn" onclick="applyRouterWeightPreset(0.30, 0.10, 0.60, 'Ultra Latência')">
-                  <span>⚡</span> Ultra Latência (30/10/60)
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Ultra Latência (30/10/60)
                 </button>
               </div>
 
               <!-- BARRA VISUAL DE DISTRIBUIÇÃO TRICOLOR -->
-              <div style="margin-bottom: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 10px;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.70rem; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 5px;">
+              <div class="u-mb-3 u-s-dc4f75">
+                <div class="u-d-flex u-justify-between u-text-muted u-mono u-s-fbc8e4">
                   <span>Composição da Utilidade</span>
-                  <span id="weights-sum-label" style="font-weight: 700; color: #fff;">Soma: 100%</span>
+                  <span class="u-fw-700 u-text-white" id="weights-sum-label">Soma: 100%</span>
                 </div>
-                <div style="height: 8px; width: 100%; border-radius: 4px; overflow: hidden; display: flex; background: rgba(255,255,255,0.05);">
-                  <div id="bar-weight-qual" style="width: 50%; background: var(--purple); transition: width 0.2s;" title="Qualidade Técnica"></div>
-                  <div id="bar-weight-cost" style="width: 30%; background: var(--green); transition: width 0.2s;" title="Economia FinOps"></div>
-                  <div id="bar-weight-lat" style="width: 20%; background: var(--cyan); transition: width 0.2s;" title="Baixa Latência"></div>
+                <div class="u-w-full u-overflow-hidden u-d-flex u-s-04d2f9">
+                  <div class="u-s-be6353" id="bar-weight-qual" title="Qualidade Técnica"></div>
+                  <div class="u-s-136e46" id="bar-weight-cost" title="Economia FinOps"></div>
+                  <div class="u-s-5efe53" id="bar-weight-lat" title="Baixa Latência"></div>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.68rem; font-family: var(--font-mono); margin-top: 5px;">
-                  <span style="color: var(--purple);">● Qualidade: <strong id="lbl-qual-pct">50%</strong></span>
-                  <span style="color: var(--green);">● FinOps: <strong id="lbl-cost-pct">30%</strong></span>
-                  <span style="color: var(--cyan);">● Latência: <strong id="lbl-lat-pct">20%</strong></span>
+                <div class="u-d-flex u-justify-between u-mono u-s-dda289">
+                  <span class="u-text-purple">● Qualidade: <strong id="lbl-qual-pct">50%</strong></span>
+                  <span class="u-text-green">● FinOps: <strong id="lbl-cost-pct">30%</strong></span>
+                  <span class="u-text-cyan">● Latência: <strong id="lbl-lat-pct">20%</strong></span>
                 </div>
               </div>
 
-              <div class="setting-list" style="display: flex; flex-direction: column; gap: 11px;">
+              <div class="setting-list u-d-flex u-flex-col u-s-2d890a">
                 <!-- SLIDER 1: QUALIDADE -->
                 <div class="setting-item">
                   <div class="setting-header">
                     <div class="setting-title">
                       Peso Qualidade Técnica (Wq)
-                      <span class="info-icon" style="z-index: 90;">i
+                      <span class="info-icon u-s-008567">i
                         <span class="tooltip-box">
                           <strong>Eficácia Técnica ($E^3$)</strong>
                           Prioridade para resolução exata e sem falhas na seleção de subagentes.
                         </span>
                       </span>
                     </div>
-                    <div class="range-val-badge" style="background: rgba(168, 85, 247, 0.12); color: var(--purple); border-color: rgba(168, 85, 247, 0.3);">
+                    <div class="range-val-badge u-text-purple u-s-4fd1a7">
                       <span class="val-kicker">Peso:</span>
                       <span id="val-weight-quality">0.50</span>
-                      <span id="pct-weight-quality" style="color: var(--text-muted);">(50%)</span>
-                      <span class="default-indicator" style="color: var(--purple);">(Padrão)</span>
+                      <span class="u-text-muted" id="pct-weight-quality">(50%)</span>
+                      <span class="default-indicator u-text-purple">(Padrão)</span>
                     </div>
                   </div>
                   <div class="range-wrap">
                     <input type="range" id="cfg-weight-quality" min="0.0" max="1.0" step="0.05" value="0.50" data-default="0.50" data-snap-delta="0.03" oninput="updateRouterWeightsUI(); markSettingsUnsaved();">
                     <div class="slider-default-tick tick-purple at-default" data-slider="cfg-weight-quality" style="left: calc(8px + (100% - 16px) * 0.50);" title="Padrão canônico: 0.50 (50% - Clique ou aproxime para restaurar)"></div>
                   </div>
-                  <div class="setting-desc" style="text-wrap: balance;">Atribui relevância à taxa de acertos e sofisticação arquitetural do modelo candidato.</div>
+                  <div class="setting-desc u-balance">Atribui relevância à taxa de acertos e sofisticação arquitetural do modelo candidato.</div>
                 </div>
 
                 <!-- SLIDER 2: CUSTO -->
@@ -290,25 +294,25 @@
                   <div class="setting-header">
                     <div class="setting-title">
                       Peso Economia FinOps (Wc)
-                      <span class="info-icon" style="z-index: 90;">i
+                      <span class="info-icon u-s-008567">i
                         <span class="tooltip-box">
                           <strong>FinOps & Custo Zero</strong>
                           Prioridade dada ao silício local ($0.00 na GPU/CPU) ou provedores em nuvem com menor tarifa por milhão de tokens.
                         </span>
                       </span>
                     </div>
-                    <div class="range-val-badge" style="background: rgba(16, 185, 129, 0.12); color: var(--green); border-color: rgba(16, 185, 129, 0.3);">
+                    <div class="range-val-badge u-text-green u-s-6366d5">
                       <span class="val-kicker">Peso:</span>
                       <span id="val-weight-cost">0.30</span>
-                      <span id="pct-weight-cost" style="color: var(--text-muted);">(30%)</span>
-                      <span class="default-indicator" style="color: var(--green);">(Padrão)</span>
+                      <span class="u-text-muted" id="pct-weight-cost">(30%)</span>
+                      <span class="default-indicator u-text-green">(Padrão)</span>
                     </div>
                   </div>
                   <div class="range-wrap">
                     <input type="range" id="cfg-weight-cost" min="0.0" max="1.0" step="0.05" value="0.30" data-default="0.30" data-snap-delta="0.03" oninput="updateRouterWeightsUI(); markSettingsUnsaved();">
                     <div class="slider-default-tick tick-green at-default" data-slider="cfg-weight-cost" style="left: calc(8px + (100% - 16px) * 0.30);" title="Padrão canônico: 0.30 (30% - Clique ou aproxime para restaurar)"></div>
                   </div>
-                  <div class="setting-desc" style="text-wrap: balance;">Prioriza soluções gratuitas no silício local antes de recorrer a tarifas em nuvem.</div>
+                  <div class="setting-desc u-balance">Prioriza soluções gratuitas no silício local antes de recorrer a tarifas em nuvem.</div>
                 </div>
 
                 <!-- SLIDER 3: LATÊNCIA -->
@@ -316,25 +320,25 @@
                   <div class="setting-header">
                     <div class="setting-title">
                       Peso Baixa Latência (Wl)
-                      <span class="info-icon" style="z-index: 90;">i
+                      <span class="info-icon u-s-008567">i
                         <span class="tooltip-box">
                           <strong>Agilidade & Vazão (TPS)</strong>
                           Prioridade para tempo de primeiro token (TTFT) ultrabaixo e respostas instantâneas.
                         </span>
                       </span>
                     </div>
-                    <div class="range-val-badge" style="background: rgba(6, 182, 212, 0.12); color: var(--cyan); border-color: rgba(6, 182, 212, 0.3);">
+                    <div class="range-val-badge u-text-cyan u-s-6ce7bb">
                       <span class="val-kicker">Peso:</span>
                       <span id="val-weight-latency">0.20</span>
-                      <span id="pct-weight-latency" style="color: var(--text-muted);">(20%)</span>
-                      <span class="default-indicator" style="color: var(--cyan);">(Padrão)</span>
+                      <span class="u-text-muted" id="pct-weight-latency">(20%)</span>
+                      <span class="default-indicator u-text-cyan">(Padrão)</span>
                     </div>
                   </div>
                   <div class="range-wrap">
                     <input type="range" id="cfg-weight-latency" min="0.0" max="1.0" step="0.05" value="0.20" data-default="0.20" data-snap-delta="0.03" oninput="updateRouterWeightsUI(); markSettingsUnsaved();">
                     <div class="slider-default-tick at-default" data-slider="cfg-weight-latency" style="left: calc(8px + (100% - 16px) * 0.20);" title="Padrão canônico: 0.20 (20% - Clique ou aproxime para restaurar)"></div>
                   </div>
-                  <div class="setting-desc" style="text-wrap: balance;">Favorece workers de alta velocidade para tarefas críticas de fluxo contínuo.</div>
+                  <div class="setting-desc u-balance">Favorece workers de alta velocidade para tarefas críticas de fluxo contínuo.</div>
                 </div>
 
                 <!-- DECAIMENTO TEMPORAL -->
@@ -342,7 +346,7 @@
                   <div class="setting-header">
                     <div class="setting-title">
                       Fator de Decaimento Temporal (γ)
-                      <span class="info-icon" style="z-index: 90;">i
+                      <span class="info-icon u-s-008567">i
                         <span class="tooltip-box">
                           <strong>Esquecimento Geométrico</strong>
                           Aplica fator de desconto exponencial em dados antigos, permitindo rápida adaptação se um modelo melhorar ou sofrer degradação de API.
@@ -360,116 +364,133 @@
                     <input type="range" id="cfg-router-gamma" min="0.950" max="0.999" step="0.001" value="0.995" data-default="0.995" data-snap-delta="0.002" oninput="document.getElementById('val-gamma').innerText = Number(this.value).toFixed(3); markSettingsUnsaved();">
                     <div class="slider-default-tick at-default" data-slider="cfg-router-gamma" style="left: calc(8px + (100% - 16px) * 0.9184);" title="Padrão canônico: 0.995 (Decaimento diário - Clique ou aproxime para restaurar)"></div>
                   </div>
-                  <div class="setting-desc" style="text-wrap: balance;">Desconta observações históricas antigas no cálculo da distribuição Beta do Thompson Sampling.</div>
+                  <div class="setting-desc u-balance">Desconta observações históricas antigas no cálculo da distribuição Beta do Thompson Sampling.</div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- COLUNA 2: SIMULADOR DE DESPACHO & PARETOBANDIT EM TEMPO REAL -->
-          <div class="card" style="margin-bottom: 0;">
-            <div class="card-header" style="padding-bottom: 10px; align-items: flex-start; gap: 12px;">
-              <div class="card-title" style="font-size: 0.88rem; flex: 1; min-width: 0;">
-                <div class="card-icon icon-cyan" style="width: 24px; height: 24px; font-size: 0.9rem; flex-shrink: 0;">🧪</div>
+          <details class="lab-drawer" id="drawer-lab-router">
+            <summary class="lab-drawer-header">
+              <div class="lab-drawer-title">
+                <svg class="ui-icon icon-sm lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+                <svg class="ui-icon icon-sm text-cyan" aria-hidden="true"><use href="#icon-flask"></use></svg>
+                <span>Laboratório Avançado: Simulador de Despacho Pareto em Tempo Real</span>
+              </div>
+              <span class="lab-drawer-badge">Diagnóstico &bull; In-Memory</span>
+            </summary>
+            <div class="lab-drawer-body">
+          <div class="card u-mb-0">
+            <div class="card-header u-items-start u-gap-3 u-s-b8fb4b">
+              <div class="card-title u-flex-1 u-min-w-0 u-s-604fde">
+                <div class="card-icon icon-cyan u-shrink-0 u-s-327c17"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-flask"></use></svg></div>
                 <span>Simulador de Despacho Pareto em Tempo Real</span>
               </div>
-              <div style="text-align: right; flex-shrink: 0;">
-                <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--cyan); background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); padding: 3px 8px; border-radius: 4px; display: inline-block; text-align: right; line-height: 1.35;">In-Memory<br>Bare-Metal</span>
+              <div class="u-text-right u-shrink-0">
+                <span class="u-mono u-text-cyan u-d-inline-block u-text-right u-s-5e2856">In-Memory<br>Bare-Metal</span>
               </div>
             </div>
 
-            <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 12px; text-wrap: balance;">
+            <div class="u-text-muted u-mb-3 u-balance u-s-fdae4f">
               Simule a delegação de tarefas contra o motor ParetoBandit nativo do Souls Engine para visualizar as notas multi-objetivo, amostragem Thompson e o worker vencedor.
             </div>
 
             <!-- PRESETS DE TAREFAS -->
-            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+            <div class="u-d-flex u-gap-6p u-flex-wrap u-mb-3">
               <button class="sim-preset-btn" onclick="setRouterSimScenario('coding', 1200, 'Refatorar módulo de AST em crates/souls_ast garantindo Myers Diff estrito sem vazamento de memória')">
-                <span>🧬</span> Refatoração AST (SWE)
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-dna"></use></svg> Refatoração AST (SWE)
               </button>
               <button class="sim-preset-btn" onclick="setRouterSimScenario('reasoning', 2000, 'Demonstrar prova formal de consistência da cohomologia H¹ sob hipóteses de Hilbert')">
-                <span>🧮</span> Prova Matemática
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-sliders"></use></svg> Prova Matemática
               </button>
               <button class="sim-preset-btn" onclick="setRouterSimScenario('fast', 350, 'Extrair lista de entidades e links de uma nota markdown no cofre')">
-                <span>⚡</span> Triagem Rápida
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Triagem Rápida
               </button>
               <button class="sim-preset-btn" onclick="setRouterSimScenario('local', 800, 'Auditoria de dados médicos confidenciais com preservação de privacidade')">
-                <span>🔒</span> Soberania Local
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg> Soberania Local
               </button>
             </div>
 
             <!-- FORMULÁRIO DO CENÁRIO -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div class="u-d-grid u-gap-2 u-mb-10p u-s-80ed41">
               <div>
-                <label style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Categoria da Tarefa</label>
-                <select id="sim-task-type" class="setting-input" style="width: 100%; font-size: 0.74rem; margin-top: 3px;" onchange="runRouterSimulator()">
+                <label class="u-text-muted u-uppercase u-fw-700 u-s-923ef2">Categoria da Tarefa</label>
+                <select id="sim-task-type" class="setting-input u-w-full u-mt-3p u-s-d3bc8d" onchange="runRouterSimulator()">
+                  <option value="executive">Maestro / Orquestração Executiva</option>
                   <option value="coding" selected>Engenharia SWE (Coding)</option>
-                  <option value="reasoning">Raciocínio & Provas (Math)</option>
+                  <option value="agentic">Agentic &amp; Tool Calling (MCP)</option>
+                  <option value="reasoning">Raciocínio &amp; Provas (Reasoning)</option>
                   <option value="fast">Triagem Imediata (Fast)</option>
-                  <option value="agentic">Orquestração Multi-Agente</option>
+                  <option value="design">Design, UI/UX &amp; Multimodal</option>
+                  <option value="research">Pesquisa Profunda (Research)</option>
+                  <option value="security">Segurança &amp; Guardrails (Security)</option>
+                  <option value="curation">Curadoria &amp; Grafo (Curation)</option>
                   <option value="local">Soberania Local Bare-Metal</option>
                 </select>
               </div>
               <div>
-                <label style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Expectativa de Tokens</label>
-                <input type="number" id="sim-task-tokens" class="setting-input" style="width: 100%; font-size: 0.74rem; margin-top: 3px;" value="1200" min="100" max="32000" step="100" onchange="runRouterSimulator()">
+                <label class="u-text-muted u-uppercase u-fw-700 u-s-923ef2">Expectativa de Tokens</label>
+                <input type="number" id="sim-task-tokens" class="setting-input u-w-full u-mt-3p u-s-d3bc8d" value="1200" min="100" max="32000" step="100" onchange="runRouterSimulator()">
               </div>
             </div>
 
-            <div style="margin-bottom: 12px;">
-              <textarea id="sim-task-prompt" class="setting-input" rows="2" style="width: 100%; resize: vertical; font-size: 0.76rem; font-family: var(--font-mono); line-height: 1.45; padding: 8px 10px;" placeholder="Instrução da subtarefa a ser delegada...">Refatorar módulo de AST em crates/souls_ast garantindo Myers Diff estrito sem vazamento de memória</textarea>
+            <div class="u-mb-3">
+              <textarea id="sim-task-prompt" class="setting-input u-w-full u-resize-y u-mono u-s-1f5ee9" rows="2" placeholder="Instrução da subtarefa a ser delegada...">Refatorar módulo de AST em crates/souls_ast garantindo Myers Diff estrito sem vazamento de memória</textarea>
             </div>
 
-            <button class="btn btn-cyan" id="btn-run-router-sim" onclick="runRouterSimulator()" style="width: 100%; justify-content: center; padding: 9px; font-weight: 600; font-size: 0.78rem; margin-bottom: 16px;">
-              <span>⚡</span> Calcular Utilidade & Simular Despacho Pareto
+            <button class="btn btn-cyan u-w-full u-justify-center u-fw-600 u-mb-4 u-s-281a08" id="btn-run-router-sim" onclick="runRouterSimulator()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Calcular Utilidade & Simular Despacho Pareto
             </button>
 
             <!-- PAINEL DE RESULTADOS DIAGNÓSTICOS DO ROTEADOR -->
-            <div id="router-sim-results" style="background: rgba(10, 16, 28, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 14px;">
+            <div class="u-s-c7e1c3" id="router-sim-results">
               <!-- CARD DO VENCEDOR -->
-              <div style="background: linear-gradient(90deg, rgba(6, 182, 212, 0.12) 0%, rgba(168, 85, 247, 0.08) 100%); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 6px; padding: 12px; margin-bottom: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cyan);">
-                    🏆 Modelo Vencedor (Despacho Recomendado)
+              <div class="u-mb-14p u-s-5dee06">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+                  <span class="u-fw-700 u-uppercase u-text-cyan u-s-fe2c9f">
+                    <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-trophy"></use></svg> Modelo Vencedor (Despacho Recomendado)
                   </span>
-                  <span id="router-sim-tier-badge" style="font-size: 0.68rem; font-family: var(--font-mono); font-weight: 700; color: #fff; background: rgba(6, 182, 212, 0.25); border: 1px solid rgba(6, 182, 212, 0.4); padding: 2px 6px; border-radius: 3px;">
+                  <span class="u-mono u-fw-700 u-text-white u-s-e392d9" id="router-sim-tier-badge">
                     Tier 0.5 (CPU AVX2)
                   </span>
                 </div>
-                <div id="router-sim-winner-name" style="font-size: 1.05rem; font-weight: 700; color: #fff; font-family: var(--font-mono); margin-bottom: 4px;">
+                <div class="u-fw-700 u-text-white u-mono u-mb-1 u-s-7a04c0" id="router-sim-winner-name">
                   tier0_onnx_cpu
                 </div>
-                <div style="display: flex; gap: 12px; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); flex-wrap: wrap;">
-                  <span>Utilidade Composta: <strong id="router-sim-utility" style="color: var(--green);">0.9470</strong></span>
-                  <span>Custo FinOps: <strong id="router-sim-cost" style="color: #fff;">$0.00</strong></span>
-                  <span>Latência Projetada: <strong id="router-sim-lat" style="color: var(--cyan);">20.0 ms</strong></span>
+                <div class="u-d-flex u-gap-3 u-text-muted u-mono u-flex-wrap u-s-dbc8d1">
+                  <span>Utilidade Composta: <strong class="u-text-green" id="router-sim-utility">0.9470</strong></span>
+                  <span>Custo FinOps: <strong class="u-text-white" id="router-sim-cost">$0.00</strong></span>
+                  <span>Latência Projetada: <strong class="u-text-cyan" id="router-sim-lat">20.0 ms</strong></span>
                 </div>
               </div>
 
               <!-- TABELA COMPARATIVA DOS CANDIDATOS -->
-              <div style="margin-bottom: 12px;">
-                <div style="font-size: 0.70rem; font-weight: 700; text-transform: uppercase; color: var(--text-dark); margin-bottom: 8px;">
+              <div class="u-mb-3">
+                <div class="u-fw-700 u-uppercase u-text-dark u-mb-2 u-s-6262d0">
                   Classificação na Fronteira de Pareto
                 </div>
-                <div id="router-sim-candidates-list" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="u-d-flex u-flex-col u-gap-2" id="router-sim-candidates-list">
                   <!-- Gerado dinamicamente com barras de utilidade -->
                 </div>
               </div>
 
               <!-- TELEMETRIA DO SILÍCIO NA DECISÃO -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.04); font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-muted); margin-bottom: 12px;">
-                <div>🌡️ Barreira Térmica (Φ): <strong id="router-sim-phi" style="color: var(--green);">0.00 (Nominal)</strong></div>
-                <div>💾 VRAM Requerida: <strong id="router-sim-vram" style="color: #fff;">0 MB (Host CPU)</strong></div>
-                <div style="grid-column: span 2;">⚙️ Zona Operacional: <strong id="router-sim-zone" style="color: var(--cyan);">Zona Segura WDDM (&lt; 5.294 MB)</strong></div>
+              <div class="u-d-grid u-gap-2 u-mono u-text-muted u-mb-3 u-s-ac2802">
+                <div><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-thermometer"></use></svg> Barreira Térmica (Φ): <strong class="u-text-green" id="router-sim-phi">0.00 (Nominal)</strong></div>
+                <div><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-database"></use></svg> VRAM Requerida: <strong class="u-text-white" id="router-sim-vram">0 MB (Host CPU)</strong></div>
+                <div class="u-s-1f61f2"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-settings"></use></svg> Zona Operacional: <strong class="u-text-cyan" id="router-sim-zone">Zona Segura WDDM</strong></div>
               </div>
 
               <!-- RACIONAL DA DECISÃO -->
-              <div style="font-size: 0.70rem; color: var(--text-muted); line-height: 1.45;">
-                <span style="color: var(--text-dark); font-weight: 600;">Racional do ParetoBandit:</span>
+              <div class="u-text-muted u-s-b685a3">
+                <span class="u-text-dark u-fw-600">Racional do ParetoBandit:</span>
                 <span id="router-sim-rationale">Arm tier0_onnx_cpu: Q_hat=0.967, Cost=$0.00000, Lat=20.0ms, Phi=0.00 => U=0.947</span>
               </div>
             </div>
           </div>
+            </div>
+          </details>
         </div>
       </div>
 

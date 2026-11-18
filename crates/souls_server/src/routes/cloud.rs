@@ -7,6 +7,11 @@ use axum::http::StatusCode;
 use axum::response::Json;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use souls_llm_cloud_arena::analytics::{
+    get_profile_weights, normalize_agentic_score, normalize_coding_score, normalize_direct_pct,
+    normalize_general_score,
+};
+use souls_llm_cloud_arena::TaskProfileKind;
 
 use crate::state::AppState;
 
@@ -25,49 +30,13 @@ pub async fn cloud_champions_handler(
 
     match state.cloud_arena.get_champions_with_effective_date(params.date.as_deref()).await {
         Ok((effective_date, champions)) => {
-            let mut champions_val = serde_json::to_value(champions).unwrap_or_else(|_| json!([]));
-            if let Value::Array(ref mut arr) = champions_val {
-                // Injeta o perfil primordial: Maestro / Master Brain (Orquestrador)
-                let orchestrator_report = json!({
-                    "profile": "orchestrator",
-                    "quality_leader": {
-                        "canonical_id": "anthropic/claude-opus-5.5",
-                        "display_name": "Claude Opus 5.5",
-                        "provider": "nous_portal",
-                        "composite_score": 94.2,
-                        "blended_cost": 6.30,
-                        "roi_index": 35.8,
-                        "throughput_tps": 45.0,
-                        "context_window": 1000000
-                    },
-                    "best_value": {
-                        "canonical_id": "openai/gpt-6.1-sol",
-                        "display_name": "GPT-6.1 Sol",
-                        "provider": "nous_portal",
-                        "composite_score": 87.9,
-                        "blended_cost": 3.15,
-                        "roi_index": 43.4,
-                        "throughput_tps": 95.0,
-                        "context_window": 1050000
-                    },
-                    "ultra_low_cost": {
-                        "canonical_id": "qwen/qwen3.7-flash",
-                        "display_name": "Qwen 3.7 Flash",
-                        "provider": "nous_portal",
-                        "composite_score": 74.3,
-                        "blended_cost": 0.0256,
-                        "roi_index": 72.4,
-                        "throughput_tps": 130.0,
-                        "context_window": 1000000
-                    }
-                });
-                arr.insert(0, orchestrator_report);
-            }
+            let champions_val = serde_json::to_value(champions).unwrap_or_else(|_| json!([]));
+            let profiles_count = if let Value::Array(ref a) = champions_val { a.len() } else { 0 };
 
             Ok(Json(json!({
                 "status": "success",
                 "date": effective_date,
-                "profiles_count": if let Value::Array(ref a) = champions_val { a.len() } else { 0 },
+                "profiles_count": profiles_count,
                 "champions": champions_val
             })))
         }
@@ -148,127 +117,97 @@ pub async fn cloud_ranked_models_handler(
     };
 
     use sqlx::Row;
-    let is_orchestrator = raw_profile == "orchestrator" || raw_profile == "brain" || raw_profile == "maestro";
+    let profile_kind = TaskProfileKind::from_str_lossy(&raw_profile).unwrap_or(TaskProfileKind::Executive);
+    let canonical_profile = profile_kind.as_str();
+    let (_, cost_weights) = get_profile_weights(profile_kind);
 
-    let rows = if is_orchestrator {
-        let query_str = r#"
-            SELECT 
-                de.canonical_id,
-                cm.display_name,
-                cm.developer,
-                cm.is_multimodal,
-                cm.supports_tools,
-                cm.supports_structured_outputs,
-                cm.supports_caching,
-                (
-                    0.35 * COALESCE(MAX(CASE WHEN de.profile_task = 'agentic' THEN de.composite_score END), 70.0) +
-                    0.35 * COALESCE(MAX(CASE WHEN de.profile_task = 'reasoning' THEN de.composite_score END), 70.0) +
-                    0.30 * COALESCE(MAX(CASE WHEN de.profile_task = 'coding' THEN de.composite_score END), 70.0)
-                ) as score,
-                AVG(de.task_blended_cost) as task_blended_cost,
-                AVG(de.roi_index) as roi_index,
-                MAX(de.pareto_tag) as pareto_tag,
-                cm.context_window,
-                (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%') as has_nous,
-                (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%') as has_openrouter,
-                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC LIMIT 1) as nous_prompt_price,
-                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC LIMIT 1) as nous_completion_price,
-                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC LIMIT 1) as or_prompt_price,
-                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC LIMIT 1) as or_completion_price,
-                MAX(CASE WHEN de.profile_task = 'coding' THEN de.composite_score END) as eval_coding,
-                MAX(CASE WHEN de.profile_task = 'agentic' THEN de.composite_score END) as eval_agentic,
-                MAX(CASE WHEN de.profile_task = 'reasoning' THEN de.composite_score END) as eval_reasoning,
-                MAX(CASE WHEN de.profile_task = 'fast' THEN de.composite_score END) as eval_fast,
-                MAX(CASE WHEN de.profile_task = 'design' THEN de.composite_score END) as eval_design,
-                bs.general_elo,
-                bs.coding_elo,
-                bs.bfcl_score,
-                bs.ifeval_score,
-                bs.gpqa_score,
-                bs.hard_prompts_elo,
-                bs.vqa_multimodal_score,
-                (SELECT throughput_tps FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id ORDER BY pts.recorded_at DESC LIMIT 1) as tps,
-                (SELECT ttft_ms FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.ttft_ms > 0 ORDER BY pts.recorded_at DESC LIMIT 1) as ttft_ms
-            FROM daily_evaluations de
-            JOIN canonical_models cm ON cm.id = de.canonical_id
-            LEFT JOIN (
-                SELECT canonical_id, general_elo, coding_elo, bfcl_score, ifeval_score, gpqa_score, hard_prompts_elo, vqa_multimodal_score
-                FROM benchmark_snapshots
-                GROUP BY canonical_id
-            ) bs ON bs.canonical_id = de.canonical_id
-            WHERE de.evaluation_date = (
-                SELECT MAX(evaluation_date) 
-                FROM daily_evaluations
+    let query_str = r#"
+        SELECT 
+            de.canonical_id,
+            cm.display_name,
+            cm.developer,
+            cm.is_multimodal,
+            cm.supports_tools,
+            cm.supports_structured_outputs,
+            cm.supports_caching,
+            de.composite_score as score,
+            de.task_blended_cost,
+            de.roi_index,
+            de.pareto_tag,
+            cm.context_window,
+            (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%') as has_nous,
+            (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%') as has_openrouter,
+            (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC, pts.id DESC LIMIT 1) as nous_prompt_price,
+            (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC, pts.id DESC LIMIT 1) as nous_completion_price,
+            (SELECT cache_read_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC, pts.id DESC LIMIT 1) as nous_cache_price,
+            (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC, pts.id DESC LIMIT 1) as or_prompt_price,
+            (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC, pts.id DESC LIMIT 1) as or_completion_price,
+            (SELECT cache_read_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC, pts.id DESC LIMIT 1) as or_cache_price,
+            ev.eval_executive,
+            ev.eval_coding,
+            ev.eval_agentic,
+            ev.eval_reasoning,
+            ev.eval_fast,
+            ev.eval_design,
+            ev.eval_research,
+            ev.eval_security,
+            ev.eval_curation,
+            bs.general_elo,
+            bs.coding_elo,
+            bs.bfcl_score,
+            bs.ifeval_score,
+            bs.gpqa_score,
+            bs.hard_prompts_elo,
+            bs.vqa_multimodal_score,
+            (SELECT throughput_tps FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id ORDER BY CASE WHEN pts.source = 'nous_portal' THEN 0 WHEN pts.source LIKE '%nous%' THEN 1 ELSE 2 END, pts.recorded_at DESC, pts.id DESC LIMIT 1) as tps,
+            (SELECT ttft_ms FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.ttft_ms > 0 ORDER BY CASE WHEN pts.source = 'nous_portal' THEN 0 WHEN pts.source LIKE '%nous%' THEN 1 ELSE 2 END, pts.recorded_at DESC, pts.id DESC LIMIT 1) as ttft_ms
+        FROM daily_evaluations de
+        JOIN canonical_models cm ON cm.id = de.canonical_id
+        LEFT JOIN benchmark_snapshots bs ON bs.id = (
+            SELECT MAX(b2.id) FROM benchmark_snapshots b2 WHERE b2.canonical_id = de.canonical_id
+        )
+        LEFT JOIN (
+            SELECT
+                canonical_id,
+                MAX(CASE WHEN profile_task = 'executive' THEN composite_score END) as eval_executive,
+                MAX(CASE WHEN profile_task = 'coding' THEN composite_score END) as eval_coding,
+                MAX(CASE WHEN profile_task = 'agentic' THEN composite_score END) as eval_agentic,
+                MAX(CASE WHEN profile_task = 'reasoning' THEN composite_score END) as eval_reasoning,
+                MAX(CASE WHEN profile_task = 'fast' THEN composite_score END) as eval_fast,
+                MAX(CASE WHEN profile_task = 'design' THEN composite_score END) as eval_design,
+                MAX(CASE WHEN profile_task = 'research' THEN composite_score END) as eval_research,
+                MAX(CASE WHEN profile_task = 'security' THEN composite_score END) as eval_security,
+                MAX(CASE WHEN profile_task = 'curation' THEN composite_score END) as eval_curation
+            FROM daily_evaluations
+            WHERE evaluation_date = (
+                SELECT MAX(evaluation_date) FROM daily_evaluations WHERE profile_task = ?
             )
-            GROUP BY de.canonical_id
-            ORDER BY score DESC
-            LIMIT ?;
-        "#;
+            GROUP BY canonical_id
+        ) ev ON ev.canonical_id = de.canonical_id
+        WHERE de.profile_task = ?
+          AND de.evaluation_date = (
+              SELECT MAX(evaluation_date)
+              FROM daily_evaluations
+              WHERE profile_task = ?
+          )
+          AND cm.context_window >= 4096
+          AND LOWER(cm.id) NOT LIKE '%embed%'
+          AND LOWER(cm.id) NOT LIKE '%minilm%'
+          AND LOWER(cm.id) NOT LIKE '%rerank%'
+          AND LOWER(cm.id) NOT LIKE '%whisper%'
+          AND LOWER(cm.id) NOT LIKE '%tts%'
+        GROUP BY de.canonical_id
+        ORDER BY CASE WHEN de.pareto_tag = 'Estimated' THEN 1 ELSE 0 END ASC, score DESC
+        LIMIT ?;
+    "#;
 
-        sqlx::query(query_str)
-            .bind(limit)
-            .fetch_all(&pool)
-            .await
-    } else {
-        let query_str = r#"
-            SELECT 
-                de.canonical_id,
-                cm.display_name,
-                cm.developer,
-                cm.is_multimodal,
-                cm.supports_tools,
-                cm.supports_structured_outputs,
-                cm.supports_caching,
-                MAX(de.composite_score) as score,
-                de.task_blended_cost,
-                de.roi_index,
-                de.pareto_tag,
-                cm.context_window,
-                (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%') as has_nous,
-                (SELECT COUNT(*) FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%') as has_openrouter,
-                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC LIMIT 1) as nous_prompt_price,
-                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%nous%' ORDER BY pts.recorded_at DESC LIMIT 1) as nous_completion_price,
-                (SELECT prompt_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC LIMIT 1) as or_prompt_price,
-                (SELECT completion_price_per_m FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.source LIKE '%openrouter%' ORDER BY pts.recorded_at DESC LIMIT 1) as or_completion_price,
-                MAX(CASE WHEN de.profile_task = 'coding' THEN de.composite_score END) as eval_coding,
-                MAX(CASE WHEN de.profile_task = 'agentic' THEN de.composite_score END) as eval_agentic,
-                MAX(CASE WHEN de.profile_task = 'reasoning' THEN de.composite_score END) as eval_reasoning,
-                MAX(CASE WHEN de.profile_task = 'fast' THEN de.composite_score END) as eval_fast,
-                MAX(CASE WHEN de.profile_task = 'design' THEN de.composite_score END) as eval_design,
-                bs.general_elo,
-                bs.coding_elo,
-                bs.bfcl_score,
-                bs.ifeval_score,
-                bs.gpqa_score,
-                bs.hard_prompts_elo,
-                bs.vqa_multimodal_score,
-                (SELECT throughput_tps FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id ORDER BY pts.recorded_at DESC LIMIT 1) as tps,
-                (SELECT ttft_ms FROM pricing_telemetry_snapshots pts WHERE pts.canonical_id = de.canonical_id AND pts.ttft_ms > 0 ORDER BY pts.recorded_at DESC LIMIT 1) as ttft_ms
-            FROM daily_evaluations de
-            JOIN canonical_models cm ON cm.id = de.canonical_id
-            LEFT JOIN (
-                SELECT canonical_id, general_elo, coding_elo, bfcl_score, ifeval_score, gpqa_score, hard_prompts_elo, vqa_multimodal_score
-                FROM benchmark_snapshots
-                GROUP BY canonical_id
-            ) bs ON bs.canonical_id = de.canonical_id
-            WHERE de.profile_task = ? 
-              AND de.evaluation_date = (
-                  SELECT MAX(evaluation_date) 
-                  FROM daily_evaluations 
-                  WHERE profile_task = ?
-              )
-            GROUP BY de.canonical_id
-            ORDER BY score DESC
-            LIMIT ?;
-        "#;
-
-        sqlx::query(query_str)
-            .bind(&raw_profile)
-            .bind(&raw_profile)
-            .bind(limit)
-            .fetch_all(&pool)
-            .await
-    };
+    let rows = sqlx::query(query_str)
+        .bind(canonical_profile)
+        .bind(canonical_profile)
+        .bind(canonical_profile)
+        .bind(limit)
+        .fetch_all(&pool)
+        .await;
 
     let rows = match rows {
         Ok(r) => r,
@@ -298,29 +237,50 @@ pub async fn cloud_ranked_models_handler(
         let has_openrouter: i64 = r.try_get("has_openrouter").unwrap_or(0);
         let nous_prompt_price: Option<f64> = r.try_get("nous_prompt_price").ok();
         let nous_completion_price: Option<f64> = r.try_get("nous_completion_price").ok();
+        let nous_cache_price: Option<f64> = r.try_get("nous_cache_price").ok();
         let or_prompt_price: Option<f64> = r.try_get("or_prompt_price").ok();
         let or_completion_price: Option<f64> = r.try_get("or_completion_price").ok();
+        let or_cache_price: Option<f64> = r.try_get("or_cache_price").ok();
+        let eval_executive: Option<f64> = r.try_get("eval_executive").ok();
         let eval_coding: Option<f64> = r.try_get("eval_coding").ok();
         let eval_agentic: Option<f64> = r.try_get("eval_agentic").ok();
         let eval_reasoning: Option<f64> = r.try_get("eval_reasoning").ok();
         let eval_fast: Option<f64> = r.try_get("eval_fast").ok();
         let eval_design: Option<f64> = r.try_get("eval_design").ok();
-        let general_elo: Option<f64> = r.try_get("general_elo").ok();
-        let coding_elo: Option<f64> = r.try_get("coding_elo").ok();
-        let bfcl_score: Option<f64> = r.try_get("bfcl_score").ok();
-        let ifeval_score: Option<f64> = r.try_get("ifeval_score").ok();
-        let gpqa_score: Option<f64> = r.try_get("gpqa_score").ok();
-        let hard_prompts_elo: Option<f64> = r.try_get("hard_prompts_elo").ok();
-        let vqa_score: Option<f64> = r.try_get("vqa_multimodal_score").ok();
+        let eval_research: Option<f64> = r.try_get("eval_research").ok();
+        let eval_security: Option<f64> = r.try_get("eval_security").ok();
+        let eval_curation: Option<f64> = r.try_get("eval_curation").ok();
+        let general_elo_raw: Option<f64> = r.try_get("general_elo").ok();
+        let coding_elo_raw: Option<f64> = r.try_get("coding_elo").ok();
+        let bfcl_score_raw: Option<f64> = r.try_get("bfcl_score").ok();
+        let ifeval_score_raw: Option<f64> = r.try_get("ifeval_score").ok();
+        let gpqa_score_raw: Option<f64> = r.try_get("gpqa_score").ok();
+        let hard_prompts_raw: Option<f64> = r.try_get("hard_prompts_elo").ok();
+        let vqa_score_raw: Option<f64> = r.try_get("vqa_multimodal_score").ok();
         let tps: Option<f64> = r.try_get("tps").ok();
         let ttft_ms: Option<f64> = r.try_get("ttft_ms").ok();
 
+        // Normaliza todos os sub-scores para a escala unificada 0.0..100.0 antes de enviar à UI
+        let general_elo = general_elo_raw.filter(|v| *v > 0.0).map(normalize_general_score);
+        let coding_elo = coding_elo_raw.filter(|v| *v > 0.0).map(normalize_coding_score);
+        let bfcl_score = bfcl_score_raw.filter(|v| *v > 0.0).map(normalize_agentic_score);
+        let ifeval_score = ifeval_score_raw.filter(|v| *v > 0.0).map(normalize_direct_pct);
+        let gpqa_score = gpqa_score_raw.filter(|v| *v > 0.0).map(normalize_direct_pct);
+        let hard_prompts_elo = hard_prompts_raw.filter(|v| *v > 0.0).map(normalize_general_score);
+        let vqa_score = vqa_score_raw.filter(|v| *v > 0.0).map(normalize_direct_pct);
+
         let nous_blended = match (nous_prompt_price, nous_completion_price) {
-            (Some(p), Some(c)) => Some(0.25 * p + 0.75 * c),
+            (Some(p), Some(c)) => {
+                let cr = nous_cache_price.unwrap_or(p * 0.20);
+                Some((cost_weights.w_cache * cr + cost_weights.w_in * p + cost_weights.w_out * c).max(0.001))
+            }
             _ => None,
         };
         let or_blended = match (or_prompt_price, or_completion_price) {
-            (Some(p), Some(c)) => Some(0.25 * p + 0.75 * c),
+            (Some(p), Some(c)) => {
+                let cr = or_cache_price.unwrap_or(p * 0.25);
+                Some((cost_weights.w_cache * cr + cost_weights.w_in * p + cost_weights.w_out * c).max(0.001))
+            }
             _ => None,
         };
 
@@ -339,6 +299,7 @@ pub async fn cloud_ranked_models_handler(
             "blended_cost": blended_cost,
             "roi_index": roi_index,
             "pareto_tag": pareto_tag,
+            "is_verified": pareto_tag != "Estimated",
             "context_window": context_window,
             "provider": primary_provider,
             "has_nous": has_nous > 0,
@@ -349,11 +310,15 @@ pub async fn cloud_ranked_models_handler(
             "or_prompt_price": or_prompt_price,
             "or_completion_price": or_completion_price,
             "or_blended": or_blended,
+            "eval_executive": eval_executive,
             "eval_coding": eval_coding,
             "eval_agentic": eval_agentic,
             "eval_reasoning": eval_reasoning,
             "eval_fast": eval_fast,
             "eval_design": eval_design,
+            "eval_research": eval_research,
+            "eval_security": eval_security,
+            "eval_curation": eval_curation,
             "general_elo": general_elo,
             "coding_elo": coding_elo,
             "bfcl_score": bfcl_score,
@@ -368,7 +333,7 @@ pub async fn cloud_ranked_models_handler(
 
     Ok(Json(json!({
         "status": "success",
-        "profile": raw_profile,
+        "profile": canonical_profile,
         "count": models.len(),
         "models": models
     })))

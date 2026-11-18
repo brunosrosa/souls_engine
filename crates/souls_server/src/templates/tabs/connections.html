@@ -1,67 +1,66 @@
     <!-- ========================================== -->
     <!-- ABA 7: CONEXÕES GLOBAIS & HARNESSES AGÊNTICOS -->
     <!-- ========================================== -->
-    <section class="tab-pane" id="tab-connections" style="display: none;">
-      <div class="card-hero" style="margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+    <section class="tab-pane" id="tab-connections">
+      <div class="card-hero u-mb-6">
+        <div class="u-d-flex u-justify-between u-items-start u-flex-wrap u-gap-4">
           <div>
-            <h2 style="margin: 0 0 8px 0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px;">
-              <span>🔌</span> Conexões Globais & Harnesses Agênticos
-              <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: var(--cyan); border: 1px solid var(--cyan); font-size: 0.75rem;">v0.8.1 Canônica</span>
+            <h2 class="u-d-flex u-items-center u-gap-10p u-s-c4b339">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-plug"></use></svg> Conexões Globais &amp; CLIs Agênticas
             </h2>
-            <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem; max-width: 820px; line-height: 1.5;">
-              Central soberana de credenciais e telemetria de gateways de fronteira (DeepSeek, DashScope, Moonshot Kimi, Zhipu GLM, MiniMax, SiliconFlow) e orquestração de subagentes via CLIs agênticas nativas (<code style="color: var(--cyan);">agy</code>, <code style="color: var(--purple);">claude</code>, <code style="color: var(--emerald);">codex</code>) em modo headless com rollback transacional em caso de erro.
+            <p class="u-m-0 u-text-muted u-s-43b9f4">
+              Credenciais soberanas, telemetria de gateways de fronteira e despacho headless via CLIs (<code>agy</code>, <code>claude</code>, <code>codex</code>) com rollback transacional.
             </p>
           </div>
-          <div style="display: flex; gap: 10px;">
-            <button class="btn btn-secondary" onclick="fetchConnectionsData()" style="display: flex; align-items: center; gap: 6px;">
-              <span>🔄</span> Atualizar Conexões
+          <div class="u-d-flex u-gap-10p u-flex-wrap">
+            <button class="btn btn-sm u-d-flex u-items-center u-gap-6p" onclick="fetchConnectionsData()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar Conexões
             </button>
           </div>
         </div>
       </div>
 
       <!-- GRID PRINCIPAL: 2 SEÇÕES (CLIs & GATEWAYS) -->
-      <div style="display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 30px;">
+      <div class="u-d-grid u-s-3ccb16">
 
         <!-- SEÇÃO 1: CLIs AGÊNTICAS INSTALADAS NO HOST -->
-        <div class="card" style="padding: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 1.3rem;">💻</span>
-              <h3 style="margin: 0; font-size: 1.15rem; color: #fff;">Harness de CLIs Agênticas no Host</h3>
+        <div class="card u-s-f8d354">
+          <div class="u-d-flex u-justify-between u-items-center u-mb-4 u-s-6cf0f4">
+            <div class="u-d-flex u-items-center u-gap-10p">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-terminal"></use></svg>
+              <h3 class="u-m-0 u-text-white u-s-ff0d51">Harness de CLIs Agênticas no Host</h3>
             </div>
-            <span class="badge" id="clis-count-badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid #22c55e;">
+            <span class="badge u-s-3aa48e" id="clis-count-badge">
               0 Instaladas
             </span>
           </div>
 
-          <div id="clis-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 20px;">
+          <div class="u-d-grid u-gap-4 u-mb-5 u-s-02eca4" id="clis-grid">
             <!-- Renderizado via JS -->
-            <div style="color: var(--text-muted); font-size: 0.9rem; padding: 20px; text-align: center;">Carregando CLIs do host...</div>
+            <div class="u-text-muted u-text-center u-s-63ed2b">Carregando CLIs do host...</div>
           </div>
 
           <!-- CONSOLE DE DISPATCH INTERATIVO DE TAREFAS -->
-          <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 18px;">
-            <h4 style="margin: 0 0 12px 0; font-size: 0.95rem; color: var(--cyan); display: flex; align-items: center; gap: 8px;">
-              <span>⚡</span> Despacho Headless de Tarefa Agêntica
+          <div class="u-s-c7023f">
+            <h4 class="u-text-cyan u-d-flex u-items-center u-gap-2 u-s-9b31ae">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Despacho Headless de Tarefa Agêntica
             </h4>
-            <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="u-d-grid u-gap-3 u-mb-3 u-s-a82cff">
               <div>
-                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">CLI Alvo:</label>
-                <select id="dispatch-cli-select" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px;">
+                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">CLI Alvo:</label>
+                <select id="dispatch-cli-select" class="form-control u-w-full u-text-white u-s-dc6018">
                   <option value="agy">Antigravity CLI (agy)</option>
                   <option value="claude">Claude Code (claude)</option>
                   <option value="codex">Codex CLI (codex)</option>
                 </select>
               </div>
               <div>
-                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Diretório de Trabalho (CWD):</label>
-                <input id="dispatch-cwd-input" type="text" class="form-control" value="Z:\souls_engine" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px; font-family: monospace; font-size: 0.85rem;" />
+                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Diretório de Trabalho (CWD):</label>
+                <input id="dispatch-cwd-input" type="text" class="form-control u-w-full u-text-white u-mono u-s-150a51" value="." placeholder="Diretório do workspace ativo" />
               </div>
               <div>
-                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Timeout Máximo:</label>
-                <select id="dispatch-timeout-select" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px;">
+                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Timeout Máximo:</label>
+                <select id="dispatch-timeout-select" class="form-control u-w-full u-text-white u-s-dc6018">
                   <option value="60">60 segundos</option>
                   <option value="180">3 minutos</option>
                   <option value="300" selected>5 minutos</option>
@@ -69,117 +68,117 @@
                 </select>
               </div>
             </div>
-            <div style="margin-bottom: 12px;">
-              <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Prompt da Tarefa Agêntica:</label>
-              <textarea id="dispatch-prompt-textarea" rows="2" placeholder="Ex.: inspecionar testes da crate souls_core e reportar cobertura..." style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box;"></textarea>
+            <div class="u-mb-3">
+              <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Prompt da Tarefa Agêntica:</label>
+              <textarea class="u-w-full u-text-white u-resize-y u-box-border u-s-73409c" id="dispatch-prompt-textarea" rows="2" placeholder="Ex.: inspecionar testes da crate souls_core e reportar cobertura..."></textarea>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <label style="font-size: 0.82rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="dispatch-restore-check" checked style="cursor: pointer;" />
-                Rollback automático (<code style="color: #f59e0b;">git restore</code>) se o processo falhar (código != 0)
+            <div class="u-d-flex u-justify-between u-items-center">
+              <label class="u-text-muted u-d-flex u-items-center u-gap-6p u-pointer u-s-5b9d54">
+                <input class="u-pointer" type="checkbox" id="dispatch-restore-check" checked />
+                Rollback automático (<code class="u-s-aba882">git restore</code>) se o processo falhar (código != 0)
               </label>
-              <button id="btn-dispatch-cli" class="btn btn-primary" onclick="dispatchCliTask()" style="background: var(--cyan); color: #000; font-weight: 600; padding: 6px 16px;">
-                🚀 Executar no Silício
+              <button id="btn-dispatch-cli" class="btn btn-primary u-fw-600 u-s-6f7d55" onclick="dispatchCliTask()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-rocket"></use></svg> Executar no Silício
               </button>
             </div>
 
             <!-- RESULTADO DE EXECUÇÃO / CONSOLE NDJSON -->
-            <div id="dispatch-output-box" style="display: none; margin-top: 14px; background: #06090e; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 12px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span id="dispatch-status-label" style="font-size: 0.85rem; font-weight: bold; color: var(--cyan);">Executando...</span>
-                <span id="dispatch-metrics-label" style="font-size: 0.8rem; color: var(--text-muted);">Duração: --</span>
+            <div class="u-mt-14p u-s-dd7533 is-hidden" id="dispatch-output-box">
+              <div class="u-d-flex u-justify-between u-items-center u-mb-2">
+                <span class="u-fw-700 u-text-cyan u-s-933a8e" id="dispatch-status-label">Executando...</span>
+                <span class="u-text-muted u-s-22b62c" id="dispatch-metrics-label">Duração: --</span>
               </div>
-              <pre id="dispatch-output-pre" style="margin: 0; max-height: 220px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; color: #e2e8f0; white-space: pre-wrap; line-height: 1.4;"></pre>
+              <pre class="u-m-0 u-scroll-y u-mono u-text-slate-light u-pre-wrap u-s-2fa580" id="dispatch-output-pre"></pre>
             </div>
           </div>
         </div>
 
         <!-- SEÇÃO 2: GATEWAYS CHINESES & GLOBAIS DE FRONTEIRA -->
-        <div class="card" style="padding: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 1.3rem;">🌐</span>
-              <h3 style="margin: 0; font-size: 1.15rem; color: #fff;">Gateways Globais & Chineses de Fronteira</h3>
+        <div class="card u-s-f8d354">
+          <div class="u-d-flex u-justify-between u-items-center u-mb-4 u-s-6cf0f4">
+            <div class="u-d-flex u-items-center u-gap-10p">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-globe"></use></svg>
+              <h3 class="u-m-0 u-text-white u-s-ff0d51">Gateways Globais & Chineses de Fronteira</h3>
             </div>
-            <span class="badge" id="providers-count-badge" style="background: rgba(56, 189, 248, 0.15); color: var(--cyan); border: 1px solid var(--cyan);">
+            <span class="badge u-text-cyan u-s-19f050" id="providers-count-badge">
               0 Provedores Homologados
             </span>
           </div>
 
-          <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0 0 16px 0; line-height: 1.4;">
+          <p class="u-text-muted u-s-a637e8">
             As chamadas de subagentes delegadas pelo ParetoBandit consom diretamente estes gateways respeitando descontos de cache de prompt e limites de taxa de requisições (com quarentena adaptativa 429).
           </p>
 
-          <div id="providers-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px;">
+          <div class="u-d-grid u-gap-4 u-s-31de64" id="providers-grid">
             <!-- Renderizado via JS -->
-            <div style="color: var(--text-muted); font-size: 0.9rem; padding: 20px; text-align: center;">Carregando provedores...</div>
+            <div class="u-text-muted u-text-center u-s-63ed2b">Carregando provedores...</div>
           </div>
         </div>
 
         <!-- SEÇÃO 3: GOOGLE UNIVERSE & NOTEBOOKLM BRIDGE (v0.8.2) -->
-        <div class="card" style="padding: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 1.3rem;">🪐</span>
-              <h3 style="margin: 0; font-size: 1.15rem; color: #fff;">Google Universe & NotebookLM Bridge</h3>
+        <div class="card u-s-f8d354">
+          <div class="u-d-flex u-justify-between u-items-center u-mb-4 u-s-6cf0f4">
+            <div class="u-d-flex u-items-center u-gap-10p">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-compass"></use></svg>
+              <h3 class="u-m-0 u-text-white u-s-ff0d51">Google Universe & NotebookLM Bridge</h3>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span class="badge" id="google-session-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444;">
-                🔒 Desconectado
+            <div class="u-d-flex u-gap-2 u-items-center">
+              <span class="badge u-text-red u-s-55a138" id="google-session-badge">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg> Desconectado
               </span>
-              <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--purple); border: 1px solid var(--purple);">
+              <span class="badge u-text-purple u-s-22c3f2">
                 v0.8.2 Wiz Engine
               </span>
             </div>
           </div>
 
-          <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0 0 16px 0; line-height: 1.4;">
-            Cofre local encriptado (<code style="color: var(--cyan);">google_sessions.vault</code>), emulação direta de 22 RPCs <code style="color: var(--purple);">batchexecute</code> para Deep Research, Studio e RAG soberano no Google NotebookLM, e migração transparente da frota legada do Jules para a Antigravity CLI (<code style="color: var(--cyan);">agy</code>).
+          <p class="u-text-muted u-s-a637e8">
+            Cofre local encriptado (<code class="u-text-cyan">google_sessions.vault</code>), emulação direta de 22 RPCs <code class="u-text-purple">batchexecute</code> para Deep Research, Studio e RAG soberano no Google NotebookLM, e migração transparente da frota legada do Jules para a Antigravity CLI (<code class="u-text-cyan">agy</code>).
           </p>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 20px;">
+          <div class="u-d-grid u-gap-4 u-mb-5 u-s-ce02d9">
             <!-- SUBCARD 1: COFRE DE SESSÃO GOOGLE -->
-            <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h4 style="margin: 0; font-size: 0.95rem; color: var(--cyan); display: flex; align-items: center; gap: 6px;">
-                  <span>🔑</span> Cofre de Sessão Encriptado
+            <div class="u-s-6bb2bb">
+              <div class="u-d-flex u-justify-between u-items-center u-mb-10p">
+                <h4 class="u-m-0 u-text-cyan u-d-flex u-items-center u-gap-6p u-s-e1fb4b">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-key"></use></svg> Cofre de Sessão Encriptado
                 </h4>
-                <button class="btn btn-secondary" onclick="checkGoogleSession()" style="font-size: 0.75rem; padding: 3px 8px;">
+                <button class="btn btn-secondary u-s-39e9d5" onclick="checkGoogleSession()">
                   Sondar Cofre
                 </button>
               </div>
 
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.6;">
-                <div>Conta: <strong id="google-account-email" style="color: #fff;">Nenhuma detectada</strong></div>
-                <div>Status PSID: <span id="google-masked-psid" style="font-family: monospace; color: var(--cyan);">Não configurado</span></div>
-                <div>CSRF Token: <span id="google-csrf-token" style="font-family: monospace; color: #a3e635;">SNlM0e</span></div>
+              <div class="u-text-muted u-mb-3 u-s-581aa2">
+                <div>Conta: <strong class="u-text-white" id="google-account-email">Nenhuma detectada</strong></div>
+                <div>Status PSID: <span class="u-mono u-text-cyan" id="google-masked-psid">Não configurado</span></div>
+                <div>CSRF Token: <span class="u-mono u-s-7193d0" id="google-csrf-token">SNlM0e</span></div>
               </div>
 
               <!-- Form rápido de credenciais -->
-              <details style="margin-top: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
-                <summary style="font-size: 0.8rem; color: var(--cyan); cursor: pointer; font-weight: 500;">
+              <details class="u-mt-10p u-s-8dfa74">
+                <summary class="u-text-cyan u-pointer u-fw-500 u-s-22b62c">
                   Atualizar Cookies / Credenciais do Cofre
                 </summary>
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-                  <input id="google-psid-input" type="password" placeholder="__Secure-1PSID" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-size: 0.8rem;" />
-                  <input id="google-psidts-input" type="password" placeholder="__Secure-1PSIDTS" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-size: 0.8rem;" />
-                  <input id="google-sapisid-input" type="password" placeholder="SAPISID" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-size: 0.8rem;" />
-                  <input id="google-email-input" type="text" placeholder="Conta Google (ex: user@gmail.com)" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-size: 0.8rem;" />
-                  <button class="btn btn-primary" onclick="saveGoogleSession()" style="background: var(--purple); color: #fff; font-size: 0.8rem; font-weight: 600; padding: 6px 12px; margin-top: 4px;">
-                    🔒 Salvar no Cofre GV1
+                <div class="u-d-flex u-flex-col u-gap-2 u-mt-2">
+                  <input id="google-psid-input" type="password" placeholder="__Secure-1PSID" class="form-control u-w-full u-text-white u-s-93cd1c" />
+                  <input id="google-psidts-input" type="password" placeholder="__Secure-1PSIDTS" class="form-control u-w-full u-text-white u-s-93cd1c" />
+                  <input id="google-sapisid-input" type="password" placeholder="SAPISID" class="form-control u-w-full u-text-white u-s-93cd1c" />
+                  <input id="google-email-input" type="text" placeholder="Conta Google (ex: user@gmail.com)" class="form-control u-w-full u-text-white u-s-93cd1c" />
+                  <button class="btn btn-primary u-text-white u-fw-600 u-mt-1 u-s-67f930" onclick="saveGoogleSession()">
+                    <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-lock"></use></svg> Salvar no Cofre GV1
                   </button>
                 </div>
               </details>
             </div>
 
             <!-- SUBCARD 2: DISPATCHER WIZ RPC NOTEBOOKLM -->
-            <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 16px;">
-              <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: var(--purple); display: flex; align-items: center; gap: 6px;">
-                <span>⚡</span> Wiz RPC Engine (NotebookLM)
+            <div class="u-s-6bb2bb">
+              <h4 class="u-text-purple u-d-flex u-items-center u-gap-6p u-s-1a2743">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Wiz RPC Engine (NotebookLM)
               </h4>
-              <div style="margin-bottom: 8px;">
-                <label style="display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Ação / RPC Alvo:</label>
-                <select id="google-rpc-select" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 6px; padding: 6px 8px; font-size: 0.85rem;">
+              <div class="u-mb-2">
+                <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Ação / RPC Alvo:</label>
+                <select id="google-rpc-select" class="form-control u-w-full u-text-white u-s-15be8a">
                   <option value="QA9ei">QA9ei — Deep Research Autônomo</option>
                   <option value="wXbhsf">wXbhsf — Criar / Editar Nota</option>
                   <option value="orqRsd">orqRsd — Consulta RAG Evidenciada</option>
@@ -187,29 +186,29 @@
                   <option value="s07Lfd">s07Lfd — Listar Notebooks da Conta</option>
                 </select>
               </div>
-              <div style="margin-bottom: 8px;">
-                <label style="display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Payload / Argumentos (JSON):</label>
-                <textarea id="google-rpc-args-input" rows="2" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 6px; padding: 6px 8px; font-family: monospace; font-size: 0.8rem; box-sizing: border-box;">["Pesquisa Arquitetural Souls Engine"]</textarea>
+              <div class="u-mb-2">
+                <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Payload / Argumentos (JSON):</label>
+                <textarea class="u-w-full u-text-white u-mono u-box-border u-s-e8e1f4" id="google-rpc-args-input" rows="2">["Pesquisa Arquitetural Souls Engine"]</textarea>
               </div>
-              <button class="btn btn-primary" onclick="dispatchGoogleRpc()" style="background: var(--purple); color: #fff; font-weight: 600; font-size: 0.82rem; padding: 6px 14px; width: 100%;">
-                ⚡ Executar RPC batchexecute
+              <button class="btn btn-primary u-text-white u-fw-600 u-w-full u-s-6e3298" onclick="dispatchGoogleRpc()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Executar RPC batchexecute
               </button>
             </div>
 
             <!-- SUBCARD 3: DUAL-LAYER WORKSPACE & JULES MIGRATION -->
-            <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 16px;">
-              <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: #22c55e; display: flex; align-items: center; gap: 6px;">
-                <span>🔄</span> Dual Workspace & Migração Jules
+            <div class="u-s-6bb2bb">
+              <h4 class="u-d-flex u-items-center u-gap-6p u-s-492463">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Dual Workspace & Migração Jules
               </h4>
-              <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px;">
-                <div>Dev Drive ReFS: <strong style="color: #fff;">Z:\souls_engine</strong> (Block Cloning)</div>
-                <div>Status Jules: <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444; font-size: 0.7rem;">Descontinuado em 29/10/2026</span></div>
-                <div style="margin-top: 4px;">Destino: <strong style="color: var(--cyan);">Antigravity CLI (agy)</strong></div>
+              <div class="u-text-muted u-mb-10p u-s-4cec55">
+                <div>Workspace Ativo: <strong class="u-text-white" id="conn-workspace-root">Dev Drive ReFS</strong> (Block Cloning)</div>
+                <div>Status Jules: <span class="badge u-text-red u-s-1037ad">Descontinuado em 29/10/2026</span></div>
+                <div class="u-mt-1">Destino: <strong class="u-text-cyan">Antigravity CLI (agy)</strong></div>
               </div>
               <div>
-                <label style="display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">Comando Jules Legado:</label>
-                <input id="jules-cmd-input" type="text" value="jules apply --branch=feat/perf" class="form-control" style="width: 100%; background: #0f141c; color: #fff; border: 1px solid #30363d; border-radius: 4px; padding: 5px 8px; font-family: monospace; font-size: 0.8rem; margin-bottom: 8px;" />
-                <button class="btn btn-secondary" onclick="testJulesMigration()" style="font-size: 0.78rem; width: 100%; padding: 5px 10px;">
+                <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Comando Jules Legado:</label>
+                <input id="jules-cmd-input" type="text" value="jules apply --branch=feat/perf" class="form-control u-w-full u-text-white u-mono u-mb-2 u-s-93cd1c" />
+                <button class="btn btn-secondary u-w-full u-s-432fd9" onclick="testJulesMigration()">
                   Verificar Roteamento agy
                 </button>
               </div>
@@ -217,12 +216,12 @@
           </div>
 
           <!-- CONSOLE DE RESPOSTA RPC / MIGRAÇÃO -->
-          <div id="google-bridge-output-box" style="display: none; background: #06090e; border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 6px; padding: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span id="google-bridge-status-label" style="font-size: 0.85rem; font-weight: bold; color: var(--purple);">Resposta RPC:</span>
-              <button class="btn btn-secondary" onclick="document.getElementById('google-bridge-output-box').style.display='none'" style="font-size: 0.7rem; padding: 2px 6px;">Fechar</button>
+          <div class="u-s-a90057 is-hidden" id="google-bridge-output-box">
+            <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+              <span class="u-fw-700 u-text-purple u-s-933a8e" id="google-bridge-status-label">Resposta RPC:</span>
+              <button class="btn btn-secondary u-s-29c688" onclick="document.getElementById('google-bridge-output-box').style.display='none'">Fechar</button>
             </div>
-            <pre id="google-bridge-output-pre" style="margin: 0; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; color: #e2e8f0; white-space: pre-wrap; line-height: 1.4;"></pre>
+            <pre class="u-m-0 u-scroll-y u-mono u-text-slate-light u-pre-wrap u-s-f18663" id="google-bridge-output-pre"></pre>
           </div>
 
         </div>

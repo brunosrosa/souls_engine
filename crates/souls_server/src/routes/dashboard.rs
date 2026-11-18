@@ -828,19 +828,90 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
 
     let cpu_simd = detect_cpu_simd_extension();
     let cpu_host_label = format!("CPU Host {}", cpu_simd);
+    let hw_diag = souls_llm_inventory::probe_hardware();
+    let dgpu_label = if hw_diag.has_dedicated_gpu && !hw_diag.gpu_name.trim().is_empty() {
+        format!("dGPU {}", hw_diag.gpu_name.trim())
+    } else {
+        "dGPU Dedicada".to_string()
+    };
 
     let vault = query_vault_empirical_summary().await;
     let profiles = crate::profiles::get_available_profiles(&state).await;
+    let arena_reports = state.cloud_arena.get_all_champions(None).await.unwrap_or_default();
+    let local_inventory = souls_llm_local_arena::LocalModelInventory::scan();
+    let installed_items = local_inventory.list_models();
 
-    let find_profile = |id: &str, cat: &str| {
-        profiles
-            .iter()
-            .find(|p| p.id == id)
-            .or_else(|| profiles.iter().find(|p| p.arena_category == cat))
+    // Helper to pick best installed local model matching preferred traits/tiers
+    let pick_installed_local = |prefer_vision: bool, prefer_code: bool, prefer_fast_cpu: bool, fallback_id: &str| -> (String, String, f64, f64) {
+        let mut best: Option<(&souls_llm_local_arena::LocalModelItem, i32)> = None;
+        for m in installed_items {
+            let low = format!("{} {} {}", m.model_id, m.name, m.tags.join(" ")).to_lowercase();
+            let tier_low = m.tier.to_lowercase();
+            let mut score: i32 = 0;
+
+            if prefer_vision {
+                if low.contains("vl") || low.contains("vision") || tier_low.contains("tier 3") {
+                    score += 120;
+                }
+            }
+            if prefer_fast_cpu {
+                if !m.is_gpu_accelerated || tier_low.contains("tier 0") {
+                    score += 90;
+                }
+                if low.contains("smollm") || low.contains("135m") || low.contains("360m") {
+                    score += 40;
+                }
+            } else if m.is_gpu_accelerated {
+                score += 30;
+            }
+            if prefer_code {
+                if low.contains("coder") || low.contains("code") || tier_low.contains("tier 1") {
+                    score += 100;
+                }
+            }
+            if !prefer_code && !prefer_vision && !prefer_fast_cpu {
+                if tier_low.contains("tier 0.5") || low.contains("nemotron") || low.contains("hermes") || low.contains("phi") {
+                    score += 85;
+                }
+            }
+            // Prefer already benchmarked models slightly
+            if vault.models_map.contains_key(&m.model_id.to_lowercase()) {
+                score += 15;
+            }
+
+            if best.map_or(true, |(_, bs)| score > bs) {
+                best = Some((m, score));
+            }
+        }
+
+        if let Some((m, _)) = best {
+            let target = if m.is_gpu_accelerated {
+                dgpu_label.clone()
+            } else {
+                cpu_host_label.clone()
+            };
+            let fit = if m.is_gpu_accelerated {
+                souls_llm_inventory::HardwareFit::OptimalVram
+            } else {
+                souls_llm_inventory::HardwareFit::PartialCpuOffload
+            };
+            let size_bytes = (m.size_mb.max(10.0) * 1024.0 * 1024.0) as u64;
+            let (params, _, _) = souls_llm_inventory::parse_model_params_from_name(&m.model_id, Some(size_bytes));
+            let est_tps = souls_llm_inventory::estimate_variant_throughput_tps(&hw_diag, fit, size_bytes, params) as f64;
+            let est_vram = if m.is_gpu_accelerated { m.size_mb * 0.85 } else { 0.0 };
+            (m.model_id.clone(), target, est_tps, est_vram)
+        } else {
+            (
+                fallback_id.to_string(),
+                if prefer_fast_cpu { cpu_host_label.clone() } else { dgpu_label.clone() },
+                if prefer_fast_cpu { 85.0 } else { 42.0 },
+                if prefer_fast_cpu { 0.0 } else { 1500.0 },
+            )
+        }
     };
 
     let format_local_cell =
-        |model_id: &str, default_target: &str, fallback_tps: f64, fallback_vram_mb: f64| {
+        |model_id: &str, default_target: &str, est_tps: f64, est_vram_mb: f64| {
             let key = model_id.to_lowercase();
             let empirical = vault.models_map.get(&key).copied();
             let is_cpu = default_target.to_lowercase().contains("cpu");
@@ -850,20 +921,26 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
                     let clean_vram = if is_cpu { 0.0 } else { v };
                     (t, ttft, clean_vram, e, true)
                 }
-                _ => (fallback_tps, 180.0, fallback_vram_mb, 92.0, false),
+                _ => (est_tps, 180.0, est_vram_mb, 90.0, false),
             };
 
             let target_str = if is_cpu || vram_mb <= 10.0 {
                 format!("{} (0 MB VRAM • RAM)", default_target)
             } else {
                 format!(
-                    "{} ({:.2} GB Pico NVML)",
+                    "{} ({:.2} GB {})",
                     default_target,
-                    vram_mb / 1024.0
+                    vram_mb / 1024.0,
+                    if is_benchmarked { "Pico NVML" } else { "Estimado" }
                 )
             };
 
-            let tps_str = format!("{:.1} tok/s • {:.0}ms TTFT", tps, ttft_ms);
+            let tps_str = if is_benchmarked {
+                format!("{:.1} tok/s • {:.0}ms TTFT", tps, ttft_ms)
+            } else {
+                format!("~{:.1} tok/s (Est. Banda)", tps)
+            };
+
             let status_str = if is_benchmarked {
                 if is_cpu || vram_mb <= 10.0 {
                     format!("✅ Homologado (CPU Host {})", cpu_simd)
@@ -871,9 +948,9 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
                     "✅ Homologado (dGPU)".to_string()
                 }
             } else if is_cpu || vram_mb <= 10.0 {
-                format!("Pronto (CPU Host {})", cpu_simd)
+                format!("Instalado (CPU Host {})", cpu_simd)
             } else {
-                "Pronto (dGPU)".to_string()
+                "Instalado (dGPU)".to_string()
             };
 
             (
@@ -893,19 +970,23 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
             )
         };
 
-    let format_cloud_cell = |prof_id: &str,
-                             cat: &str,
-                             default_model: &str,
-                             default_provider: &str,
-                             default_cost: &str| {
-        if let Some(p) = find_profile(prof_id, cat) {
+    let format_cloud_cell = |prof_id: &str, cat: &str| {
+        // 1. User-explicit override in souls_config.toml (!is_builtin or explicit custom profile for this category) takes top priority
+        let explicit_profile = profiles
+            .iter()
+            .find(|p| !p.is_builtin && (p.id == prof_id || p.arena_category.eq_ignore_ascii_case(cat)));
+
+        let pretty_provider = |raw: &str| -> String {
+            match raw.to_lowercase().as_str() {
+                "nous" => "Nous Portal".to_string(),
+                "openrouter" => "OpenRouter".to_string(),
+                "custom" | "local_silicon" => "Silício Local ($0)".to_string(),
+                other => other.to_string(),
+            }
+        };
+
+        if let Some(p) = explicit_profile {
             let model = p.target_model.clone();
-            let prov = match p.provider.as_str() {
-                "nous" => "Nous Portal",
-                "openrouter" => "OpenRouter",
-                "custom" | "local_silicon" => "Silício Local ($0)",
-                other => other,
-            };
             let cost = if let Some(ref triad) = p.triad {
                 let matched_item = [
                     triad.quality_leader.as_ref(),
@@ -922,240 +1003,258 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
                         format!("${:.2} / 1M (Blended)", item.blended_cost)
                     }
                 } else {
-                    default_cost.to_string()
+                    "Perfil Customizado (Config)".to_string()
                 }
             } else {
-                default_cost.to_string()
+                "Perfil Customizado (Config)".to_string()
             };
 
-            json!({
+            return json!({
                 "profile_id": p.id,
                 "profile_name": p.name,
                 "model": model,
-                "provider": prov,
+                "provider": pretty_provider(&p.provider),
                 "cost": cost
-            })
-        } else {
-            json!({
-                "profile_id": prof_id,
-                "profile_name": prof_id,
-                "model": default_model,
-                "provider": default_provider,
-                "cost": default_cost
-            })
+            });
         }
+
+        // 2. Otherwise pull live Pareto champion from Cloud Arena for this cognitive domain
+        if let Some(kind) = souls_llm_cloud_arena::TaskProfileKind::from_str_lossy(cat) {
+            if let Some(rep) = arena_reports.iter().find(|r| r.profile == kind) {
+                let champ = rep.best_value.as_ref().or(rep.quality_leader.as_ref());
+                if let Some(c) = champ {
+                    return json!({
+                        "profile_id": prof_id,
+                        "profile_name": kind.as_str(),
+                        "model": c.canonical_id,
+                        "provider": pretty_provider(&c.provider),
+                        "cost": if c.blended_cost <= 0.0 {
+                            "$0.00 (Free/Local)".to_string()
+                        } else {
+                            format!("${:.2} / 1M (Blended • ROI {:.1}x)", c.blended_cost, c.roi_index)
+                        }
+                    });
+                }
+            }
+        }
+
+        // 3. Fallback to configured profile triad / target
+        if let Some(p) = profiles.iter().find(|p| p.id == prof_id).or_else(|| profiles.iter().find(|p| p.arena_category.eq_ignore_ascii_case(cat))) {
+            let champ = p.triad.as_ref().and_then(|t| t.best_value.as_ref().or(t.quality_leader.as_ref()));
+            if let Some(item) = champ {
+                return json!({
+                    "profile_id": p.id,
+                    "profile_name": p.name,
+                    "model": item.canonical_id,
+                    "provider": pretty_provider(&item.provider),
+                    "cost": format!("${:.2} / 1M (Blended)", item.blended_cost)
+                });
+            }
+            return json!({
+                "profile_id": p.id,
+                "profile_name": p.name,
+                "model": p.target_model,
+                "provider": pretty_provider(&p.provider),
+                "cost": "Configurado no Perfil"
+            });
+        }
+
+        json!({
+            "profile_id": prof_id,
+            "profile_name": cat,
+            "model": "deepseek/deepseek-chat",
+            "provider": "Nous Portal",
+            "cost": "$0.14 / 1M (Blended)"
+        })
     };
 
-    let (coding_local, coding_status) = format_local_cell(
-        "qwen3-5-4b-agentic-coder-v4-i1-q4-k-s",
-        "dGPU RTX 2060m",
-        46.6,
-        1278.0,
-    );
-    let (agentic_local, agentic_status) = format_local_cell(
-        "arch-function-chat-3b-q5-k-m",
-        "dGPU RTX 2060m",
-        47.1,
-        1438.0,
-    );
-    let (fast_local, fast_status) = format_local_cell(
-        "smollm2-135m-reasoning-5k-q4-k-m",
-        &cpu_host_label,
-        110.0,
-        0.0,
-    );
-    let (reasoning_local, reasoning_status) = format_local_cell(
-        "phi-4-mini-instruct-q4-k-m",
-        "dGPU RTX 2060m",
-        38.4,
-        1979.0,
-    );
-    let (vision_local, vision_status) = format_local_cell(
-        "qwen2-5-vl-3b-instruct-q4-k-m",
-        "dGPU RTX 2060m",
-        49.5,
-        1624.0,
-    );
-    let (context_local, context_status) = format_local_cell(
-        "tiktoken-ccr-fast",
-        &cpu_host_label,
-        1250.0,
-        0.0,
-    );
-    let (blast_local, blast_status) = format_local_cell(
-        "gitoxide-frecency-native",
-        &cpu_host_label,
-        950.0,
-        0.0,
-    );
-    let (obsidian_local, obsidian_status) = format_local_cell(
-        "ladybug-ontological-graph",
-        &cpu_host_label,
-        480.0,
-        0.0,
-    );
-    let (hardware_local, hardware_status) = format_local_cell(
-        "nvml-barrier-watchdog",
-        "dGPU RTX 2060m",
-        1000.0,
-        0.0,
-    );
+    // Resolve actual installed local models for the 9 canonical cognitive domains
+    let (exec_id, exec_tgt, exec_tps, exec_vram) = pick_installed_local(false, false, false, "hermes-3-llama-3.2-3b-q4-k-m");
+    let (code_id, code_tgt, code_tps, code_vram) = pick_installed_local(false, true, false, "qwen3-5-4b-agentic-coder-v4");
+    let (agen_id, agen_tgt, agen_tps, agen_vram) = pick_installed_local(false, false, false, "nvidia-nemotron-3-nano-4b");
+    let (reas_id, reas_tgt, reas_tps, reas_vram) = pick_installed_local(false, false, false, "phi-4-mini-instruct");
+    let (fast_id, fast_tgt, fast_tps, fast_vram) = pick_installed_local(false, false, true, "smollm2-360m-instruct");
+    let (dsgn_id, dsgn_tgt, dsgn_tps, dsgn_vram) = pick_installed_local(true, false, false, "qwen2-5-vl-3b-instruct");
+    let (rsch_id, rsch_tgt, rsch_tps, rsch_vram) = pick_installed_local(false, false, false, "hermes-3-llama-3.2-3b-q4-k-m");
+    let (sec_id, sec_tgt, sec_tps, sec_vram) = pick_installed_local(false, true, false, "qwen3-5-4b-agentic-coder-v4");
+    let (cur_id, cur_tgt, cur_tps, cur_vram) = pick_installed_local(false, false, true, "smollm2-360m-instruct");
+
+    let (exec_local, exec_status) = format_local_cell(&exec_id, &exec_tgt, exec_tps, exec_vram);
+    let (code_local, code_status) = format_local_cell(&code_id, &code_tgt, code_tps, code_vram);
+    let (agen_local, agen_status) = format_local_cell(&agen_id, &agen_tgt, agen_tps, agen_vram);
+    let (reas_local, reas_status) = format_local_cell(&reas_id, &reas_tgt, reas_tps, reas_vram);
+    let (fast_local, fast_status) = format_local_cell(&fast_id, &fast_tgt, fast_tps, fast_vram);
+    let (dsgn_local, dsgn_status) = format_local_cell(&dsgn_id, &dsgn_tgt, dsgn_tps, dsgn_vram);
+    let (rsch_local, rsch_status) = format_local_cell(&rsch_id, &rsch_tgt, rsch_tps, rsch_vram);
+    let (sec_local, sec_status) = format_local_cell(&sec_id, &sec_tgt, sec_tps, sec_vram);
+    let (cur_local, cur_status) = format_local_cell(&cur_id, &cur_tgt, cur_tps, cur_vram);
 
     let matrix = vec![
         json!({
-            "id": "coding_swe",
-            "profile_id": "deep_swe",
-            "category": "Coding & Cirurgia Sintática",
-            "icon": "💻",
-            "description": "Edições atômicas AST, Myers Diff e refatoração de código Rust/TypeScript.",
-            "local_default": coding_local,
-            "cloud_fallback": format_cloud_cell(
-                "deep_swe",
-                "coding",
-                "anthropic/claude-3-7-sonnet",
-                "Nous Portal / OpenRouter",
-                "$3.00 / 1M (Blended)"
-            ),
-            "pareto_rule": "Executa 100% no silício local se blast radius <= 5 arquivos; escala para Cloud Fallback em refatoração estrutural multi-crate.",
-            "status": coding_status
-        }),
-        json!({
-            "id": "agentic_tools",
+            "id": "executive",
             "profile_id": "frontier_balanced",
-            "category": "Agentic & Tool Calling (MCP)",
-            "icon": "🤖",
-            "description": "Despacho de microtarefas periféricas, JSON Schema e execução MCP.",
-            "local_default": agentic_local,
-            "cloud_fallback": format_cloud_cell(
-                "frontier_balanced",
-                "agentic",
-                "deepseek/deepseek-chat",
-                "Nous Portal",
-                "$0.14 / 1M (Blended)"
-            ),
-            "pareto_rule": "Chamadas operacionais de MCP executam localmente; orquestração complexa com long-turn desvia para o perfil Agentic.",
-            "status": agentic_status
+            "arena_category": "executive",
+            "category": "Maestro / Executive Brain",
+            "icon": "brain",
+            "description": "Orquestração executiva all-round, planejamento estratégico e julgamento clínico do diálogo.",
+            "local_default": exec_local,
+            "cloud_fallback": format_cloud_cell("frontier_balanced", "executive"),
+            "pareto_rule": "Atua como fallback soberano quando políticas Privacy Shield proíbem saída de contexto para nuvem.",
+            "status": exec_status
         }),
         json!({
-            "id": "fast_triage",
+            "id": "coding",
+            "profile_id": "deep_swe",
+            "arena_category": "coding",
+            "category": "Coding & Cirurgia Sintática (SWE)",
+            "icon": "code",
+            "description": "Edições atômicas AST, Myers Diff e refatoração estrutural em Rust, TypeScript e Python.",
+            "local_default": code_local,
+            "cloud_fallback": format_cloud_cell("deep_swe", "coding"),
+            "pareto_rule": "Executa 100% no silício local se blast radius <= 5 arquivos; escala para Cloud Fallback em refatoração multi-crate.",
+            "status": code_status
+        }),
+        json!({
+            "id": "agentic",
+            "profile_id": "frontier_balanced",
+            "arena_category": "agentic",
+            "category": "Agentic & Tool Calling (MCP)",
+            "icon": "bot",
+            "description": "Despacho autônomo de ferramentas MCP, aderência estrita a JSON Schema e execução multi-turn.",
+            "local_default": agen_local,
+            "cloud_fallback": format_cloud_cell("agentic_dispatcher", "agentic"),
+            "pareto_rule": "Microtarefas operacionais e chamadas MCP rodam no silício local; cadeias multi-step complexas escalam para Nuvem Agentic.",
+            "status": agen_status
+        }),
+        json!({
+            "id": "reasoning",
+            "profile_id": "deep_reasoning",
+            "arena_category": "reasoning",
+            "category": "Deep Reasoning & Matemática Formal",
+            "icon": "cpu",
+            "description": "Cadeias densas de pensamento (CoT), provas formais, análise financeira e verificação lógica.",
+            "local_default": reas_local,
+            "cloud_fallback": format_cloud_cell("deep_reasoning", "reasoning"),
+            "pareto_rule": "Deliberação socrática local até 8k tokens; desvia para Reasoning Cloud quando entropia H exceder limiar configurado.",
+            "status": reas_status
+        }),
+        json!({
+            "id": "fast",
             "profile_id": "ultra_fast",
-            "category": "Fast Triage & Gating de Entropia",
-            "icon": "⚡",
-            "description": "Triagem instantânea de intenção e medição de entropia de prompts.",
+            "arena_category": "fast",
+            "category": "Fast Triage & Baixa Latência",
+            "icon": "zap",
+            "description": "Triagem instantânea de intenção, medição de entropia e gating de contexto a latência sub-segundo.",
             "local_default": fast_local,
-            "cloud_fallback": format_cloud_cell(
-                "ultra_fast",
-                "fast",
-                "google/gemini-2.0-flash-001",
-                "Nous Portal",
-                "$0.10 / 1M (Blended)"
-            ),
-            "pareto_rule": "100% Bare-metal no silício host (0 MB VRAM). Escala apenas quando solicitado contexto ultra-longo > 32k.",
+            "cloud_fallback": format_cloud_cell("ultra_fast", "fast"),
+            "pareto_rule": "100% Bare-metal no silício host (0 MB VRAM) em uso normal; escala para Flash Cloud em janelas longas.",
             "status": fast_status
         }),
         json!({
-            "id": "deep_reasoning",
-            "profile_id": "deep_reasoning",
-            "category": "Deep Reasoning & Lógica",
-            "icon": "🧠",
-            "description": "Cadeias densas de pensamento (CoT), análise matemática e prova de propriedades.",
-            "local_default": reasoning_local,
-            "cloud_fallback": format_cloud_cell(
-                "deep_reasoning",
-                "reasoning",
-                "openai/o3-mini-high",
-                "Nous Portal",
-                "$4.40 / 1M (Blended)"
-            ),
-            "pareto_rule": "Deliberação socrática local até 8k tokens; desvia para Reasoning Cloud se ambiguidade formal exceder limiar de entropia.",
-            "status": reasoning_status
+            "id": "design",
+            "profile_id": "ux_designer",
+            "arena_category": "design",
+            "category": "UX, Frontend & Multimodal Design",
+            "icon": "palette",
+            "description": "Arquitetura de UI/UX, inspeção visual VLM (screenshots/AXTree), design systems e CSS.",
+            "local_default": dsgn_local,
+            "cloud_fallback": format_cloud_cell("ux_designer", "design"),
+            "pareto_rule": "Captura AXTree/VLM local sob Privacy Shield; prototipação visual rica e refactor CSS completo escalam para Design Cloud.",
+            "status": dsgn_status
         }),
         json!({
-            "id": "vision_multimodal",
-            "profile_id": "local_sovereign",
-            "category": "Multimodal, Visão & Soberania",
-            "icon": "👁️",
-            "description": "Compreensão de capturas de tela de UI, diagramas e dados sensíveis com Privacy Shield.",
-            "local_default": vision_local,
-            "cloud_fallback": json!({
-                "profile_id": "local_sovereign",
-                "profile_name": "Local Sovereign 🛡️",
-                "model": "qwen2-5-vl-3b-instruct + mmproj-F16",
-                "provider": "Silício Bare-Metal (Privacy Shield)",
-                "cost": "$0.00 (Soberania Estrita)"
-            }),
-            "pareto_rule": "Processamento de imagens e dados clínicos/financeiros diretamente na RTX 2060m sem tráfego externo.",
-            "status": vision_status
+            "id": "research",
+            "profile_id": "web_researcher",
+            "arena_category": "research",
+            "category": "Deep Research & Síntese Factual",
+            "icon": "search",
+            "description": "Investigação autônoma (STORM), raspagem HTML->Markdown na RAM, RAG longo e síntese citada.",
+            "local_default": rsch_local,
+            "cloud_fallback": format_cloud_cell("web_researcher", "research"),
+            "pareto_rule": "Indexação e extração local de fontes; sínteses de alto volume (>16k contexto) escalam para Research Cloud.",
+            "status": rsch_status
         }),
         json!({
-            "id": "context_lean",
-            "profile_id": "ultra_fast",
-            "category": "Context Lean & Compressão Semântica (CCR)",
-            "icon": "🗜️",
-            "description": "Deduplicação de AST e compressão na RAM bare-metal, economizando 70% a 85% de tokens de contexto.",
-            "local_default": context_local,
-            "cloud_fallback": format_cloud_cell(
-                "ultra_fast",
-                "fast",
-                "google/gemini-2.0-flash-001",
-                "Nous Portal",
-                "$0.10 / 1M (Blended)"
-            ),
-            "pareto_rule": "100% executado na RAM do host via CPU AVX2 (<1ms); escala para nuvem apenas em payloads brutos > 200k tokens.",
-            "status": context_status
+            "id": "security",
+            "profile_id": "security_auditor",
+            "arena_category": "security",
+            "category": "Security Auditing & Guardrails",
+            "icon": "shield",
+            "description": "Auditoria de vulnerabilidades, Zero-Trust em skills, higienização PII e isolamento de sandbox.",
+            "local_default": sec_local,
+            "cloud_fallback": format_cloud_cell("security_auditor", "security"),
+            "pareto_rule": "Dados sensíveis/PII são obrigatoriamente auditados no silício local; revisão profunda de código desidentificado usa Cloud.",
+            "status": sec_status
         }),
         json!({
-            "id": "blast_radius",
-            "profile_id": "deep_swe",
-            "category": "Blast Radius & Frecency Git",
-            "icon": "🎯",
-            "description": "Grafo de acoplamento reverso BFS e medição de calor temporal via commit graph nativo gitoxide.",
-            "local_default": blast_local,
-            "cloud_fallback": format_cloud_cell(
-                "deep_swe",
-                "coding",
-                "anthropic/claude-3-7-sonnet",
-                "Nous Portal",
-                "$3.00 / 1M (Blended)"
-            ),
-            "pareto_rule": "Cálculo puramente determinístico em silício host; aciona LLM em nuvem apenas se entropia de refatoração exigir decomposição arquitetural.",
-            "status": blast_status
+            "id": "curation",
+            "profile_id": "memory_curator",
+            "arena_category": "curation",
+            "category": "Memory, Graph & Vault Curation",
+            "icon": "database",
+            "description": "Curadoria epistêmica L2/L3, consolidação no Obsidian (raw -> wiki) e grafo LadybugDB.",
+            "local_default": cur_local,
+            "cloud_fallback": format_cloud_cell("memory_curator", "curation"),
+            "pareto_rule": "Extração e desidentificação inicial via silício local; síntese bibliográfica longa opcionalmente usa Curation Cloud.",
+            "status": cur_status
         }),
-        json!({
-            "id": "obsidian_curator",
-            "profile_id": "frontier_balanced",
-            "category": "Obsidian Vault Curator & Grafo L2",
-            "icon": "📓",
-            "description": "Higienização de PII com Privacy Shield e vinculação ontológica no grafo LadybugDB do cofre Obsidian.",
-            "local_default": obsidian_local,
-            "cloud_fallback": format_cloud_cell(
-                "frontier_balanced",
-                "agentic",
-                "anthropic/claude-3-5-haiku",
-                "Nous Portal / OpenRouter",
-                "$0.80 / 1M (Blended)"
-            ),
-            "pareto_rule": "Desidentificação local inviolável; síntese de notas consolidada atomicamente em wiki/log.md.",
-            "status": obsidian_status
-        }),
-        json!({
-            "id": "hardware_watchdog",
-            "profile_id": "local_sovereign",
-            "category": "Hardware Watchdog & FinOps Silício",
-            "icon": "🛡️",
-            "description": "Vigilância termodinâmica contínua a 1Hz da RTX 2060m e CPU AVX2 com Barreira Física Phi.",
-            "local_default": hardware_local,
-            "cloud_fallback": json!({
-                "profile_id": "local_sovereign",
-                "profile_name": "Soberania Física 🛡️",
-                "model": "nvml-barrier-daemon",
-                "provider": "Kernel Bare-Metal Local",
-                "cost": "$0.00 (Inviolável)"
-            }),
-            "pareto_rule": "Telemetria soberana exclusiva bare-metal; bloqueia spillover de VRAM no WDDM e descarrega subagentes se GPU > 78°C.",
-            "status": hardware_status
-        })
     ];
+
+    let bare_metal_engines = vec![
+        json!({
+            "id": "ccr_engine",
+            "name": "Context Lean CCR (Tiktoken)",
+            "icon": "scissors",
+            "target": format!("{} (RAM • 0 MB VRAM)", cpu_host_label),
+            "metric": "70%–85% Economia de Contexto",
+            "status": "✅ Determinístico Ativo"
+        }),
+        json!({
+            "id": "gitoxide_engine",
+            "name": "Blast Radius & Frecency (Gitoxide)",
+            "icon": "git-branch",
+            "target": format!("{} (AST + BFS)", cpu_host_label),
+            "metric": "< 5 ms em Grafo Reverso",
+            "status": "✅ Determinístico Ativo"
+        }),
+        json!({
+            "id": "ladybug_engine",
+            "name": "Obsidian & Grafo Ontológico (LadybugDB)",
+            "icon": "network",
+            "target": "FrankenSQLite WAL + RRF",
+            "metric": "Busca Híbrida Zero-Leak",
+            "status": "✅ Determinístico Ativo"
+        }),
+        json!({
+            "id": "nvml_watchdog",
+            "name": "Hardware Watchdog & Barreira Phi (NVML)",
+            "icon": "shield",
+            "target": dgpu_label,
+            "metric": format!("Barreira WDDM {} MB", hw_diag.vram_safe_usable_mb),
+            "status": "✅ Vigilância 1Hz Ativa"
+        }),
+    ];
+
+    let installed_local_models: Vec<Value> = installed_items
+        .iter()
+        .map(|m| {
+            let fname = m
+                .file_path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(&m.model_id);
+            json!({
+                "id": m.model_id,
+                "name": m.name,
+                "file_name": fname,
+                "size_mb": m.size_mb,
+                "size_gb": ((m.size_mb / 1024.0) * 100.0).round() / 100.0,
+                "quantization": m.quantization,
+                "assigned_tier": m.tier,
+                "is_gpu_accelerated": m.is_gpu_accelerated
+            })
+        })
+        .collect();
 
     Json(json!({
         "status": "success",
@@ -1163,7 +1262,10 @@ pub async fn router_matrix_handler(State(state): State<AppState>) -> Json<Value>
         "benchmarked_count": vault.benchmarked_count,
         "total_arena_runs": vault.total_arena_runs,
         "cpu_simd": cpu_simd,
-        "matrix": matrix
+        "gpu_name": hw_diag.gpu_name,
+        "matrix": matrix,
+        "bare_metal_engines": bare_metal_engines,
+        "installed_local_models": installed_local_models
     }))
 }
 
@@ -1377,6 +1479,13 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
         }
     }
 
+    let hw_diag = souls_llm_inventory::probe_hardware();
+    let dgpu_target_label = if hw_diag.has_dedicated_gpu && !hw_diag.gpu_name.trim().is_empty() {
+        format!("dGPU {}", hw_diag.gpu_name.trim())
+    } else {
+        "dGPU Dedicada".to_string()
+    };
+
     let inventory = souls_llm_local_arena::LocalModelInventory::scan();
     if !inventory.is_empty() {
         let items: Vec<Value> = inventory
@@ -1388,6 +1497,30 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                 } else {
                     "Pronto na CPU (AVX2)"
                 };
+
+                let file_name_only = m
+                    .file_path
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(&m.model_id)
+                    .to_string();
+
+                let fit = if m.is_gpu_accelerated {
+                    souls_llm_inventory::HardwareFit::OptimalVram
+                } else {
+                    souls_llm_inventory::HardwareFit::PartialCpuOffload
+                };
+                let size_bytes = (m.size_mb.max(10.0) * 1024.0 * 1024.0) as u64;
+                let (params, _, _) = souls_llm_inventory::parse_model_params_from_name(
+                    &m.model_id,
+                    Some(size_bytes),
+                );
+                let estimated_tps = souls_llm_inventory::estimate_variant_throughput_tps(
+                    &hw_diag,
+                    fit,
+                    size_bytes,
+                    params,
+                ) as f64;
 
                 // Opção E: Freshness física do arquivo GGUF ("Há X dias")
                 let (freshness_str, freshness_days) = if let Ok(meta) = fs::metadata(&m.file_path) {
@@ -1495,7 +1628,8 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                     "tiers": multi_tiers,
                     "model": m.model_id,
                     "name": m.name,
-                    "target": if m.is_gpu_accelerated { "dGPU RTX 2060m" } else { "CPU Host (AVX2)" },
+                    "filename": file_name_only,
+                    "target": if m.is_gpu_accelerated { dgpu_target_label.as_str() } else { "CPU Host (AVX2)" },
                     "size_mb": m.size_mb,
                     "quantization": m.quantization,
                     "context_window": m.context_window,
@@ -1507,6 +1641,7 @@ pub async fn local_models_handler(State(state): State<AppState>) -> Json<Value> 
                     "freshness": freshness_str,
                     "freshness_days": freshness_days,
                     "tps": tps,
+                    "estimated_tps": estimated_tps,
                     "ttft_ms": ttft_ms,
                     "tpot_ms": tpot_ms,
                     "e3_score": e3_score,
@@ -4173,15 +4308,32 @@ pub async fn router_providers_handler(
         }));
     }
 
-    // Host local silicon dynamically
+    // Host local silicon dynamically from scanned GGUF inventory
+    let local_inv = souls_llm_local_arena::LocalModelInventory::scan();
+    let mut local_model_labels: Vec<String> = local_inv
+        .list_models()
+        .iter()
+        .take(6)
+        .map(|m| {
+            let hw = if m.is_gpu_accelerated { "dGPU" } else { "CPU AVX2" };
+            format!("{} [{} • {}]", m.name, m.quantization, hw)
+        })
+        .collect();
+    if local_model_labels.is_empty() {
+        local_model_labels.push("Nenhum modelo GGUF instalado no diretório local".to_string());
+    } else if local_inv.list_models().len() > 6 {
+        local_model_labels.push(format!("+{} outro(s) GGUF(s) no disco", local_inv.list_models().len() - 6));
+    }
+
     providers.push(json!({
         "id": "local",
         "name": "Host Silicon (Bare-Metal)",
-        "models": ["Qwen 2.5 Coder 3B/7B (dGPU)", "Llama 3.2 (CPU AVX2)"],
+        "models": local_model_labels,
+        "installed_count": local_inv.list_models().len(),
         "cache_discount": "100% Grátis ($0.00 / Zero Custo)",
         "latency_factor": "0.80x (Zero Latência de Rede)",
-        "status": "Nativo (dGPU/CPU)",
-        "is_configured": true,
+        "status": if local_inv.is_empty() { "Aguardando Download GGUF" } else { "Nativo Ativo (dGPU/CPU)" },
+        "is_configured": !local_inv.is_empty(),
         "auth_header_env": "",
         "tier": "Silício Bare-Metal Host"
     }));
@@ -4194,29 +4346,107 @@ pub async fn router_providers_handler(
 }
 
 /// Handler do endpoint GET /api/v1/system/pulse
-/// Retorna métricas consolidadas do ecossistema pessoal do usuário: nível de evolução,
-/// economia FinOps estimada via prompt cache e inferência local, saúde epistêmica e entidades soberanas.
+/// Retorna métricas reais consolidadas do ecossistema pessoal do usuário: nível de evolução,
+/// economia FinOps auditável via cache/silício local, saúde epistêmica e entidades soberanas.
 pub async fn system_pulse_handler(
     State(state): State<AppState>,
 ) -> Json<serde_json::Value> {
+    let limits = read_finops_config_limits();
     let research_dir = &state.research.roots().research_dir;
     let completed_missions = if research_dir.exists() {
         std::fs::read_dir(research_dir)
-            .map(|entries| entries.filter_map(|e| e.ok()).filter(|e| e.path().is_dir()).count())
+            .map(|entries| {
+                entries
+                    .filter_map(|e| e.ok())
+                    .filter(|e| {
+                        e.path().is_dir()
+                            && !e
+                                .file_name()
+                                .to_string_lossy()
+                                .starts_with('_')
+                    })
+                    .count()
+            })
             .unwrap_or(0)
     } else {
         0
     };
 
-    let baseline_savings = 14.20 + (completed_missions as f64 * 0.45);
-    let evolution_score = 50 + (completed_missions.min(10) * 5);
-    let evolution_level = if evolution_score >= 80 {
-        "Level 4 — Soberania Cognitiva Plena"
-    } else if evolution_score >= 65 {
-        "Level 3 — Ecossistema Aumentado"
+    let pool = state.memory.pool();
+    let (stable_count, evolving_count) = state.memory.partition_counts().await.unwrap_or((0, 0));
+    let ladybug_nodes = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM ladybug_nodes")
+        .fetch_one(&*pool)
+        .await
+        .unwrap_or(0);
+    let ladybug_edges = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM ladybug_edges")
+        .fetch_one(&*pool)
+        .await
+        .unwrap_or(0);
+    let pre_compress_tokens = sqlx::query_scalar::<_, i64>(
+        "SELECT COALESCE(SUM(pre_compress_tokens), 0) FROM session_checkpoints",
+    )
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let subagent_completed = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM sub_agent_sessions WHERE status = 'COMPLETED'",
+    )
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let diaries_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM sub_agent_diaries")
+        .fetch_one(&*pool)
+        .await
+        .unwrap_or(0);
+    let epistemic_chars: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM epistemic_memories",
+    )
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let diary_chars: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(content)), 0) FROM sub_agent_diaries",
+    )
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+    let handoff_chars: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(LENGTH(context_summary)), 0) FROM handoff_payloads",
+    )
+    .fetch_one(&*pool)
+    .await
+    .unwrap_or(0);
+
+    let vault_summary = query_vault_empirical_summary().await;
+    let local_inventory = souls_llm_local_arena::LocalModelInventory::scan();
+    let local_installed_count = local_inventory.list_models().len();
+    let (obsidian_raw_count, obsidian_wiki_count) =
+        count_obsidian_vault_notes(&limits.vault_path);
+
+    let local_arena_tokens = vault_summary.total_arena_runs * 512;
+    let l3_confined_tokens = (epistemic_chars + diary_chars + handoff_chars) / 4;
+    let total_local_tokens = local_arena_tokens + pre_compress_tokens + l3_confined_tokens;
+
+    let real_savings_usd = ((total_local_tokens as f64) / 1_000_000.0) * 6.00
+        + (vault_summary.total_arena_runs as f64) * 0.04
+        + (subagent_completed as f64) * 0.12
+        + (diaries_count as f64) * 0.03;
+
+    let context_savings_pct = if diary_chars + handoff_chars + epistemic_chars > 0 {
+        let raw_chars = (diary_chars + handoff_chars + epistemic_chars).max(1) as f64;
+        let injected_chars = (handoff_chars.max(200) as f64).min(raw_chars * 0.25);
+        ((1.0 - (injected_chars / raw_chars)) * 100.0).clamp(50.0, 96.0)
+    } else if local_installed_count > 0 {
+        75.0
     } else {
-        "Level 2 — Aprendizado Ativo & Curadoria"
+        0.0
     };
+
+    let sovereign_entities_count = stable_count
+        + evolving_count
+        + (ladybug_nodes.max(0) as usize)
+        + obsidian_raw_count
+        + obsidian_wiki_count;
 
     let frontier_providers = souls_model_router::get_canonical_frontier_providers();
     let active_providers_count = frontier_providers
@@ -4229,19 +4459,100 @@ pub async fn system_pulse_handler(
         })
         .count();
 
+    let profiles = crate::profiles::get_available_profiles(&state).await;
+    let active_profile = profiles
+        .iter()
+        .find(|p| p.is_active)
+        .or_else(|| profiles.first());
+    let (active_model, active_provider) =
+        crate::profiles::read_active_hermes_model(&crate::profiles::resolve_hermes_config_path());
+    let active_preset_label = active_profile
+        .map(|p| format!("{} ({})", p.name, p.target_model))
+        .unwrap_or_else(|| format!("{} ({})", active_model, active_provider));
+
+    // Real hardware readiness & epistemic health
+    let (hardware_readiness, hw_zone_ok) = if let Ok(mut wd) = state.runtime.watchdog().lock() {
+        wd.sample_once();
+        let snap = wd.snapshot();
+        let zone_raw = format!("{:?}", snap.operational_zone);
+        let status_label = match zone_raw.as_str() {
+            "Nominal" => "Estável",
+            "Caution" | "Warning" | "ThermalWarning" => "Atenção",
+            "Critical" | "Throttle" | "Spillover" => "Crítico",
+            _ if (snap.gpu_temp_c as f64) >= limits.gpu_temp_throttle_c => "Alerta",
+            _ => "Estável",
+        };
+        let used_gb = snap.vram_allocated_mb as f64 / 1024.0;
+        let limit_gb = limits.vram_hard_limit_mb as f64 / 1024.0;
+        let ready = format!(
+            "{} ({:.0}°C • {:.1}/{:.1} GB)",
+            status_label, snap.gpu_temp_c, used_gb, limit_gb
+        );
+        (ready, (snap.gpu_temp_c as f64) < limits.gpu_temp_throttle_c)
+    } else {
+        ("CPU Standby".to_string(), true)
+    };
+
+    let total_memories = (stable_count + evolving_count).max(0) as f64;
+    let epistemic_health_pct = if total_memories > 0.0 {
+        let stable_ratio = (stable_count as f64 / total_memories) * 100.0;
+        (75.0 + stable_ratio * 0.25).clamp(50.0, 100.0)
+    } else if hw_zone_ok {
+        100.0
+    } else {
+        80.0
+    };
+
+    // Auditable 4-pillar composite Evolution Score (0-100, 25 pts per pillar)
+    let silicon_pts = (local_installed_count.min(3) * 5 + vault_summary.benchmarked_count.min(2) * 5).min(25) as u64;
+    let memory_pts = (((stable_count + evolving_count).max(0) as u64).min(15)
+        + ((ladybug_nodes + ladybug_edges).max(0) as u64).min(10))
+    .min(25);
+    let knowledge_pts = (obsidian_wiki_count.min(10) + obsidian_raw_count.min(5) + completed_missions.min(5) * 2).min(25) as u64;
+    let ecosystem_pts = (active_providers_count.min(3) * 4
+        + profiles.len().min(5) * 2
+        + (subagent_completed.max(0) as usize).min(3))
+    .min(25) as u64;
+
+    let evolution_score = (silicon_pts + memory_pts + knowledge_pts + ecosystem_pts).min(100);
+    let evolution_level = if evolution_score >= 80 {
+        "Nível 4 — Soberania Cognitiva Plena"
+    } else if evolution_score >= 55 {
+        "Nível 3 — Ecossistema Aumentado"
+    } else if evolution_score >= 30 {
+        "Nível 2 — Aprendizado Ativo & Curadoria"
+    } else {
+        "Nível 1 — Inicialização Bare-Metal"
+    };
+
     Json(json!({
         "status": "success",
         "pulse": {
             "evolution_level": evolution_level,
             "evolution_score": evolution_score,
-            "finops_savings_usd": format!("{:.2}", baseline_savings),
-            "finops_cache_efficiency": "88.4%",
+            "evolution_breakdown": {
+                "silicon_pts": silicon_pts,
+                "memory_graph_pts": memory_pts,
+                "obsidian_research_pts": knowledge_pts,
+                "ecosystem_pts": ecosystem_pts,
+                "local_models_installed": local_installed_count,
+                "local_models_benchmarked": vault_summary.benchmarked_count,
+                "memories_stable": stable_count,
+                "memories_evolving": evolving_count,
+                "ladybug_nodes": ladybug_nodes,
+                "ladybug_edges": ladybug_edges,
+                "obsidian_raw": obsidian_raw_count,
+                "obsidian_wiki": obsidian_wiki_count,
+                "subagent_completed": subagent_completed
+            },
+            "finops_savings_usd": format!("{:.2}", real_savings_usd),
+            "finops_cache_efficiency": format!("{:.1}%", context_savings_pct),
             "completed_missions_count": completed_missions,
             "active_providers_count": active_providers_count,
-            "sovereign_entities_count": 142 + (completed_missions * 8),
-            "epistemic_health_pct": 98.2,
-            "hardware_readiness": "Nominal / Otimizado",
-            "active_preset": "Frontier Balanced (Master Brain)",
+            "sovereign_entities_count": sovereign_entities_count,
+            "epistemic_health_pct": (epistemic_health_pct * 10.0).round() / 10.0,
+            "hardware_readiness": hardware_readiness,
+            "active_preset": active_preset_label,
             "updated_at": chrono::Utc::now().to_rfc3339()
         }
     }))

@@ -2,20 +2,20 @@
       <!-- SUBTABS DE MODELOS & ARENA -->
       <div class="subtabs-bar">
         <button class="subtab-btn active" id="btn-subtab-installed" onclick="switchLocalSubtab('installed')">
-          <span>💾 Silício Local &amp; Arena</span>
+          <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-cpu"></use></svg> Silício Local &amp; Arena</span>
           <span class="tab-count-badge" id="badge-subtab-installed-count">--</span>
         </button>
         <button class="subtab-btn" id="btn-subtab-cloud" onclick="switchLocalSubtab('cloud')">
-          <span>🌐 Cloud Arena &amp; Pareto</span>
+          <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-globe"></use></svg> Cloud Arena &amp; Pareto</span>
           <span class="tab-count-badge" id="badge-subtab-cloud-count">9 Perfis</span>
         </button>
         <button class="subtab-btn" id="btn-subtab-hub" onclick="switchLocalSubtab('hub')">
-          <span>✨ Model Hub &amp; Downloader</span>
-          <span class="tab-count-badge" id="badge-active-downloads-count" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); display: none;">0</span>
+          <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Model Hub &amp; Downloader</span>
+          <span class="tab-count-badge u-text-cyan u-s-424136 is-hidden" id="badge-active-downloads-count">0</span>
         </button>
         <button class="subtab-btn" id="btn-subtab-fallback" onclick="switchLocalSubtab('fallback')">
-          <span>🛡️ Provedores &amp; Fallback</span>
-          <span class="tab-count-badge" id="badge-subtab-fallback-count" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald);">Ativo</span>
+          <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-shield"></use></svg> Provedores &amp; Fallback</span>
+          <span class="tab-count-badge u-text-green u-s-084638" id="badge-subtab-fallback-count">Ativo</span>
         </button>
       </div>
 
@@ -23,39 +23,41 @@
       <div id="panel-local-installed">
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-cyan">⚡</div>
-                Inventário Físico de Modelos
+            <div class="card-header-media">
+              <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-zap"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Inventário Físico de Modelos
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-c79ecd">
+                  Diretório Físico: <code class="mono" id="local-root-dir">Detectando...</code> <span class="u-text-cyan u-fw-700 u-s-e111e8">•</span> Total: <strong class="u-text-cyan" id="local-total-models">Carregando modelos...</strong>
+                </p>
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Diretório Físico: <code class="mono" id="local-root-dir">Detectando...</code> <span style="color: var(--cyan); margin: 0 4px; font-weight: bold;">•</span> Total: <strong id="local-total-models" style="color: var(--cyan);">Carregando modelos...</strong>
-              </p>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div class="card-header-actions">
               <button class="btn btn-purple" onclick="switchTab('tab-settings'); switchSettingsSubtab('subtab-brain');">
-                <span>⚙️</span> Definir Perfil no Hermes
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Definir Perfil no Hermes
               </button>
               <button class="btn btn-cyan" onclick="fetchLocalModels()">
-                <span>🔄</span> Atualizar Inventário Local
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar Inventário Local
               </button>
             </div>
           </div>
 
           <!-- BARRA DE FILTRO E PESQUISA INSTANTÂNEA -->
-          <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 260px; position: relative;">
-              <input type="text" id="local-models-search-input" class="setting-input" placeholder="🔍 Filtrar modelos por nome, quantização, tags, capacidades..." oninput="handleLocalModelsSearch(this.value)" style="width: 100%; padding-left: 12px; height: 36px; font-size: 0.78rem;">
+          <div class="u-d-flex u-gap-3 u-items-center u-justify-between u-mb-14p u-flex-wrap">
+            <div class="u-flex-1 u-relative u-s-44b658">
+              <input type="text" id="local-models-search-input" class="setting-input u-w-full u-s-19a3ad" placeholder="Filtrar modelos por nome, quantização, tags, capacidades..." oninput="handleLocalModelsSearch(this.value)">
             </div>
-            <div class="filter-pills-group" style="background: rgba(10, 16, 28, 0.65); padding: 3px; border-radius: 8px; border: 1px solid var(--border-subtle); gap: 4px;">
-              <button class="filter-provider-btn active" id="btn-filter-local-all" onclick="setLocalSiliconFilter('all')" style="padding: 4px 10px; font-size: 0.72rem;">
+            <div class="filter-pills-group u-gap-1 u-s-22eebb">
+              <button class="filter-provider-btn active u-s-513c8c" id="btn-filter-local-all" onclick="setLocalSiliconFilter('all')">
                 Todos (<span id="count-local-all">--</span>)
               </button>
-              <button class="filter-provider-btn" id="btn-filter-local-dgpu" onclick="setLocalSiliconFilter('dgpu')" style="padding: 4px 10px; font-size: 0.72rem;">
-                🎮 dGPU (<span id="count-local-dgpu">--</span>)
+              <button class="filter-provider-btn u-s-513c8c" id="btn-filter-local-dgpu" onclick="setLocalSiliconFilter('dgpu')">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-gamepad"></use></svg> dGPU (<span id="count-local-dgpu">--</span>)
               </button>
-              <button class="filter-provider-btn" id="btn-filter-local-cpu" onclick="setLocalSiliconFilter('cpu')" style="padding: 4px 10px; font-size: 0.72rem;">
-                ⚡ CPU (<span id="count-local-cpu">--</span>)
+              <button class="filter-provider-btn u-s-513c8c" id="btn-filter-local-cpu" onclick="setLocalSiliconFilter('cpu')">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-cpu"></use></svg> CPU (<span id="count-local-cpu">--</span>)
               </button>
             </div>
           </div>
@@ -63,26 +65,26 @@
           <div class="table-container">
             <table class="arena-table">
               <thead>
-                <tr style="cursor: pointer; user-select: none;">
-                  <th style="min-width: 200px; max-width: 250px;" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
-                  <th class="text-center" style="width: 110px;">Ações</th>
-                  <th class="text-center" style="width: 85px;" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier(s) ↕</th>
-                  <th style="width: 115px;" onclick="sortLocalModels('profile')" title="Clique para ordenar por Perfil Agêntico">Perfil Agêntico ↕</th>
-                  <th style="width: 105px;" class="text-center" title="Capacidades identificadas (VLM, Código, Raciocínio, Chat)">Capacidades ↕</th>
-                  <th class="text-center" style="width: 105px;" onclick="sortLocalModels('size')" title="Clique para ordenar por Tamanho">Tamanho / Quant ↕</th>
-                  <th class="text-center" style="width: 115px;" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM e Folga">VRAM & Folga WDDM ↕</th>
-                  <th class="text-center" style="width: 125px;" onclick="sortLocalModels('tps')" title="Throughput e Tempo de Resposta aferidos na Silicon Arena. Clique para ordenar.">Velocidade & TPOT ↕</th>
-                  <th class="text-center" style="width: 95px;" onclick="sortLocalModels('e3')" title="Eficiência Empírica E³ e Homologação no Silício. Clique para ordenar.">Eficiência E³ ↕</th>
-                  <th class="text-center" style="width: 75px;" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
-                  <th style="min-width: 130px; max-width: 160px;">Tags Especializadas</th>
-                  <th class="text-center" style="width: 85px;" onclick="sortLocalModels('freshness')" title="Clique para ordenar por Data de Adição">Freshness ↕</th>
-                  <th class="text-center" style="width: 125px; white-space: nowrap;">Silício Alvo</th>
+                <tr class="u-pointer u-select-none">
+                  <th class="u-s-7c2f32" onclick="sortLocalModels('name')" title="Clique para ordenar por Nome">Modelo / Identificador Físico ↕</th>
+                  <th class="text-center u-s-9ed99d">Ações</th>
+                  <th class="text-center u-s-12c738" onclick="sortLocalModels('tier')" title="Clique para ordenar por Tier">Tier(s) ↕</th>
+                  <th class="u-s-d40183" onclick="sortLocalModels('profile')" title="Clique para ordenar por Perfil Agêntico">Perfil Agêntico ↕</th>
+                  <th class="text-center u-s-ab6335" title="Capacidades identificadas (VLM, Código, Raciocínio, Chat)">Capacidades ↕</th>
+                  <th class="text-center u-s-ab6335" onclick="sortLocalModels('size')" title="Clique para ordenar por Tamanho">Tamanho / Quant ↕</th>
+                  <th class="text-center u-s-d40183" onclick="sortLocalModels('vram')" title="Clique para ordenar por VRAM e Folga">VRAM & Folga WDDM ↕</th>
+                  <th class="text-center u-s-957572" onclick="sortLocalModels('tps')" title="Throughput e Tempo de Resposta aferidos na Silicon Arena. Clique para ordenar.">Velocidade & TPOT ↕</th>
+                  <th class="text-center u-s-2e8896" onclick="sortLocalModels('e3')" title="Eficiência Empírica E³ e Homologação no Silício. Clique para ordenar.">Eficiência E³ ↕</th>
+                  <th class="text-center u-s-b1b11e" onclick="sortLocalModels('context')" title="Clique para ordenar por Contexto">Janela Ctx ↕</th>
+                  <th class="u-s-ae82cd">Tags Especializadas</th>
+                  <th class="text-center u-s-12c738" onclick="sortLocalModels('freshness')" title="Clique para ordenar por Data de Adição">Freshness ↕</th>
+                  <th class="text-center u-nowrap u-s-957572">Silício Alvo</th>
                 </tr>
               </thead>
               <tbody id="local-arena-tbody">
                 <!-- Renderizado dinamicamente via JS -->
                 <tr>
-                  <td colspan="13" style="text-align: center; color: var(--text-muted); padding: 24px;">Varrendo modelos físicos em disco...</td>
+                  <td class="u-text-center u-text-muted u-s-0acd09" colspan="13">Varrendo modelos físicos em disco...</td>
                 </tr>
               </tbody>
             </table>
@@ -90,150 +92,154 @@
         </div>
 
         <!-- SEÇÃO UNIFICADA: ARENA DE TESTES & HEURISTIC VAULT -->
-        <div id="panel-local-arena" style="margin-top: 20px;">
+        <div class="u-mt-5" id="panel-local-arena">
           <!-- CARD 1: RUNNER DE BENCHMARK INTERATIVO -->
-          <div class="card" id="arena-runner-card" style="margin-bottom: 20px;">
-          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-emerald">🏟️</div>
-                Arena de Testes de Silício (Benchmarks Locais)
+          <div class="card u-mb-5" id="arena-runner-card">
+          <div class="card-header u-flex-wrap u-gap-3 u-items-center u-justify-between">
+            <div class="card-header-media">
+              <div class="card-icon icon-emerald"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-trophy"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Arena de Testes de Silício (Benchmarks Locais)
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-a768c1">
+                  Meça a velocidade real (tokens/s), tempo de resposta (TTFT), TPOT e consumo de VRAM diretamente na sua dGPU dedicada e CPU Host AVX2.
+                </p>
               </div>
-              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Meça a velocidade real (tokens/s), tempo de resposta (TTFT), TPOT e consumo de VRAM diretamente na sua placa NVIDIA RTX 2060m e CPU Intel i9.
-              </p>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div class="card-header-actions">
               <button class="btn btn-emerald" onclick="syncLocalArenaHermes()" title="Cria links diretos e atualiza o catálogo do orquestrador Hermes">
-                <span>🔗</span> Sincronizar com Hermes Agent
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-link"></use></svg> Sincronizar com Hermes Agent
               </button>
               <button class="btn btn-cyan" onclick="fetchLocalArenaData()" title="Recarregar telemetria e dados medidos">
-                <span>🔄</span> Atualizar Dados
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar Dados
               </button>
             </div>
           </div>
 
           <!-- CONTROLE DE DISPARO DE PROVA -->
-          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px; margin-top: 14px; display: flex; flex-direction: column; gap: 14px;">
+          <div class="u-mt-14p u-d-flex u-flex-col u-gap-14p u-s-556187">
             <!-- LINHA 1: MODELO LOCAL (AMPLO) + BOTÃO INICIAR TESTE -->
-            <div style="display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: end;">
+            <div class="u-d-grid u-gap-14p u-s-51259a">
               <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">MODELO LOCAL PARA TESTE</label>
-                <select id="arena-runner-model-select" class="form-select" onchange="onArenaModelSelectChange(this.value)" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
+                <label class="u-text-muted u-fw-600 u-d-block u-mb-6p u-s-d3bc8d">MODELO LOCAL PARA TESTE</label>
+                <select id="arena-runner-model-select" class="form-select u-w-full u-text-white u-s-25c6ec" onchange="onArenaModelSelectChange(this.value)">
                   <option value="">Carregando modelos instalados...</option>
                 </select>
               </div>
 
               <div>
-                <button class="btn btn-emerald" id="btn-run-arena-benchmark" onclick="executeSelectedArenaBenchmark()" style="height: 40px; padding: 0 24px; white-space: nowrap; font-weight: 600; font-size: 0.82rem;">
-                  <span>⚡</span> Iniciar Teste no Silício
+                <button class="btn btn-emerald u-nowrap u-fw-600 u-s-91c2c4" id="btn-run-arena-benchmark" onclick="executeSelectedArenaBenchmark()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Iniciar Teste no Silício
                 </button>
               </div>
             </div>
 
             <!-- LINHA 2: TIPO DE TESTE / PROVA (ADAPTATIVO) + ACELERADOR DE SILÍCIO -->
-            <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; align-items: end;">
+            <div class="u-d-grid u-gap-14p u-s-59fb6e">
               <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">TIPO DE TESTE / PROVA</label>
-                <select id="arena-runner-type-select" class="form-select" onchange="onArenaBenchmarkTypeChange()" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
-                  <option value="1">⚡ Velocidade & Memória (Throughput tok/s, VRAM e TTFT)</option>
-                  <option value="2">🧠 Avaliação Cognitiva (Raciocínio CoT & Parsing Rust AST)</option>
-                  <option value="3" id="opt-arena-type-vlm">👁️ Visão Multimodal (Pareamento de Projetor VLM mmproj)</option>
-                  <option value="4" id="opt-arena-type-speculative">🚀 Aceleração Especulativa (Drafting & Ganho de Velocidade)</option>
-                  <option value="5">📦 Pressão de Contexto (Janela Longa de 4k até 32k tokens)</option>
+                <label class="u-text-muted u-fw-600 u-d-block u-mb-6p u-s-d3bc8d">TIPO DE TESTE / PROVA</label>
+                <select id="arena-runner-type-select" class="form-select u-w-full u-text-white u-s-25c6ec" onchange="onArenaBenchmarkTypeChange()">
+                  <option value="1">Velocidade & Memória (Throughput tok/s, VRAM e TTFT)</option>
+                  <option value="2">Avaliação Cognitiva (Raciocínio CoT & Parsing Rust AST)</option>
+                  <option value="3" id="opt-arena-type-vlm">Visão Multimodal (Pareamento de Projetor VLM mmproj)</option>
+                  <option value="4" id="opt-arena-type-speculative">Aceleração Especulativa (Drafting & Ganho de Velocidade)</option>
+                  <option value="5">Pressão de Contexto (Janela Longa de 4k até 32k tokens)</option>
                 </select>
               </div>
 
               <div>
-                <label style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">ACELERADOR DE SILÍCIO</label>
-                <select id="arena-runner-engine-select" class="form-select" style="width: 100%; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 9px 14px; font-size: 0.82rem;">
+                <label class="u-text-muted u-fw-600 u-d-block u-mb-6p u-s-d3bc8d">ACELERADOR DE SILÍCIO</label>
+                <select id="arena-runner-engine-select" class="form-select u-w-full u-text-white u-s-25c6ec">
                   <option value="">Auto (CUDA na GPU / AVX2 na CPU)</option>
-                  <option value="llama-cuda">NVIDIA CUDA (Placa de Vídeo RTX 2060m)</option>
-                  <option value="llama-cpu">CPU Intel AVX2 (Memória RAM do Computador)</option>
+                  <option value="llama-cuda">NVIDIA CUDA (dGPU Dedicada Local)</option>
+                  <option value="llama-cpu">Host CPU AVX2 (Memória RAM do Computador)</option>
                   <option value="onnx-cpu">ONNX Runtime CPU (Zero Consumo de VRAM)</option>
                 </select>
               </div>
             </div>
 
             <!-- CARD DINÂMICO DE COMPATIBILIDADE & PERFIL DO MODELO -->
-            <div id="arena-model-profile-preview" style="background: rgba(10, 16, 28, 0.75); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-10p u-s-872e51" id="arena-model-profile-preview">
+              <div class="u-d-flex u-items-center u-gap-10p">
                 <span id="arena-preview-tier-badge" class="badge badge-champion">Tier 1</span>
                 <div>
-                  <div id="arena-preview-title" style="font-size: 0.82rem; font-weight: 600; color: #fff;">Selecione um modelo para ver sua compatibilidade</div>
-                  <div id="arena-preview-sub" style="font-size: 0.70rem; color: var(--text-muted); margin-top: 2px;">Metadados de silício e projetor mmproj</div>
+                  <div class="u-fw-600 u-text-white u-s-5b9d54" id="arena-preview-title">Selecione um modelo para ver sua compatibilidade</div>
+                  <div class="u-text-muted u-mt-2p u-s-6262d0" id="arena-preview-sub">Metadados de silício e projetor mmproj</div>
                 </div>
               </div>
-              <div id="arena-preview-capabilities-pills" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+              <div class="u-d-flex u-gap-6p u-flex-wrap u-items-center" id="arena-preview-capabilities-pills">
                 <!-- Pílulas de capacidade preenchidas via JS -->
               </div>
             </div>
 
             <!-- RESULTADO EM TEMPO REAL & STEPPER DE EXECUÇÃO -->
-            <div id="arena-live-feedback" style="display: none; margin-top: 10px; padding: 16px; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
-              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <div style="font-size: 0.86rem; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;" id="arena-live-title">
-                  <span>⚡</span> Execução no Silício
+            <div class="u-mt-10p u-s-a10ff6 is-hidden" id="arena-live-feedback">
+              <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2">
+                <div class="u-fw-600 u-text-white u-d-flex u-items-center u-gap-2 u-s-63dea9" id="arena-live-title">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Execução no Silício
                 </div>
                 <div id="arena-live-verdict-badge"></div>
               </div>
 
               <!-- STEPPER DE 4 FASES BARE-METAL -->
-              <div id="arena-stepper-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0;">
-                <div class="arena-step-card active" id="arena-step-1" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(6, 182, 212, 0.4); border-radius: 6px; padding: 8px 10px;">
-                  <div style="font-size: 0.65rem; color: var(--cyan); font-weight: 600;">FASE 1</div>
-                  <div style="font-size: 0.72rem; color: #fff; margin-top: 2px;">🛡️ Watchdog NVML</div>
+              <div class="u-d-grid u-gap-2 u-s-8cb02f" id="arena-stepper-container">
+                <div class="arena-step-card active u-s-8ecc9c" id="arena-step-1">
+                  <div class="u-text-cyan u-fw-600 u-s-3b4cd3">FASE 1</div>
+                  <div class="u-text-white u-mt-2p u-s-dbc8d1"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-shield"></use></svg> Watchdog NVML</div>
                 </div>
-                <div class="arena-step-card" id="arena-step-2" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 10px;">
-                  <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">FASE 2</div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">⚙️ Alocação memmap2</div>
+                <div class="arena-step-card u-s-dcc018" id="arena-step-2">
+                  <div class="u-text-muted u-fw-600 u-s-3b4cd3">FASE 2</div>
+                  <div class="u-text-muted u-mt-2p u-s-dbc8d1"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-settings"></use></svg> Alocação memmap2</div>
                 </div>
-                <div class="arena-step-card" id="arena-step-3" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 10px;">
-                  <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">FASE 3</div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">🔬 Inferência & TPOT</div>
+                <div class="arena-step-card u-s-dcc018" id="arena-step-3">
+                  <div class="u-text-muted u-fw-600 u-s-3b4cd3">FASE 3</div>
+                  <div class="u-text-muted u-mt-2p u-s-dbc8d1"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-microscope"></use></svg> Inferência & TPOT</div>
                 </div>
-                <div class="arena-step-card" id="arena-step-4" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 10px;">
-                  <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">FASE 4</div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">💾 Persistência Vault</div>
+                <div class="arena-step-card u-s-dcc018" id="arena-step-4">
+                  <div class="u-text-muted u-fw-600 u-s-3b4cd3">FASE 4</div>
+                  <div class="u-text-muted u-mt-2p u-s-dbc8d1"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-database"></use></svg> Persistência Vault</div>
                 </div>
               </div>
 
-              <div id="arena-live-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px;"></div>
+              <div class="u-d-grid u-gap-10p u-mt-3 u-s-59cd03" id="arena-live-metrics-grid"></div>
             </div>
           </div>
         </div>
 
         <!-- CARD 2: TABELA DE MODELOS & TELEMETRIA REAL NO SILÍCIO -->
-        <div class="card" style="margin-bottom: 20px;">
-          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-cyan">📊</div>
-                Modelos Homologados & Resultados Medidos
+        <div class="card u-mb-5">
+          <div class="card-header u-flex-wrap u-gap-3 u-items-center u-justify-between">
+            <div class="card-header-media">
+              <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-bar-chart"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Modelos Homologados &amp; Resultados Medidos
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-a768c1">
+                  Velocidade, latência por token (TPOT) e consumo medidos no seu computador real. Modelos homologados alimentam automaticamente o orquestrador Hermes.
+                </p>
               </div>
-              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Velocidade, latência por token (TPOT) e consumo medidos no seu computador real. Modelos homologados alimentam automaticamente o orquestrador Hermes.
-              </p>
             </div>
             <div id="arena-models-summary-badge" class="badge badge-champion">Carregando Modelos...</div>
           </div>
 
           <!-- BARRA DE FILTROS & BUSCA RÁPIDA NA ARENA -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
-            <div class="profile-selector" id="arena-filter-pills" style="margin-bottom: 0;">
+          <div class="u-d-flex u-justify-between u-items-center u-mb-14p u-flex-wrap u-gap-10p u-s-fd7f9e">
+            <div class="profile-selector u-mb-0" id="arena-filter-pills">
               <button class="profile-pill active" id="btn-arena-filter-all" onclick="filterArenaModels('all')">Todos os Modelos</button>
-              <button class="profile-pill" id="btn-arena-filter-benchmarked" onclick="filterArenaModels('benchmarked')">✅ Homologados</button>
-              <button class="profile-pill" id="btn-arena-filter-pending" onclick="filterArenaModels('pending')">⏳ Pendentes</button>
+              <button class="profile-pill" id="btn-arena-filter-benchmarked" onclick="filterArenaModels('benchmarked')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check-circle"></use></svg> Homologados</button>
+              <button class="profile-pill" id="btn-arena-filter-pending" onclick="filterArenaModels('pending')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg> Pendentes</button>
               <button class="profile-pill" id="btn-arena-filter-tier0" onclick="filterArenaModels('tier0')">Tier 0</button>
               <button class="profile-pill" id="btn-arena-filter-tier0_5" onclick="filterArenaModels('tier0_5')">Tier 0.5</button>
               <button class="profile-pill" id="btn-arena-filter-tier1" onclick="filterArenaModels('tier1')">Tier 1</button>
               <button class="profile-pill" id="btn-arena-filter-tier2" onclick="filterArenaModels('tier2')">Tier 2</button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <input type="text" id="arena-models-search" placeholder="🔍 Filtrar modelo..." class="setting-input" style="padding: 5px 12px; font-size: 0.75rem; width: 180px; border-radius: 6px;" oninput="onArenaModelsSearchInput()">
-              <button id="arena-batch-run-btn" class="btn btn-primary" style="padding: 5px 14px; font-size: 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;" onclick="openBatchBenchmarkModal()" title="Homologar todos os modelos físicos sequencialmente">
-                <span>⚡</span> Homologar Todos os Modelos
+            <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+              <input type="text" id="arena-models-search" placeholder="Filtrar modelo..." class="setting-input u-s-ded3f2" oninput="onArenaModelsSearchInput()">
+              <button id="arena-batch-run-btn" class="btn btn-primary u-d-inline-flex u-items-center u-gap-6p u-fw-600 u-s-99d818" onclick="openBatchBenchmarkModal()" title="Homologar todos os modelos físicos sequencialmente">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Homologar Todos os Modelos
               </button>
             </div>
           </div>
@@ -242,45 +248,45 @@
             <table class="arena-table">
               <thead>
                 <tr>
-                  <th style="width: 75px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tier')" title="Clique para ordenar por Tier">
-                    Tier <span id="sort-ind-tier" style="font-size: 0.65rem; color: var(--cyan);">▲</span>
+                  <th class="text-center u-pointer u-select-none u-s-b1b11e" onclick="sortArenaTable('tier')" title="Clique para ordenar por Tier">
+                    Tier <span class="u-text-cyan u-s-3b4cd3" id="sort-ind-tier">▲</span>
                   </th>
-                  <th style="min-width: 190px; cursor: pointer; user-select: none;" onclick="sortArenaTable('name')" title="Clique para ordenar por Modelo">
-                    Modelo & Identificador <span id="sort-ind-name" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th class="u-pointer u-select-none u-s-253a7f" onclick="sortArenaTable('name')" title="Clique para ordenar por Modelo">
+                    Modelo & Identificador <span class="u-text-muted u-s-3b4cd3" id="sort-ind-name"></span>
                   </th>
-                  <th style="width: 100px;" class="text-center" title="Capacidades identificadas (VLM, Código, Raciocínio, Chat)">
+                  <th class="text-center u-s-807e51" title="Capacidades identificadas (VLM, Código, Raciocínio, Chat)">
                     Capacidades
                   </th>
-                  <th style="width: 85px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('quant')" title="Clique para ordenar por Quantização">
-                    Quant <span id="sort-ind-quant" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th class="text-center u-pointer u-select-none u-s-12c738" onclick="sortArenaTable('quant')" title="Clique para ordenar por Quantização">
+                    Quant <span class="u-text-muted u-s-3b4cd3" id="sort-ind-quant"></span>
                   </th>
-                  <th style="width: 120px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tps')" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token. Clique para ordenar.">
-                    Throughput <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token.">ⓘ</span> <span id="sort-ind-tps" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th class="text-center u-pointer u-select-none u-s-3b3384" onclick="sortArenaTable('tps')" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token. Clique para ordenar.">
+                    Throughput <span class="u-text-cyan u-s-515972" title="Throughput: Velocidade de geração em tokens por segundo após o primeiro token.">ⓘ</span> <span class="u-text-muted u-s-3b4cd3" id="sort-ind-tps"></span>
                   </th>
-                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('ttft')" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial. Clique para ordenar.">
-                    TTFT <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial.">ⓘ</span> <span id="sort-ind-ttft" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th class="text-center u-pointer u-select-none u-s-807e51" onclick="sortArenaTable('ttft')" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial. Clique para ordenar.">
+                    TTFT <span class="u-text-cyan u-s-515972" title="Time To First Token: Tempo até o primeiro token em milissegundos. Mede a agilidade de resposta inicial.">ⓘ</span> <span class="u-text-muted u-s-3b4cd3" id="sort-ind-ttft"></span>
                   </th>
-                  <th style="width: 100px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('tpot')" title="Time Per Output Token: Tempo por token gerado em milissegundos (1000/TPS). Quanto menor, mais suave é o streaming. Clique para ordenar.">
-                    TPOT <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Time Per Output Token: Tempo por token gerado em milissegundos (1000/TPS).">ⓘ</span> <span id="sort-ind-tpot" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th class="text-center u-pointer u-select-none u-s-807e51" onclick="sortArenaTable('tpot')" title="Time Per Output Token: Tempo por token gerado em milissegundos (1000/TPS). Quanto menor, mais suave é o streaming. Clique para ordenar.">
+                    TPOT <span class="u-text-cyan u-s-515972" title="Time Per Output Token: Tempo por token gerado em milissegundos (1000/TPS).">ⓘ</span> <span class="u-text-muted u-s-3b4cd3" id="sort-ind-tpot"></span>
                   </th>
-                  <th style="width: 110px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('vram')" title="VRAM Pico: Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução. Clique para ordenar.">
-                    VRAM Pico <span style="cursor: help; color: var(--cyan); font-size: 0.72rem; margin-left: 2px;" title="Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução.">ⓘ</span> <span id="sort-ind-vram" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th class="text-center u-pointer u-select-none u-s-9ed99d" onclick="sortArenaTable('vram')" title="VRAM Pico: Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução. Clique para ordenar.">
+                    VRAM Pico <span class="u-text-cyan u-s-515972" title="Consumo máximo real de memória da GPU medido pelo sensor NVML durante a execução.">ⓘ</span> <span class="u-text-muted u-s-3b4cd3" id="sort-ind-vram"></span>
                   </th>
-                  <th style="width: 90px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('e3')" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente! Clique para ordenar.">
-                    E³ Score <span style="cursor: help; color: #c084fc; font-size: 0.75rem; margin-left: 2px; font-weight: bold;" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Quanto maior, mais eficiente!">ⓘ</span> <span id="sort-ind-e3" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th class="text-center u-pointer u-select-none u-s-e60a90" onclick="sortArenaTable('e3')" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Mede quanto desempenho o modelo entrega por cada GB de VRAM e milissegundo de latência. Quanto maior, mais eficiente! Clique para ordenar.">
+                    E³ Score <span class="u-fw-700 u-s-d2366b" title="Eficiência Empírica E³: Throughput / (VRAM_GB × TTFT_s). Quanto maior, mais eficiente!">ⓘ</span> <span class="u-text-muted u-s-3b4cd3" id="sort-ind-e3"></span>
                   </th>
-                  <th style="width: 120px;" class="text-center" title="Acelerador ideal para este modelo">
+                  <th class="text-center u-s-3b3384" title="Acelerador ideal para este modelo">
                     Silício Alvo
                   </th>
-                  <th style="width: 110px; cursor: pointer; user-select: none;" class="text-center" onclick="sortArenaTable('status')" title="Clique para ordenar por Status de Homologação">
-                    Status <span id="sort-ind-status" style="font-size: 0.65rem; color: var(--text-muted);"></span>
+                  <th class="text-center u-pointer u-select-none u-s-9ed99d" onclick="sortArenaTable('status')" title="Clique para ordenar por Status de Homologação">
+                    Status <span class="u-text-muted u-s-3b4cd3" id="sort-ind-status"></span>
                   </th>
-                  <th style="width: 140px;" class="text-center">Ações</th>
+                  <th class="text-center u-s-0ff0f3">Ações</th>
                 </tr>
               </thead>
               <tbody id="arena-models-tbody">
                 <tr>
-                  <td colspan="12" style="text-align: center; color: var(--text-muted); padding: 24px;">Carregando modelos da Arena...</td>
+                  <td class="u-text-center u-text-muted u-s-0acd09" colspan="12">Carregando modelos da Arena...</td>
                 </tr>
               </tbody>
             </table>
@@ -289,15 +295,17 @@
 
         <!-- CARD 3: HISTÓRICO DE AUDITORIA DE TELEMETRIA (arena_telemetry) -->
         <div class="card">
-          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-purple">📜</div>
-                Histórico de Testes Realizados no Silício
+          <div class="card-header u-flex-wrap u-gap-3 u-items-center u-justify-between">
+            <div class="card-header-media">
+              <div class="card-icon icon-purple"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-file-text"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Histórico de Testes Realizados no Silício
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-a768c1">
+                  Registro detalhado e auditável dos ensaios de desempenho executados na sua máquina com telemetria oficial de hardware.
+                </p>
               </div>
-              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Registro detalhado e auditável dos ensaios de desempenho executados na sua máquina com telemetria oficial de hardware.
-              </p>
             </div>
             <div id="arena-telemetry-summary-badge" class="badge badge-lowcost">Histórico de Provas</div>
           </div>
@@ -306,22 +314,22 @@
             <table class="arena-table">
               <thead>
                 <tr>
-                  <th style="width: 60px;" class="text-center">ID</th>
+                  <th class="text-center u-s-d4260d">ID</th>
                   <th>Modelo</th>
-                  <th style="width: 150px;">Tipo de Prova</th>
-                  <th style="width: 100px;" class="text-center">Acelerador</th>
-                  <th style="width: 100px;" class="text-center">Velocidade</th>
-                  <th style="width: 80px;" class="text-center">TTFT</th>
-                  <th style="width: 80px;" class="text-center">TPOT</th>
-                  <th style="width: 100px;" class="text-center">VRAM Pico</th>
-                  <th style="width: 80px;" class="text-center">E³ Score</th>
-                  <th style="width: 90px;" class="text-center">Status</th>
-                  <th style="width: 130px;">Data / Hora</th>
+                  <th class="u-s-5cb571">Tipo de Prova</th>
+                  <th class="text-center u-s-807e51">Acelerador</th>
+                  <th class="text-center u-s-807e51">Velocidade</th>
+                  <th class="text-center u-s-1b3b30">TTFT</th>
+                  <th class="text-center u-s-1b3b30">TPOT</th>
+                  <th class="text-center u-s-807e51">VRAM Pico</th>
+                  <th class="text-center u-s-1b3b30">E³ Score</th>
+                  <th class="text-center u-s-e60a90">Status</th>
+                  <th class="u-s-3854f2">Data / Hora</th>
                 </tr>
               </thead>
               <tbody id="arena-telemetry-tbody">
                 <tr>
-                  <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 18px 0;">Nenhum histórico registrado no vault ainda.</td>
+                  <td class="u-text-center u-text-muted u-s-ede515" colspan="11">Nenhum histórico registrado no vault ainda.</td>
                 </tr>
               </tbody>
             </table>
@@ -330,49 +338,49 @@
 
         <!-- MODAL: HOMOLOGAÇÃO SEQUENCIAL EM LOTE NO SILÍCIO -->
         <div id="arena-batch-modal" class="modal-backdrop">
-          <div class="modal-dialog" style="max-width: 720px; width: 92%;">
+          <div class="modal-dialog u-s-6dea79">
             <div class="modal-header">
               <div class="modal-title">
-                <span>⚡</span> Homologação Sequencial no Silício (Todos os Modelos)
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Homologação Sequencial no Silício (Todos os Modelos)
               </div>
               <button class="modal-close" onclick="closeBatchBenchmarkModal()">&times;</button>
             </div>
-            <div class="modal-body" style="padding: 16px 0; max-height: 65vh; overflow-y: auto;">
+            <div class="modal-body u-scroll-y u-s-6d7e8f">
               <!-- AVISO DE ISOLAMENTO BARE-METAL -->
-              <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 0.78rem; color: #e2e8f0; line-height: 1.45;">
-                <strong style="color: var(--cyan);">Garantia Bare-Metal & FinOps:</strong>
-                A execução em lote ocorre estritamente em série (1 modelo por vez). O modelo anterior é totalmente descarregado da memória antes de alocar o próximo, protegendo a RTX 2060m e mantendo a folga de segurança do WDDM (teto útil de 5.2GB).
+              <div class="u-mb-14p u-text-slate-light u-s-af32dc">
+                <strong class="u-text-cyan">Garantia Bare-Metal & FinOps:</strong>
+                A execução em lote ocorre estritamente em série (1 modelo por vez). O modelo anterior é totalmente descarregado da memória antes de alocar o próximo, protegendo a dGPU local e mantendo a folga de segurança do WDDM.
               </div>
 
               <!-- RESUMO PRÉ-FLIGHT DA BATERIA -->
-              <div id="arena-batch-preflight-card" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 14px; margin-bottom: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                  <span style="font-size: 0.82rem; font-weight: 600; color: #fff;">Matriz de Provas Elegíveis</span>
+              <div class="u-mb-14p u-s-dfd8df" id="arena-batch-preflight-card">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-10p">
+                  <span class="u-fw-600 u-text-white u-s-5b9d54">Matriz de Provas Elegíveis</span>
                   <span id="arena-batch-summary-badge" class="badge badge-champion">-- Provas Mapeadas</span>
                 </div>
-                <div id="arena-batch-models-list" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px;">
+                <div class="u-scroll-y u-d-flex u-flex-col u-gap-6p u-s-6a30e8" id="arena-batch-models-list">
                   <!-- Gerado dinamicamente via JS com o plano de cada modelo -->
                 </div>
               </div>
 
               <!-- PROGRESSO GLOBAL DA FILA (VISÍVEL DURANTE EXECUÇÃO) -->
-              <div id="arena-batch-progress-section" style="display: none; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 14px; margin-bottom: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span id="arena-batch-current-task" style="font-size: 0.80rem; font-weight: 600; color: #fff;">Executando ensaio...</span>
-                  <span id="arena-batch-progress-percent" style="font-size: 0.80rem; font-weight: 700; color: var(--emerald);">0%</span>
+              <div class="u-mb-14p u-s-ce4d06 is-hidden" id="arena-batch-progress-section">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+                  <span class="u-fw-600 u-text-white u-s-bb1d43" id="arena-batch-current-task">Executando ensaio...</span>
+                  <span class="u-fw-700 u-text-green u-s-bb1d43" id="arena-batch-progress-percent">0%</span>
                 </div>
-                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
-                  <div id="arena-batch-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--emerald)); transition: width 0.3s ease;"></div>
+                <div class="u-w-full u-overflow-hidden u-mb-10p u-s-4a654a">
+                  <div class="u-s-c1e2a2" id="arena-batch-progress-bar"></div>
                 </div>
-                <div id="arena-batch-logs" style="background: #060911; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 8px 10px; font-family: monospace; font-size: 0.70rem; color: #94a3b8; max-height: 120px; overflow-y: auto;">
+                <div class="u-mono u-text-muted u-scroll-y u-s-11f3e3" id="arena-batch-logs">
                   [SISTEMA] Aguardando início da homologação sequencial...
                 </div>
               </div>
             </div>
             <div class="modal-footer">
-              <button id="btn-close-batch-modal" class="btn" style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1);" onclick="closeBatchBenchmarkModal()">Fechar</button>
-              <button id="btn-cancel-batch-benchmark" class="btn btn-danger" style="display: none; padding: 6px 14px; font-size: 0.78rem;" onclick="abortBatchBenchmark()">⏹️ Interromper Fila</button>
-              <button id="btn-start-batch-benchmark" class="btn btn-emerald" style="padding: 6px 18px; font-size: 0.78rem; font-weight: 600;" onclick="startBatchBenchmark()">🚀 Iniciar Homologação em Série</button>
+              <button id="btn-close-batch-modal" class="btn u-text-muted u-s-f83aec" onclick="closeBatchBenchmarkModal()">Fechar</button>
+              <button id="btn-cancel-batch-benchmark" class="btn btn-danger u-s-532f82 is-hidden" onclick="abortBatchBenchmark()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-square"></use></svg> Interromper Fila</button>
+              <button id="btn-start-batch-benchmark" class="btn btn-emerald u-fw-600 u-s-de43a0" onclick="startBatchBenchmark()"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-rocket"></use></svg> Iniciar Homologação em Série</button>
             </div>
           </div>
         </div>
@@ -380,112 +388,117 @@
     </div> <!-- /panel-local-installed -->
 
     <!-- PAINEL 2: CLOUD ARENA & PARETO -->
-    <div id="panel-local-cloud" style="display: none;">
+    <div class="is-hidden" id="panel-local-cloud">
       <div class="card">
         <div class="card-header">
-          <div>
-            <div class="card-title">
-              <div class="card-icon icon-purple">🌐</div>
-              Cloud Arena — Melhores Modelos de IA em Nuvem
+          <div class="card-header-media">
+            <div class="card-icon icon-purple"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-globe"></use></svg></div>
+            <div class="card-header-text">
+              <div class="card-title">
+                Cloud Arena — Melhores Modelos de IA em Nuvem
+              </div>
+              <p class="u-text-muted u-mt-1 u-mb-0 u-s-c79ecd">
+                Monitoramento diário de inteligência, tarifas ($/1M) e velocidade dos modelos líderes de mercado.
+              </p>
             </div>
-            <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-              Monitoramento diário de inteligência, tarifas ($/1M) e velocidade dos modelos líderes de mercado.
-            </p>
           </div>
-          <div style="display: flex; gap: 8px;">
+          <div class="card-header-actions">
             <button class="btn btn-purple" onclick="switchTab('tab-settings'); switchSettingsSubtab('subtab-brain');">
-              <span>⚙️</span> Configurar / Trocar no Hermes
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Configurar / Trocar no Hermes
             </button>
             <button class="btn btn-cyan" id="btn-sync-cloud-arena" onclick="syncCloudArena()">
-              <span>⚡</span> Sincronizar Tarifas na Nuvem
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Sincronizar Tarifas na Nuvem
             </button>
           </div>
         </div>
 
         <!-- CARD DE DESTAQUE: MODELO ATIVO NO HERMES (MASTER BRAIN) -->
-        <div id="active-hermes-brain-banner" style="margin-bottom: 16px; background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
-              🎯
+        <div class="u-mb-4 u-d-flex u-items-center u-justify-between u-flex-wrap u-gap-3 u-s-440459" id="active-hermes-brain-banner">
+          <div class="u-d-flex u-items-center u-gap-3">
+            <div class="u-d-flex u-items-center u-justify-center u-shrink-0 u-s-82eb64">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-target"></use></svg>
             </div>
             <div>
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
                 <span class="badge badge-active-hermes">
-                  🟢 Cérebro Mestre Ativo no Hermes
+                  <svg class="ui-icon icon-xs u-text-emerald" aria-hidden="true"><use href="#icon-check-circle"></use></svg> Cérebro Mestre Ativo no Hermes
                 </span>
-                <span style="font-size: 0.72rem; color: #94a3b8; font-family: var(--font-mono);" id="active-hermes-preset-tag">Preset: Frontier Balanced</span>
+                <span class="u-text-muted u-mono u-s-dbc8d1" id="active-hermes-preset-tag">Preset: Frontier Balanced</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap;">
-                <span style="font-size: 1.08rem; font-weight: 700; color: #fff; font-family: var(--font-mono);" id="active-hermes-model-name">deepseek/deepseek-chat</span>
-                <span class="badge badge-nous" id="active-hermes-provider-tag">🧠 Nous Portal (Crédito Ativo)</span>
+              <div class="u-d-flex u-items-center u-gap-2 u-mt-3p u-flex-wrap">
+                <span class="u-fw-700 u-text-white u-mono u-s-90c8f9" id="active-hermes-model-name">deepseek/deepseek-chat</span>
+                <span class="badge badge-nous" id="active-hermes-provider-tag"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Nous Portal (Crédito Ativo)</span>
               </div>
-              <div style="font-size: 0.72rem; color: #cbd5e1; margin-top: 2px;" id="active-hermes-meta-line">
+              <div class="u-text-slate u-mt-2p u-s-dbc8d1" id="active-hermes-meta-line">
                 Tarifa: $0.14 / 1M tokens • Janela: 64k tokens • Provedor Padrão: Nous Portal API
               </div>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <button class="btn btn-purple" onclick="openQuickApplyModal(window.currentHermesMasterModel || 'deepseek/deepseek-chat', 'nous', false)" style="padding: 7px 14px; font-size: 0.76rem; font-weight: 600;">
-              <span>⚙️</span> Trocar Cérebro no Hermes
+          <div class="u-d-flex u-items-center u-gap-2">
+            <button class="btn btn-purple u-fw-600 u-s-bf9e47" onclick="openQuickApplyModal(window.currentHermesMasterModel || 'deepseek/deepseek-chat', 'nous', false)">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Trocar Cérebro no Hermes
             </button>
           </div>
         </div>
 
         <!-- BARRA DE CONTROLE: PERFIS COGNITIVOS + FILTRO DE PROVEDOR -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <div class="profile-selector" id="profile-pill-container" style="margin-bottom: 0;">
-            <button class="profile-pill active" onclick="selectProfile('orchestrator')">👑 Maestro / Brain</button>
-            <button class="profile-pill" onclick="selectProfile('coding')">💻 Coding / SWE</button>
-            <button class="profile-pill" onclick="selectProfile('agentic')">🤖 Agentic / Tools</button>
-            <button class="profile-pill" onclick="selectProfile('reasoning')">🧠 Reasoning / Math</button>
-            <button class="profile-pill" onclick="selectProfile('fast')">⚡ Fast / Triage</button>
-            <button class="profile-pill" onclick="selectProfile('design')">🎨 Design / Frontend</button>
+        <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-10p u-mb-10p">
+          <div class="profile-selector u-mb-0" id="profile-pill-container">
+            <button class="profile-pill active" data-profile="executive" onclick="selectProfile('executive')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-crown"></use></svg> Maestro / Brain</button>
+            <button class="profile-pill" data-profile="coding" onclick="selectProfile('coding')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-code"></use></svg> Coding / SWE</button>
+            <button class="profile-pill" data-profile="agentic" onclick="selectProfile('agentic')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-bot"></use></svg> Agentic / Tools</button>
+            <button class="profile-pill" data-profile="reasoning" onclick="selectProfile('reasoning')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Reasoning / Math</button>
+            <button class="profile-pill" data-profile="fast" onclick="selectProfile('fast')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Fast / Triage</button>
+            <button class="profile-pill" data-profile="design" onclick="selectProfile('design')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-palette"></use></svg> Design / Frontend</button>
+            <button class="profile-pill" data-profile="research" onclick="selectProfile('research')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-microscope"></use></svg> Research / RAG</button>
+            <button class="profile-pill" data-profile="security" onclick="selectProfile('security')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-shield"></use></svg> Security / Audit</button>
+            <button class="profile-pill" data-profile="curation" onclick="selectProfile('curation')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-book"></use></svg> Curation / Wiki</button>
           </div>
 
           <!-- FILTRO DINÂMICO DE PROVEDOR CLOUD COM FOCO NO NOUS -->
-          <div style="display: flex; align-items: center; gap: 6px; background: rgba(15, 23, 42, 0.7); padding: 4px 8px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-            <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; padding-left: 4px;">Foco Provedor:</span>
+          <div class="u-d-flex u-items-center u-gap-6p u-s-b6a4dd">
+            <span class="u-text-muted u-uppercase u-mono u-fw-700 u-s-269495">Foco Provedor:</span>
             <div class="filter-pills-group" id="cloud-provider-filter-pills">
-              <button class="filter-provider-btn active" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')">🌐 Todos (Mercado)</button>
-              <button class="filter-provider-btn" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')">🧠 Nous Portal (Crédito Hermes)</button>
-              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')">🔀 OpenRouter (API)</button>
+              <button class="filter-provider-btn active" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> Todos (Mercado)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Nous Portal (Crédito Hermes)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-git-branch"></use></svg> OpenRouter (API)</button>
             </div>
           </div>
         </div>
 
         <!-- BARRA DE FILTROS SECUNDÁRIOS: MODALIDADE + FABRICANTE + CÉREBRO HERMES -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; background: rgba(15, 23, 42, 0.55); padding: 5px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-          <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+        <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2 u-mb-10p u-s-9492d0">
+          <div class="u-d-flex u-items-center u-gap-14p u-flex-wrap">
             <!-- Modalidade -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em;">Modalidade:</span>
-              <div class="filter-pills-group" id="cloud-modality-filter-pills" style="display: flex; gap: 4px; flex-wrap: wrap;">
-                <button class="filter-provider-btn active" id="btn-cloud-modal-all" onclick="setCloudModalityFilter('all')">🌐 Todas</button>
-                <button class="filter-provider-btn" id="btn-cloud-modal-vision" onclick="setCloudModalityFilter('vision')" title="Apenas modelos multimodais que processam imagens, diagramas e OCR">👁️ Visão &amp; OCR</button>
-                <button class="filter-provider-btn" id="btn-cloud-modal-image_gen" onclick="setCloudModalityFilter('image_gen')" title="Modelos que geram imagens e artefatos visuais diretamente (Text-to-Image / Canvas)">🎨 Geração de Imagem</button>
-                <button class="filter-provider-btn" id="btn-cloud-modal-audio" onclick="setCloudModalityFilter('audio')" title="Modelos conversacionais de voz nativa e baixa latência (Realtime)">🎙️ Áudio &amp; Voz</button>
-                <button class="filter-provider-btn" id="btn-cloud-modal-video" onclick="setCloudModalityFilter('video')" title="Modelos de compreensão temporal e dinâmica de múltiplos frames">🎬 Vídeo &amp; Temporal</button>
-                <button class="filter-provider-btn" id="btn-cloud-modal-world" onclick="setCloudModalityFilter('world')" title="Modelos de simulação física, ambientes espaciais e mundos 3D interativos">🌍 World Models</button>
-                <button class="filter-provider-btn" id="btn-cloud-modal-decision" onclick="setCloudModalityFilter('decision')" title="Motores de decisão não-autorregressivos e tipagem estrita (estilo Jev / TypeSafe AI)">⚡ Decisão (Jev)</button>
-                <button class="filter-provider-btn" id="btn-cloud-modal-text" onclick="setCloudModalityFilter('text')" title="Modelos focados puramente em texto, código e raciocínio simbólico">📝 Texto Puro</button>
+            <div class="u-d-flex u-items-center u-gap-6p">
+              <span class="u-text-muted u-uppercase u-mono u-fw-700 u-s-095a23">Modalidade:</span>
+              <div class="filter-pills-group u-d-flex u-gap-1 u-flex-wrap" id="cloud-modality-filter-pills">
+                <button class="filter-provider-btn active" id="btn-cloud-modal-all" onclick="setCloudModalityFilter('all')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> Todas</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-vision" onclick="setCloudModalityFilter('vision')" title="Apenas modelos multimodais que processam imagens, diagramas e OCR"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-eye"></use></svg> Visão &amp; OCR</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-image_gen" onclick="setCloudModalityFilter('image_gen')" title="Modelos que geram imagens e artefatos visuais diretamente (Text-to-Image / Canvas)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-palette"></use></svg> Geração de Imagem</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-audio" onclick="setCloudModalityFilter('audio')" title="Modelos conversacionais de voz nativa e baixa latência (Realtime)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-mic"></use></svg> Áudio &amp; Voz</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-video" onclick="setCloudModalityFilter('video')" title="Modelos de compreensão temporal e dinâmica de múltiplos frames"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-play"></use></svg> Vídeo &amp; Temporal</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-world" onclick="setCloudModalityFilter('world')" title="Modelos de simulação física, ambientes espaciais e mundos 3D interativos"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> World Models</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-decision" onclick="setCloudModalityFilter('decision')" title="Motores de decisão não-autorregressivos e tipagem estrita (estilo Jev / TypeSafe AI)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Decisão (Jev)</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-text" onclick="setCloudModalityFilter('text')" title="Modelos focados puramente em texto, código e raciocínio simbólico"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-file-text"></use></svg> Texto Puro</button>
               </div>
             </div>
 
             <!-- Fabricantes Multi-Select -->
-            <div style="position: relative;">
-              <button class="btn" id="btn-mfg-toggle" onclick="toggleMfgMenu(event)" style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-subtle); color: #cbd5e1; font-size: 0.74rem; padding: 4px 10px; display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: var(--radius-sm);">
-                <span>🏢</span> Fabricante: <span id="mfg-filter-label" style="color: var(--cyan); font-weight: 600;">Todos</span> ▾
+            <div class="u-relative">
+              <button class="btn u-text-slate u-d-flex u-items-center u-gap-6p u-pointer u-s-0ed328" id="btn-mfg-toggle" onclick="toggleMfgMenu(event)">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-users"></use></svg> Fabricante: <span class="u-text-cyan u-fw-600" id="mfg-filter-label">Todos</span> ▾
               </button>
-              <div id="mfg-dropdown-menu" style="display: none; position: absolute; left: 0; top: 100%; margin-top: 5px; background: #0f172a; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; width: 230px; z-index: 120; box-shadow: 0 12px 30px rgba(0,0,0,0.75);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 5px;">
-                  <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">Fabricantes</span>
-                  <div style="display: flex; gap: 6px;">
-                    <button onclick="toggleAllMfgs(true)" style="background: none; border: none; color: var(--cyan); font-size: 0.68rem; cursor: pointer;">Todos</button>
-                    <span style="color: var(--text-muted);">|</span>
-                    <button onclick="toggleAllMfgs(false)" style="background: none; border: none; color: #a78bfa; font-size: 0.68rem; cursor: pointer;">Limpar</button>
+              <div class="u-s-0bee13 is-hidden" id="mfg-dropdown-menu">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-2 u-s-6eff99">
+                  <span class="u-fw-700 u-text-white u-s-dbc8d1">Fabricantes</span>
+                  <div class="u-d-flex u-gap-6p">
+                    <button class="u-text-cyan u-pointer u-s-245316" onclick="toggleAllMfgs(true)">Todos</button>
+                    <span class="u-text-muted">|</span>
+                    <button class="u-pointer u-s-35ea02" onclick="toggleAllMfgs(false)">Limpar</button>
                   </div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 3px; max-height: 220px; overflow-y: auto;" id="mfg-checkboxes-container">
+                <div class="u-d-flex u-flex-col u-scroll-y u-s-63adef" id="mfg-checkboxes-container">
                   <!-- Gerado dinamicamente via JS -->
                 </div>
               </div>
@@ -493,97 +506,97 @@
           </div>
 
           <!-- Indicador Cérebro Hermes Ativo -->
-          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.72rem;">
-            <span style="color: var(--text-muted);">🤖 Cérebro Hermes Ativo:</span>
-            <code class="mono" id="cloud-quick-active-model" style="color: #34d399; background: rgba(16, 185, 129, 0.12); padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 600;">deepseek/deepseek-chat</code>
+          <div class="u-d-flex u-items-center u-gap-2 u-s-dbc8d1">
+            <span class="u-text-muted"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-bot"></use></svg> Cérebro Hermes Ativo:</span>
+            <code class="mono u-text-emerald u-fw-600 u-s-e6933e" id="cloud-quick-active-model">deepseek/deepseek-chat</code>
           </div>
         </div>
 
         <!-- SUBTEXTO DINÂMICO DO PERFIL ATIVO -->
-        <div id="cloud-profile-description-bar" style="margin-bottom: 14px; font-size: 0.74rem; color: #94a3b8; background: rgba(255, 255, 255, 0.02); padding: 6px 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--cyan);">
-          👑 <strong>Master Brain / Maestro:</strong> O modelo de fronteira all-around que orquestra o diálogo mestre, planeja cadeias agênticas e toma decisões executivas com raciocínio balanceado.
+        <div class="u-mb-14p u-text-muted u-s-94757b" id="cloud-profile-description-bar">
+          <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-crown"></use></svg> <strong>Master Brain / Maestro:</strong> O modelo de fronteira all-around que orquestra o diálogo mestre, planeja cadeias agênticas e toma decisões executivas com raciocínio balanceado.
         </div>
 
         <!-- SEÇÃO 1: OS 3 CAMPEÕES DE PARETO (PÓDIO EM CARDS) -->
-        <div style="margin-top: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-          <h4 style="font-size: 0.86rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
-            <span style="color: var(--amber);">👑</span> Pódio dos Campeões (Fronteira de Pareto)
+        <div class="u-mt-10p u-mb-10p u-d-flex u-items-center u-justify-between u-flex-wrap u-gap-6p">
+          <h4 class="u-text-white u-fw-700 u-d-flex u-items-center u-gap-6p u-m-0 u-s-63dea9">
+            <svg class="ui-icon icon-sm u-text-amber" aria-hidden="true"><use href="#icon-crown"></use></svg> Pódio dos Campeões (Fronteira de Pareto)
           </h4>
-          <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-triad-sublabel">Recomendações canônicas de qualidade máxima, melhor ROI e menor custo</span>
+          <span class="u-text-muted u-s-dbc8d1" id="cloud-triad-sublabel">Recomendações canônicas de qualidade máxima, melhor ROI e menor custo</span>
         </div>
 
         <div class="cloud-podium-grid" id="cloud-podium-cards">
           <!-- Renderizado dinamicamente via renderCloudTable() -->
-          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 24px;">
+          <div class="u-text-center u-text-muted u-s-8d8b30">
             Carregando campeões da Cloud Arena...
           </div>
         </div>
 
         <!-- SEÇÃO 2: RANKING COMPARATIVO DE MODELOS -->
-        <div style="margin-top: 18px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div class="u-mb-10p u-d-flex u-items-center u-justify-between u-flex-wrap u-gap-10p u-s-fb3bd8">
           <div>
-            <h4 style="font-size: 0.88rem; color: #fff; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
-              <span style="color: var(--cyan);">📊</span> Ranking Comparativo de Modelos (Benchmarks &amp; Custos)
+            <h4 class="u-text-white u-fw-700 u-d-flex u-items-center u-gap-6p u-m-0 u-s-604fde">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-bar-chart"></use></svg> Ranking Comparativo de Modelos (Benchmarks &amp; Custos)
             </h4>
-            <span style="font-size: 0.72rem; color: var(--text-muted);" id="cloud-ranked-count">Carregando catálogo...</span>
+            <span class="u-text-muted u-s-dbc8d1" id="cloud-ranked-count">Carregando catálogo...</span>
           </div>
 
           <!-- BARRA DE PESQUISA, SELETOR DE COLUNAS E ORDENAÇÃO -->
-          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <div style="position: relative;">
-              <input type="text" id="cloud-search-input" placeholder="🔍 Filtrar modelo, fabricante ou id..." oninput="handleCloudSearch(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #fff; border-radius: var(--radius-sm); padding: 5px 10px; font-size: 0.76rem; width: 210px;" />
+          <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+            <div class="u-relative">
+              <input class="u-text-white u-s-5e060d" type="text" id="cloud-search-input" placeholder="Filtrar modelo, fabricante ou id..." oninput="handleCloudSearch(this.value)" />
             </div>
 
             <!-- CONTROLE DE VISIBILIDADE DE COLUNAS (DROPDOWN) -->
-            <div style="position: relative;">
-              <button class="btn" id="btn-col-toggle" onclick="toggleColumnMenu(event)" style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-subtle); color: #cbd5e1; font-size: 0.76rem; padding: 5px 10px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                <span>👁️</span> Colunas <span id="col-count-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">12/12</span> ▾
+            <div class="u-relative">
+              <button class="btn u-text-slate u-d-flex u-items-center u-pointer u-s-095a2e" id="btn-col-toggle" onclick="toggleColumnMenu(event)">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-eye"></use></svg> Colunas <span class="u-text-cyan u-s-718f19" id="col-count-badge">12/12</span> ▾
               </button>
-              <div id="col-dropdown-menu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 5px; background: #0f172a; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; width: 250px; z-index: 100; box-shadow: 0 12px 30px rgba(0,0,0,0.65);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 5px;">
-                  <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">Exibir Colunas</span>
-                  <div style="display: flex; gap: 6px;">
-                    <button onclick="toggleAllColumns(true)" style="background: none; border: none; color: var(--cyan); font-size: 0.68rem; cursor: pointer;">Todas</button>
-                    <span style="color: var(--text-muted);">|</span>
-                    <button onclick="resetDefaultColumns()" style="background: none; border: none; color: #a78bfa; font-size: 0.68rem; cursor: pointer;">Padrão</button>
+              <div class="u-s-8c2e45 is-hidden" id="col-dropdown-menu">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-2 u-s-6eff99">
+                  <span class="u-fw-700 u-text-white u-s-dbc8d1">Exibir Colunas</span>
+                  <div class="u-d-flex u-gap-6p">
+                    <button class="u-text-cyan u-pointer u-s-245316" onclick="toggleAllColumns(true)">Todas</button>
+                    <span class="u-text-muted">|</span>
+                    <button class="u-pointer u-s-35ea02" onclick="resetDefaultColumns()">Padrão</button>
                   </div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto;">
+                <div class="u-d-flex u-flex-col u-gap-1 u-scroll-y u-s-aa6c3d">
                   <label class="col-toggle-item"><input type="checkbox" id="chk-col-status" checked onchange="toggleColumn('status', this.checked)"> Status Pareto</label>
                   <label class="col-toggle-item"><input type="checkbox" id="chk-col-score" checked onchange="toggleColumn('score', this.checked)"> Score Geral</label>
                   <label class="col-toggle-item"><input type="checkbox" id="chk-col-roi" checked onchange="toggleColumn('roi', this.checked)"> ROI Index</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-nous" checked onchange="toggleColumn('nous', this.checked)"> <span style="color: #e879f9;">🟣</span> Tarifa Nous ($/1M)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-or" checked onchange="toggleColumn('or', this.checked)"> <span style="color: #818cf8;">🔀</span> Tarifa OpenRouter ($/1M)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-intel" checked onchange="toggleColumn('intel', this.checked)"> 🧠 Inteligência (Arena ELO)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-coding" checked onchange="toggleColumn('coding', this.checked)"> 💻 Coding (SWE)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-bfcl" checked onchange="toggleColumn('bfcl', this.checked)"> 🤖 Tools (BFCL)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-reasoning" checked onchange="toggleColumn('reasoning', this.checked)"> 🧠 Reasoning (GPQA)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-design" checked onchange="toggleColumn('design', this.checked)"> 🎨 Design UI/UX</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-vision" checked onchange="toggleColumn('vision', this.checked)"> 👁️ Visão (VQA)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ifeval" checked onchange="toggleColumn('ifeval', this.checked)"> 📋 Instrução (IFEval)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ttft" checked onchange="toggleColumn('ttft', this.checked)"> ⏱️ Latência (TTFT)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-tps" checked onchange="toggleColumn('tps', this.checked)"> ⚡ Throughput (TPS)</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ctx" checked onchange="toggleColumn('ctx', this.checked)"> 📚 Janela &amp; RULER</label>
-                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-prov" checked onchange="toggleColumn('prov', this.checked)"> 🌐 Provedores</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-nous" checked onchange="toggleColumn('nous', this.checked)"> <svg class="ui-icon icon-xs u-s-59b283" aria-hidden="true"><use href="#icon-dollar"></use></svg> Tarifa Nous ($/1M)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-or" checked onchange="toggleColumn('or', this.checked)"> <svg class="ui-icon icon-xs u-s-dd4993" aria-hidden="true"><use href="#icon-git-branch"></use></svg> Tarifa OpenRouter ($/1M)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-intel" checked onchange="toggleColumn('intel', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Inteligência (Arena ELO)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-coding" checked onchange="toggleColumn('coding', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-code"></use></svg> Coding (SWE)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-bfcl" checked onchange="toggleColumn('bfcl', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-bot"></use></svg> Tools (BFCL)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-reasoning" checked onchange="toggleColumn('reasoning', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Reasoning (GPQA)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-design" checked onchange="toggleColumn('design', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-palette"></use></svg> Design UI/UX</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-vision" checked onchange="toggleColumn('vision', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-eye"></use></svg> Visão (VQA)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ifeval" checked onchange="toggleColumn('ifeval', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-file-text"></use></svg> Instrução (IFEval)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ttft" checked onchange="toggleColumn('ttft', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg> Latência (TTFT)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-tps" checked onchange="toggleColumn('tps', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Throughput (TPS)</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-ctx" checked onchange="toggleColumn('ctx', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-book"></use></svg> Janela &amp; RULER</label>
+                  <label class="col-toggle-item"><input type="checkbox" id="chk-col-prov" checked onchange="toggleColumn('prov', this.checked)"> <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> Provedores</label>
                 </div>
               </div>
             </div>
 
-            <select id="cloud-sort-select" onchange="handleCloudSort(this.value)" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); color: #cbd5e1; border-radius: var(--radius-sm); padding: 5px 8px; font-size: 0.76rem;">
-              <option value="score_desc">🏆 Maior Score Geral</option>
-              <option value="roi_desc">💎 Maior Custo-Benefício (ROI)</option>
-              <option value="nous_asc">🟣 Menor Tarifa Nous ($/1M)</option>
-              <option value="or_asc">🔀 Menor Tarifa OpenRouter ($/1M)</option>
-              <option value="intel_desc">🧠 Maior Inteligência (Arena ELO)</option>
-              <option value="coding_desc">💻 Maior Score Coding (SWE)</option>
-              <option value="bfcl_desc">🤖 Maior Score Tool Calling (BFCL)</option>
-              <option value="reasoning_desc">🧠 Maior Score Reasoning (Hard/Math)</option>
-              <option value="design_desc">🎨 Maior Score Design / UI/UX</option>
-              <option value="vision_desc">👁️ Maior Score Visão / VQA</option>
-              <option value="ifeval_desc">📋 Maior Score Instrução (IFEval)</option>
-              <option value="ttft_asc">⏱️ Menor Latência (TTFT)</option>
-              <option value="tps_desc">⚡ Maior Throughput (TPS)</option>
-              <option value="ctx_desc">📚 Maior Janela de Contexto</option>
+            <select class="u-text-slate u-s-b88634" id="cloud-sort-select" onchange="handleCloudSort(this.value)">
+              <option value="score_desc">Maior Score Geral</option>
+              <option value="roi_desc">Maior Custo-Benefício (ROI)</option>
+              <option value="nous_asc">Menor Tarifa Nous ($/1M)</option>
+              <option value="or_asc">Menor Tarifa OpenRouter ($/1M)</option>
+              <option value="intel_desc">Maior Inteligência (Arena ELO)</option>
+              <option value="coding_desc">Maior Score Coding (SWE)</option>
+              <option value="bfcl_desc">Maior Score Tool Calling (BFCL)</option>
+              <option value="reasoning_desc">Maior Score Reasoning (Hard/Math)</option>
+              <option value="design_desc">Maior Score Design / UI/UX</option>
+              <option value="vision_desc">Maior Score Visão / VQA</option>
+              <option value="ifeval_desc">Maior Score Instrução (IFEval)</option>
+              <option value="ttft_asc">Menor Latência (TTFT)</option>
+              <option value="tps_desc">Maior Throughput (TPS)</option>
+              <option value="ctx_desc">Maior Janela de Contexto</option>
             </select>
           </div>
         </div>
@@ -596,7 +609,7 @@
             <tbody id="cloud-ranked-tbody">
               <!-- Renderizado dinamicamente via fetchCloudRankedModels() -->
               <tr>
-                <td colspan="19" style="text-align: center; color: var(--text-muted); padding: 24px;">Buscando modelos da Cloud Arena com sub-scores de benchmarks e tarifas comparadas...</td>
+                <td class="u-text-center u-text-muted u-s-0acd09" colspan="19">Buscando modelos da Cloud Arena com sub-scores de benchmarks e tarifas comparadas...</td>
               </tr>
             </tbody>
           </table>
@@ -605,140 +618,150 @@
     </div>
 
       <!-- PAINEL 2: MODEL HUB & DOWNLOADS -->
-      <div id="panel-local-hub" style="display: none;">
+      <div class="is-hidden" id="panel-local-hub">
         <!-- CARD 1: DIAGNÓSTICO DE HARDWARE PROFILER -->
-        <div class="card" style="margin-bottom: 20px;">
+        <div class="card u-mb-5">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-cyan">🖥️</div>
-                Diagnóstico & Limites do seu Hardware
+            <div class="card-header-media">
+              <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-cpu"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Diagnóstico &amp; Limites do seu Hardware
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-c79ecd">
+                  Métricas físicas de silício em tempo real para inferência estável, isolamento térmico e zero spillover PCIe.
+                </p>
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Métricas físicas de silício em tempo real para inferência estável, isolamento térmico e zero spillover PCIe.
-              </p>
             </div>
-            <button class="btn btn-cyan" id="btn-recalibrate-hw" onclick="fetchHardwareAndRecommendations()">
-              <span>🔄</span> Recalibrar Hardware
-            </button>
+            <div class="card-header-actions">
+              <button class="btn btn-cyan" id="btn-recalibrate-hw" onclick="fetchHardwareAndRecommendations()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Recalibrar Hardware
+              </button>
+            </div>
           </div>
           <div class="hw-spec-grid" id="hw-profiler-specs">
             <div class="hw-spec-card">
               <div class="hw-spec-label">GPU Primária</div>
-              <div class="hw-spec-val" id="hw-gpu-name" style="font-size: 0.85rem; word-break: break-word;">Detectando...</div>
-              <div id="hw-gpu-sub" style="font-size: 0.63rem; color: #a78bfa; margin-top: 3px; line-height: 1.3;">Turing TU106 &bull; CC 7.5 &bull; 1.920 CUDA Cores</div>
+              <div class="hw-spec-val u-s-abdbc5" id="hw-gpu-name">Detectando...</div>
+              <div class="u-mt-3p u-s-de78a8" id="hw-gpu-sub">Turing TU106 &bull; CC 7.5 &bull; 1.920 CUDA Cores</div>
             </div>
             <div class="hw-spec-card">
               <div class="hw-spec-label">VRAM Útil (Headroom WDDM)</div>
-              <div class="hw-spec-val" id="hw-vram-usable" style="color: var(--cyan); font-size: 0.88rem;">--</div>
-              <div id="hw-vram-sub" style="font-size: 0.63rem; color: #94a3b8; margin-top: 3px; line-height: 1.35;">
-                <div>📦 Teto Pesos: ~3.8 GB (Q4_K_M)</div>
-                <div style="margin-top: 2px;">🧠 Margem KV Cache: ~1.3 GB</div>
+              <div class="hw-spec-val u-text-cyan u-s-604fde" id="hw-vram-usable">--</div>
+              <div class="u-text-muted u-mt-3p u-s-807179" id="hw-vram-sub">
+                <div><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-layers"></use></svg> Teto Pesos: ~3.8 GB (Q4_K_M)</div>
+                <div class="u-mt-2p"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Margem KV Cache: ~1.3 GB</div>
               </div>
             </div>
             <div class="hw-spec-card">
               <div class="hw-spec-label">RAM do Sistema (Host)</div>
-              <div class="hw-spec-val" id="hw-host-ram" style="font-size: 0.88rem;">--</div>
-              <div id="hw-host-ram-sub" style="font-size: 0.63rem; color: var(--green); margin-top: 3px; line-height: 1.3;">⚡ DDR4 Dual Channel</div>
+              <div class="hw-spec-val u-s-604fde" id="hw-host-ram">--</div>
+              <div class="u-text-green u-mt-3p u-s-20c02b" id="hw-host-ram-sub"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> DDR4 Dual Channel</div>
             </div>
             <div class="hw-spec-card">
               <div class="hw-spec-label">Instruções CPU & Silício</div>
-              <div class="hw-spec-val" id="hw-cpu-features" style="font-size: 0.74rem;">--</div>
-              <div id="hw-cpu-sub" style="font-size: 0.63rem; color: #38bdf8; margin-top: 3px; line-height: 1.3;">Intel Core i9-9980HK (8C / 16T)</div>
+              <div class="hw-spec-val u-s-d3bc8d" id="hw-cpu-features">--</div>
+              <div class="u-text-cyan u-mt-3p u-s-20c02b" id="hw-cpu-sub">Host CPU AVX2</div>
             </div>
             <div class="hw-spec-card">
               <div class="hw-spec-label">Teto de Contexto dGPU</div>
-              <div id="hw-context-ceiling-container" style="display: flex; flex-direction: column; justify-content: center; min-height: 38px;">
-                <div class="hw-spec-val" id="hw-context-ceiling" style="color: #34d399; font-size: 0.95rem; font-weight: 700; line-height: 1.2;">16.384 tokens</div>
-                <div id="hw-context-ceiling-sub" style="color: #38bdf8; font-size: 0.70rem; font-weight: 600; margin-top: 2px; line-height: 1.2;">(até 32k c/ KV Q4)</div>
+              <div class="u-d-flex u-flex-col u-justify-center u-s-ca0b52" id="hw-context-ceiling-container">
+                <div class="hw-spec-val u-text-emerald u-fw-700 u-s-7cc668" id="hw-context-ceiling">16.384 tokens</div>
+                <div class="u-text-cyan u-fw-600 u-mt-2p u-s-fdaec8" id="hw-context-ceiling-sub">(até 32k c/ KV Q4)</div>
               </div>
-              <div id="hw-context-sub" style="font-size: 0.63rem; color: #94a3b8; margin-top: 5px; line-height: 1.35;">Baseado em 5.17 GB úteis: seguro p/ 3B (16k-32k) e 7B c/ KV Q4 (4k-8k FP16). Sessões curtas evitam spillover PCIe.</div>
+              <div class="u-text-muted u-s-57e2ac" id="hw-context-sub">Calculado dinamicamente sobre a VRAM útil WDDM: garante 3B e 7B (KV Q4) sem spillover PCIe.</div>
             </div>
           </div>
         </div>
 
         <!-- CARD 2: DOWNLOADS ATIVOS E FILA RESILIENTE -->
-        <div class="card" id="card-downloads-hub" style="margin-bottom: 20px;">
+        <div class="card u-mb-5" id="card-downloads-hub">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-cyan">📥</div>
-                Gerenciador Sequencial de Downloads
+            <div class="card-header-media">
+              <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-download"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Gerenciador Sequencial de Downloads
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-c79ecd">
+                  Fila sequencial com suporte a download atômico, pausa/retomada HTTP Range e validação SHA-256 incremental.
+                </p>
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Fila sequencial com suporte a download atômico, pausa/retomada HTTP Range e validação SHA-256 incremental.
-              </p>
             </div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
-              Status SSE: <span id="download-sse-status" style="color: #34d399;">● Ativo</span>
+            <div class="u-text-muted u-mono u-s-a2b44b">
+              Status SSE: <span class="u-text-emerald" id="download-sse-status">● Ativo</span>
             </div>
           </div>
           <div id="downloads-content-area">
-            <div style="text-align: center; color: var(--text-muted); padding: 18px 0; font-size: 0.85rem;">
+            <div class="u-text-center u-text-muted u-s-c89d66">
               Nenhum download ativo no momento. A fila de silício está ociosa.
             </div>
           </div>
         </div>
 
         <!-- CARD 3: O TRIO RECOMENDADO -->
-        <div class="card" style="margin-bottom: 20px;">
+        <div class="card u-mb-5">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-cyan">⚡</div>
-                O Trio Recomendado
+            <div class="card-header-media">
+              <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-zap"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  O Trio Recomendado
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-a768c1">
+                  Os 3 modelos essenciais para velocidade, raciocínio e código — calibrados para rodar com folga nos 6 GB da sua placa de vídeo.
+                </p>
               </div>
-              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Os 3 modelos essenciais para velocidade, raciocínio e código — calibrados para rodar com folga nos 6 GB da sua placa de vídeo.
-              </p>
             </div>
           </div>
           <div class="triad-grid" id="triad-cards-grid">
-            <div style="color: var(--text-muted); text-align: center; grid-column: 1 / -1; padding: 20px;">Calculando fit ideal dos modelos locais...</div>
+            <div class="u-text-muted u-text-center u-s-720583">Calculando fit ideal dos modelos locais...</div>
           </div>
         </div>
 
         <!-- CARD 4: MELHORES ESCOLHAS POR FUNÇÃO -->
-        <div class="card" style="margin-bottom: 20px;">
-          <div class="card-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-purple">🎯</div>
-                Melhores Escolhas por Função
+        <div class="card u-mb-5">
+          <div class="card-header u-flex-wrap u-gap-3 u-items-center u-justify-between">
+            <div class="card-header-media">
+              <div class="card-icon icon-purple"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-target"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Melhores Escolhas por Função
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-a768c1">
+                  Modelos testados para o seu computador, organizados pelo que você precisa: Programação, Raciocínio Lógico, Visão ou Automação.
+                </p>
               </div>
-              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Modelos testados para o seu computador, organizados pelo que você precisa: Programação, Raciocínio Lógico, Visão ou Automação.
-              </p>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <span id="catalog-last-sync-badge" class="badge" style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.68rem; padding: 3px 8px; font-weight: 600; display: none;">
-                ✓ Sincronizado
+            <div class="card-header-actions">
+              <span id="catalog-last-sync-badge" class="badge u-text-emerald u-fw-600 u-s-2d960f is-hidden">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg> Sincronizado
               </span>
               <button id="btn-sync-catalog" class="btn btn-purple" onclick="syncCuratedCatalogLive()">
-                <span id="btn-sync-catalog-icon">✨</span> Sincronizar Catálogo
+                <span id="btn-sync-catalog-icon"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg></span> Sincronizar Catálogo
               </button>
             </div>
           </div>
 
           <!-- CONTROLE DE VISUALIZAÇÃO & FILTROS HARMONIZADOS -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
-            <div class="segmented-control" id="curated-view-mode" style="display: inline-flex; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 3px; gap: 4px;">
-              <button class="segmented-btn active" id="btn-curated-mode-trusted" onclick="setCuratedViewMode('trusted')" style="padding: 5px 12px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; font-weight: 600; display: flex; align-items: center; gap: 6px; background: var(--purple); color: #fff;">
-                <span>⭐</span> Mais Confiáveis
+          <div class="curated-controls-bar u-s-fd7f9e">
+            <div class="segmented-control" id="curated-view-mode">
+              <button class="segmented-btn active" id="btn-curated-mode-trusted" onclick="setCuratedViewMode('trusted')">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-crown"></use></svg> Mais Confiáveis
               </button>
-              <button class="segmented-btn" id="btn-curated-mode-trending" onclick="setCuratedViewMode('trending')" style="padding: 5px 12px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 6px; background: transparent; color: var(--text-muted);">
-                <span>🔥</span> Novidades em Alta
+              <button class="segmented-btn" id="btn-curated-mode-trending" onclick="setCuratedViewMode('trending')">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-flame"></use></svg> Novidades em Alta
               </button>
             </div>
 
-            <div class="profile-selector" id="curated-profile-filters" style="margin-bottom: 0;">
+            <div class="profile-selector u-mb-0" id="curated-profile-filters">
               <button class="profile-pill active" onclick="filterCuratedProfile('all')">Todos os Perfis</button>
-              <button class="profile-pill" onclick="filterCuratedProfile('coding')">💻 Programação</button>
-              <button class="profile-pill" onclick="filterCuratedProfile('reasoning')">🧠 Raciocínio (R1)</button>
-              <button class="profile-pill" onclick="filterCuratedProfile('agentic')">🤖 Agêntico / MCP</button>
-              <button class="profile-pill" onclick="filterCuratedProfile('design')">🎨 UI / Frontend</button>
-              <button class="profile-pill" onclick="filterCuratedProfile('vision')">👁️ Visão (VLM)</button>
-              <button class="profile-pill" onclick="filterCuratedProfile('fast')">⚡ Triagem Rápida</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('coding')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-code"></use></svg> Programação</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('reasoning')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Raciocínio (R1)</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('agentic')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-bot"></use></svg> Agêntico / MCP</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('design')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-palette"></use></svg> UI / Frontend</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('vision')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-eye"></use></svg> Visão (VLM)</button>
+              <button class="profile-pill" onclick="filterCuratedProfile('fast')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Triagem Rápida</button>
             </div>
           </div>
           <div class="curated-grid" id="curated-models-grid">
@@ -749,25 +772,33 @@
         <!-- CARD 5: EXPLORADOR HUGGING FACE HUB -->
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-cyan">🌐</div>
-                Explorar Qualquer Modelo (Hugging Face)
+            <div class="card-header-media">
+              <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-globe"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Explorar Qualquer Modelo (Hugging Face)
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-a768c1">
+                  Pesquise qualquer novidade no catálogo global com estimativa automática se cabe ou não na sua máquina.
+                </p>
               </div>
-              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
-                Pesquise qualquer novidade no catálogo global com estimativa automática se cabe ou não na sua máquina.
-              </p>
             </div>
           </div>
 
           <!-- FILTROS POR FAIXA DE PARÂMETROS -->
-          <div style="margin-bottom: 12px;">
-            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-              <span>📏 Faixa de Parâmetros:</span>
-              <span id="hf-vram-fit-legend" style="font-size: 0.65rem; color: #34d399; font-weight: normal;">(🟢 Cabem na dGPU)</span>
+          <div class="u-mb-3">
+            <div class="u-text-muted u-fw-600 u-uppercase u-mb-6p u-d-flex u-items-center u-justify-between u-flex-wrap u-gap-6p u-s-dbc8d1">
+              <div class="u-d-flex u-items-center u-gap-6p">
+                <span><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-sliders"></use></svg> Faixa de Parâmetros:</span>
+                <span class="u-text-emerald u-s-a2954f" id="hf-vram-fit-legend">(<svg class="ui-icon icon-xs u-text-emerald" aria-hidden="true"><use href="#icon-check-circle"></use></svg> Cabem na dGPU)</span>
+              </div>
+              <button class="btn u-s-918d92" id="btn-hf-reset-filters" onclick="resetHfExplorerFilters()" title="Limpar texto e redefinir todos os filtros do explorador">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-x"></use></svg> Limpar Filtros
+              </button>
             </div>
-            <div class="profile-selector" id="hf-param-filters" style="margin-bottom: 0;">
+            <div class="profile-selector u-mb-0" id="hf-param-filters">
               <button class="profile-pill active" id="btn-hf-param-all" onclick="setHfParamFilter('all')">Todos</button>
+              <button class="profile-pill" id="btn-hf-param-fit_gpu" data-param="fit_gpu" onclick="setHfParamFilter('fit_gpu')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Cabem na GPU</button>
               <button class="profile-pill" id="btn-hf-param-sub1b" onclick="setHfParamFilter('sub1b')">&lt;1B</button>
               <button class="profile-pill" id="btn-hf-param-1b" onclick="setHfParamFilter('1b')">1B</button>
               <button class="profile-pill" id="btn-hf-param-2b" onclick="setHfParamFilter('2b')">2B</button>
@@ -786,29 +817,32 @@
           </div>
 
           <!-- FILTROS POR TIPO DE TAREFA / PERFIL -->
-          <div style="margin-bottom: 14px;">
-            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">
-              🎯 Tipo de Tarefa / Perfil Agêntico:
+          <div class="u-mb-14p">
+            <div class="u-text-muted u-fw-600 u-uppercase u-mb-6p u-s-dbc8d1">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-target"></use></svg> Tipo de Tarefa / Perfil Agêntico:
             </div>
-            <div class="profile-selector" id="hf-task-filters" style="margin-bottom: 0;">
-              <button class="profile-pill" id="btn-hf-task-coding" onclick="setHfTaskFilter('coding')">💻 Programação</button>
-              <button class="profile-pill" id="btn-hf-task-reasoning" onclick="setHfTaskFilter('reasoning')">🧠 Raciocínio (R1)</button>
-              <button class="profile-pill" id="btn-hf-task-agentic" onclick="setHfTaskFilter('agentic')">🤖 Ferramentas & MCP</button>
-              <button class="profile-pill" id="btn-hf-task-vision" onclick="setHfTaskFilter('vision')">👁️ Visão (VLM)</button>
-              <button class="profile-pill" id="btn-hf-task-fast" onclick="setHfTaskFilter('fast')">⚡ Triagem Rápida</button>
-              <button class="profile-pill" id="btn-hf-task-general" onclick="setHfTaskFilter('general')">🌐 Conversação</button>
+            <div class="profile-selector u-mb-0" id="hf-task-filters">
+              <button class="profile-pill" id="btn-hf-task-coding" onclick="setHfTaskFilter('coding')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-code"></use></svg> Programação</button>
+              <button class="profile-pill" id="btn-hf-task-reasoning" onclick="setHfTaskFilter('reasoning')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Raciocínio (R1)</button>
+              <button class="profile-pill" id="btn-hf-task-agentic" onclick="setHfTaskFilter('agentic')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-bot"></use></svg> Ferramentas & MCP</button>
+              <button class="profile-pill" id="btn-hf-task-vision" onclick="setHfTaskFilter('vision')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-eye"></use></svg> Visão (VLM)</button>
+              <button class="profile-pill" id="btn-hf-task-fast" onclick="setHfTaskFilter('fast')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Triagem Rápida</button>
+              <button class="profile-pill" id="btn-hf-task-general" onclick="setHfTaskFilter('general')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> Conversação</button>
             </div>
           </div>
 
-          <!-- BARRA DE PESQUISA -->
+          <!-- BARRA DE PESQUISA COM AUTOCOMPLETE AO VIVO -->
           <div class="hf-search-row">
-            <input type="text" id="hf-search-input" class="setting-input" style="flex: 1;" placeholder="Pesquise por autor ou modelo (ex: bartowski, unsloth, Qwen2.5-Coder, DeepSeek-R1, xLAM)..." onkeydown="if(event.key==='Enter') searchHuggingFaceHub()">
-            <button class="btn btn-cyan" onclick="searchHuggingFaceHub()">
-              <span>🔍</span> Pesquisar no HF
+            <div class="hf-autocomplete-wrap">
+              <input type="text" id="hf-search-input" class="setting-input u-w-full" autocomplete="off" placeholder="Digite autor, família ou modelo (ex: Qwen3, bartowski, unsloth, DeepSeek-R1, Gemma-3, Phi-4)..." oninput="onHfSearchInputKeyup(event)" onfocus="onHfSearchInputKeyup(event)" onkeydown="if(event.key==='Enter'){ hideHfAutocomplete(); searchHuggingFaceHub(); } else if(event.key==='Escape'){ hideHfAutocomplete(); }">
+              <div id="hf-autocomplete-dropdown" class="hf-autocomplete-dropdown is-hidden"></div>
+            </div>
+            <button class="btn btn-cyan" onclick="hideHfAutocomplete(); searchHuggingFaceHub()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-search"></use></svg> Pesquisar no HF
             </button>
           </div>
-          <div id="hf-search-results" style="margin-top: 16px;">
-            <div style="text-align: center; color: var(--text-muted); padding: 16px; font-size: 0.82rem;">
+          <div class="u-mt-4" id="hf-search-results">
+            <div class="u-text-center u-text-muted u-s-40d486">
               Selecione uma faixa de parâmetros ou tipo de tarefa acima, ou digite um termo para explorar arquivos GGUF na nuvem.
             </div>
           </div>
@@ -816,67 +850,69 @@
       </div>
 
       <!-- PAINEL 4: PROVEDORES & FALLBACK GATEWAY (v0.7.3) -->
-      <div id="panel-local-fallback" style="display: none;">
+      <div class="is-hidden" id="panel-local-fallback">
         <!-- Header & Quick Telemetry -->
-        <div class="card" style="margin-bottom: 16px;">
+        <div class="card u-mb-4">
           <div class="card-header">
-            <div>
-              <div class="card-title">
-                <div class="card-icon icon-emerald">🛡️</div>
-                Universal Cloud Dispatch Gateway &amp; Circuit Breaker
+            <div class="card-header-media">
+              <div class="card-icon icon-emerald"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-shield"></use></svg></div>
+              <div class="card-header-text">
+                <div class="card-title">
+                  Universal Cloud Dispatch Gateway &amp; Circuit Breaker
+                </div>
+                <p class="u-text-muted u-mt-1 u-mb-0 u-s-c79ecd">
+                  Roteamento de contingência em sub-150ms sob HTTP 429/500/timeout com quarentena adaptativa e FinOps Prompt Cache.
+                </p>
               </div>
-              <p style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
-                Roteamento de contingência em sub-150ms sob HTTP 429/500/timeout com quarentena adaptativa e FinOps Prompt Cache.
-              </p>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div class="card-header-actions">
               <button class="btn btn-purple" onclick="resetFallbackQuarantines('all')">
-                <span>🔄</span> Limpar Quarentenas
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Limpar Quarentenas
               </button>
               <button class="btn btn-cyan" onclick="fetchFallbackQuarantines(); fetchFallbackProviders();">
-                <span>⚡</span> Atualizar Telemetria
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Atualizar Telemetria
               </button>
             </div>
           </div>
 
           <!-- STATUS DO CIRCUIT BREAKER -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 8px;">
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-              <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Estado do Circuit Breaker</div>
-              <div id="circuit-breaker-status" style="font-size: 1.1rem; font-weight: bold; color: var(--emerald); margin-top: 4px;">
+          <div class="u-d-grid u-gap-3 u-mt-2 u-s-850b08">
+            <div class="u-s-ffbb36">
+              <div class="u-text-muted u-uppercase u-s-dbc8d1">Estado do Circuit Breaker</div>
+              <div class="u-fw-700 u-text-green u-mt-1 u-s-1902e8" id="circuit-breaker-status">
                 ● 100% Nominal (0 Quarentenas)
               </div>
-              <div id="circuit-breaker-detail" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+              <div class="u-text-muted u-mt-2p u-s-a2b44b" id="circuit-breaker-detail">
                 Nenhum provedor sob rate limit (429) ou indisponibilidade (500).
               </div>
             </div>
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-              <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">SLA de Contingência</div>
-              <div style="font-size: 1.1rem; font-weight: bold; color: var(--cyan); margin-top: 4px;">
+            <div class="u-s-ffbb36">
+              <div class="u-text-muted u-uppercase u-s-dbc8d1">SLA de Contingência</div>
+              <div class="u-fw-700 u-text-cyan u-mt-1 u-s-1902e8">
                 &lt; 150 ms
               </div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+              <div class="u-text-muted u-mt-2p u-s-a2b44b">
                 Chaveamento determinístico para o próximo candidato na Fronteira de Pareto.
               </div>
             </div>
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-              <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">FinOps Prompt Cache</div>
-              <div style="font-size: 1.1rem; font-weight: bold; color: var(--purple); margin-top: 4px;">
+            <div class="u-s-ffbb36">
+              <div class="u-text-muted u-uppercase u-s-dbc8d1">FinOps Prompt Cache</div>
+              <div class="u-fw-700 u-text-purple u-mt-1 u-s-1902e8">
                 Até 74% - 90% OFF
               </div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+              <div class="u-text-muted u-mt-2p u-s-a2b44b">
                 DeepSeek V3 ($0.07/M cached) e Claude ($0.30/M read).
               </div>
             </div>
           </div>
 
           <!-- TABELA DE QUARENTENAS ATIVAS -->
-          <div id="quarantine-section" style="margin-top: 16px; display: none;">
-            <div style="font-size: 0.8rem; font-weight: bold; color: var(--amber); margin-bottom: 8px;">
-              ⚠️ Modelos em Quarentena Temporária (Cooldown Ativo)
+          <div class="u-mt-4 is-hidden" id="quarantine-section">
+            <div class="u-fw-700 u-text-amber u-mb-2 u-s-22b62c">
+              <svg class="ui-icon icon-xs u-text-amber" aria-hidden="true"><use href="#icon-alert-triangle"></use></svg> Modelos em Quarentena Temporária (Cooldown Ativo)
             </div>
             <div class="table-responsive">
-              <table class="table" style="width: 100%; font-size: 0.78rem;">
+              <table class="table u-w-full u-s-a768c1">
                 <thead>
                   <tr>
                     <th>Modelo</th>
@@ -894,61 +930,78 @@
         </div>
 
         <!-- SIMULADOR INTERATIVO DE CADEIA DE FALLBACK -->
-        <div class="card" style="margin-bottom: 16px;">
+        <details class="lab-drawer u-mb-4" id="drawer-lab-fallback">
+          <summary class="lab-drawer-header">
+            <div class="lab-drawer-title">
+              <svg class="ui-icon icon-sm lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+              <svg class="ui-icon icon-sm text-purple" aria-hidden="true"><use href="#icon-target"></use></svg>
+              <span>Laboratório Avançado: Simulador de Contingência &amp; Resolução de Cadeia</span>
+            </div>
+            <span class="lab-drawer-badge">Diagnóstico &bull; SLA Sub-150ms</span>
+          </summary>
+          <div class="lab-drawer-body">
+        <div class="card u-mb-4">
           <div class="card-header">
             <div class="card-title">
-              <div class="card-icon icon-purple">🎯</div>
+              <div class="card-icon icon-purple"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-target"></use></svg></div>
               Simulador de Contingência &amp; Resolução de Cadeia
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+          <div class="u-d-grid u-gap-3 u-mb-3 u-s-722e9a">
             <div>
-              <label style="font-size: 0.72rem; color: var(--text-muted);">Categoria da Tarefa</label>
-              <select id="sim-task-category" class="setting-input" style="width: 100%; height: 34px;">
-                <option value="code" selected>Programação (Code)</option>
-                <option value="reasoning">Raciocínio Complexo (Reasoning)</option>
-                <option value="research">Pesquisa Profunda (Research)</option>
-                <option value="fast">Triagem Rápida (Fast)</option>
+              <label class="u-text-muted u-s-dbc8d1">Categoria da Tarefa</label>
+              <select id="sim-task-category" class="setting-input u-w-full u-s-64d7b6">
+                <option value="executive">Maestro / Orquestração Executiva (Executive)</option>
+                <option value="code" selected>Programação &amp; Cirurgia AST (Coding)</option>
+                <option value="agentic">Agentic &amp; Tool Calling (MCP)</option>
+                <option value="reasoning">Raciocínio Complexo &amp; Matemática (Reasoning)</option>
+                <option value="fast">Triagem Rápida &amp; Baixa Latência (Fast)</option>
+                <option value="design">Design, UX &amp; Multimodal (Design)</option>
+                <option value="research">Pesquisa Profunda &amp; Síntese (Research)</option>
+                <option value="security">Auditoria de Segurança &amp; Guardrails (Security)</option>
+                <option value="curation">Curadoria de Memória &amp; Obsidian (Curation)</option>
               </select>
             </div>
             <div>
-              <label style="font-size: 0.72rem; color: var(--text-muted);">Tokens de Entrada (Prompt)</label>
-              <input type="number" id="sim-input-tokens" class="setting-input" value="4000" style="width: 100%; height: 34px;">
+              <label class="u-text-muted u-s-dbc8d1">Tokens de Entrada (Prompt)</label>
+              <input type="number" id="sim-input-tokens" class="setting-input u-w-full u-s-64d7b6" value="4000">
             </div>
             <div>
-              <label style="font-size: 0.72rem; color: var(--text-muted);">Tokens Cacheados (Cache Hit)</label>
-              <input type="number" id="sim-cached-tokens" class="setting-input" value="3000" style="width: 100%; height: 34px;">
+              <label class="u-text-muted u-s-dbc8d1">Tokens Cacheados (Cache Hit)</label>
+              <input type="number" id="sim-cached-tokens" class="setting-input u-w-full u-s-64d7b6" value="3000">
             </div>
             <div>
-              <label style="font-size: 0.72rem; color: var(--text-muted);">Teto de Custo FinOps (USD)</label>
-              <input type="number" id="sim-budget-cap" class="setting-input" placeholder="Opcional (ex: 0.01)" step="0.001" style="width: 100%; height: 34px;">
+              <label class="u-text-muted u-s-dbc8d1">Teto de Custo FinOps (USD)</label>
+              <input type="number" id="sim-budget-cap" class="setting-input u-w-full u-s-64d7b6" placeholder="Opcional (ex: 0.01)" step="0.001">
             </div>
           </div>
-          <button class="btn btn-purple" onclick="simulateFallbackChain()" style="width: 100%; justify-content: center;">
-            <span>🚀</span> Resolver Cadeia de Contingência em Tempo Real
+          <button class="btn btn-purple u-w-full u-justify-center" onclick="simulateFallbackChain()">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-rocket"></use></svg> Resolver Cadeia de Contingência em Tempo Real
           </button>
 
           <!-- RESULTADO DA RESOLUÇÃO -->
-          <div id="sim-chain-results" style="margin-top: 14px; display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="font-size: 0.8rem; font-weight: bold; color: var(--cyan);">Cadeia Resolvida com Sucesso</span>
-              <span id="sim-resolution-time" class="chip chip-cyan" style="font-size: 0.72rem;">-- ms</span>
+          <div class="u-mt-14p is-hidden" id="sim-chain-results">
+            <div class="u-d-flex u-justify-between u-items-center u-mb-2">
+              <span class="u-fw-700 u-text-cyan u-s-22b62c">Cadeia Resolvida com Sucesso</span>
+              <span id="sim-resolution-time" class="chip chip-cyan u-s-dbc8d1">-- ms</span>
             </div>
-            <div id="sim-chain-cards" style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="u-d-flex u-flex-col u-gap-2" id="sim-chain-cards">
               <!-- Renderizado dinamicamente -->
             </div>
           </div>
         </div>
+          </div>
+        </details>
 
         <!-- GRADE DE PROVEDORES CLOUD CONECTADOS -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">
-              <div class="card-icon icon-cyan">🌐</div>
+              <div class="card-icon icon-cyan"><svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-globe"></use></svg></div>
               Provedores Suportados &amp; Políticas de Economia
             </div>
           </div>
-          <div id="fallback-providers-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px;">
+          <div class="u-d-grid u-gap-3 u-s-82a5ca" id="fallback-providers-grid">
             <!-- Renderizado dinamicamente -->
           </div>
         </div>
