@@ -281,26 +281,34 @@ pub fn estimate_throughput_tps(
 
     match fit {
         HardwareFit::OptimalVram => {
-            if params_b <= 0.2 {
+            if params_b <= 0.25 {
                 180.0
-            } else if params_b <= 1.5 {
-                75.0
-            } else if params_b <= 3.5 {
+            } else if params_b <= 0.6 {
+                125.0
+            } else if params_b <= 1.8 {
+                85.0
+            } else if params_b <= 3.2 {
+                52.0
+            } else if params_b <= 4.5 {
                 42.0
-            } else if params_b <= 8.0 {
+            } else if params_b <= 8.5 {
                 28.0
             } else {
                 16.0
             }
         }
         HardwareFit::PartialCpuOffload => {
-            let base_speed = if params_b <= 0.2 {
+            let base_speed = if params_b <= 0.25 {
                 120.0
-            } else if params_b <= 1.5 {
-                35.0
-            } else if params_b <= 3.5 {
+            } else if params_b <= 0.6 {
+                75.0
+            } else if params_b <= 1.8 {
+                38.0
+            } else if params_b <= 3.2 {
+                24.0
+            } else if params_b <= 4.5 {
                 20.0
-            } else if params_b <= 8.0 {
+            } else if params_b <= 8.5 {
                 9.5
             } else {
                 4.0
@@ -313,6 +321,52 @@ pub fn estimate_throughput_tps(
         }
         HardwareFit::IncompatibleSpillover => 1.2,
     }
+}
+
+/// Estimates variant-level throughput (tokens/sec) from physical GGUF weight size and memory bandwidth.
+///
+/// Differentiates quantization sizes (e.g. `Q4_K_M` vs `Q5_K_M` vs `Q8_0`) on the detected
+/// dGPU or host CPU/RAM memory hierarchy.
+pub fn estimate_variant_throughput_tps(
+    diag: &HardwareDiagnostic,
+    fit: HardwareFit,
+    size_bytes: u64,
+    parameter_count: u64,
+) -> f32 {
+    if size_bytes == 0 {
+        return estimate_throughput_tps(fit, parameter_count, diag.has_avx2);
+    }
+
+    let size_gb = (size_bytes as f64 / 1_073_741_824.0).max(0.08);
+    let raw_tps = match fit {
+        HardwareFit::OptimalVram => {
+            let gpu_upper = diag.gpu_name.to_ascii_uppercase();
+            let effective_bw = if gpu_upper.contains("RTX 50") || gpu_upper.contains("BLACKWELL") {
+                520.0
+            } else if gpu_upper.contains("RTX 40") || gpu_upper.contains("ADA") {
+                380.0
+            } else if gpu_upper.contains("RTX 30") || gpu_upper.contains("AMPERE") {
+                320.0
+            } else {
+                // RTX 20 / Turing and general dedicated GPUs
+                245.0
+            };
+            ((effective_bw / (size_gb + 0.35)) * 0.42).clamp(18.0, 195.0)
+        }
+        HardwareFit::PartialCpuOffload => {
+            let cpu_bw = if diag.has_avx512 {
+                18.0
+            } else if diag.has_avx2 {
+                13.5
+            } else {
+                6.5
+            };
+            (cpu_bw / (size_gb + 0.5)).clamp(3.0, 95.0)
+        }
+        HardwareFit::IncompatibleSpillover => 1.2,
+    };
+
+    ((raw_tps * 10.0).round() / 10.0) as f32
 }
 
 #[cfg(test)]
@@ -387,5 +441,39 @@ mod tests {
             diag.gpu_name, "NVIDIA GeForce Dedicated",
             "Must preserve real GPU name instead of discarded static placeholder"
         );
+    }
+
+    #[test]
+    fn test_variant_throughput_differentiates_quant_sizes() {
+        let diag_rtx2060 = HardwareDiagnostic {
+            has_dedicated_gpu: true,
+            gpu_name: "NVIDIA GeForce RTX 2060".to_string(),
+            cpu_name: "Intel Core i9".to_string(),
+            vram_total_mb: 6144,
+            vram_free_mb: 5000,
+            vram_safe_usable_mb: 5294,
+            host_ram_total_mb: 32768,
+            host_ram_available_mb: 24000,
+            host_ram_safe_usable_mb: 20000,
+            cpu_cores_physical: 8,
+            cpu_cores_logical: 16,
+            has_avx2: true,
+            has_avx512: false,
+        };
+
+        let q4_bytes = 2650 * 1024 * 1024;
+        let q5_bytes = 3100 * 1024 * 1024;
+        let tps_q4 = estimate_variant_throughput_tps(&diag_rtx2060, HardwareFit::OptimalVram, q4_bytes, 4_000_000_000);
+        let tps_q5 = estimate_variant_throughput_tps(&diag_rtx2060, HardwareFit::OptimalVram, q5_bytes, 4_000_000_000);
+
+        assert!(tps_q4 > tps_q5, "Q4_K_M ({}) should project higher TPS than Q5_K_M ({})", tps_q4, tps_q5);
+        assert!(tps_q4 >= 34.0 && tps_q4 <= 45.0, "4B Q4 TPS {} out of expected RTX 2060 range", tps_q4);
+
+        let small_360m_bytes = 225 * 1024 * 1024;
+        let tps_360m = estimate_variant_throughput_tps(&diag_rtx2060, HardwareFit::OptimalVram, small_360m_bytes, 360_000_000);
+        assert!(tps_360m >= 150.0, "360M TPS {} should reflect featherweight speed", tps_360m);
+
+        let tps_cpu = estimate_variant_throughput_tps(&diag_rtx2060, HardwareFit::PartialCpuOffload, q4_bytes, 4_000_000_000);
+        assert!(tps_cpu < tps_q4 && tps_cpu >= 3.0);
     }
 }

@@ -28,10 +28,12 @@ pub use downloader::{DownloadItem, DownloadManager, DownloadState};
 pub use error::InventoryError;
 pub use hf_client::{extract_quant_tag, HfModelFile, HfSearchResult, HuggingFaceClient};
 pub use profiler::{
-    detect_cpu_brand_string, estimate_kv_cache_mb, estimate_throughput_tps, evaluate_model_fit,
-    probe_hardware, HardwareDiagnostic, HardwareFit,
+    detect_cpu_brand_string, estimate_kv_cache_mb, estimate_throughput_tps,
+    estimate_variant_throughput_tps, evaluate_model_fit, probe_hardware, HardwareDiagnostic,
+    HardwareFit,
 };
 pub use registry::{
-    get_curated_catalog, get_recommended_triad, get_recommended_triad_from_models,
-    BenchmarkExpectation, HuggingFaceModelItem, QuantizationVariant, RecommendedTriad,
+    build_dynamic_hf_catalog_item, get_curated_catalog, get_curated_catalog_from_models,
+    get_recommended_triad, get_recommended_triad_from_models, BenchmarkExpectation,
+    HuggingFaceModelItem, QuantizationVariant, RecommendedTriad,
 };
