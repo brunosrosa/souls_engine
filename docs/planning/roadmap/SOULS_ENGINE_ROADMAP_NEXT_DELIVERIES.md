@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)
-> **VERSÃO CONSOLIDADA:** v0.9.0 (Fevereiro/2026) ➔ Meta Final: v1.0.0 Real
+> **VERSÃO CONSOLIDADA:** v0.9.1 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -89,8 +89,8 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestone v0.7.3** | **Universal Cloud Dispatch Gateway & Fallback Chains** | **100% CONCLUÍDO** | **souls_model_router + souls_llm_cloud_arena + souls_server:** Resolução de contingência em sub-150ms (`resolve_fallback_chain`), Circuit Breaker & Quarentena sob HTTP 429/500/timeout com auto-recuperação, FinOps Prompt Cache (DeepSeek, Groq, Cerebras, Together, Bedrock, Azure), catálogo multi-cloud canônico expandido e sub-aba visual `🛡️ Provedores & Fallback` no Dashboard (56/56 testes PASS). |
 | **Alfândega v0.7.x** | **Revisão Ampla, Hardening & Release Oficial** | **100% CONCLUÍDO** | **Inspeção de Alfândega:** 193/193 testes PASS no workspace, isolamento Axum de RNG thread-safety (`std::thread::spawn`), MCP `route_subtask` enriquecido com `fallback_chain`/`cached_tokens`/`max_budget_usd`, compilação Release MSVC LTO (114.4 MB), live smoke test sub-5ms e instalação operacional em `%LOCALAPPDATA%\SoulsEngine` via `tools/install_souls.ps1`. |
 | **Milestones v0.8.0 ➔ v0.8.3** | **Streaming PDF, Gateways Globais & Visão Cognitiva O(1)** | **100% CONCLUÍDO** | PDF Streaming nativo em SQLite STRICT WAL, integração de gateways de CLIs agênticas (`agy`, `claude`, `codex`), reverse-engineering do NotebookLM (Google Universe Bridge / GV1), e visão AXTree O(1) sem alocação de VRAM. |
-| **Milestone v0.9.0** | **SSOT de Modelos, Cockpit de Evolução, Quarentena & Unificação Multi-Cloud** | **100% CONCLUÍDO** | **v0.9.0 Oficial:** Agnosticismo real de hardware no backend (Dynamic NVML / profiler CPU Brand / zero `%USER%` hardcoded em Rust), parser MoE inteligente (`30B-A3B`, `8x7B`, `8x22B`), ciclo de quarentena de skills com endpoints de descarte/limpeza (`/discard` e `/clear`), Doctor 2.0 com cofre atômico de credenciais persistente (`/credentials/save`), unificação dos 16 provedores canônicos no ParetoBandit/Arena/Subagentes, Cockpit de Evolução Pessoal com 4 KPIs e ações rápidas no Overview, modais nativos `appConfirm`/`appPrompt` e resolução de todos os 175 onclicks (296/296 testes PASS). A purga profunda de inline styles e ícones SVG foi formalmente decomposta para a Milestone v0.9.5 dedicada de Design System. |
-| **Milestone v0.9.5** | **Precision Dark UI, Ícones Vetoriais SVG & Purga de Estilos Inline** | **PROGRAMADO** | Purga massiva dos 3.070 atributos `style="..."` inline nos templates, sistema unificado de ícones vetoriais SVG (substituindo emojis de sistema), eliminação dos 30+ hardcodings de hardware residual no front-end, gavetas `<details class="lab-drawer">` para os 6 simuladores e garantia de CLS = 0 (Zero Layout Shift). |
+| **Milestone v0.9.0** | **SSOT de Modelos, Cockpit de Evolução, Quarentena & Unificação Multi-Cloud** | **100% CONCLUÍDO** | **v0.9.0 Oficial:** Agnosticismo real de hardware no backend (Dynamic NVML / profiler CPU Brand / zero `%USER%` hardcoded em Rust), parser MoE inteligente (`30B-A3B`, `8x7B`, `8x22B`), ciclo de quarentena de skills com endpoints de descarte/limpeza (`/discard` e `/clear`), Doctor 2.0 com cofre atômico de credenciais persistente (`/credentials/save`), unificação dos 16 provedores canônicos no ParetoBandit/Arena/Subagentes, Cockpit de Evolução Pessoal com 4 KPIs e ações rápidas no Overview, modais nativos `appConfirm`/`appPrompt` e resolução de todos os 175 onclicks (296/296 testes PASS). A purga profunda de inline styles e ícones SVG foi formalmente concluída na Milestone v0.9.1 dedicada de Design System. |
+| **Milestone v0.9.1** | **Precision Dark UI, Ícones Vetoriais SVG & Purga de Estilos Inline** | **100% CONCLUÍDO** | **v0.9.1-A..F (76/76 testes PASS em `souls_server`):** Topbar consolidada em 6 Pilares + subnavs contextuais + Settings em 4 categorias + Command Palette (`Ctrl+K`), sprite SVG Duotone (`80` símbolos em `components/icons.svg` + `uiIcon()` sem emojis residuais na UI), purga total de hardcodes de hardware (`RTX`/`9980HK`/`i9`) e caminhos absolutos (`Z:\souls_engine`/`rosas`) por vínculos reativos de telemetria/host, 6 Lab Drawers `<details class="lab-drawer">` colapsáveis, tokens `oklch` + purga dos estilos inline estáticos nos 27 parciais HTML e 5 scripts JS (`styles.css`), estabilização CLS = 0 (`min-height` + `contain: layout style;`), Auto-Save com debounce de 400ms em Settings visuais, alinhamento dos 9 perfis cognitivos ADR-009 e ranking multiobjetivo na Cloud Arena, Trio Recomendado evolutivo + catálogo HF híbrido/trending + estimativa física de TPS e Explorer unificado com autocomplete no Model Hub, auditoria cross-tab zero-mocks/zero-404 nas 8 abas e 6 sub-abas de Settings, e Cockpit Pulse auditável em 4 pilares. |
 
 ### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
@@ -113,7 +113,7 @@ Cruzamento do draft [`docs/reference/lembretes.txt`](file:///Z:/souls_engine/doc
 | **#4 Perfis do Hermes** | Inspecionar/editar `AGENTS.md`, `SOUL.md` e configs dos perfis no Dashboard | **CONCLUÍDO (v0.6.0)** | Concluído em `souls_server`: Aba `🎭 Personas`, Guardião de Privacidade & Coerência em 1 clique, Bancada Dupla, Estúdio Criar/Clonar e Comparador Myers Diff. |
 | **#5 Deep Research Engine** | Capability/Tool base de pesquisa profunda em árvore com síntese e fontes | **GAP IDENTIFICADO** | **Milestone v0.7.0** ➔ Ref.: [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/docs/reference/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md). |
 | **#6 Gateway Cloud Multi-Provedor** | Universalizar despacho de subagentes para além de OpenAI/Claude/Gemini | **GAP IDENTIFICADO** | **Milestone v0.7.0** (DeepSeek API, Groq, Together, Bedrock). |
-| **#13 Precision Dark UI & SVG Icons** | Purga de 3.070 inline styles, ícones SVG, gavetas de simuladores e eliminação de hardware fixo na UI | **GAP IDENTIFICADO** | **Milestone v0.9.1** (Maturidade Visual, Design System Canônico & Zero Layout Shift). |
+| **#13 Precision Dark UI & SVG Icons** | Purga de 3.070 inline styles, ícones SVG, gavetas de simuladores e eliminação de hardware fixo na UI | **CONCLUÍDO (v0.9.1)** | **Milestone v0.9.1** (Maturidade Visual, Design System Canônico, Auto-Save 400ms & Zero Layout Shift). |
 | **#12 Google Personal & Life Hub** | Workspace (Gmail/Agenda/Docs/Sheets), Gemini Notebooks UI no Dashboard, Keep, Contacts, Maps e Gems Web | **GAP IDENTIFICADO** | **Milestone v0.9.2** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
 | **#11 Percepção Multimodal Híbrida** | AXTree O(1) + On-Demand Snapshots (Canvas/Figma) + Áudio Soberano Local na CPU i9 (0 MB VRAM) | **GAP IDENTIFICADO** | **Milestone v0.9.3** ➔ Ref.: Arquitetura Híbrida de Grounding & FinOps. |
 | **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **GAP IDENTIFICADO** | **Milestone v0.9.4** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
@@ -153,9 +153,9 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.0        │ SSOT Modelos, Pulse & Multi-Cloud│ [CONCLUÍDO] Backend + Cockpit │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.1 (PRÓX) │ Precision Dark UI & SVG Icons    │ Purga 3k inline styles + Labs │
+│ v0.9.1        │ Precision Dark UI & SVG Icons    │ [CONCLUÍDO] SVG+OKLCH+AutoSave│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.2        │ Google Personal & Life Hub       │ Workspace, NotebookLM UI, Keep│
+│ v0.9.2 (PRÓX) │ Google Personal & Life Hub       │ Workspace, NotebookLM UI, Keep│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.3        │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
@@ -330,25 +330,27 @@ Abertura do ecossistema para a vida pessoal e profissional do operador através 
 
 ---
 
-### MILESTONE v0.9.1: PRECISION DARK DESIGN SYSTEM, ÍCONES VETORIAIS SVG & PURGA DE DÍVIDA DE FRONTEND
+### MILESTONE v0.9.1: PRECISION DARK DESIGN SYSTEM, ÍCONES VETORIAIS SVG & PURGA DE DÍVIDA DE FRONTEND — [100% CONCLUÍDO — 76/76 TESTES PASS]
 
 A consolidação estética e ergonômica definitiva da interface do usuário (Single Page Application headless servida na porta `:9123`), elevando o acabamento visual do Dashboard para o nível de produtos como Linear, Raycast e Vercel, e liquidando 100% da dívida técnica residual de front-end do `implementation_plan.md`:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                   DECOMPOSIÇÃO CANÔNICA DA MILESTONE v0.9.1                            │
+│                   DECOMPOSIÇÃO CANÔNICA DA MILESTONE v0.9.1 [CONCLUÍDO]                │
 ├───────────────┬──────────────────────┬────────────────────────┬────────────────────────┤
 │ Sub-Fase      │ Escopo de Domínio    │ Componentes Alvo       │ Entrega Principal      │
 ├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.1-A      │ Purga Inline Styles  │ styles.css & templates │ 3.070 styles -> Classes│
+│ v0.9.1-A      │ Navegação & Cmd+K    │ topbar/sidebar/modals  │ 6 Pilares + Ctrl+K     │
 ├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.1-B      │ Ícones Vetoriais SVG │ components/modals.html │ 100% Emojis -> SVG Duot│
+│ v0.9.1-B      │ Ícones Vetoriais SVG │ icons.svg & scripts/   │ 80 Símbolos Duot+uiIcon│
 ├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.1-C      │ Limpeza de Hardware  │ templates/ & scripts/  │ 0 RTX/i9 fixos na UI   │
+│ v0.9.1-C      │ Limpeza de Hardware  │ templates/ & scripts/  │ 0 RTX/i9/Paths fixos   │
 ├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
 │ v0.9.1-D      │ Gavetas de Lab (6)   │ tabs/ & settings/      │ Simuladores em Details │
 ├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
-│ v0.9.1-E      │ A2UI / CLS Zero      │ dashboard.js & layouts │ Zero Shift & Ergonomia │
+│ v0.9.1-E      │ OKLCH & Inline Purge │ styles.css & templates │ Purga 3k styles -> CSS │
+├───────────────┼──────────────────────┼────────────────────────┼────────────────────────┤
+│ v0.9.1-F      │ CLS=0, AutoSave & QA │ css/dashboard.js/tests │ Debounce 400ms + 76 ok │
 └───────────────┴──────────────────────┴────────────────────────┴────────────────────────┘
 ```
 

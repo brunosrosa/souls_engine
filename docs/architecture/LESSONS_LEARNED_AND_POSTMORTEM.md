@@ -97,3 +97,23 @@ Ao rodar `hermes update`, pacotes binários dentro de `%LOCALAPPDATA%\hermes\too
 2. **Âncoras Absolutas Fora de Fluxo:** Todo elemento de canto superior em card flexbox deve residir em um container com `position: absolute; pointer-events: none;` (`.installed-badge-anchor`), garantindo impacto zero no alinhamento vertical dos filhos do flex.
 3. **Partição Explícita de VRAM:** A telemetria física expõe explicitamente `Teto Pesos: ~3.8 GB (Q4_K_M)` e `Margem KV Cache: ~1.3 GB`, com teto seguro para 7B calibrado em `16.384 tokens (até 32k c/ KV Q4)`.
 
+---
+
+## 6. POST-MORTEM & APRENDIZADOS: AUDITORIA CROSS-TAB, PARIDADE ADR-009 E CURADORIA DINÂMICA (v0.9.1)
+
+### 6.1 Contexto & Sintomas Identificados
+1. **Desalinhamento de Perfis Cognitivos na Cloud Arena e Settings:** A Cloud Arena expunha apenas 6 perfis estáticos enquanto a governança ADR-009 exige 9 perfis (`executive`, `coding`, `agentic`, `reasoning`, `fast`, `design`, `research`, `security`, `curation`), além de perfis built-in em `souls_server::profiles` usando IDs legados (`web_researcher`, `memory_curator`, `security_auditor`) que falhavam quando o catálogo era reidratado parcialmente.
+2. **Estagnação de Curadoria e Falsos "Instalado" no Model Hub:** "O Trio Recomendado" apenas apontava modelos já baixados sem sugerir o próximo upgrade compatível; "Melhores Escolhas por Função" dependia de metadados estáticos sem fusão com novidades ao vivo do Hugging Face; e a marcação `Instalado` verificava apenas a família/repositório, exibindo `⚡ Usar` mesmo para quantizações (`Q6_K`, `Q8_0`) que não estavam em disco.
+3. **KPIs Fictícios e Stubs em Abas Secundárias:** O Cockpit Pulse e algumas sub-abas de Settings exibiam métricas estáticas (`$14.20 USD`, `142 fatos`, `88.4%`) ou botões simuladores desconectados da telemetria bare-metal real, além de controles sem feedback tátil de sincronização (`Atualizar`).
+
+### 6.2 Causa-Raiz Técnica
+1. **Identificadores Divergentes entre Crates & Frontend:** Ausência de contrato único de IDs dos 9 perfis entre `souls_llm_cloud_arena`, `souls_server::profiles` e o router matrix da UI.
+2. **Casamento Frouxo de Artefatos GGUF:** O estado `is_installed` comparava nomes de modelo/família em vez do arquivo GGUF e da quantização exata selecionada no dropdown; as estimativas de throughput usavam constantes fixas em vez de cálculo físico por largura de banda de memória.
+3. **Resquícios de Protótipo na Camada de Telemetria:** Handlers de resumo retornavam literais de fallback mesmo quando SQLite STRICT WAL, LadybugDB, Obsidian e NVML já forneciam contagens reais.
+
+### 6.3 Solução Implementada & Regras Canônicas
+1. **Paridade Estrita dos 9 Perfis ADR-009:** Unificação canônica de `executive`, `coding`, `agentic`, `reasoning`, `fast`, `design`, `research`, `security` e `curation` em todo o stack (`souls_llm_cloud_arena`, `souls_server::profiles`, Router Matrix e filtros da Cloud Arena), com ranking multiobjetivo dinâmico na Fronteira de Pareto e reidratação individual de perfis faltantes.
+2. **Model Hub Evolutivo, Híbrido & Físico:** Implementação do Trio Recomendado em **Modo Evolutivo** (campeão local + próximo upgrade compatível com o teto VRAM da GPU), catálogo híbrido (curados + HF live/trending), detecção estrita `is_installed` por variante de quantização (alternando dinamicamente `⚡ Usar` vs `⬇ Baixar`), estimativa física de TPS por largura de banda e Explorer HF unificado com autocomplete (`250 ms` debounce).
+3. **Telemetria 100% Real & Feedback Visual Zero-Atrito:** Substituição integral dos stubs em `/api/v1/system/pulse` e Settings por métricas auditáveis em 4 pilares (SQLite STRICT, LadybugDB, Obsidian e NVML), com formatação concisa de hardware (`Estável (XX°C • X.X/X.X GB)`) e trava visual anti-duplo clique com pulso de confirmação no botão `Atualizar`.
+
+
