@@ -105,4 +105,15 @@ A base de código e documentação segue uma divisão linguística estrita:
 Com base no caderno de post-mortems (`docs/architecture/LESSONS_LEARNED_AND_POSTMORTEM.md`):
 1. **Proibição de Edições Cegas em Arquivos Estruturados (YAML/TOML):** É terminantemente proibido utilizar substituições simplistas de texto (`starts_with`) em arquivos hierárquicos (como o `config.yaml` do Hermes). Toda mutação deve navegar explicitamente até a chave correta para evitar corrupção sintática de blocos filhos.
 2. **Protocolo Single-Instance & Zombie Immunity:** O daemon deve sondar ativamente `http://127.0.0.1:9123/health` caso a porta TCP esteja ocupada. Se a instância já estiver saudável, deve encerrar de forma limpa com código 0 (sem panic). Se for um zumbi, deve instruir o uso de `stop_souls.bat`.
-3. **Dupla Identidade de Binários Nativos:** A esteira de compilação release deve disponibilizar tanto o nome de especificação `souls_server.exe` quanto o executável com identidade de produto `souls_engine.exe`.
+3. **Dupla Identidade de Binários Nativos:** A esteira de compilação release deve disponibilizar tanto o nome de especificação `souls_server.exe` quanto o executável com identidade de produto `souls_engine.exe`.
+
+## 9. LEI DE UX CENTRADA NO HUMANO, FACILITADORES DE ONBOARDING & PROIBIÇÃO DE JARGÃO INTERNO
+
+Capturado via ciclo de auto-aprendizado (`agent-self-learning-loop`) após feedback direto do Arquiteto:
+1. **Proibição de Jargão Interno e Códigos Crípticos na UI Humana:** É **TERMINANTEMENTE PROIBIDO** expor nomes internos de protocolo, IDs de RPC ou acrônimos de engenharia na superfície primária do usuário (ex.: `Wiz`, `QA9ei —`, `wXbhsf —`, `FLmJqe`, `GV2`, `BMAD`, `HOTL/HITL`, `Taint Guard`, `PKCE`, `HTTP Range 206`, `sendUpdates=none`, `Routes v2`). A complexidade técnica deve permanecer encapsulada no código e, quando útil para depuração, recolhida dentro de gavetas `<details class="lab-drawer">` discretas; toda interface visível deve usar linguagem humana clara orientada ao benefício prático.
+2. **Facilitadores 1-Clique e Fluxos Acionáveis (Zero "MVP Duro"):** Nunca entregue formulários secos exigindo que o usuário descubra onde obter chaves, arquivos JSON ou comandos de terminal. Toda integração externa (Google OAuth, NotebookLM, APIs de nuvem, Maps) DEVE oferecer:
+   - Link direto oficial de obtenção (`"Obter chave →"` / `"Abrir Console →"`),
+   - Campo inline ou upload/importador de arquivo (`.json`) com botão **"Salvar e Ativar"** ou **"Conectar em 1 clique"**,
+   - Passo a passo curto em linguagem humana explicando o porquê da configuração.
+3. **Priorização Visual pelo Uso Real do Operador:** Em superfícies de conexão e configuração, os serviços de uso cotidiano imediato (ex.: Conta Google / NotebookLM logo após os CLIs locais) devem vir em prioridade visual acima de catálogos extensos de gateways secundários.
+4. **Proibição de "Passou no Teste, Basta":** Testes unitários com mocks não garantem experiência real no Windows. Antes de declarar uma entrega pronta, valide explicitamente no host real resolução de `.exe`/`.cmd`/`.bat`, timeouts realistas de subprocessos (Node/Python/CLIs), `sccache` apontando para `Z:\souls_engine\.souls_data\sccache` e o fluxo visual/HTTP completo no daemon vivo.
