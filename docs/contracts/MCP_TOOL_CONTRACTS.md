@@ -603,3 +603,402 @@ Qualquer exceção capturada pelas barreiras `catch_unwind` da crate `souls_core
 4. **PROIBIÇÃO DE I/O BLOQUEANTE NO DISCO FORA DO BUFFER:** Ferramentas MCP não devem ler ou gravar arquivos sem passar pelas salvaguardas da crate `souls_core` e validações de caminho em `Z:\`.
 5. **PROIBIÇÃO DE TELEMETRIA SÍNCRONA:** O registro de métricas de invocação de ferramentas deve ser emitido via canal assíncrono Tokio MPSC para esvaziamento agregado a cada 5 segundos no SQLite, sem travar o ciclo de resposta da ferramenta.
 6. **DISCIPLINA DE RESPOSTA DAS FERRAMENTAS RESTRINGIDAS:** Ferramentas marcadas como `UPGRADE_CANDIDATE` não devem ser removidas da árvore de código; devem ser investigadas e transplantadas com as adaptações da arquitetura v7.
+
+---
+
+## 7. EXPANSÃO CANÔNICA DA MILESTONE v0.9.2 — GOOGLE PERSONAL & LIFE HUB E BMAD AGENT INBOX
+
+> **CATÁLOGO TOTAL CONSOLIDADO (v0.9.2):** **80 Ferramentas Canônicas** (**7** Boot Level 0 + **73** Progressivas sob demanda) + **16 Skills Canônicas** no Two-Stage Semantic Switchboard (`souls_server::mcp::switchboard`).  
+> **REFERÊNCIA ARQUITETURAL:** [ADR-030](file:///Z:/souls_engine/docs/decisions/adrs/ADR-030-Google-Personal-Life-Hub-BMAD-Inbox-e-Hibrido-Seguro.md) • Implementação: `crates/souls_server/src/mcp/tools_google.rs`, `crates/souls_server/src/mcp/registry.rs`.
+
+### 7.1 Distribuição Atualizada dos 11 Namespaces (80 Tools)
+
+| **Namespace** | **Qtd** | **Observação de Evolução** |
+| :--- | :---: | :--- |
+| `core` | **1** | `tool_search` (Boot Level 0; `namespace` enum expandido para incluir `research`, `ui`, `google`, `inbox`) |
+| `code` | **8** | `outline` e `symbol` em Boot Level 0 |
+| `context` | **8** | `read` em Boot Level 0 |
+| `memory` | **14** | Memória L2/L3 + grafo LadybugDB + subagentes/handoff |
+| `think` | **6** | `thinking` em Boot Level 0 |
+| `ops` | **9** | `route_subtask` em Boot Level 0; inclui `cloud_champions`, `cloud_arena_sync`, `agentic_dispatch` |
+| `sys` | **10** | Inclui `tree`, `search`, `shell`, `execute`, `fetch_web`, `web_search`, `routes`, etc. |
+| `research` | **4** | `research_claim`, `research_event`, `research_steering`, `research_complete` (v0.7.0) |
+| `ui` | **2** | `ui_inspect`, `ui_interact` (v0.8.3 AXTree LEAN) |
+| `google` | **15** | `notebooklm_rpc` (v0.8.2) + **14 novas ferramentas Life Hub (v0.9.2)** |
+| `inbox` | **3** | **3 novas ferramentas BMAD Agent Inbox (v0.9.2)** |
+| **TOTAL** | **80** | **7 Boot Level 0 + 73 Progressivas** |
+
+Atualização do enum `namespace` em `tool_search` (`registry.rs`):
+```json
+"enum": ["all", "code", "context", "memory", "think", "ops", "sys", "research", "ui", "google", "inbox"]
+```
+
+### 7.2 As 14 Novas Ferramentas do Namespace `google.*` (v0.9.2)
+
+Todas as ferramentas abaixo possuem `is_level_0: false` (descobertas via `tool_search(namespace="google")` ou Switchboard) e executam governança BMAD (`BlastRadiusTier`, `SessionTaintTracker`, `wrap_untrusted_content`).
+
+#### 7.2.1 `google_accounts`
+- **Descrição:** Gerencia contas Google no cofre encriptado GV2, executa o Google Doctor, importa credenciais `gws` e ajusta políticas BMAD.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["list", "doctor", "import_gws", "set_policy", "upsert", "delete"], "default": "list" },
+    "account_id": { "type": "string" },
+    "email": { "type": "string" },
+    "label": { "type": "string" },
+    "kind": { "type": "string", "enum": ["personal_gmail", "workspace_enterprise", "secondary_sandbox"] },
+    "policy": { "type": "string", "enum": ["read_only", "drafts_and_tasks_only", "balanced_hotl_hitl", "whitelist_write"] },
+    "is_primary": { "type": "boolean" },
+    "write_whitelist_ids": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.2.2 `google_briefing`
+- **Descrição:** Gera o Daily Briefing unificado (Agenda Calendar, Blocos Deep Focus, Trânsito Routes v2, Gmail Prioritário, Tasks e Inbox BMAD) com degradação graciosa offline.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "account_id": { "type": "string", "description": "ID ou email da conta Google opcional." }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.2.3 `google_gmail`
+- **Descrição:** Triagem determinística de e-mails Gmail, leitura com delimitação anti-injection, criação de rascunhos, rótulos em lote e envio via BMAD Inbox.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["triage", "read", "draft", "bulk", "send"], "default": "triage" },
+    "account_id": { "type": "string" },
+    "query": { "type": "string" },
+    "max_results": { "type": "integer" },
+    "message_id": { "type": "string" },
+    "to": { "type": "string" },
+    "subject": { "type": "string" },
+    "body": { "type": "string" },
+    "ids": { "type": "array", "items": { "type": "string" } },
+    "add_labels": { "type": "array", "items": { "type": "string" } },
+    "remove_labels": { "type": "array", "items": { "type": "string" } },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.2.4 `google_calendar`
+- **Descrição:** Consulta agenda Google Calendar, encontra blocos de foco profundo (Deep Focus Slots) e cria/remove eventos com Taint Guard BMAD.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["list", "focus_slots", "create", "delete"], "default": "list" },
+    "account_id": { "type": "string" },
+    "time_min": { "type": "string" },
+    "time_max": { "type": "string" },
+    "work_start": { "type": "string" },
+    "work_end": { "type": "string" },
+    "min_duration_mins": { "type": "integer" },
+    "summary": { "type": "string" },
+    "start_rfc3339": { "type": "string" },
+    "end_rfc3339": { "type": "string" },
+    "location": { "type": "string" },
+    "attendees": { "type": "array", "items": { "type": "string" } },
+    "send_updates": { "type": "string" },
+    "event_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.2.5 `google_drive`
+- **Descrição:** Pesquisa arquivos no Google Drive, inspeciona metadados, baixa para exchange sandbox ou propõe compartilhamento/exclusão via BMAD Inbox.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["search", "metadata", "download_sandbox", "share", "delete"], "default": "search" },
+    "account_id": { "type": "string" },
+    "query": { "type": "string" },
+    "page_size": { "type": "integer" },
+    "file_id": { "type": "string" },
+    "filename": { "type": "string" },
+    "role": { "type": "string" },
+    "perm_type": { "type": "string" },
+    "email_address": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.2.6 `google_docs_scratchpad`
+- **Descrição:** Rascunho incremental por linhas para Google Docs (`load`, `insert`, `replace`, `delete`, `render`) e `push` via Myers Diff no BMAD Agent Inbox.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["load", "insert", "replace", "delete", "render", "push"], "default": "load" },
+    "doc_id": { "type": "string" },
+    "title": { "type": "string" },
+    "at_line": { "type": "integer" },
+    "start_line": { "type": "integer" },
+    "end_line": { "type": "integer" },
+    "lines": { "type": "array", "items": { "type": "string" } },
+    "remote_baseline": { "type": "string" },
+    "account_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "required": ["doc_id"],
+  "additionalProperties": false
+}
+```
+
+#### 7.2.7 `google_sheets`
+- **Descrição:** Leitura e análise financeira determinística (totais, categorias, anomalias >2x média, projeção 30d) ou escrita via BMAD Inbox em Google Sheets.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["analyze", "read", "write"], "default": "analyze" },
+    "spreadsheet_id": { "type": "string" },
+    "range": { "type": "string" },
+    "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } },
+    "values": { "type": "array", "items": { "type": "array" } },
+    "account_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "required": ["spreadsheet_id", "range"],
+  "additionalProperties": false
+}
+```
+
+#### 7.2.8 `google_slides`
+- **Descrição:** Planejamento estruturado (5 a 15 slides) e criação assistida de apresentações Google Slides.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["plan", "create"], "default": "plan" },
+    "topic": { "type": "string" },
+    "briefing": { "type": "string" },
+    "target_slides": { "type": "integer" },
+    "account_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "required": ["topic"],
+  "additionalProperties": false
+}
+```
+
+#### 7.2.9 `google_tasks`
+- **Descrição:** Gerencia Google Tasks, executa Obsidian Quick Capture (fallback soberano para Google Keep em contas pessoais) e checa elegibilidade Keep Enterprise.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["list", "create", "complete", "quick_capture", "check_keep_eligibility"], "default": "list" },
+    "account_id": { "type": "string" },
+    "tasklist_id": { "type": "string" },
+    "show_completed": { "type": "boolean" },
+    "title": { "type": "string" },
+    "notes": { "type": "string" },
+    "due_rfc3339": { "type": "string" },
+    "task_id": { "type": "string" },
+    "body": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.2.10 `google_contacts`
+- **Descrição:** Busca contatos via Google People API e detecta aniversários próximos.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["search", "upcoming_birthdays"], "default": "search" },
+    "query": { "type": "string" },
+    "page_size": { "type": "integer" },
+    "within_days": { "type": "integer" },
+    "contacts": { "type": "array", "items": { "type": "object" } },
+    "account_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.2.11 `google_commute`
+- **Descrição:** Calcula rota com tráfego ao vivo (Google Maps Routes API v2) e gera alerta proativo de horário de saída.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "origin": { "type": "string" },
+    "destination": { "type": "string" },
+    "event_id": { "type": "string" },
+    "event_title": { "type": "string" },
+    "event_start_rfc3339": { "type": "string" },
+    "buffer_mins": { "type": "integer" },
+    "api_key": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "required": ["origin", "destination"],
+  "additionalProperties": false
+}
+```
+
+#### 7.2.12 `google_youtube`
+- **Descrição:** Extrai e cacheia transcrições de vídeos YouTube (Innertube + parser XML/SRV3 puro em Rust) com delimitação anti-injection.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "url_or_id": { "type": "string" },
+    "preferred_lang": { "type": "string", "default": "en" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "required": ["url_or_id"],
+  "additionalProperties": false
+}
+```
+
+#### 7.2.13 `google_notebooklm`
+- **Descrição:** Gerencia cadernos Google NotebookLM, fontes Drive (`check_freshness`/`sync_drive`), RAG query, Studio Audio Overview e Mapas Mentais.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["list", "get", "add_source", "check_freshness", "sync_drive", "query", "studio_create", "studio_status", "mindmap"], "default": "list" },
+    "notebook_id": { "type": "string" },
+    "source_id": { "type": "string" },
+    "source_url": { "type": "string" },
+    "query": { "type": "string" },
+    "prompt": { "type": "string" },
+    "arguments": { "type": "array" },
+    "session_id": { "type": "string" },
+    "endpoint_override": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.2.14 `google_gems`
+- **Descrição:** Gerencia catálogo local de Custom Gems e despacha prompts via Gemini API oficial (bloqueando `StreamGenerate` em contas primárias).
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["list", "upsert", "delete", "dispatch", "secondary_stream_generate"], "default": "list" },
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "system_instruction": { "type": "string" },
+    "model": { "type": "string" },
+    "backend": { "type": "string" },
+    "remote_gem_id": { "type": "string" },
+    "prompt": { "type": "string" },
+    "account_id": { "type": "string" },
+    "api_key": { "type": "string" },
+    "base_url": { "type": "string" },
+    "model_hash": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+### 7.3 As 3 Novas Ferramentas do Namespace `inbox.*` (BMAD Agent Inbox)
+
+#### 7.3.1 `inbox_list`
+- **Descrição:** Lista propostas pendentes ou históricas no BMAD Agent Inbox (com contagem de pendências e redação de tokens Gravity Lock).
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "status": { "type": "string", "enum": ["all", "pending", "approved", "executed", "rejected", "failed", "expired"], "default": "all" },
+    "limit": { "type": "integer", "default": 50 }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 7.3.2 `inbox_inspect_diff`
+- **Descrição:** Inspeciona o Myers Diff completo, snapshots `before`/`after`, nível de risco e status de taint de uma proposta no BMAD Agent Inbox.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "proposal_id": { "type": "string" }
+  },
+  "required": ["proposal_id"],
+  "additionalProperties": false
+}
+```
+
+#### 7.3.3 `inbox_propose`
+- **Descrição:** Enfileira uma proposta de mutação externa no BMAD Agent Inbox computando Myers Diff real via `souls_ast` e herdando estado de Taint Guard da sessão.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "account_id": { "type": "string" },
+    "service": { "type": "string" },
+    "action": { "type": "string" },
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "tier": { "type": "string", "enum": ["tier0_read_only", "tier1_safe_reversible", "tier2_external_destructive"] },
+    "target_resource": { "type": "string" },
+    "before_snapshot": { "type": "string" },
+    "after_snapshot": { "type": "string" },
+    "myers_diff": { "type": "string" },
+    "payload_json": { "type": "object" },
+    "ttl_secs": { "type": "integer" },
+    "session_id": { "type": "string" }
+  },
+  "required": ["service", "action", "title", "target_resource"],
+  "additionalProperties": false
+}
+```
+
+### 7.4 Registro da 16ª Skill Canônica no Switchboard (`google-life-hub`)
+
+Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª skill canônica é registrada com roteamento direto para o domínio Google/Inbox:
+- **Identificador:** `google-life-hub`
+- **Arquivo de Playbook:** `.agents/skills/google-life-hub/SKILL.md`
+- **Primary Tools:** `google_briefing`, `google_gmail`, `google_calendar`, `google_docs_scratchpad`, `google_notebooklm`, `inbox_propose`, `inbox_list`
+- **Keywords de Afinidade Semântica:** `gmail`, `email`, `calendar`, `agenda`, `drive`, `docs`, `sheets`, `slides`, `tasks`, `keep`, `contacts`, `maps`, `commute`, `youtube`, `transcript`, `notebooklm`, `podcast`, `audio`, `gems`, `inbox`, `bmad`, `diff`, `google`

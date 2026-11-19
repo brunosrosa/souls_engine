@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)
-> **VERSÃO CONSOLIDADA:** v0.9.1 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
+> **VERSÃO CONSOLIDADA:** v0.9.2 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -91,6 +91,7 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestones v0.8.0 ➔ v0.8.3** | **Streaming PDF, Gateways Globais & Visão Cognitiva O(1)** | **100% CONCLUÍDO** | PDF Streaming nativo em SQLite STRICT WAL, integração de gateways de CLIs agênticas (`agy`, `claude`, `codex`), reverse-engineering do NotebookLM (Google Universe Bridge / GV1), e visão AXTree O(1) sem alocação de VRAM. |
 | **Milestone v0.9.0** | **SSOT de Modelos, Cockpit de Evolução, Quarentena & Unificação Multi-Cloud** | **100% CONCLUÍDO** | **v0.9.0 Oficial:** Agnosticismo real de hardware no backend (Dynamic NVML / profiler CPU Brand / zero `%USER%` hardcoded em Rust), parser MoE inteligente (`30B-A3B`, `8x7B`, `8x22B`), ciclo de quarentena de skills com endpoints de descarte/limpeza (`/discard` e `/clear`), Doctor 2.0 com cofre atômico de credenciais persistente (`/credentials/save`), unificação dos 16 provedores canônicos no ParetoBandit/Arena/Subagentes, Cockpit de Evolução Pessoal com 4 KPIs e ações rápidas no Overview, modais nativos `appConfirm`/`appPrompt` e resolução de todos os 175 onclicks (296/296 testes PASS). A purga profunda de inline styles e ícones SVG foi formalmente concluída na Milestone v0.9.1 dedicada de Design System. |
 | **Milestone v0.9.1** | **Precision Dark UI, Ícones Vetoriais SVG & Purga de Estilos Inline** | **100% CONCLUÍDO** | **v0.9.1-A..F (76/76 testes PASS em `souls_server`):** Topbar consolidada em 6 Pilares + subnavs contextuais + Settings em 4 categorias + Command Palette (`Ctrl+K`), sprite SVG Duotone (`80` símbolos em `components/icons.svg` + `uiIcon()` sem emojis residuais na UI), purga total de hardcodes de hardware (`RTX`/`9980HK`/`i9`) e caminhos absolutos (`Z:\souls_engine`/`rosas`) por vínculos reativos de telemetria/host, 6 Lab Drawers `<details class="lab-drawer">` colapsáveis, tokens `oklch` + purga dos estilos inline estáticos nos 27 parciais HTML e 5 scripts JS (`styles.css`), estabilização CLS = 0 (`min-height` + `contain: layout style;`), Auto-Save com debounce de 400ms em Settings visuais, alinhamento dos 9 perfis cognitivos ADR-009 e ranking multiobjetivo na Cloud Arena, Trio Recomendado evolutivo + catálogo HF híbrido/trending + estimativa física de TPS e Explorer unificado com autocomplete no Model Hub, auditoria cross-tab zero-mocks/zero-404 nas 8 abas e 6 sub-abas de Settings, e Cockpit Pulse auditável em 4 pilares. |
+| **Milestone v0.9.2** | **Google Personal & Life Hub, BMAD Agent Inbox & Multi-Conta OAuth2** | **100% CONCLUÍDO** | **v0.9.2 Oficial (ADR-030):** Cofre encriptado multi-conta **GV2** + OAuth2 PKCE (`RFC 7636 S256`) + importação `gws` + Google Doctor, **Híbrido Seguro** (Workspace REST oficial, **Routes API v2** com `X-Goog-FieldMask`, People/Contacts, YouTube Innertube + parser XML/SRV3, Tasks + Obsidian Quick Capture para `@gmail.com`, 22+ RPCs Wiz corrigidos + `nlm` CLI, Custom Gems via Gemini API oficial com bloqueio de `StreamGenerate` na conta primária), **Governança BMAD** (`BlastRadiusTier` em 3 níveis, 4 políticas multi-conta, `wrap_untrusted_content` com nonce anti-injection, `SessionTaintTracker` 30m e `AgentInboxStore` com Myers Diff + Gravity Lock + `audit_log.jsonl`), 17 novas ferramentas MCP (`14 google.*` + `3 inbox.*` = **80 tools canônicas**), 16ª skill `google-life-hub` no Switchboard, 39 rotas `/api/v1/google/*` + 5 rotas `/api/v1/inbox/*`, e abas SPA `Google Life Hub`, `Gemini Notebooks` (player HTTP Range) e `Agent Inbox` + badge global na Topbar (zero inline styles). |
 
 ### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
@@ -114,7 +115,7 @@ Cruzamento do draft [`docs/reference/lembretes.txt`](file:///Z:/souls_engine/doc
 | **#5 Deep Research Engine** | Capability/Tool base de pesquisa profunda em árvore com síntese e fontes | **GAP IDENTIFICADO** | **Milestone v0.7.0** ➔ Ref.: [Deep Research para o Ecossistema Hermes Agent e Souls Engine.md](file:///Z:/souls_engine/docs/reference/Deep%20Research%20para%20o%20Ecossistema%20Hermes%20Agent%20e%20Souls%20Engine.md). |
 | **#6 Gateway Cloud Multi-Provedor** | Universalizar despacho de subagentes para além de OpenAI/Claude/Gemini | **GAP IDENTIFICADO** | **Milestone v0.7.0** (DeepSeek API, Groq, Together, Bedrock). |
 | **#13 Precision Dark UI & SVG Icons** | Purga de 3.070 inline styles, ícones SVG, gavetas de simuladores e eliminação de hardware fixo na UI | **CONCLUÍDO (v0.9.1)** | **Milestone v0.9.1** (Maturidade Visual, Design System Canônico, Auto-Save 400ms & Zero Layout Shift). |
-| **#12 Google Personal & Life Hub** | Workspace (Gmail/Agenda/Docs/Sheets), Gemini Notebooks UI no Dashboard, Keep, Contacts, Maps e Gems Web | **GAP IDENTIFICADO** | **Milestone v0.9.2** ➔ Ref.: [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md). |
+| **#12 Google Personal & Life Hub** | Workspace (Gmail/Agenda/Docs/Sheets), Gemini Notebooks UI no Dashboard, Tasks/Quick Capture, Contacts, Routes v2 e Gems | **CONCLUÍDO (v0.9.2)** | **Milestone v0.9.2** ➔ Concluído (ADR-030, 80 MCP tools, BMAD Agent Inbox com Myers Diff & Gravity Lock, Google Life Hub & Gemini Notebooks UI). |
 | **#11 Percepção Multimodal Híbrida** | AXTree O(1) + On-Demand Snapshots (Canvas/Figma) + Áudio Soberano Local na CPU i9 (0 MB VRAM) | **GAP IDENTIFICADO** | **Milestone v0.9.3** ➔ Ref.: Arquitetura Híbrida de Grounding & FinOps. |
 | **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **GAP IDENTIFICADO** | **Milestone v0.9.4** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
 | **#8 Souls Anthropophagy** | Ingestão mecânica de repositórios ➔ Essências ➔ Janela de Vidro (85+ colunas Google Sheets) ➔ Deep Analysis & Backlog de Implementação | **GAP IDENTIFICADO** | **Milestone v0.9.5** ➔ Ref.: `_donor/souls_mc_anthropophagy` e `Ideação Curadoria de Contexto Souls MC.md`. |
@@ -155,9 +156,9 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.1        │ Precision Dark UI & SVG Icons    │ [CONCLUÍDO] SVG+OKLCH+AutoSave│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.2 (PRÓX) │ Google Personal & Life Hub       │ Workspace, NotebookLM UI, Keep│
+│ v0.9.2        │ Google Personal & Life Hub       │ [CONCLUÍDO] BMAD Inbox+LifeHub│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.3        │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
+│ v0.9.3 (PRÓX) │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.4        │ Souls Evolutive Harness (Harness)│ Cordis Kernel, Catnap Protocol│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
@@ -391,84 +392,78 @@ A consolidação estética e ergonômica definitiva da interface do usuário (Si
 
 ---
 
-### MILESTONE v0.9.2: GOOGLE PERSONAL & LIFE HUB (WORKSPACE, NOTEBOOKLM UI & ROTINAS PESSOAIS)
+### MILESTONE v0.9.2: GOOGLE PERSONAL & LIFE HUB (WORKSPACE, NOTEBOOKLM UI & BMAD AGENT INBOX) — **[100% CONCLUÍDO]**
 
 > **Documentos de Referência Arquiteturais SSOT:**  
-> 📄 [Arquitetura Universal Google e Hermes.md](file:///Z:/souls_engine/docs/reference/Arquitetura%20Universal%20Google%20e%20Hermes.md)  
-> 📄 `crates/souls_server/src/routes/google.rs` e `crates/souls_core/src/google_bridge/`
+> 📄 [ADR-030: Google Personal & Life Hub, Governança BMAD Agent Inbox e Arquitetura Híbrida Segura](file:///Z:/souls_engine/docs/decisions/adrs/ADR-030-Google-Personal-Life-Hub-BMAD-Inbox-e-Hibrido-Seguro.md)  
+> 📄 [Skill Canônica: `google-life-hub`](file:///Z:/souls_engine/.agents/skills/google-life-hub/SKILL.md)  
+> 📄 `crates/souls_server/src/routes/google.rs`, `crates/souls_server/src/routes/inbox.rs` e `crates/souls_core/src/google_bridge/`
 
-A consagração do Souls Engine como o **cérebro de produtividade e vida pessoal do usuário**, rompendo definitivamente a "miopia de infraestrutura" e entregando valor real e direto na rotina diária (emails, agenda, finanças, documentos e mídias).
+A consagração do Souls Engine como o **cérebro de produtividade e vida pessoal do usuário**, rompendo definitivamente a "miopia de infraestrutura" e entregando valor real e direto na rotina diária (emails, agenda, finanças, documentos, deslocamento, mídias e cadernos NotebookLM) sob governança criptográfica e zero mutações silenciosas.
 
 ```mermaid
 flowchart TD
-    subgraph DashboardSPA ["Dashboard SPA (:9123)"]
-        UI_Notebooks["📚 Sub-aba Gemini Notebooks (Galeria & Player de Áudio)"]
-        UI_Workspace["📂 Sub-aba Google Life Hub (Drive, Agenda & Finanças)"]
+    subgraph DashboardSPA ["Dashboard SPA (:9123 — 6 Pilares + Badge Global Inbox)"]
+        UI_Notebooks["Sub-aba Gemini Notebooks (Galeria, Sync Drive & Player HTTP Range)"]
+        UI_Workspace["Sub-aba Google Life Hub (Briefing, Gmail, Agenda, Scratchpad & Finanças)"]
+        UI_Inbox["Sub-aba Agent Inbox (Myers Diff + Gravity Lock HITL)"]
     end
 
-    subgraph SoulsGoogleEngine ["souls_server & souls_core (Google Sovereign Bridge)"]
-        Vault["Cofre Seguro de Sessões & OAuth2"]
-        WizClient["Wiz RPC Client (batchexecute & StreamGenerate)"]
-        WorkClient["Google Workspace REST & Batch Connector"]
+    subgraph SoulsGoogleEngine ["souls_protocol + souls_core + souls_server (Híbrido Seguro)"]
+        Vault["Cofre Multi-Conta GV2 & OAuth2 PKCE (S256)"]
+        BmadSec["Taint Guard (30m) + Untrusted Framing + Redação PII"]
+        WizClient["Wiz RPC Client (22+ RPCs + nlm CLI Bridge)"]
+        WorkClient["Workspace REST, Tasks/Obsidian, People, Routes v2 & YouTube"]
+        GemsClient["Gems Catalog + Gemini API Oficial (Bloqueio StreamGenerate Primário)"]
     end
 
-    subgraph GoogleServices ["Superfícies Pessoais do Google"]
+    subgraph GoogleServices ["Superfícies Pessoais do Google & Cofre Local"]
         G_NLM["Gemini Notebooks (Podcasts / Mapas / RAG)"]
-        G_Work["Docs / Sheets / Slides / Drive"]
-        G_Life["Gmail / Calendar / Keep / Tasks / Contacts / Maps / YouTube"]
-        G_Gems["Gems Personalizadas (Custo R$ 0,00 / Google One)"]
+        G_Work["Docs Scratchpad / Sheets / Slides / Drive"]
+        G_Life["Gmail / Calendar / Tasks + Obsidian / Contacts / Routes v2 / YouTube"]
+        G_Gems["Custom Gems (Gemini API Oficial / Sandbox Opt-In)"]
     end
 
     UI_Notebooks --> WizClient
     UI_Workspace --> WorkClient
+    UI_Workspace --> GemsClient
+    UI_Inbox --> BmadSec
     Vault --> WizClient
     Vault --> WorkClient
+    BmadSec --> WorkClient
     WizClient --> G_NLM
-    WizClient --> G_Gems
+    GemsClient --> G_Gems
     WorkClient --> G_Work
     WorkClient --> G_Life
 ```
 
-#### 1. Google Workspace Sovereign Hub (Gestão Diária de Vida & Trabalho)
-* **Gmail com Triagem Cognitiva:**
-  - Leitura semântica de caixas de entrada, classificação de prioridades em tempo real e geração de rascunhos inteligentes com aprovação em 1 clique (`sendUpdates: none` por padrão para segurança).
-  - Triagem em lote de emails antigos/spam via chamadas nativas de `bulk_operations`.
-* **Google Calendar Proativo:**
-  - Inspeção contínua da agenda pessoal, identificação de blocos livres para foco profundo e agendamento de reuniões sem conflitos.
-* **Google Docs, Sheets & Slides Operáveis:**
-  - **Sheets:** Extração analítica de planilhas de finanças e despesas pessoais, cálculos agregados e projeções orçamentárias.
-  - **Docs:** Composição cirúrgica via bloco de rascunho endereçável por linhas (`manage_scratchpad`), evitando reescrever documentos inteiros.
-  - **Slides:** Geração automática de apresentações visuais de 5 a 15 slides baseadas em relatórios de pesquisa ou briefings do usuário.
+#### 1. Google Workspace Sovereign Hub (Gestão Diária de Vida & Trabalho) — **[CONCLUÍDO]**
+* **Gmail com Triagem Cognitiva (`google_gmail`):**
+  - Triagem determinística (`triage`), leitura encapsulada em delimitação anti-injection `<<<SOULS_UNTRUSTED_DATA:...>>>`, geração de rascunhos (`draft`), rótulos em lote (`bulk`) e envio (`send`) obrigatoriamente auditados via **BMAD Agent Inbox**.
+* **Google Calendar Proativo (`google_calendar`):**
+  - Inspeção contínua da agenda pessoal, identificação de **Deep Focus Slots** (`focus_slots`) e criação segura com `send_updates: "none"` por padrão (`Tier1SafeReversible` em sessão limpa).
+* **Google Docs, Sheets & Slides Operáveis (`google_docs_scratchpad`, `google_sheets`, `google_slides`):**
+  - **Sheets:** Extração e análise financeira determinística (`analyze`: totais por coluna, categorias, anomalias `> 2x` média e projeção 30 dias) e escrita via BMAD Inbox.
+  - **Docs:** Composição cirúrgica via scratchpad incremental por linhas (`load`, `insert`, `replace`, `delete`, `render`) antes de propor `push` com **Myers Diff** no BMAD Agent Inbox.
+  - **Slides:** Planejamento estruturado de 5 a 15 slides (`plan`) com *speaker notes* e criação assistida (`create`).
 
-#### 2. Sub-Aba Visual `📚 Gemini Notebooks` no Dashboard SPA
-Transformação do NotebookLM de um serviço invisível em uma **Janela de Vidro interativa** para o usuário no Web Dashboard:
-* **Galeria Visual de Notebooks:** Cards interativos exibindo todos os cadernos da conta Google com contagem de notas, fontes e data de modificação.
-* **Explorador de Fontes do Caderno:** Visualização dos PDFs, links web, documentos do Drive e vídeos do YouTube indexados em cada caderno, com botão para adicionar novas fontes ou forçar sincronização (`FLmJqe`).
-* **Estúdio de Criação & Player de Áudio Embutido:**
-  - Disparo em 1 clique da geração de **Audio Overviews (Podcasts de IA com duas vozes)**, Mapas Mentais conceituais hierárquicos, FAQs e Guias de Estudo.
-  - **Player de áudio nativo integrado no Dashboard** para escutar os resumos de áudio gerados diretamente na interface web sem precisar abrir o navegador externo.
+#### 2. Sub-Aba Visual `Gemini Notebooks` no Dashboard SPA — **[CONCLUÍDO]**
+* **Galeria & Explorador de Fontes (`templates/tabs/gemini_notebooks.html`):** Listagem de cadernos, inspeção de fontes, verificação de frescura (`yR9Yof`) e sincronização com o Google Drive (`FLmJqe`) além do mapeamento completo dos **22+ RPCs Wiz** em `wiz_rpc.rs` e ponte `nlm` CLI (`NlmCliBridge`).
+* **Estúdio de Criação & Player de Áudio HTTP Range:** Disparo de **Audio Overviews**, consultas RAG (`orqRsd`) e Mapas Mentais (`yyryJe`), com streaming de áudio local via endpoint `/api/v1/google/notebooks/:id/audio/:artifact_id`.
 
-#### 3. Superfícies de Rotina Pessoal (Keep, Tasks, Contacts, Maps & YouTube)
-* **Google Keep & Tasks (Memória de Trabalho de Bolso):**
-  - O Obsidian é a memória profunda L3; o Google Keep atua como o *Scratchpad Relâmpago*: listas de compras, ideias efêmeras capturadas no celular e recados rápidos sincronizados com a memória de trabalho do agente.
-* **Google Contacts (People API / CRM Pessoal):**
-  - Mapeamento do grafo social do usuário: aniversários de amigos/família, telefones, empresas e histórico de interações quando uma pessoa for mencionada em conversas ou emails.
-* **Google Maps & Directions API (Consciência de Deslocamento):**
-  - Cruzamento do trânsito em tempo real com os compromissos do Google Calendar: *"Você tem reunião médica às 15h; devido a congestionamento na rota, você precisa sair às 14h15."*
-* **YouTube Data & Transcripts (Pesquisa Multimídia em Segundos):**
-  - Ingestão instantânea de transcrições e legendas de vídeos longos, tutoriais de tecnologia e podcasts do YouTube, sintetizando o conteúdo central em segundos sem o usuário perder horas assistindo ao vídeo.
+#### 3. Superfícies de Rotina Pessoal (Tasks + Obsidian, Contacts, Routes v2 & YouTube) — **[CONCLUÍDO]**
+* **Google Tasks + Obsidian Quick Capture (`google_tasks`):** Como a Google Keep API é restrita a contas Workspace Enterprise com Domain-Wide Delegation (`check_keep_eligibility`), contas pessoais `@gmail.com` operam nativamente via **Google Tasks API** + **Obsidian Quick Capture** (`raw/inbox/` com frontmatter YAML, LF puro e redação PII).
+* **Google Contacts (`google_contacts`):** Busca via People API (`people:searchContacts`) e detector determinístico de aniversários próximos (`upcoming_birthdays`).
+* **Google Maps Routes API v2 (`google_commute`):** Substituição da Directions Legacy (End of Sale) pela **Routes API v2** (`computeRoutes`, `TRAFFIC_AWARE`, `X-Goog-FieldMask`), cruzando tráfego em tempo real com compromissos do Calendar para alertas proativos de horário de saída.
+* **YouTube Transcripts (`google_youtube`):** Extração via Innertube (`ANDROID` client) + parser XML/SRV3 puro em Rust com cache local em `.souls_data/google/youtube_cache/` e framing anti-injection.
 
-#### 4. Conector de Gems do Google Gemini (FinOps & Custo Zero de API)
-* **Aproveitamento da Assinatura Google One / Gemini Advanced:**
-  - Invocação das **Gems personalizadas** já criadas pelo usuário no Gemini Web (`gemini.google.com/app`) através do payload posicional de 69 elementos do protocolo `StreamGenerate`.
-  - **Custo R$ 0,00 de Tokens:** Acesso aos modelos de raciocínio de ponta (Gemini 2.5 Pro / 3.0 Pro) com janela de 1 milhão de tokens coberta pela assinatura pessoal do usuário, eliminando gastos em dólares no Google Cloud / Vertex AI.
+#### 4. Conector Seguro de Custom Gems (`google_gems`) — **[CONCLUÍDO]**
+* **Padrão via Gemini API Oficial:** Catálogo local persistente (`gems.json`) e despacho oficial via `POST /v1beta/models/{model}:generateContent` (`dispatch_gem_official_api`).
+* **Proteção da Conta Primária:** Bloqueio arquitetural estrito (`DangerousCommandBlocked` / `HitlDenied`) contra `StreamGenerate` via cookies em contas primárias (`is_primary == true`) ou sem opt-in explícito em `secondary_sandbox`.
 
-#### 5. Agent Inbox & Paradigma BMAD (Branch, Mutate, Approve, Diff)
-* **Zero Alterações Silenciosas:** Nenhum subagente de background altera arquivos de trabalho ou envia mensagens externas sem autorização.
-* **Aprovação Visual em Myers Diff:** Propostas de mutação são enfileiradas na sub-aba **`📥 Agent Inbox`** do Dashboard com exibição de diff semântico.
-* **Governança por Blast Radius:**
-  - Ações de risco nulo (leitura, resumos, rascunhos locais): aprovadas automaticamente (**HOTL — Human-On-The-Loop**).
-  - Ações de impacto estrutural (edição de código, exclusões no Drive, envio de emails): travadas por **Slider de Confirmação com Gravity Lock** (**HITL — Human-in-the-Loop**).
+#### 5. Agent Inbox & Paradigma BMAD (Branch, Mutate, Approve, Diff) — **[CONCLUÍDO]**
+* **Zero Alterações Silenciosas:** Governança em **3 Tiers** (`Tier0ReadOnly`, `Tier1SafeReversible`, `Tier2ExternalDestructive`), **4 Políticas Multi-Conta** (`ReadOnly`, `DraftsAndTasksOnly`, `BalancedHotlHitl`, `WhitelistWrite`) e **Taint Guard** (`SessionTaintTracker` com TTL de 30 minutos).
+* **Aprovação Visual em Myers Diff + Gravity Lock:** Propostas enfileiradas na sub-aba **`Agent Inbox`** (`templates/tabs/agent_inbox.html`) com Badge Global persistente na Topbar (`#top-inbox-count`), exibição de Myers Diff computado via `souls_ast`, confirmação **Gravity Lock** (`glock_*`) e trilha de auditoria redigida em `audit_log.jsonl`.
 
 ---
 
@@ -872,27 +867,33 @@ flowchart TD
         PersonalPulse["Cockpit de Evolução Pessoal & Zero Placebos"]
     end
 
-    subgraph M091 ["Milestone v0.9.1 — PRÓXIMA (Souls Anthropophagy)"]
-        Anthropophagy["Souls Anthropophagy (Ingestão de Repos & AST)"]
-        GlassWindow["Janela de Vidro (Google Sheets 85+ Colunas SSOT)"]
-        DeepAnalysis["Fila de Deep Analysis & Backlog de PRs"]
+    subgraph M091 ["Milestone v0.9.1 — CONCLUÍDO (Precision Dark UI & SVG Icons)"]
+        PrecisionUI["Topbar 6 Pilares + Command Palette Ctrl+K"]
+        SvgTokens["80 Ícones SVG + Tokens OKLCH + Purga Inline Styles"]
+        ClsAutoSave["CLS=0 + Auto-Save 400ms + Lab Drawers"]
     end
 
-    subgraph M092 ["Milestone v0.9.2 (Souls Evolutive Harness)"]
+    subgraph M092 ["Milestone v0.9.2 — CONCLUÍDO (Google Personal & Life Hub)"]
+        GoogleLife["Híbrido Seguro (Workspace, Tasks/Obsidian, Routes v2, People, YouTube)"]
+        NLMDashboard["Gemini Notebooks UI (22+ RPCs Wiz + Player HTTP Range) & Gems API"]
+        BmadInbox["BMAD Agent Inbox (Myers Diff + Gravity Lock + Taint Guard + 80 MCP Tools)"]
+    end
+
+    subgraph M093 ["Milestone v0.9.3 — PRÓXIMA (Percepção Multimodal Híbrida)"]
+        HybridVision["AXTree O(1) + On-Demand DXGI Snapshots"]
+        SovereignAudio["Áudio Soberano Local (Silero + SenseVoice + Kokoro)"]
+    end
+
+    subgraph M094 ["Milestone v0.9.4 (Souls Evolutive Harness)"]
         CordisKernel["DeepSeek Cordis Reversible Microkernel"]
         CatnapProtocol["The Cognitive Catnap Protocol (0ms Preempt)"]
         ShadowProbing["Shadow Probing (Propose-Probe-Compose)"]
     end
 
-    subgraph M093 ["Milestone v0.9.3 (Percepção Multimodal Híbrida)"]
-        HybridVision["AXTree O(1) + On-Demand DXGI Snapshots"]
-        SovereignAudio["Áudio Soberano Local (Silero + SenseVoice + Kokoro)"]
-    end
-
-    subgraph M094 ["Milestone v0.9.4 (Google Personal & Life Hub)"]
-        GoogleLife["Workspace Soberano (Gmail / Agenda / Docs / Sheets)"]
-        NLMDashboard["Gemini Notebooks Hub Visual (Player de Áudio & Studio)"]
-        PersonalLife["Rotinas Pessoais (Keep / Tasks / Contacts / Maps / YouTube / Gems)"]
+    subgraph M095 ["Milestone v0.9.5 (Souls Anthropophagy)"]
+        Anthropophagy["Souls Anthropophagy (Ingestão de Repos & AST)"]
+        GlassWindow["Janela de Vidro (Google Sheets 85+ Colunas SSOT)"]
+        DeepAnalysis["Fila de Deep Analysis & Backlog de PRs"]
     end
 
     subgraph M100 ["Milestone v1.0.0 (Universalização & Distribuição Pública)"]
@@ -911,18 +912,21 @@ flowchart TD
     AXTreeVision --> HardwareAgno
     HardwareAgno --> MultiCloud16
     MultiCloud16 --> PersonalPulse
-    PersonalPulse --> Anthropophagy
-    Anthropophagy --> GlassWindow
-    GlassWindow --> DeepAnalysis
-    DeepAnalysis --> CordisKernel
+    PersonalPulse --> PrecisionUI
+    PrecisionUI --> SvgTokens
+    SvgTokens --> ClsAutoSave
+    ClsAutoSave --> GoogleLife
+    GoogleLife --> NLMDashboard
+    NLMDashboard --> BmadInbox
+    BmadInbox --> HybridVision
+    HybridVision --> SovereignAudio
+    SovereignAudio --> CordisKernel
     CordisKernel --> CatnapProtocol
     CatnapProtocol --> ShadowProbing
-    ShadowProbing --> HybridVision
-    HybridVision --> SovereignAudio
-    SovereignAudio --> GoogleLife
-    GoogleLife --> NLMDashboard
-    NLMDashboard --> PersonalLife
-    PersonalLife --> AutoTuning
+    ShadowProbing --> Anthropophagy
+    Anthropophagy --> GlassWindow
+    GlassWindow --> DeepAnalysis
+    DeepAnalysis --> AutoTuning
     AutoTuning --> Installer
     Installer --> DecomDonor
 ```
