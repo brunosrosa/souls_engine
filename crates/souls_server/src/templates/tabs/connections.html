@@ -1,34 +1,34 @@
     <!-- ========================================== -->
-    <!-- ABA 7: CONEXÕES GLOBAIS & HARNESSES AGÊNTICOS -->
+    <!-- ABA 7: CONEXÕES, CONTA GOOGLE & CHAVES DE IA -->
     <!-- ========================================== -->
     <section class="tab-pane" id="tab-connections">
       <div class="card-hero u-mb-6">
         <div class="u-d-flex u-justify-between u-items-start u-flex-wrap u-gap-4">
           <div>
             <h2 class="u-d-flex u-items-center u-gap-10p u-s-c4b339">
-              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-plug"></use></svg> Conexões Globais &amp; CLIs Agênticas
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-plug"></use></svg> Conexões, Conta Google &amp; Chaves de IA
             </h2>
             <p class="u-m-0 u-text-muted u-s-43b9f4">
-              Credenciais soberanas, telemetria de gateways de fronteira e despacho headless via CLIs (<code>agy</code>, <code>claude</code>, <code>codex</code>) com rollback transacional.
+              Conecte seus assistentes locais, sua conta Google (Gmail, Agenda, Drive e NotebookLM) com onboarding guiado e as chaves de modelos de IA em nuvem com plano gratuito.
             </p>
           </div>
           <div class="u-d-flex u-gap-10p u-flex-wrap">
-            <button class="btn btn-sm u-d-flex u-items-center u-gap-6p" onclick="fetchConnectionsData()">
+            <button class="btn btn-sm u-d-flex u-items-center u-gap-6p" onclick="fetchConnectionsData(); if (typeof loadGoogleConnectionsVault === 'function') loadGoogleConnectionsVault(true);">
               <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar Conexões
             </button>
           </div>
         </div>
       </div>
 
-      <!-- GRID PRINCIPAL: 2 SEÇÕES (CLIs & GATEWAYS) -->
+      <!-- GRID PRINCIPAL: 1. CLIs LOCAIS | 2. CONTA GOOGLE & NOTEBOOKLM | 3. PROVEDORES DE IA -->
       <div class="u-d-grid u-s-3ccb16">
 
-        <!-- SEÇÃO 1: CLIs AGÊNTICAS INSTALADAS NO HOST -->
+        <!-- SEÇÃO 1: ASSISTENTES INSTALADOS NO SEU PC -->
         <div class="card u-s-f8d354">
           <div class="u-d-flex u-justify-between u-items-center u-mb-4 u-s-6cf0f4">
             <div class="u-d-flex u-items-center u-gap-10p">
               <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-terminal"></use></svg>
-              <h3 class="u-m-0 u-text-white u-s-ff0d51">Harness de CLIs Agênticas no Host</h3>
+              <h3 class="u-m-0 u-text-white u-s-ff0d51">1. Assistentes Instalados no Seu Computador</h3>
             </div>
             <span class="badge u-s-3aa48e" id="clis-count-badge">
               0 Instaladas
@@ -37,17 +37,17 @@
 
           <div class="u-d-grid u-gap-4 u-mb-5 u-s-02eca4" id="clis-grid">
             <!-- Renderizado via JS -->
-            <div class="u-text-muted u-text-center u-s-63ed2b">Carregando CLIs do host...</div>
+            <div class="u-text-muted u-text-center u-s-63ed2b">Carregando assistentes locais...</div>
           </div>
 
-          <!-- CONSOLE DE DISPATCH INTERATIVO DE TAREFAS -->
+          <!-- CONSOLE DE EXECUÇÃO RÁPIDA VIA ASSISTENTE LOCAL -->
           <div class="u-s-c7023f">
             <h4 class="u-text-cyan u-d-flex u-items-center u-gap-2 u-s-9b31ae">
-              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Despacho Headless de Tarefa Agêntica
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Executar Tarefa com Assistente Local
             </h4>
             <div class="u-d-grid u-gap-3 u-mb-3 u-s-a82cff">
               <div>
-                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">CLI Alvo:</label>
+                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Assistente:</label>
                 <select id="dispatch-cli-select" class="form-control u-w-full u-text-white u-s-dc6018">
                   <option value="agy">Antigravity CLI (agy)</option>
                   <option value="claude">Claude Code (claude)</option>
@@ -55,11 +55,11 @@
                 </select>
               </div>
               <div>
-                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Diretório de Trabalho (CWD):</label>
-                <input id="dispatch-cwd-input" type="text" class="form-control u-w-full u-text-white u-mono u-s-150a51" value="." placeholder="Diretório do workspace ativo" />
+                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Pasta de Trabalho:</label>
+                <input id="dispatch-cwd-input" type="text" class="form-control u-w-full u-text-white u-mono u-s-150a51" value="." placeholder="Diretório do projeto ativo" />
               </div>
               <div>
-                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Timeout Máximo:</label>
+                <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Tempo Limite:</label>
                 <select id="dispatch-timeout-select" class="form-control u-w-full u-text-white u-s-dc6018">
                   <option value="60">60 segundos</option>
                   <option value="180">3 minutos</option>
@@ -69,20 +69,20 @@
               </div>
             </div>
             <div class="u-mb-3">
-              <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">Prompt da Tarefa Agêntica:</label>
-              <textarea class="u-w-full u-text-white u-resize-y u-box-border u-s-73409c" id="dispatch-prompt-textarea" rows="2" placeholder="Ex.: inspecionar testes da crate souls_core e reportar cobertura..."></textarea>
+              <label class="u-d-block u-text-muted u-mb-1 u-s-22b62c">O que você quer pedir ao assistente?</label>
+              <textarea class="u-w-full u-text-white u-resize-y u-box-border u-s-73409c" id="dispatch-prompt-textarea" rows="2" placeholder="Ex.: revisar os testes recentes e apontar melhorias..."></textarea>
             </div>
             <div class="u-d-flex u-justify-between u-items-center">
               <label class="u-text-muted u-d-flex u-items-center u-gap-6p u-pointer u-s-5b9d54">
                 <input class="u-pointer" type="checkbox" id="dispatch-restore-check" checked />
-                Rollback automático (<code class="u-s-aba882">git restore</code>) se o processo falhar (código != 0)
+                Desfazer alterações automaticamente (<code class="u-s-aba882">git restore</code>) se algo falhar
               </label>
               <button id="btn-dispatch-cli" class="btn btn-primary u-fw-600 u-s-6f7d55" onclick="dispatchCliTask()">
-                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-rocket"></use></svg> Executar no Silício
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-rocket"></use></svg> Executar Tarefa
               </button>
             </div>
 
-            <!-- RESULTADO DE EXECUÇÃO / CONSOLE NDJSON -->
+            <!-- RESULTADO DE EXECUÇÃO -->
             <div class="u-mt-14p u-s-dd7533 is-hidden" id="dispatch-output-box">
               <div class="u-d-flex u-justify-between u-items-center u-mb-2">
                 <span class="u-fw-700 u-text-cyan u-s-933a8e" id="dispatch-status-label">Executando...</span>
@@ -93,137 +93,390 @@
           </div>
         </div>
 
-        <!-- SEÇÃO 2: GATEWAYS CHINESES & GLOBAIS DE FRONTEIRA -->
-        <div class="card u-s-f8d354">
+        <!-- SEÇÃO 2: SUA CONTA GOOGLE (GMAIL, AGENDA, DRIVE & NOTEBOOKLM) -->
+        <div class="card u-s-f8d354 gv2-vault-section" id="google-gv2-section">
+          <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-3 u-mb-4 u-s-6cf0f4">
+            <div class="u-d-flex u-items-center u-gap-10p">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-shield"></use></svg>
+              <h3 class="u-m-0 u-text-white u-s-ff0d51">2. Sua Conta Google (Gmail, Agenda, Drive &amp; NotebookLM)</h3>
+            </div>
+            <div class="u-d-flex u-gap-2 u-items-center u-flex-wrap">
+              <span class="badge badge-dominated" id="google-session-badge">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg> Verificando...
+              </span>
+              <button type="button" class="btn btn-xs btn-secondary" onclick="loadGoogleConnectionsVault(true)">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar
+              </button>
+            </div>
+          </div>
+
+          <p class="u-text-muted u-s-a637e8">
+            Conecte seu NotebookLM em 1 clique para consultar cadernos e áudios, e ligue sua conta Google para usar Gmail, Agenda, Drive, Documentos, Planilhas e Tarefas com aprovação antes de enviar qualquer coisa.
+          </p>
+
+          <!-- GRID 3 COLUNAS ORIENTADO A BENEFICIOS HUMANOS -->
+          <div class="conn-grid-3 u-mb-5">
+            <!-- CARD 1: NOTEBOOKLM (1 CLIQUE) -->
+            <div class="conn-step-card">
+              <div class="conn-step-card-header">
+                <div class="conn-step-card-title">
+                  <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-book"></use></svg>
+                  <span>NotebookLM (Cadernos &amp; Áudios)</span>
+                </div>
+                <span class="badge badge-dominated" id="nlm-connection-badge">Verificando...</span>
+              </div>
+
+              <p class="conn-step-desc">
+                Acesse seus cadernos, perguntas com fontes citadas e resumos em áudio. Basta clicar abaixo e escolher sua conta Google na janela do navegador que abrir — sem copiar cookies manualmente.
+              </p>
+
+              <div class="gh-btn-row">
+                <button type="button" class="btn btn-sm btn-primary" id="nlm-login-btn" onclick="triggerNlmOneClickLogin(false)">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg>
+                  <span id="nlm-login-btn-label">Conectar NotebookLM com 1 Clique</span>
+                </button>
+                <button type="button" class="btn btn-xs btn-secondary" onclick="triggerNlmOneClickLogin(true)">
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+                  <span>Trocar Conta / Refazer Login</span>
+                </button>
+              </div>
+
+              <div class="gh-result-box is-hidden" id="nlm-login-status"></div>
+
+              <div class="gh-policy-note u-mt-2">
+                <svg class="ui-icon icon-xs u-text-cyan" aria-hidden="true"><use href="#icon-info"></use></svg>
+                <span>Depois de confirmar sua conta uma única vez, o Souls sincroniza cadernos e fontes automaticamente.</span>
+              </div>
+            </div>
+
+            <!-- CARD 2: GMAIL, AGENDA, DRIVE & DOCUMENTOS -->
+            <div class="conn-step-card">
+              <div class="conn-step-card-header">
+                <div class="conn-step-card-title">
+                  <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-key"></use></svg>
+                  <span>Gmail, Agenda, Drive &amp; Tarefas</span>
+                </div>
+              </div>
+
+              <p class="conn-step-desc">
+                Por privacidade, apps locais no seu PC usam sua própria credencial do Google Cloud (feita 1 única vez em ~2 minutos):
+              </p>
+
+              <ol class="conn-guide-steps">
+                <li>
+                  <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">
+                    Abrir Google Cloud Console &rarr;
+                  </a>
+                  <span>Crie um <strong>ID do cliente OAuth</strong> &rarr; <strong>App para computador</strong> e baixe o arquivo <code>.json</code>.</span>
+                </li>
+                <li>
+                  <span>Na aba <strong>Público-alvo</strong> (Tela de consentimento), clique em <strong>Publicar aplicativo</strong> para seu login não expirar após 7 dias.</span>
+                </li>
+                <li>
+                  <span>Selecione o arquivo baixado abaixo para abrir o login do Google em 1 clique.</span>
+                </li>
+              </ol>
+
+              <div class="conn-upload-box">
+                <label for="gv2-json-file-input" class="conn-file-label">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-upload"></use></svg>
+                  <span>Selecionar client_secret.json e Entrar com Google</span>
+                </label>
+                <input id="gv2-json-file-input" type="file" accept=".json,application/json" class="conn-hidden-input" onchange="handleGoogleSecretFileUpload(this)" />
+                <div class="gh-btn-row">
+                  <button type="button" class="btn btn-xs btn-secondary" onclick="toggleGoogleJsonPaste()">
+                    <span>Ou colar JSON</span>
+                  </button>
+                  <button type="button" class="btn btn-xs btn-secondary" onclick="importGwsCredentials()">
+                    <span>Detectar gws</span>
+                  </button>
+                  <button type="button" class="btn btn-xs btn-secondary" onclick="triggerGwsOneClickLogin()">
+                    <span>Entrar via gws</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="gh-form-stack is-hidden" id="gv2-json-paste-box">
+                <textarea id="gv2-json-raw" rows="3" class="form-control gh-textarea u-mono" placeholder='Cole aqui o conteúdo do arquivo client_secret_*.json...'></textarea>
+                <button type="button" class="btn btn-sm btn-primary" onclick="uploadGoogleClientJsonAndLogin()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-link"></use></svg>
+                  <span>Salvar JSON e Entrar com Google</span>
+                </button>
+              </div>
+
+              <div class="gh-two-col">
+                <input id="gv2-oauth-label" type="text" class="form-control" placeholder="Apelido (ex: Pessoal, Trabalho)" />
+                <input id="gv2-oauth-email" type="email" class="form-control" placeholder="Seu e-mail Google (opcional)" />
+              </div>
+              <div class="gh-two-col">
+                <select id="gv2-oauth-kind" class="form-control">
+                  <option value="personal_gmail">Conta Pessoal (@gmail.com)</option>
+                  <option value="workspace_enterprise">Google Workspace Empresa</option>
+                  <option value="secondary_sandbox">Conta Secundária de Testes</option>
+                </select>
+                <select id="gv2-oauth-policy" class="form-control">
+                  <option value="balanced_hotl_hitl" selected>Equilibrado — Pede Confirmação (Recomendado)</option>
+                  <option value="read_only">Somente Leitura</option>
+                  <option value="drafts_and_tasks_only">Seguro — Rascunhos e Tarefas</option>
+                  <option value="whitelist_write">Automação Ampla</option>
+                </select>
+              </div>
+
+              <details class="lab-drawer">
+                <summary class="lab-drawer-header">
+                  <span class="lab-drawer-title">
+                    <svg class="ui-icon icon-xs lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+                    <span>Informar Client ID e Secret manualmente</span>
+                  </span>
+                </summary>
+                <div class="lab-drawer-body gh-form-stack">
+                  <input id="gv2-oauth-client-id" type="text" class="form-control u-mono" placeholder="Client ID (opcional se enviou JSON)" />
+                  <input id="gv2-oauth-client-secret" type="password" class="form-control u-mono" placeholder="Client Secret (opcional)" />
+                  <div class="gh-btn-row">
+                    <button type="button" class="btn btn-xs btn-primary" onclick="startGoogleOAuthPkce()">
+                      <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-link"></use></svg>
+                      <span>Gerar Link de Login</span>
+                    </button>
+                    <button type="button" class="btn btn-xs btn-secondary" onclick="upsertManualGoogleAccount()">
+                      <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                      <span>Salvar Preferências da Conta</span>
+                    </button>
+                  </div>
+                </div>
+              </details>
+
+              <div class="gh-result-box is-hidden" id="gv2-oauth-result"></div>
+            </div>
+
+            <!-- CARD 3: CHAVES EXTRAS DO GOOGLE, CONTAS CONECTADAS & DIAGNOSTICO -->
+            <div class="conn-step-card" id="google-doctor-panel">
+              <div class="conn-step-card-header">
+                <div class="conn-step-card-title">
+                  <svg class="ui-icon icon-sm u-text-amber" aria-hidden="true"><use href="#icon-stethoscope"></use></svg>
+                  <span>Chaves Google &amp; Diagnóstico</span>
+                </div>
+                <span class="badge badge-dominated" id="gv2-doctor-status-badge">Verificando...</span>
+              </div>
+
+              <div class="conn-key-row">
+                <div class="conn-key-row-top">
+                  <span class="conn-key-title">Google Gemini API</span>
+                  <span class="badge badge-dominated" id="conn-gemini-key-badge">Opcional</span>
+                </div>
+                <a class="conn-external-link gh-text-xs" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">
+                  Obter chave gratuita no Google AI Studio &rarr;
+                </a>
+                <div class="conn-key-inline">
+                  <input id="conn-gemini-key-input" type="password" class="form-control conn-key-input" placeholder="Cole sua chave Gemini (AIza...)" />
+                  <button type="button" class="btn btn-xs btn-primary" onclick="saveInlineApiKey('GEMINI_API_KEY', 'conn-gemini-key-input')">Salvar</button>
+                </div>
+              </div>
+
+              <div class="conn-key-row">
+                <div class="conn-key-row-top">
+                  <span class="conn-key-title">Previsão de Trânsito (Google Maps)</span>
+                  <span class="badge badge-dominated" id="conn-maps-key-badge">Opcional</span>
+                </div>
+                <a class="conn-external-link gh-text-xs" href="https://console.cloud.google.com/google/maps-apis/credentials" target="_blank" rel="noopener noreferrer">
+                  Ativar Routes API no Google Cloud &rarr;
+                </a>
+                <div class="conn-key-inline">
+                  <input id="conn-maps-key-input" type="password" class="form-control conn-key-input" placeholder="Cole sua chave Maps Routes (AIza...)" />
+                  <button type="button" class="btn btn-xs btn-primary" onclick="saveInlineApiKey('GOOGLE_MAPS_API_KEY', 'conn-maps-key-input')">Salvar</button>
+                </div>
+              </div>
+
+              <div class="u-d-flex u-justify-between u-items-center u-mt-1">
+                <span class="gh-field-label u-m-0">Contas Google Conectadas</span>
+                <span class="badge badge-value" id="gv2-accounts-count-badge">0 conta(s)</span>
+              </div>
+              <div class="gh-list-container gh-scroll-panel-sm" id="gv2-accounts-list">
+                <div class="gh-empty-state">Carregando contas conectadas...</div>
+              </div>
+
+              <div class="u-d-flex u-justify-between u-items-center u-mt-1">
+                <span class="gh-field-label u-m-0">Saúde das Integrações</span>
+                <button type="button" class="btn btn-xs btn-secondary" onclick="loadGoogleDoctorReport(true)">
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+                  <span>Testar Agora</span>
+                </button>
+              </div>
+              <div class="gh-list-container" id="gv2-doctor-clis">
+                <div class="gh-empty-state">Verificando NotebookLM, Workspace, Gemini e rotas...</div>
+              </div>
+              <div class="gh-policy-note" id="gv2-doctor-notes">
+                <svg class="ui-icon icon-xs u-text-cyan" aria-hidden="true"><use href="#icon-info"></use></svg>
+                <span>Aguardando diagnóstico...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- GAVETA AVANCADA / MODO DESENVOLVEDOR (FECHADA POR PADRAO) -->
+          <details class="lab-drawer" id="drawer-lab-google-wiz" ontoggle="if (this.open) loadGoogleGems()">
+            <summary class="lab-drawer-header">
+              <div class="lab-drawer-title">
+                <svg class="ui-icon icon-sm lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+                <svg class="ui-icon icon-sm u-text-purple" aria-hidden="true"><use href="#icon-flask"></use></svg>
+                <span>Ferramentas Avançadas &amp; Modo Desenvolvedor (Cookies Manuais, Chamadas Internas &amp; Gems)</span>
+              </div>
+              <span class="lab-drawer-badge">Opcional &bull; Uso Técnico</span>
+            </summary>
+            <div class="lab-drawer-body">
+              <div class="u-d-grid u-gap-4 u-mb-4 u-s-ce02d9">
+                <!-- SUBCARD LAB 1: COOKIES MANUAIS -->
+                <div class="u-s-6bb2bb">
+                  <div class="u-d-flex u-justify-between u-items-center u-mb-10p">
+                    <h4 class="u-m-0 u-text-cyan u-d-flex u-items-center u-gap-6p u-s-e1fb4b">
+                      <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-key"></use></svg> Cookies Manuais do NotebookLM
+                    </h4>
+                    <button type="button" class="btn btn-secondary u-s-39e9d5" onclick="checkGoogleSession()">
+                      Verificar Sessão
+                    </button>
+                  </div>
+
+                  <div class="u-text-muted u-mb-3 u-s-581aa2">
+                    <div>Conta: <strong class="u-text-white" id="google-account-email">Nenhuma detectada</strong></div>
+                    <div>Cookie Principal: <span class="u-mono u-text-cyan" id="google-masked-psid">Não configurado</span></div>
+                    <div>Token CSRF: <span class="u-mono u-s-7193d0" id="google-csrf-token">SNlM0e</span></div>
+                  </div>
+
+                  <div class="u-d-flex u-flex-col u-gap-2 u-mt-2">
+                    <input id="google-psid-input" type="password" placeholder="__Secure-1PSID" class="form-control u-w-full u-text-white u-s-93cd1c" />
+                    <input id="google-psidts-input" type="password" placeholder="__Secure-1PSIDTS" class="form-control u-w-full u-text-white u-s-93cd1c" />
+                    <input id="google-sapisid-input" type="password" placeholder="SAPISID" class="form-control u-w-full u-text-white u-s-93cd1c" />
+                    <input id="google-email-input" type="text" placeholder="Conta Google (ex: user@gmail.com)" class="form-control u-w-full u-text-white u-s-93cd1c" />
+                    <button type="button" class="btn btn-primary u-text-white u-fw-600 u-mt-1 u-s-67f930" onclick="saveGoogleSession()">
+                      <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-lock"></use></svg> Salvar Cookies Manuais
+                    </button>
+                  </div>
+                </div>
+
+                <!-- SUBCARD LAB 2: CHAMADA DIRETA NOTEBOOKLM -->
+                <div class="u-s-6bb2bb">
+                  <h4 class="u-text-purple u-d-flex u-items-center u-gap-6p u-s-1a2743">
+                    <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Chamada Direta do NotebookLM (Uso Técnico)
+                  </h4>
+                  <div class="u-mb-2">
+                    <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Ação Desejada:</label>
+                    <select id="google-rpc-select" class="form-control u-w-full u-text-white u-s-15be8a">
+                      <option value="wXbhsf">Listar e Gerenciar Cadernos</option>
+                      <option value="QA9ei">Pesquisa Profunda Automática na Web</option>
+                      <option value="orqRsd">Consulta com Fontes Citadas</option>
+                      <option value="R7cb6c">Gerar Áudio ou Estúdio</option>
+                      <option value="FLmJqe">Sincronizar Fontes do Google Drive</option>
+                      <option value="s07Lfd">Listar Cadernos (Modo Legado)</option>
+                    </select>
+                  </div>
+                  <div class="u-mb-2">
+                    <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Parâmetros (JSON):</label>
+                    <textarea class="u-w-full u-text-white u-mono u-box-border u-s-e8e1f4" id="google-rpc-args-input" rows="2">["Pesquisa Arquitetural Souls Engine"]</textarea>
+                  </div>
+                  <button type="button" class="btn btn-primary u-text-white u-fw-600 u-w-full u-s-6e3298" onclick="dispatchGoogleRpc()">
+                    <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Executar Chamada Direta
+                  </button>
+                </div>
+
+                <!-- SUBCARD LAB 3: COMPATIBILIDADE COMANDOS ANTIGOS -->
+                <div class="u-s-6bb2bb">
+                  <h4 class="u-d-flex u-items-center u-gap-6p u-s-492463">
+                    <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Migração de Comandos Antigos
+                  </h4>
+                  <div class="u-text-muted u-mb-10p u-s-4cec55">
+                    <div>Armazenamento Local: <strong class="u-text-white" id="conn-workspace-root">Dev Drive ReFS</strong></div>
+                    <div>Jules CLI: <span class="badge u-text-red u-s-1037ad">Substituído por agy</span></div>
+                    <div class="u-mt-1">Destino atual: <strong class="u-text-cyan">Antigravity CLI (agy)</strong></div>
+                  </div>
+                  <div>
+                    <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Comando antigo para traduzir:</label>
+                    <input id="jules-cmd-input" type="text" value="jules apply --branch=feat/perf" class="form-control u-w-full u-text-white u-mono u-mb-2 u-s-93cd1c" />
+                    <button type="button" class="btn btn-secondary u-w-full u-s-432fd9" onclick="testJulesMigration()">
+                      Testar Tradução para agy
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SUBCARD LAB 4: ASSISTENTES PERSONALIZADOS (GEMS) -->
+              <div class="gv2-panel u-mb-4">
+                <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2 u-mb-3">
+                  <h4 class="u-m-0 u-text-cyan u-d-flex u-items-center u-gap-6p">
+                    <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+                    <span>Assistentes Personalizados (Gemini Gems)</span>
+                  </h4>
+                  <button type="button" class="btn btn-xs btn-secondary" onclick="loadGoogleGems()">
+                    <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+                    <span>Listar Gems</span>
+                  </button>
+                </div>
+                <div class="gh-policy-note u-mb-3">
+                  <svg class="ui-icon icon-xs u-text-amber" aria-hidden="true"><use href="#icon-shield"></use></svg>
+                  <span>Proteção de conta: recomenda-se usar a API Oficial Gemini. O modo experimental web é isolado apenas para contas secundárias de teste.</span>
+                </div>
+                <div class="gh-list-container u-mb-3" id="gv2-gems-list">
+                  <div class="gh-empty-state">Nenhum Gem customizado carregado.</div>
+                </div>
+                <div class="gh-two-col u-mb-2">
+                  <input id="gv2-gem-id" type="text" class="form-control u-mono" placeholder="Identificador (ex: revisor_rust)" />
+                  <input id="gv2-gem-name" type="text" class="form-control" placeholder="Nome do Gem" />
+                </div>
+                <div class="gh-two-col u-mb-2">
+                  <select id="gv2-gem-backend" class="form-control">
+                    <option value="gemini_api">API Oficial Gemini (Recomendado)</option>
+                    <option value="secondary_web">Modo Web (Apenas Conta Secundária)</option>
+                  </select>
+                  <input id="gv2-gem-account-id" type="text" class="form-control u-mono" placeholder="ID da conta secundária (se usar modo web)" />
+                </div>
+                <textarea id="gv2-gem-instruction" rows="2" class="form-control gh-textarea u-mb-2" placeholder="Instruções de comportamento deste Gem..."></textarea>
+                <div class="gh-inline-form">
+                  <input id="gv2-gem-prompt" type="text" class="form-control gh-flex-1" placeholder="Pergunta ou tarefa de teste para este Gem" />
+                  <button type="button" class="btn btn-sm btn-secondary" onclick="saveGoogleGem()">Salvar Gem</button>
+                  <button type="button" class="btn btn-sm btn-primary" onclick="dispatchGoogleGem()">Testar Gem</button>
+                </div>
+                <div class="gh-result-box is-hidden u-mt-2" id="gv2-gem-output"></div>
+              </div>
+
+              <!-- CONSOLE DE RESPOSTA -->
+              <div class="u-s-a90057 is-hidden" id="google-bridge-output-box">
+                <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
+                  <span class="u-fw-700 u-text-purple u-s-933a8e" id="google-bridge-status-label">Resposta:</span>
+                  <button type="button" class="btn btn-secondary u-s-29c688" onclick="document.getElementById('google-bridge-output-box').classList.add('is-hidden')">Fechar</button>
+                </div>
+                <pre class="u-m-0 u-scroll-y u-mono u-text-slate-light u-pre-wrap u-s-f18663" id="google-bridge-output-pre"></pre>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- SEÇÃO 3: CHAVES DE API PARA MODELOS DE IA -->
+        <div class="card u-s-f8d354" id="cloud-providers-section">
           <div class="u-d-flex u-justify-between u-items-center u-mb-4 u-s-6cf0f4">
             <div class="u-d-flex u-items-center u-gap-10p">
               <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-globe"></use></svg>
-              <h3 class="u-m-0 u-text-white u-s-ff0d51">Gateways Globais & Chineses de Fronteira</h3>
+              <h3 class="u-m-0 u-text-white u-s-ff0d51">3. Chaves de API para Modelos de IA (Nuvem)</h3>
             </div>
             <span class="badge u-text-cyan u-s-19f050" id="providers-count-badge">
-              0 Provedores Homologados
+              0 Provedores Configurados
             </span>
           </div>
 
           <p class="u-text-muted u-s-a637e8">
-            As chamadas de subagentes delegadas pelo ParetoBandit consom diretamente estes gateways respeitando descontos de cache de prompt e limites de taxa de requisições (com quarentena adaptativa 429).
+            Conecte provedores de inteligência artificial para tarefas em segundo plano. Vários deles oferecem plano gratuito — use o link direto para gerar sua chave e cole no card correspondente.
           </p>
+
+          <div class="conn-filter-bar" id="providers-filter-bar">
+            <div class="conn-filter-pills">
+              <button type="button" class="filter-provider-btn active" data-provider-filter="all" onclick="setProviderFilter('all', this)">Todos</button>
+              <button type="button" class="filter-provider-btn" data-provider-filter="connected" onclick="setProviderFilter('connected', this)">Conectados</button>
+              <button type="button" class="filter-provider-btn" data-provider-filter="free" onclick="setProviderFilter('free', this)">Com Plano Gratuito</button>
+              <button type="button" class="filter-provider-btn" data-provider-filter="missing" onclick="setProviderFilter('missing', this)">Falta Chave</button>
+            </div>
+            <input type="text" id="providers-search-input" class="form-control conn-filter-search" placeholder="Buscar provedor ou modelo (ex: Gemini, DeepSeek, Groq)..." oninput="setProviderSearch(this.value)" />
+          </div>
 
           <div class="u-d-grid u-gap-4 u-s-31de64" id="providers-grid">
             <!-- Renderizado via JS -->
             <div class="u-text-muted u-text-center u-s-63ed2b">Carregando provedores...</div>
           </div>
-        </div>
-
-        <!-- SEÇÃO 3: GOOGLE UNIVERSE & NOTEBOOKLM BRIDGE (v0.8.2) -->
-        <div class="card u-s-f8d354">
-          <div class="u-d-flex u-justify-between u-items-center u-mb-4 u-s-6cf0f4">
-            <div class="u-d-flex u-items-center u-gap-10p">
-              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-compass"></use></svg>
-              <h3 class="u-m-0 u-text-white u-s-ff0d51">Google Universe & NotebookLM Bridge</h3>
-            </div>
-            <div class="u-d-flex u-gap-2 u-items-center">
-              <span class="badge u-text-red u-s-55a138" id="google-session-badge">
-                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg> Desconectado
-              </span>
-              <span class="badge u-text-purple u-s-22c3f2">
-                v0.8.2 Wiz Engine
-              </span>
-            </div>
-          </div>
-
-          <p class="u-text-muted u-s-a637e8">
-            Cofre local encriptado (<code class="u-text-cyan">google_sessions.vault</code>), emulação direta de 22 RPCs <code class="u-text-purple">batchexecute</code> para Deep Research, Studio e RAG soberano no Google NotebookLM, e migração transparente da frota legada do Jules para a Antigravity CLI (<code class="u-text-cyan">agy</code>).
-          </p>
-
-          <div class="u-d-grid u-gap-4 u-mb-5 u-s-ce02d9">
-            <!-- SUBCARD 1: COFRE DE SESSÃO GOOGLE -->
-            <div class="u-s-6bb2bb">
-              <div class="u-d-flex u-justify-between u-items-center u-mb-10p">
-                <h4 class="u-m-0 u-text-cyan u-d-flex u-items-center u-gap-6p u-s-e1fb4b">
-                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-key"></use></svg> Cofre de Sessão Encriptado
-                </h4>
-                <button class="btn btn-secondary u-s-39e9d5" onclick="checkGoogleSession()">
-                  Sondar Cofre
-                </button>
-              </div>
-
-              <div class="u-text-muted u-mb-3 u-s-581aa2">
-                <div>Conta: <strong class="u-text-white" id="google-account-email">Nenhuma detectada</strong></div>
-                <div>Status PSID: <span class="u-mono u-text-cyan" id="google-masked-psid">Não configurado</span></div>
-                <div>CSRF Token: <span class="u-mono u-s-7193d0" id="google-csrf-token">SNlM0e</span></div>
-              </div>
-
-              <!-- Form rápido de credenciais -->
-              <details class="u-mt-10p u-s-8dfa74">
-                <summary class="u-text-cyan u-pointer u-fw-500 u-s-22b62c">
-                  Atualizar Cookies / Credenciais do Cofre
-                </summary>
-                <div class="u-d-flex u-flex-col u-gap-2 u-mt-2">
-                  <input id="google-psid-input" type="password" placeholder="__Secure-1PSID" class="form-control u-w-full u-text-white u-s-93cd1c" />
-                  <input id="google-psidts-input" type="password" placeholder="__Secure-1PSIDTS" class="form-control u-w-full u-text-white u-s-93cd1c" />
-                  <input id="google-sapisid-input" type="password" placeholder="SAPISID" class="form-control u-w-full u-text-white u-s-93cd1c" />
-                  <input id="google-email-input" type="text" placeholder="Conta Google (ex: user@gmail.com)" class="form-control u-w-full u-text-white u-s-93cd1c" />
-                  <button class="btn btn-primary u-text-white u-fw-600 u-mt-1 u-s-67f930" onclick="saveGoogleSession()">
-                    <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-lock"></use></svg> Salvar no Cofre GV1
-                  </button>
-                </div>
-              </details>
-            </div>
-
-            <!-- SUBCARD 2: DISPATCHER WIZ RPC NOTEBOOKLM -->
-            <div class="u-s-6bb2bb">
-              <h4 class="u-text-purple u-d-flex u-items-center u-gap-6p u-s-1a2743">
-                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Wiz RPC Engine (NotebookLM)
-              </h4>
-              <div class="u-mb-2">
-                <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Ação / RPC Alvo:</label>
-                <select id="google-rpc-select" class="form-control u-w-full u-text-white u-s-15be8a">
-                  <option value="QA9ei">QA9ei — Deep Research Autônomo</option>
-                  <option value="wXbhsf">wXbhsf — Criar / Editar Nota</option>
-                  <option value="orqRsd">orqRsd — Consulta RAG Evidenciada</option>
-                  <option value="R7cb6c">R7cb6c — Gerar Áudio / Mindmap Studio</option>
-                  <option value="s07Lfd">s07Lfd — Listar Notebooks da Conta</option>
-                </select>
-              </div>
-              <div class="u-mb-2">
-                <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Payload / Argumentos (JSON):</label>
-                <textarea class="u-w-full u-text-white u-mono u-box-border u-s-e8e1f4" id="google-rpc-args-input" rows="2">["Pesquisa Arquitetural Souls Engine"]</textarea>
-              </div>
-              <button class="btn btn-primary u-text-white u-fw-600 u-w-full u-s-6e3298" onclick="dispatchGoogleRpc()">
-                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg> Executar RPC batchexecute
-              </button>
-            </div>
-
-            <!-- SUBCARD 3: DUAL-LAYER WORKSPACE & JULES MIGRATION -->
-            <div class="u-s-6bb2bb">
-              <h4 class="u-d-flex u-items-center u-gap-6p u-s-492463">
-                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg> Dual Workspace & Migração Jules
-              </h4>
-              <div class="u-text-muted u-mb-10p u-s-4cec55">
-                <div>Workspace Ativo: <strong class="u-text-white" id="conn-workspace-root">Dev Drive ReFS</strong> (Block Cloning)</div>
-                <div>Status Jules: <span class="badge u-text-red u-s-1037ad">Descontinuado em 29/10/2026</span></div>
-                <div class="u-mt-1">Destino: <strong class="u-text-cyan">Antigravity CLI (agy)</strong></div>
-              </div>
-              <div>
-                <label class="u-d-block u-text-muted u-mb-1 u-s-a768c1">Comando Jules Legado:</label>
-                <input id="jules-cmd-input" type="text" value="jules apply --branch=feat/perf" class="form-control u-w-full u-text-white u-mono u-mb-2 u-s-93cd1c" />
-                <button class="btn btn-secondary u-w-full u-s-432fd9" onclick="testJulesMigration()">
-                  Verificar Roteamento agy
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- CONSOLE DE RESPOSTA RPC / MIGRAÇÃO -->
-          <div class="u-s-a90057 is-hidden" id="google-bridge-output-box">
-            <div class="u-d-flex u-justify-between u-items-center u-mb-6p">
-              <span class="u-fw-700 u-text-purple u-s-933a8e" id="google-bridge-status-label">Resposta RPC:</span>
-              <button class="btn btn-secondary u-s-29c688" onclick="document.getElementById('google-bridge-output-box').style.display='none'">Fechar</button>
-            </div>
-            <pre class="u-m-0 u-scroll-y u-mono u-text-slate-light u-pre-wrap u-s-f18663" id="google-bridge-output-pre"></pre>
-          </div>
-
         </div>
 
       </div>

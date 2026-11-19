@@ -1,0 +1,215 @@
+    <!-- ========================================== -->
+    <!-- ABA: GEMINI NOTEBOOKS (NOTEBOOKLM) v0.9.2  -->
+    <!-- ========================================== -->
+    <section class="tab-pane" id="tab-gemini-notebooks">
+      <div class="card-hero u-mb-6 notebook-hero">
+        <div class="u-d-flex u-justify-between u-items-start u-flex-wrap u-gap-4">
+          <div>
+            <h2 class="u-d-flex u-items-center u-gap-10p u-s-c4b339">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-book"></use></svg>
+              <span>Gemini Notebooks (NotebookLM)</span>
+            </h2>
+            <p class="u-m-0 u-text-muted u-s-43b9f4">
+              Cadernos do NotebookLM com sincronização automática do Google Drive, perguntas com fontes citadas e player de áudio integrado.
+            </p>
+          </div>
+          <div class="google-hub-hero-controls">
+            <span class="badge badge-champion" id="nb-backend-badge">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-radio"></use></svg>
+              <span>NotebookLM</span>
+            </span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadNotebooksGallery(true)">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Atualizar Cadernos</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="switchTab('tab-connections')">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-key"></use></svg>
+              <span>Conexões Google</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLAYER DE AUDIO EMBUTIDO PRECISION DARK -->
+      <div class="card audio-player-bar u-mb-6" id="nb-audio-player-bar">
+        <audio id="nb-audio-element" preload="metadata"></audio>
+        <div class="audio-player-main">
+          <button type="button" class="btn btn-primary audio-play-btn" id="nb-audio-toggle-btn" onclick="toggleNotebookAudio()" title="Reproduzir / Pausar Audio Overview">
+            <svg class="ui-icon icon-md" id="nb-audio-toggle-icon" aria-hidden="true"><use href="#icon-play"></use></svg>
+          </button>
+          <div class="audio-track-meta">
+            <div class="audio-track-title" id="nb-audio-title">Nenhum Audio Overview carregado</div>
+            <div class="audio-track-sub" id="nb-audio-subtitle">Selecione um caderno ou áudio abaixo para ouvir</div>
+          </div>
+          <div class="audio-seek-group">
+            <input type="range" id="nb-audio-seek" class="audio-seek-range" min="0" max="100" value="0" step="0.1" aria-label="Progresso do audio" />
+            <span class="audio-time-label u-mono" id="nb-audio-time">00:00 / 00:00</span>
+          </div>
+          <div class="audio-controls-right">
+            <select id="nb-audio-speed" class="form-control audio-speed-select" onchange="setNotebookAudioSpeed(this.value)" title="Velocidade de reproducao">
+              <option value="1">1.0x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2.0x</option>
+            </select>
+            <a id="nb-audio-download-link" class="btn btn-sm btn-secondary is-hidden" href="#" download>
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-download"></use></svg>
+              <span>Baixar</span>
+            </a>
+          </div>
+        </div>
+        <details class="lab-drawer u-mt-3" id="drawer-lab-notebooks">
+          <summary class="lab-drawer-header">
+            <div class="lab-drawer-title">
+              <svg class="ui-icon icon-sm lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+              <span>Opções Técnicas (Carregar Áudio por ID e Modo de Conexão)</span>
+            </div>
+            <span class="lab-drawer-badge">Opcional</span>
+          </summary>
+          <div class="lab-drawer-body">
+            <div class="audio-manual-loader u-mb-2">
+              <span class="gh-field-label">Modo de Conexão:</span>
+              <select id="nb-backend-select" class="form-control gh-select-sm" title="Modo de conexão do NotebookLM">
+                <option value="auto">Automático (Recomendado)</option>
+                <option value="nlm_cli">Assistente local (nlm)</option>
+                <option value="wiz_rpc">Modo Web</option>
+              </select>
+            </div>
+            <div class="audio-manual-loader">
+              <span class="gh-field-label">Reproduzir por ID:</span>
+              <input id="nb-audio-manual-nb" type="text" class="form-control u-mono audio-manual-input" placeholder="ID do caderno (ex: nb_podcast_1)" />
+              <input id="nb-audio-manual-art" type="text" class="form-control u-mono audio-manual-input" placeholder="ID do áudio (ex: art_deepdive)" />
+              <button type="button" class="btn btn-xs btn-secondary" onclick="loadManualNotebookAudio()">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-mic"></use></svg>
+                <span>Carregar Áudio</span>
+              </button>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- LAYOUT 2 COLUNAS: GALERIA | DETALHES & STUDIO -->
+      <div class="notebook-workspace-grid">
+        <!-- COLUNA ESQUERDA: GALERIA DE CADERNOS -->
+        <div class="card notebook-gallery-card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-folder"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Galeria de Cadernos</div>
+                <div class="u-text-muted gh-text-xs" id="nb-gallery-count">0 cadernos encontrados</div>
+              </div>
+            </div>
+          </div>
+          <div class="nb-gallery-list" id="nb-gallery-list">
+            <div class="gh-empty-state">Carregando cadernos NotebookLM...</div>
+          </div>
+        </div>
+
+        <!-- COLUNA DIREITA: DETALHES, FONTES, RAG & STUDIO -->
+        <div class="card notebook-detail-panel" id="nb-detail-panel">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-purple">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white" id="nb-selected-title">Selecione um caderno na galeria</div>
+                <div class="u-text-muted u-mono gh-text-xs" id="nb-selected-id">Nenhum caderno selecionado</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" id="nb-sync-drive-btn" onclick="syncSelectedNotebookDrive()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Sincronizar Drive</span>
+            </button>
+          </div>
+
+          <div class="nb-detail-sections">
+            <!-- FONTES DO CADERNO -->
+            <div class="gh-subpanel">
+              <h4 class="gh-subpanel-title">
+                <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                <span>Fontes do Caderno</span>
+              </h4>
+              <div class="gh-list-container gh-scroll-panel-sm u-mb-3" id="nb-sources-list">
+                <div class="gh-empty-state">Selecione um caderno para listar fontes e status de sincronizacao Drive.</div>
+              </div>
+
+              <div class="gh-divider-block">
+                <h5 class="gh-subpanel-title">
+                  <svg class="ui-icon icon-xs u-text-green" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                  <span>Ingerir Nova Fonte</span>
+                </h5>
+                <div class="gh-form-stack">
+                  <div class="gh-two-col">
+                    <select id="nb-source-type" class="form-control">
+                      <option value="url">URL Web / YouTube</option>
+                      <option value="text">Texto / Nota</option>
+                      <option value="drive">Google Drive</option>
+                    </select>
+                    <input id="nb-source-title" type="text" class="form-control" placeholder="Titulo da fonte" />
+                  </div>
+                  <input id="nb-source-url" type="text" class="form-control" placeholder="URL da fonte ou Drive ID (opcional para texto)" />
+                  <textarea id="nb-source-content" rows="2" class="form-control gh-textarea" placeholder="Conteudo textual (quando tipo = Texto)"></textarea>
+                  <button type="button" class="btn btn-sm btn-secondary" onclick="addNotebookSource()">
+                    <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                    <span>Adicionar Fonte ao Caderno</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- CONSULTA RAG CITADA -->
+            <div class="gh-subpanel">
+              <h4 class="gh-subpanel-title">
+                <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-search"></use></svg>
+                <span>Consulta RAG Citada</span>
+              </h4>
+              <div class="gh-inline-form u-mb-3">
+                <input id="nb-rag-query" type="text" class="form-control gh-flex-1" placeholder="Pergunte sobre as fontes deste caderno..." />
+                <button type="button" class="btn btn-sm btn-primary" onclick="querySelectedNotebook()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg>
+                  <span>Consultar RAG</span>
+                </button>
+              </div>
+              <div class="gh-result-box" id="nb-rag-answer">
+                <span class="u-text-muted">As respostas baseadas exclusivamente nas suas fontes aparecerão aqui.</span>
+              </div>
+            </div>
+
+            <!-- STUDIO 1-CLIQUE & AUDIOS EM CACHE -->
+            <div class="gh-subpanel">
+              <h4 class="gh-subpanel-title">
+                <svg class="ui-icon icon-sm u-text-purple" aria-hidden="true"><use href="#icon-mic"></use></svg>
+                <span>NotebookLM Studio (1-Clique)</span>
+              </h4>
+              <div class="nb-studio-actions u-mb-3">
+                <button type="button" class="btn btn-sm btn-primary" onclick="triggerNotebookStudio('audio_overview')">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-mic"></use></svg>
+                  <span>Audio Overview</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="triggerNotebookStudio('mindmap')">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-git-branch"></use></svg>
+                  <span>Mapa Mental</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="triggerNotebookStudio('report')">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                  <span>Relatorio</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="triggerNotebookStudio('faq')">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-book"></use></svg>
+                  <span>FAQ</span>
+                </button>
+              </div>
+              <div class="gh-result-box is-hidden u-mb-3" id="nb-studio-output"></div>
+              <div class="gh-field-label u-mb-2">Resumos em Áudio Salvos Localmente:</div>
+              <div class="gh-list-container" id="nb-cached-audio-list">
+                <div class="gh-empty-state">Nenhum audio em cache detectado para este caderno.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>

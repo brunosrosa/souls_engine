@@ -93,6 +93,8 @@
 
       // Mapeamento de pilar para botão do topo (6 pilares canônicos)
       let topBtnId = 'btn-' + tabId;
+      if (tabId === 'tab-google-hub' || tabId === 'tab-agent-inbox') topBtnId = 'btn-tab-overview';
+      if (tabId === 'tab-gemini-notebooks') topBtnId = 'btn-tab-research';
       if (tabId === 'tab-subagents') topBtnId = 'btn-tab-personas';
       if (tabId === 'tab-connections') topBtnId = 'btn-tab-settings';
 
@@ -100,14 +102,27 @@
       if (btn) btn.classList.add('active');
 
       // Sub-navegação contextual dos pilares compostos
+      const cockpitSubnav = document.getElementById('pillar-subnav-cockpit');
+      const researchSubnav = document.getElementById('pillar-subnav-research');
       const agentsSubnav = document.getElementById('pillar-subnav-agents');
       const systemSubnav = document.getElementById('pillar-subnav-system');
+      if (cockpitSubnav) {
+        cockpitSubnav.classList.toggle('is-hidden', tabId !== 'tab-overview' && tabId !== 'tab-google-hub' && tabId !== 'tab-agent-inbox');
+      }
+      if (researchSubnav) {
+        researchSubnav.classList.toggle('is-hidden', tabId !== 'tab-research' && tabId !== 'tab-gemini-notebooks');
+      }
       if (agentsSubnav) {
         agentsSubnav.classList.toggle('is-hidden', tabId !== 'tab-personas' && tabId !== 'tab-subagents');
       }
       if (systemSubnav) {
         systemSubnav.classList.toggle('is-hidden', tabId !== 'tab-connections' && tabId !== 'tab-settings');
       }
+      if (tabId === 'tab-overview') document.getElementById('btn-pillar-overview')?.classList.add('active');
+      if (tabId === 'tab-google-hub') document.getElementById('btn-pillar-google-hub')?.classList.add('active');
+      if (tabId === 'tab-agent-inbox') document.getElementById('btn-pillar-agent-inbox')?.classList.add('active');
+      if (tabId === 'tab-research') document.getElementById('btn-pillar-research')?.classList.add('active');
+      if (tabId === 'tab-gemini-notebooks') document.getElementById('btn-pillar-notebooks')?.classList.add('active');
       if (tabId === 'tab-personas') document.getElementById('btn-pillar-personas')?.classList.add('active');
       if (tabId === 'tab-subagents') document.getElementById('btn-pillar-subagents')?.classList.add('active');
       if (tabId === 'tab-connections') document.getElementById('btn-pillar-connections')?.classList.add('active');
@@ -134,6 +149,18 @@
       } else if (tabId === 'tab-overview') {
         fetchEcosystemPulse();
         fetchTelemetry();
+      } else if (tabId === 'tab-google-hub') {
+        if (typeof loadGoogleHubTab === 'function') {
+          loadGoogleHubTab();
+        }
+      } else if (tabId === 'tab-agent-inbox') {
+        if (typeof loadAgentInboxTab === 'function') {
+          loadAgentInboxTab();
+        }
+      } else if (tabId === 'tab-gemini-notebooks') {
+        if (typeof loadGeminiNotebooksTab === 'function') {
+          loadGeminiNotebooksTab();
+        }
       } else if (tabId === 'tab-skills') {
         if (typeof initSkillsHubTab === 'function') {
           initSkillsHubTab();
@@ -152,6 +179,9 @@
       } else if (tabId === 'tab-connections') {
         if (typeof fetchConnectionsData === 'function') {
           fetchConnectionsData();
+        }
+        if (typeof loadGoogleConnectionsVault === 'function') {
+          loadGoogleConnectionsVault();
         }
       } else if (tabId === 'tab-settings') {
         fetchConfigToml();
@@ -360,6 +390,9 @@
           telemetryPromise,
           minVisualDelay
         ]);
+        if (typeof refreshInboxBadgeCount === 'function') {
+          refreshInboxBadgeCount();
+        }
 
         if (!res.ok) {
           if (isManual) throw new Error(`HTTP ${res.status}`);
@@ -9767,6 +9800,9 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       if (typeof fetchPersonasCountBadgeOnly === 'function') {
         fetchPersonasCountBadgeOnly();
       }
+      if (typeof refreshInboxBadgeCount === 'function') {
+        refreshInboxBadgeCount();
+      }
 
       // Inicialização dos editores ergonômicos com régua de linhas e indicador Ln/Col
       setupErgonomicEditor('raw-toml-editor', 'raw-toml-gutter', 'footer-toml-cursor');
@@ -10491,14 +10527,18 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
     // ========================================================
     const COMMAND_PALETTE_ITEMS = [
       { id: 'nav-overview', title: 'Ir para Cockpit & Overview', desc: 'Pulso pessoal, telemetria de silício e status do Master Brain', category: 'Navegação', action: () => switchTab('tab-overview') },
+      { id: 'nav-google-hub', title: 'Ir para Google Life Hub', desc: 'Resumo diário, Gmail, Agenda, previsão de trânsito, Docs, Sheets, Tarefas e YouTube', category: 'Navegação', action: () => switchTab('tab-google-hub') },
+      { id: 'nav-agent-inbox', title: 'Ir para Central de Aprovações', desc: 'Revisar alterações com destaque visual e confirmar envios com segurança', category: 'Navegação', action: () => switchTab('tab-agent-inbox') },
       { id: 'nav-research', title: 'Ir para Pesquisa & Conhecimento', desc: 'Missões STORM, Deep Research e biblioteca verificada', category: 'Navegação', action: () => switchTab('tab-research') },
       { id: 'act-new-research', title: 'Iniciar Nova Pesquisa Profunda', desc: 'Abrir formulário de scoping STORM com preview FinOps', category: 'Ação Rápida', action: () => { switchTab('tab-research'); if (typeof switchResearchSubtab === 'function') switchResearchSubtab('new-mission'); } },
+      { id: 'nav-gemini-notebooks', title: 'Ir para Gemini Notebooks', desc: 'Cadernos NotebookLM, Drive, perguntas com fontes citadas e player de áudio', category: 'Navegação', action: () => switchTab('tab-gemini-notebooks') },
       { id: 'nav-personas', title: 'Ir para Personas & Governança', desc: 'Gerenciar assistentes Hermes, SOUL.md e privacidade', category: 'Navegação', action: () => switchTab('tab-personas') },
       { id: 'nav-subagents', title: 'Ir para Subagentes & Fila', desc: 'Monitorar sessões Pareto e handoffs L3', category: 'Navegação', action: () => switchTab('tab-subagents') },
       { id: 'nav-skills', title: 'Ir para Skills & MCP Tools', desc: 'Catálogo local, marketplace 101k+ e Forge', category: 'Navegação', action: () => switchTab('tab-skills') },
       { id: 'nav-local', title: 'Ir para Modelos & Arena', desc: 'Silício local, Cloud Arena, Model Hub e Provedores', category: 'Navegação', action: () => switchTab('tab-local') },
       { id: 'nav-fallback', title: 'Ver Provedores Cloud & Fallback Chains', desc: 'Circuit breaker, quarentenas 429 e resolução <150ms', category: 'Navegação', action: () => { switchTab('tab-local'); if (typeof switchLocalSubtab === 'function') switchLocalSubtab('fallback'); } },
-      { id: 'nav-connections', title: 'Ir para Conexões, Cofre & CLIs', desc: 'Google Universe Vault, NotebookLM e agy/claude/codex', category: 'Navegação', action: () => switchTab('tab-connections') },
+      { id: 'nav-connections', title: 'Ir para Conexões, Conta Google & Chaves de IA', desc: 'Conectar NotebookLM, Google Workspace, provedores de IA e assistentes locais', category: 'Navegação', action: () => switchTab('tab-connections') },
+      { id: 'act-google-doctor', title: 'Verificar Diagnóstico Google & NotebookLM', desc: 'Checar conexão com Google, NotebookLM, Gemini e chaves configuradas', category: 'Diagnóstico', action: () => { switchTab('tab-connections'); if (typeof loadGoogleConnectionsVault === 'function') loadGoogleConnectionsVault(true); } },
       { id: 'nav-set-brain', title: 'Configurar Master Brain & Presets', desc: 'Alternar modelo mestre e tríade Pareto', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-brain'); } },
       { id: 'nav-set-router', title: 'Configurar Roteador ParetoBandit', desc: 'Thresholds e priors bayesianas de despacho', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-router'); } },
       { id: 'nav-set-reasoning', title: 'Configurar Raciocínio & Modo Socrático', desc: 'Thinking budget e detecção de entropia', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-reasoning'); } },

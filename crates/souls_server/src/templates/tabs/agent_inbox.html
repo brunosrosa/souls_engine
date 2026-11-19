@@ -1,0 +1,90 @@
+    <!-- ========================================== -->
+    <!-- ABA: AGENT INBOX — CENTRAL DE APROVAÇÕES -->
+    <!-- ========================================== -->
+    <section class="tab-pane" id="tab-agent-inbox">
+      <div class="card-hero u-mb-6 inbox-hero">
+        <div class="u-d-flex u-justify-between u-items-start u-flex-wrap u-gap-4">
+          <div>
+            <h2 class="u-d-flex u-items-center u-gap-10p u-s-c4b339">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-inbox"></use></svg>
+              <span>Central de Aprovações — Revisão Antes de Agir</span>
+            </h2>
+            <p class="u-m-0 u-text-muted u-s-43b9f4">
+              Ações seguras do dia a dia (como criar rascunhos ou adicionar tarefas) acontecem direto. Já ações externas ou irreversíveis — como enviar um e-mail, modificar um documento ou lidar com conteúdo externo — aparecem aqui mostrando exatamente o que vai mudar para você revisar e confirmar no controle deslizante.
+            </p>
+          </div>
+          <div class="google-hub-hero-controls">
+            <span class="badge badge-lowcost" id="inbox-hero-pending-badge">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg>
+              <span>Pendentes: <strong id="inbox-hero-pending-count">0</strong></span>
+            </span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadAgentInboxTab(true)">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Atualizar Inbox</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BARRA DE FILTROS POR STATUS -->
+      <div class="subtabs-bar u-mb-4 u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-3">
+        <div class="u-d-flex u-gap-2 u-flex-wrap" id="inbox-status-filters">
+          <button type="button" class="subtab-btn active" data-status="pending" onclick="setInboxStatusFilter('pending', this)">
+            <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+            <span>Pendentes</span>
+          </button>
+          <button type="button" class="subtab-btn" data-status="executed" onclick="setInboxStatusFilter('executed', this)">
+            <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check-circle"></use></svg>
+            <span>Executadas</span>
+          </button>
+          <button type="button" class="subtab-btn" data-status="rejected" onclick="setInboxStatusFilter('rejected', this)">
+            <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-x-circle"></use></svg>
+            <span>Rejeitadas</span>
+          </button>
+          <button type="button" class="subtab-btn" data-status="all" onclick="setInboxStatusFilter('all', this)">
+            <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-list"></use></svg>
+            <span>Todas</span>
+          </button>
+        </div>
+        <span class="u-text-muted gh-text-xs" id="inbox-filter-summary">Exibindo propostas pendentes de aprovacao humana</span>
+      </div>
+
+      <!-- LISTA E INSPETOR DE PROPOSTAS -->
+      <div class="inbox-proposals-container u-mb-6" id="inbox-proposals-list">
+        <div class="gh-empty-state">Carregando ações aguardando aprovação...</div>
+      </div>
+
+      <!-- GAVETA DE AUDITORIA REDACTED -->
+      <details class="lab-drawer u-mb-4" id="drawer-inbox-audit" ontoggle="if (this.open) loadInboxAuditTrail()">
+        <summary class="lab-drawer-header">
+          <div class="lab-drawer-title">
+            <svg class="ui-icon icon-sm lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+            <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-shield"></use></svg>
+            <span>Trilha de Auditoria Segura (Redacted Audit Log)</span>
+          </div>
+          <span class="lab-drawer-badge">GET /api/v1/inbox/audit</span>
+        </summary>
+        <div class="lab-drawer-body">
+          <div class="card u-mb-0">
+            <div class="card-header u-mb-3">
+              <div class="card-title">
+                <div class="card-icon icon-cyan">
+                  <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-history"></use></svg>
+                </div>
+                <div>
+                  <div class="u-fw-700 u-text-white">Histórico de Decisões &amp; Segurança</div>
+                  <div class="u-text-muted gh-text-xs">Tokens e cookies OAuth sao redigidos automaticamente antes da persistencia.</div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-xs btn-secondary" onclick="loadInboxAuditTrail()">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+                <span>Recarregar Log</span>
+              </button>
+            </div>
+            <div class="gh-list-container gh-scroll-panel" id="inbox-audit-list">
+              <div class="gh-empty-state">Abra esta gaveta para inspecionar a trilha de auditoria.</div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>

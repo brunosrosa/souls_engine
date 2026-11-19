@@ -1,0 +1,477 @@
+    <!-- ========================================== -->
+    <!-- ABA: GOOGLE PERSONAL & LIFE HUB (v0.9.2)   -->
+    <!-- ========================================== -->
+    <section class="tab-pane" id="tab-google-hub">
+      <div class="card-hero u-mb-6 google-hub-hero">
+        <div class="u-d-flex u-justify-between u-items-start u-flex-wrap u-gap-4">
+          <div>
+            <h2 class="u-d-flex u-items-center u-gap-10p u-s-c4b339">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-compass"></use></svg>
+              <span>Google Personal &amp; Life Hub</span>
+            </h2>
+            <p class="u-m-0 u-text-muted u-s-43b9f4">
+              Seu resumo do dia, triagem inteligente de e-mails, agenda com cálculo de saída no trânsito, documentos, planilhas e tarefas — tudo com confirmação sua antes de enviar qualquer coisa.
+            </p>
+          </div>
+          <div class="google-hub-hero-controls">
+            <div class="google-hub-account-picker">
+              <label for="gh-account-select" class="gh-field-label">Conta Ativa</label>
+              <select id="gh-account-select" class="form-control gh-select-sm" onchange="onGoogleHubAccountChange()">
+                <option value="">Conta Primaria (Auto)</option>
+              </select>
+            </div>
+            <span class="badge badge-champion" id="gh-account-policy-badge">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-shield"></use></svg>
+              <span>Equilibrado (Pede Confirmação)</span>
+            </span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadGoogleBriefing(true)">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Atualizar Briefing</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="switchTab('tab-connections')">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-key"></use></svg>
+              <span>Ir para Cofre/Contas</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD HERO: BRIEFING DIARIO & DESLOCAMENTO -->
+      <div class="card card-highlight u-mb-6 google-hub-briefing-card">
+        <div class="card-header u-mb-3">
+          <div class="card-title">
+            <div class="card-icon icon-cyan">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+            </div>
+            <div>
+              <div class="u-fw-700 u-text-white u-s-7a04c0">Resumo do Dia &amp; Deslocamento</div>
+              <div class="u-text-muted u-mt-2p u-s-d3bc8d" id="gh-briefing-subtitle">
+                Sintese de compromissos, alertas de transito com horario sugerido de saida e janelas de foco profundo.
+              </div>
+            </div>
+          </div>
+          <div class="u-d-flex u-gap-2 u-items-center">
+            <span class="badge badge-value" id="gh-briefing-status-badge">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check-circle"></use></svg>
+              <span>Briefing Pronto</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="gh-oauth-banner is-hidden" id="gh-oauth-banner">
+          <div class="gh-oauth-banner-body">
+            <svg class="ui-icon icon-md u-text-amber" aria-hidden="true"><use href="#icon-alert-triangle"></use></svg>
+            <div>
+              <div class="u-fw-600 u-text-white">OAuth2 Google ainda nao conectado nesta conta</div>
+              <div class="u-text-muted gh-text-sm">
+                Conecte sua conta Google em Conexões para ativar Gmail, Agenda, Drive, Documentos, Planilhas, Tarefas e Contatos em tempo real.
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" onclick="switchTab('tab-connections')">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-link"></use></svg>
+            <span>Conectar Conta Google</span>
+          </button>
+        </div>
+
+        <div class="gh-briefing-notes is-hidden" id="gh-briefing-notes"></div>
+
+        <div class="google-hub-briefing-grid">
+          <div class="gh-subpanel">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+              <span>Proximos Eventos</span>
+            </h4>
+            <div class="gh-list-container" id="gh-briefing-events">
+              <div class="gh-empty-state">Carregando eventos da agenda...</div>
+            </div>
+          </div>
+
+          <div class="gh-subpanel">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-amber" aria-hidden="true"><use href="#icon-compass"></use></svg>
+              <span>Alertas de Trânsito e Saída</span>
+            </h4>
+            <div class="gh-list-container" id="gh-commute-alerts">
+              <div class="gh-empty-state">Nenhum alerta de deslocamento pendente.</div>
+            </div>
+          </div>
+
+          <div class="gh-subpanel">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-clock"></use></svg>
+              <span>Blocos de Foco Profundo</span>
+            </h4>
+            <div class="gh-list-container" id="gh-focus-slots">
+              <div class="gh-empty-state">Calculando janelas livres de foco...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRID DE PRODUTIVIDADE DIARIA -->
+      <div class="google-hub-grid">
+
+        <!-- 1. TRIAGEM GMAIL -->
+        <div class="card google-hub-card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-inbox"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Triagem Gmail &amp; Rascunho Seguro</div>
+                <div class="u-text-muted gh-text-xs">Priorização automática com verificação de segurança</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-xs btn-secondary" onclick="triageGmail()">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Triar Inbox</span>
+            </button>
+          </div>
+
+          <div class="gh-inline-form u-mb-3">
+            <input id="gh-gmail-query" type="text" class="form-control gh-flex-1" value="in:inbox" placeholder="Filtro Gmail (ex: is:unread, from:...)" />
+            <button type="button" class="btn btn-sm btn-primary" onclick="triageGmail()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-search"></use></svg>
+              <span>Buscar</span>
+            </button>
+          </div>
+
+          <div class="gh-list-container gh-scroll-panel u-mb-4" id="gh-gmail-list">
+            <div class="gh-empty-state">Clique em Triar Inbox para escanear mensagens prioritarias.</div>
+          </div>
+
+          <div class="gh-divider-block">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-edit"></use></svg>
+              <span>Compor Rascunho / Propor Envio</span>
+            </h4>
+            <div class="gh-form-stack">
+              <input id="gh-gmail-to" type="email" class="form-control" placeholder="Destinatario (para@dominio.com)" />
+              <input id="gh-gmail-subject" type="text" class="form-control" placeholder="Assunto da mensagem" />
+              <textarea id="gh-gmail-body" rows="3" class="form-control gh-textarea" placeholder="Corpo da mensagem..."></textarea>
+              <div class="gh-policy-note">
+                <svg class="ui-icon icon-xs u-text-amber" aria-hidden="true"><use href="#icon-shield"></use></svg>
+                <span><strong>Salvar Rascunho</strong> cria na sua conta com segurança; <strong>Enviar E-mail</strong> pede sua confirmação na Central de Aprovações.</span>
+              </div>
+              <div class="gh-btn-row">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="createGmailDraft()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                  <span>Criar Rascunho Seguro (Tier 1)</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="proposeGmailSend()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-lock"></use></svg>
+                  <span>Preparar Envio (Pede Confirmação)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. TASKS & QUICK CAPTURE RELAMPAGO -->
+        <div class="card google-hub-card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-green">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-check-circle"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Google Tasks &amp; Quick Capture Relampago</div>
+                <div class="u-text-muted gh-text-xs">Tarefas sincronizadas e captura soberana para Obsidian</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-xs btn-secondary" onclick="loadGoogleTasks()">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Atualizar</span>
+            </button>
+          </div>
+
+          <div class="gh-list-container gh-scroll-panel u-mb-4" id="gh-tasks-list">
+            <div class="gh-empty-state">Carregando Google Tasks...</div>
+          </div>
+
+          <div class="gh-divider-block">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-plus"></use></svg>
+              <span>Captura Rapida (Task ou Obsidian raw/inbox/)</span>
+            </h4>
+            <div class="gh-form-stack">
+              <input id="gh-task-title" type="text" class="form-control" placeholder="Titulo da tarefa ou nota rapida" />
+              <textarea id="gh-task-notes" rows="2" class="form-control gh-textarea" placeholder="Notas, contexto ou tags (#ideia #rotina)..."></textarea>
+              <input id="gh-task-tags" type="text" class="form-control" placeholder="Tags Obsidian opcionais (ex: inbox, rotina)" />
+              <div class="gh-btn-row">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="createGoogleTask()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-check-circle"></use></svg>
+                  <span>Criar Google Task</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="quickCaptureToObsidian()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-database"></use></svg>
+                  <span>Quick Capture Obsidian</span>
+                </button>
+              </div>
+              <div class="gh-policy-note">
+                <svg class="ui-icon icon-xs u-text-cyan" aria-hidden="true"><use href="#icon-info"></use></svg>
+                <span>Nota Keep Enterprise: a Google Keep API e restrita a contas Workspace Enterprise; contas pessoais <code>@gmail.com</code> usam Quick Capture higienizado direto em Obsidian <code>raw/inbox/</code>.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. AGENDA & PREVISAO DE TRANSITO -->
+        <div class="card google-hub-card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-amber">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Agenda &amp; Previsão de Trânsito</div>
+                <div class="u-text-muted gh-text-xs">Criação silenciosa de eventos e cálculo inteligente de hora de saída</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gh-form-stack u-mb-4">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-plus"></use></svg>
+              <span>Novo Evento Rápido (sem disparar convites)</span>
+            </h4>
+            <input id="gh-cal-summary" type="text" class="form-control" placeholder="Título do compromisso" />
+            <div class="gh-two-col">
+              <div>
+                <label for="gh-cal-start" class="gh-field-label">Início (data e hora)</label>
+                <input id="gh-cal-start" type="text" class="form-control u-mono" placeholder="2026-11-20T14:00:00-03:00" />
+              </div>
+              <div>
+                <label for="gh-cal-end" class="gh-field-label">Término (data e hora)</label>
+                <input id="gh-cal-end" type="text" class="form-control u-mono" placeholder="2026-11-20T15:00:00-03:00" />
+              </div>
+            </div>
+            <input id="gh-cal-location" type="text" class="form-control" placeholder="Local / Endereço (opcional)" />
+            <button type="button" class="btn btn-sm btn-secondary" onclick="createCalendarEvent()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+              <span>Agendar Evento</span>
+            </button>
+          </div>
+
+          <div class="gh-divider-block">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-amber" aria-hidden="true"><use href="#icon-compass"></use></svg>
+              <span>Simular Trajeto &amp; Horário de Saída</span>
+            </h4>
+            <div class="gh-form-stack">
+              <input id="gh-route-origin" type="text" class="form-control" placeholder="Origem (ex: Av. Paulista, 1000, São Paulo)" />
+              <input id="gh-route-destination" type="text" class="form-control" placeholder="Destino (ex: Aeroporto de Congonhas)" />
+              <div class="gh-two-col">
+                <div>
+                  <label for="gh-route-event-start" class="gh-field-label">Horário Alvo (opcional)</label>
+                  <input id="gh-route-event-start" type="text" class="form-control u-mono" placeholder="Auto (+2h)" />
+                </div>
+                <div>
+                  <label for="gh-route-buffer" class="gh-field-label">Margem extra (min)</label>
+                  <input id="gh-route-buffer" type="number" class="form-control" value="15" min="0" max="120" />
+                </div>
+              </div>
+              <input id="gh-route-apikey" type="password" class="form-control" placeholder="Chave do Google Maps Routes (opcional se já salva em Conexões)" />
+              <button type="button" class="btn btn-sm btn-primary" onclick="calculateCommuteRoute()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg>
+                <span>Calcular Tempo de Deslocamento</span>
+              </button>
+              <div class="gh-result-box is-hidden" id="gh-route-result"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. RASCUNHO DE DOCUMENTOS & COMPARADOR -->
+        <div class="card google-hub-card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-purple">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Rascunho de Documentos &amp; Revisão</div>
+                <div class="u-text-muted gh-text-xs">Edição segura por linhas com comparação visual antes de salvar</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gh-form-stack">
+            <div class="gh-two-col">
+              <div>
+                <label for="gh-doc-id" class="gh-field-label">ID do Documento Google</label>
+                <input id="gh-doc-id" type="text" class="form-control u-mono" placeholder="ex: doc_arquitetura_q4" />
+              </div>
+              <div>
+                <label for="gh-doc-title" class="gh-field-label">Título</label>
+                <input id="gh-doc-title" type="text" class="form-control" placeholder="Título do rascunho" />
+              </div>
+            </div>
+
+            <div class="gh-three-col">
+              <div>
+                <label for="gh-doc-op" class="gh-field-label">Operação</label>
+                <select id="gh-doc-op" class="form-control">
+                  <option value="replace">Substituir Trecho</option>
+                  <option value="insert">Inserir na Linha</option>
+                  <option value="delete">Remover Trecho</option>
+                </select>
+              </div>
+              <div>
+                <label for="gh-doc-line-start" class="gh-field-label">Linha Inicial</label>
+                <input id="gh-doc-line-start" type="number" class="form-control" value="1" min="1" />
+              </div>
+              <div>
+                <label for="gh-doc-line-end" class="gh-field-label">Linha Final</label>
+                <input id="gh-doc-line-end" type="number" class="form-control" value="1" min="1" />
+              </div>
+            </div>
+
+            <div>
+              <label for="gh-doc-editor" class="gh-field-label">Conteúdo do Rascunho</label>
+              <textarea id="gh-doc-editor" rows="5" class="form-control gh-textarea u-mono" placeholder="Carregue um documento ou digite linhas para editar com segurança..."></textarea>
+            </div>
+
+            <div>
+              <label for="gh-doc-baseline" class="gh-field-label">Texto Original para Comparação (opcional)</label>
+              <textarea id="gh-doc-baseline" rows="2" class="form-control gh-textarea u-mono" placeholder="Cole o texto atual se quiser ver a comparação linha a linha..."></textarea>
+            </div>
+
+            <div class="gh-btn-row">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="loadDocsScratchpad()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-download"></use></svg>
+                <span>Carregar Doc</span>
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="saveDocsScratchpad()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-edit"></use></svg>
+                <span>Salvar Rascunho Local</span>
+              </button>
+              <button type="button" class="btn btn-sm btn-primary" onclick="pushDocsScratchpad()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-git-branch"></use></svg>
+                <span>Enviar Alteração para Aprovação</span>
+              </button>
+            </div>
+            <div class="gh-result-box is-hidden" id="gh-doc-status"></div>
+          </div>
+        </div>
+
+        <!-- 5. SHEETS FINANCEIRO & PLANEJADOR DE SLIDES -->
+        <div class="card google-hub-card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-green">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-bar-chart"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Sheets Financeiro &amp; Planejador de Slides</div>
+                <div class="u-text-muted gh-text-xs">Analise quantitativa de faixas e roteiros de 5 a 15 slides</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gh-form-stack u-mb-4">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-dollar"></use></svg>
+              <span>Analisar Faixa Financeira (Google Sheets)</span>
+            </h4>
+            <div class="gh-two-col">
+              <input id="gh-sheet-id" type="text" class="form-control u-mono" placeholder="Spreadsheet ID" />
+              <input id="gh-sheet-range" type="text" class="form-control u-mono" value="A1:D20" placeholder="Faixa (ex: A1:D20)" />
+            </div>
+            <textarea id="gh-sheet-rows" rows="2" class="form-control gh-textarea u-mono" placeholder='Opcional JSON inline: [["Categoria","Valor"],["Nuvem","120.50"]]'></textarea>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="analyzeSheetsRange()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-bar-chart"></use></svg>
+              <span>Analisar Faixa</span>
+            </button>
+            <div class="gh-result-box is-hidden" id="gh-sheet-result"></div>
+          </div>
+
+          <div class="gh-divider-block">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-layers"></use></svg>
+              <span>Planejador de Deck (Google Slides)</span>
+            </h4>
+            <div class="gh-form-stack">
+              <div class="gh-two-col">
+                <input id="gh-slides-topic" type="text" class="form-control" placeholder="Tema da apresentacao" />
+                <input id="gh-slides-count" type="number" class="form-control" value="8" min="5" max="15" />
+              </div>
+              <textarea id="gh-slides-briefing" rows="2" class="form-control gh-textarea" placeholder="Briefing, publico e pontos-chave..."></textarea>
+              <label class="gh-checkbox-label">
+                <input type="checkbox" id="gh-slides-create-remote" />
+                <span>Criar apresentação no Google Slides (solicita confirmação antes de publicar)</span>
+              </label>
+              <button type="button" class="btn btn-sm btn-primary" onclick="generateSlidesPlan()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+                <span>Gerar Plano de Slides</span>
+              </button>
+              <div class="gh-result-box is-hidden" id="gh-slides-result"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. CONTATOS / ANIVERSARIOS & YOUTUBE TRANSCRIPTS -->
+        <div class="card google-hub-card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-purple">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-users"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Contatos, Aniversarios &amp; YouTube Transcripts</div>
+                <div class="u-text-muted gh-text-xs">People API e extracao limpa de transcricoes YouTube</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gh-form-stack u-mb-4">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-users"></use></svg>
+              <span>Contatos &amp; Proximos Aniversarios</span>
+            </h4>
+            <div class="gh-inline-form">
+              <input id="gh-contacts-query" type="text" class="form-control gh-flex-1" placeholder="Nome, email ou empresa" />
+              <button type="button" class="btn btn-sm btn-secondary" onclick="searchGoogleContacts()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-search"></use></svg>
+                <span>Buscar</span>
+              </button>
+            </div>
+            <label class="gh-checkbox-label">
+              <input type="checkbox" id="gh-contacts-birthdays" />
+              <span>Filtrar aniversarios nos proximos 30 dias</span>
+            </label>
+            <div class="gh-list-container gh-scroll-panel-sm" id="gh-contacts-list">
+              <div class="gh-empty-state">Use a busca para consultar contatos via People API.</div>
+            </div>
+          </div>
+
+          <div class="gh-divider-block">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-amber" aria-hidden="true"><use href="#icon-play"></use></svg>
+              <span>Transcricao YouTube &amp; Captura</span>
+            </h4>
+            <div class="gh-form-stack">
+              <div class="gh-two-col">
+                <input id="gh-yt-url" type="text" class="form-control" placeholder="URL ou ID do video YouTube" />
+                <select id="gh-yt-lang" class="form-control">
+                  <option value="pt">Portugues (pt)</option>
+                  <option value="en" selected>Ingles (en)</option>
+                  <option value="es">Espanhol (es)</option>
+                </select>
+              </div>
+              <button type="button" class="btn btn-sm btn-primary" onclick="fetchYouTubeTranscript()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                <span>Extrair Transcricao</span>
+              </button>
+              <div class="gh-result-box is-hidden" id="gh-yt-preview"></div>
+              <button type="button" class="btn btn-sm btn-secondary is-hidden" id="gh-yt-capture-btn" onclick="sendYouTubeToQuickCapture()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-database"></use></svg>
+                <span>Enviar para Quick Capture / Notebook</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>

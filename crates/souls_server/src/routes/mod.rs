@@ -7,6 +7,7 @@ pub mod connections;
 pub mod dashboard;
 pub mod google;
 pub mod health;
+pub mod inbox;
 pub mod inventory;
 pub mod memory;
 pub mod models;
@@ -14,7 +15,7 @@ pub mod sessions;
 pub mod switchboard;
 pub mod vision;
 
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::Router;
 use tower_http::trace::TraceLayer;
 
@@ -115,6 +116,49 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/google/workspace/status", get(google::workspace_status_handler))
         .route("/api/v1/google/workspace/link", post(google::workspace_link_handler))
         .route("/api/v1/google/jules/migrate", post(google::jules_migrate_handler))
+        // Milestone v0.9.2: Google Life Hub, Multi-Account OAuth2 PKCE, Notebooks Audio & BMAD Agent Inbox
+        .route("/api/v1/inbox/proposals", get(inbox::list_proposals_handler))
+        .route("/api/v1/inbox/proposals/:id", get(inbox::get_proposal_handler))
+        .route("/api/v1/inbox/proposals/:id/approve", post(inbox::approve_proposal_handler))
+        .route("/api/v1/inbox/proposals/:id/reject", post(inbox::reject_proposal_handler))
+        .route("/api/v1/inbox/audit", get(inbox::list_audit_handler))
+        .route("/api/v1/google/accounts", get(google::list_accounts_handler).post(google::upsert_account_handler))
+        .route("/api/v1/google/accounts/:id", delete(google::delete_account_handler))
+        .route("/api/v1/google/accounts/:id/policy", post(google::update_account_policy_handler))
+        .route("/api/v1/google/accounts/import-gws", post(google::import_gws_handler))
+        .route("/api/v1/google/oauth/start", post(google::oauth_start_handler))
+        .route("/api/v1/google/oauth/upload-credentials", post(google::oauth_upload_credentials_handler))
+        .route("/api/v1/google/oauth/callback", get(google::oauth_callback_handler))
+        .route("/api/v1/google/nlm/login", post(google::nlm_login_handler))
+        .route("/api/v1/google/gws/login", post(google::gws_login_handler))
+        .route("/api/v1/google/doctor", get(google::google_doctor_handler))
+        .route("/api/v1/google/briefing", get(google::briefing_handler))
+        .route("/api/v1/google/gmail/triage", get(google::gmail_triage_handler))
+        .route("/api/v1/google/gmail/draft", post(google::gmail_draft_handler))
+        .route("/api/v1/google/gmail/bulk", post(google::gmail_bulk_handler))
+        .route("/api/v1/google/gmail/send", post(google::gmail_send_handler))
+        .route("/api/v1/google/calendar/events", get(google::calendar_events_handler).post(google::calendar_create_event_handler))
+        .route("/api/v1/google/calendar/focus-slots", get(google::calendar_focus_slots_handler))
+        .route("/api/v1/google/drive/search", get(google::drive_search_handler))
+        .route("/api/v1/google/drive/action", post(google::drive_action_handler))
+        .route("/api/v1/google/docs/scratchpad", get(google::docs_scratchpad_get_handler).post(google::docs_scratchpad_edit_handler))
+        .route("/api/v1/google/docs/scratchpad/push", post(google::docs_scratchpad_push_handler))
+        .route("/api/v1/google/sheets/analyze", post(google::sheets_analyze_handler))
+        .route("/api/v1/google/sheets/write", post(google::sheets_write_handler))
+        .route("/api/v1/google/slides/plan", post(google::slides_plan_handler))
+        .route("/api/v1/google/tasks", get(google::tasks_list_handler).post(google::tasks_mutate_handler))
+        .route("/api/v1/google/quick-capture", post(google::quick_capture_handler))
+        .route("/api/v1/google/contacts", get(google::contacts_handler))
+        .route("/api/v1/google/maps/commute", post(google::maps_commute_handler))
+        .route("/api/v1/google/youtube/transcript", post(google::youtube_transcript_handler))
+        .route("/api/v1/google/gems", get(google::gems_list_handler).post(google::gems_mutate_handler))
+        .route("/api/v1/google/notebooks", get(google::notebooks_list_handler))
+        .route("/api/v1/google/notebooks/:id", get(google::notebook_get_handler))
+        .route("/api/v1/google/notebooks/:id/sources", post(google::notebook_add_source_handler))
+        .route("/api/v1/google/notebooks/:id/sync-drive", post(google::notebook_sync_drive_handler))
+        .route("/api/v1/google/notebooks/:id/query", post(google::notebook_query_handler))
+        .route("/api/v1/google/notebooks/:id/studio", post(google::notebook_studio_handler))
+        .route("/api/v1/google/notebooks/:id/audio/:artifact_id", get(google::notebook_audio_stream_handler))
         // Milestone v0.8.3: Cognitive Vision O(1) & AXTree LEAN (ADR-029)
         .route("/api/v1/vision/status", get(vision::vision_status_handler))
         .route("/api/v1/vision/axtree/serialize", post(vision::serialize_axtree_handler))

@@ -10,6 +10,7 @@ pub mod registry;
 pub mod session;
 pub mod switchboard;
 pub mod tools_extended;
+pub mod tools_google;
 pub mod transport;
 
 pub use session::McpSessionManager;

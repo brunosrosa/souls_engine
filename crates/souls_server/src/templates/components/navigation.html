@@ -32,6 +32,33 @@
 
   <!-- CONTENT -->
   <main class="content-area">
+    <!-- SUB-NAVEGAÇÃO CONTEXTUAL DO PILAR: COCKPIT & LIFE HUB -->
+    <div class="pillar-subnav" id="pillar-subnav-cockpit">
+      <span class="pillar-subnav-label">Pilar Cockpit:</span>
+      <button class="pillar-subnav-btn active" id="btn-pillar-overview" onclick="switchTab('tab-overview')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-target"></use></svg> Cockpit &amp; Pulso</span>
+      </button>
+      <button class="pillar-subnav-btn" id="btn-pillar-google-hub" onclick="switchTab('tab-google-hub')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-compass"></use></svg> Google Life Hub</span>
+      </button>
+      <button class="pillar-subnav-btn" id="btn-pillar-agent-inbox" onclick="switchTab('tab-agent-inbox')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-inbox"></use></svg> Agent Inbox</span>
+        <span class="tab-count-badge" id="badge-inbox-count">0</span>
+      </button>
+    </div>
+
+    <!-- SUB-NAVEGAÇÃO CONTEXTUAL DO PILAR: PESQUISA & CONHECIMENTO -->
+    <div class="pillar-subnav is-hidden" id="pillar-subnav-research">
+      <span class="pillar-subnav-label">Pilar Pesquisa:</span>
+      <button class="pillar-subnav-btn active" id="btn-pillar-research" onclick="switchTab('tab-research')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-microscope"></use></svg> Pesquisa Profunda</span>
+      </button>
+      <button class="pillar-subnav-btn" id="btn-pillar-notebooks" onclick="switchTab('tab-gemini-notebooks')">
+        <span><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-book"></use></svg> Gemini Notebooks</span>
+        <span class="tab-count-badge" id="badge-notebooks-count">--</span>
+      </button>
+    </div>
+
     <!-- SUB-NAVEGAÇÃO CONTEXTUAL DO PILAR: AGENTES & PERSONAS -->
     <div class="pillar-subnav is-hidden" id="pillar-subnav-agents">
       <span class="pillar-subnav-label">Pilar Agentes:</span>

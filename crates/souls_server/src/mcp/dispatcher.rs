@@ -12,6 +12,7 @@ use souls_protocol::error::{JsonRpcError, JsonRpcResponse, McpDomainError};
 use crate::mcp::handlers;
 use crate::mcp::registry::{get_canonical_tools, list_tools};
 use crate::mcp::tools_extended;
+use crate::mcp::tools_google;
 use crate::state::AppState;
 
 /// Standard MCP protocol version.
@@ -520,7 +521,7 @@ pub async fn dispatch_jsonrpc(
                     }
                 }
 
-                // DOMAIN 9: GOOGLE UNIVERSE & NOTEBOOKLM (v0.8.2)
+                // DOMAIN 9: GOOGLE UNIVERSE & NOTEBOOKLM (v0.8.2 + v0.9.2 Canonical RPCs)
                 "notebooklm_rpc" => {
                     let rpc_id_str = match args.get("rpc_id").and_then(Value::as_str) {
                         Some(id) => id,
@@ -528,23 +529,26 @@ pub async fn dispatch_jsonrpc(
                     };
                     let rpc_args = args.get("arguments").cloned().unwrap_or(json!([]));
                     let vault_path = crate::routes::google::resolve_google_vault_path();
-                    let creds = match souls_core::google_bridge::GoogleSessionVault::load(&vault_path) {
-                        Ok(Some(c)) if c.is_configured() => c,
+                    let legacy_creds = souls_core::google_bridge::GoogleSessionVault::load(&vault_path)
+                        .ok()
+                        .flatten()
+                        .filter(|c| c.is_configured());
+                    let gv2_creds = if legacy_creds.is_none() {
+                        let vault = state.google_hub.vault.read().await;
+                        vault
+                            .accounts()
+                            .iter()
+                            .find(|a| a.has_nlm_bridge || a.psid.is_some() || a.sapisid.is_some())
+                            .map(|a| a.to_legacy_credentials())
+                    } else {
+                        None
+                    };
+                    let creds = match legacy_creds.or(gv2_creds) {
+                        Some(c) if c.is_configured() => c,
                         _ => return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, JsonRpcError::new(-32001, "Google session credentials not found in vault. Authenticate via Dashboard."))).unwrap_or_default()),
                     };
 
-                    let rpc_id = match rpc_id_str.to_ascii_lowercase().as_str() {
-                        "wxbhsf" | "create_note" => souls_core::google_bridge::WizRpcId::CreateNote,
-                        "rlm1ne" | "read_notes" => souls_core::google_bridge::WizRpcId::ReadNotes,
-                        "izaodd" | "ingest_source" => souls_core::google_bridge::WizRpcId::IngestSource,
-                        "qa9ei" | "deep_research" => souls_core::google_bridge::WizRpcId::DeepResearch,
-                        "r7cb6c" | "studio_create" => souls_core::google_bridge::WizRpcId::StudioCreate,
-                        "yyryje" | "studio_status" => souls_core::google_bridge::WizRpcId::StudioStatus,
-                        "orqrsd" | "query_rag" => souls_core::google_bridge::WizRpcId::QueryRAG,
-                        "s07lfd" | "list_notebooks" => souls_core::google_bridge::WizRpcId::ListNotebooks,
-                        _ => souls_core::google_bridge::WizRpcId::Custom(rpc_id_str.to_string()),
-                    };
-
+                    let rpc_id = crate::routes::google::resolve_wiz_rpc_id(rpc_id_str);
                     let client = souls_core::google_bridge::WizRpcClient::new(creds);
                     let payload = souls_core::google_bridge::WizRpcPayload::new(rpc_id, rpc_args);
                     match client.execute(&payload).await {
@@ -595,12 +599,18 @@ pub async fn dispatch_jsonrpc(
                 }
 
                 other => {
-                    // Check if known canonical tool
-                    let tools = get_canonical_tools();
-                    if tools.iter().any(|t| t.name == other) {
-                        Ok(handlers::handle_staging_fallback(other))
+                    if let Some(google_res) =
+                        tools_google::try_dispatch_google_tool(state, other, args, session_id).await
+                    {
+                        google_res.map_err(|e| e.to_jsonrpc_error())
                     } else {
-                        Err(McpDomainError::ToolNotFoundInNamespace.to_jsonrpc_error())
+                        // Check if known canonical tool
+                        let tools = get_canonical_tools();
+                        if tools.iter().any(|t| t.name == other) {
+                            Ok(handlers::handle_staging_fallback(other))
+                        } else {
+                            Err(McpDomainError::ToolNotFoundInNamespace.to_jsonrpc_error())
+                        }
                     }
                 }
             };

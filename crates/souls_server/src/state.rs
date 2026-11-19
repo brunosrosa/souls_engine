@@ -48,6 +48,7 @@ pub struct AppState {
     pub hf_client: Arc<souls_llm_inventory::HuggingFaceClient>,
     pub local_arena: Arc<tokio::sync::Mutex<souls_llm_local_arena::ArenaRunner>>,
     pub research: Arc<crate::research_hub::ResearchIndex>,
+    pub google_hub: Arc<crate::google_hub::GoogleHubService>,
     active_connections: Arc<AtomicUsize>,
     start_time: Instant,
 }
@@ -70,9 +71,16 @@ impl AppState {
             hf_client: Arc::new(souls_llm_inventory::HuggingFaceClient::new()),
             local_arena: Arc::new(tokio::sync::Mutex::new(souls_llm_local_arena::ArenaRunner::new())),
             research: Arc::new(crate::research_hub::ResearchIndex::new(crate::research_hub::ResearchRoots::from_system())),
+            google_hub: Arc::new(crate::google_hub::GoogleHubService::from_system()),
             active_connections: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),
         }
+    }
+
+    /// Overrides the `GoogleHubService` instance for isolated unit/integration tests.
+    pub fn with_google_hub(mut self, google_hub: Arc<crate::google_hub::GoogleHubService>) -> Self {
+        self.google_hub = google_hub;
+        self
     }
 
     /// Acquires an RAII connection guard incrementing the active connections count.

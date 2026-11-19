@@ -36,7 +36,7 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 "properties": {
                     "namespace": {
                         "type": "string",
-                        "enum": ["all", "code", "context", "memory", "think", "ops", "sys", "research", "ui", "google"],
+                        "enum": ["all", "code", "context", "memory", "think", "ops", "sys", "research", "ui", "google", "inbox"],
                         "description": "Namespace funcional para listar ferramentas."
                     },
                     "query": {
@@ -991,10 +991,368 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
             input_schema: || json!({
                 "type": "object",
                 "properties": {
-                    "rpc_id": { "type": "string", "description": "Identificador do RPC (ex: 'QA9ei', 'wXbhsf', 'orqRsd', 's07Lfd')" },
+                    "rpc_id": { "type": "string", "description": "Identificador do RPC (ex: 'wXbhsf', 'rLM1Ne', 'QA9ei', 'gArtLc', 'orqRsd')" },
                     "arguments": { "type": "array", "description": "Lista de argumentos em formato JSON para o payload" }
                 },
                 "required": ["rpc_id", "arguments"],
+                "additionalProperties": false
+            }),
+        },
+        // google.* Life Hub & Multi-Account Governance (v0.9.2 - 14 tools)
+        ToolMeta {
+            name: "google_accounts",
+            namespace: "google",
+            description: "Gerencia contas Google no cofre encriptado GV2, executa o Google Doctor, importa credenciais gws e ajusta políticas BMAD.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["list", "doctor", "import_gws", "set_policy", "upsert", "delete"], "default": "list" },
+                    "account_id": { "type": "string" },
+                    "email": { "type": "string" },
+                    "label": { "type": "string" },
+                    "kind": { "type": "string", "enum": ["personal_gmail", "workspace_enterprise", "secondary_sandbox"] },
+                    "policy": { "type": "string", "enum": ["read_only", "drafts_and_tasks_only", "balanced_hotl_hitl", "whitelist_write"] },
+                    "is_primary": { "type": "boolean" },
+                    "write_whitelist_ids": { "type": "array", "items": { "type": "string" } }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_briefing",
+            namespace: "google",
+            description: "Gera o Daily Briefing unificado (Agenda Calendar, Blocos Deep Focus, Trânsito Routes v2, Gmail Prioritário, Tasks e Inbox BMAD) com degradação graciosa offline.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "account_id": { "type": "string", "description": "ID ou email da conta Google opcional." }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_gmail",
+            namespace: "google",
+            description: "Triagem determinística de e-mails Gmail, leitura com delimitação anti-injection, criação de rascunhos, rótulos em lote e envio via BMAD Inbox.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["triage", "read", "draft", "bulk", "send"], "default": "triage" },
+                    "account_id": { "type": "string" },
+                    "query": { "type": "string" },
+                    "max_results": { "type": "integer" },
+                    "message_id": { "type": "string" },
+                    "to": { "type": "string" },
+                    "subject": { "type": "string" },
+                    "body": { "type": "string" },
+                    "ids": { "type": "array", "items": { "type": "string" } },
+                    "add_labels": { "type": "array", "items": { "type": "string" } },
+                    "remove_labels": { "type": "array", "items": { "type": "string" } },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_calendar",
+            namespace: "google",
+            description: "Consulta agenda Google Calendar, encontra blocos de foco profundo (Deep Focus Slots) e cria/remove eventos com Taint Guard BMAD.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["list", "focus_slots", "create", "delete"], "default": "list" },
+                    "account_id": { "type": "string" },
+                    "time_min": { "type": "string" },
+                    "time_max": { "type": "string" },
+                    "work_start": { "type": "string" },
+                    "work_end": { "type": "string" },
+                    "min_duration_mins": { "type": "integer" },
+                    "summary": { "type": "string" },
+                    "start_rfc3339": { "type": "string" },
+                    "end_rfc3339": { "type": "string" },
+                    "location": { "type": "string" },
+                    "attendees": { "type": "array", "items": { "type": "string" } },
+                    "send_updates": { "type": "string" },
+                    "event_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_drive",
+            namespace: "google",
+            description: "Pesquisa arquivos no Google Drive, inspeciona metadados, baixa para exchange sandbox ou propõe compartilhamento/exclusão via BMAD Inbox.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["search", "metadata", "download_sandbox", "share", "delete"], "default": "search" },
+                    "account_id": { "type": "string" },
+                    "query": { "type": "string" },
+                    "page_size": { "type": "integer" },
+                    "file_id": { "type": "string" },
+                    "filename": { "type": "string" },
+                    "role": { "type": "string" },
+                    "perm_type": { "type": "string" },
+                    "email_address": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_docs_scratchpad",
+            namespace: "google",
+            description: "Rascunho incremental por linhas para Google Docs (load, insert, replace, delete, render) e push via Myers Diff no BMAD Agent Inbox.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["load", "insert", "replace", "delete", "render", "push"], "default": "load" },
+                    "doc_id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "at_line": { "type": "integer" },
+                    "start_line": { "type": "integer" },
+                    "end_line": { "type": "integer" },
+                    "lines": { "type": "array", "items": { "type": "string" } },
+                    "remote_baseline": { "type": "string" },
+                    "account_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "required": ["doc_id"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_sheets",
+            namespace: "google",
+            description: "Leitura e análise financeira determinística (totais, categorias, anomalias >2x média, projeção 30d) ou escrita via BMAD Inbox em Google Sheets.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["analyze", "read", "write"], "default": "analyze" },
+                    "spreadsheet_id": { "type": "string" },
+                    "range": { "type": "string" },
+                    "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } },
+                    "values": { "type": "array", "items": { "type": "array" } },
+                    "account_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "required": ["spreadsheet_id", "range"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_slides",
+            namespace: "google",
+            description: "Planejamento estruturado (5 a 15 slides) e criação assistida de apresentações Google Slides.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["plan", "create"], "default": "plan" },
+                    "topic": { "type": "string" },
+                    "briefing": { "type": "string" },
+                    "target_slides": { "type": "integer" },
+                    "account_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "required": ["topic"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_tasks",
+            namespace: "google",
+            description: "Gerencia Google Tasks, executa Obsidian Quick Capture (fallback soberano para Google Keep em contas pessoais) e checa elegibilidade Keep Enterprise.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["list", "create", "complete", "quick_capture", "check_keep_eligibility"], "default": "list" },
+                    "account_id": { "type": "string" },
+                    "tasklist_id": { "type": "string" },
+                    "show_completed": { "type": "boolean" },
+                    "title": { "type": "string" },
+                    "notes": { "type": "string" },
+                    "due_rfc3339": { "type": "string" },
+                    "task_id": { "type": "string" },
+                    "body": { "type": "string" },
+                    "tags": { "type": "array", "items": { "type": "string" } },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_contacts",
+            namespace: "google",
+            description: "Busca contatos via Google People API e detecta aniversários próximos.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["search", "upcoming_birthdays"], "default": "search" },
+                    "query": { "type": "string" },
+                    "page_size": { "type": "integer" },
+                    "within_days": { "type": "integer" },
+                    "contacts": { "type": "array", "items": { "type": "object" } },
+                    "account_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_commute",
+            namespace: "google",
+            description: "Calcula rota com tráfego ao vivo (Google Maps Routes API v2) e gera alerta proativo de horário de saída.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "origin": { "type": "string" },
+                    "destination": { "type": "string" },
+                    "event_id": { "type": "string" },
+                    "event_title": { "type": "string" },
+                    "event_start_rfc3339": { "type": "string" },
+                    "buffer_mins": { "type": "integer" },
+                    "api_key": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "required": ["origin", "destination"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_youtube",
+            namespace: "google",
+            description: "Extrai e cacheia transcrições de vídeos YouTube (Innertube + parser XML/SRV3 puro em Rust) com delimitação anti-injection.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "url_or_id": { "type": "string" },
+                    "preferred_lang": { "type": "string", "default": "en" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "required": ["url_or_id"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_notebooklm",
+            namespace: "google",
+            description: "Gerencia cadernos Google NotebookLM, fontes Drive (check_freshness/sync_drive), RAG query, Studio Audio Overview e Mapas Mentais.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["list", "get", "add_source", "check_freshness", "sync_drive", "query", "studio_create", "studio_status", "mindmap"], "default": "list" },
+                    "notebook_id": { "type": "string" },
+                    "source_id": { "type": "string" },
+                    "source_url": { "type": "string" },
+                    "query": { "type": "string" },
+                    "prompt": { "type": "string" },
+                    "arguments": { "type": "array" },
+                    "session_id": { "type": "string" },
+                    "endpoint_override": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_gems",
+            namespace: "google",
+            description: "Gerencia catálogo local de Custom Gems e despacha prompts via Gemini API oficial (bloqueando StreamGenerate em contas primárias).",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["list", "upsert", "delete", "dispatch", "secondary_stream_generate"], "default": "list" },
+                    "id": { "type": "string" },
+                    "name": { "type": "string" },
+                    "description": { "type": "string" },
+                    "system_instruction": { "type": "string" },
+                    "model": { "type": "string" },
+                    "backend": { "type": "string" },
+                    "remote_gem_id": { "type": "string" },
+                    "prompt": { "type": "string" },
+                    "account_id": { "type": "string" },
+                    "api_key": { "type": "string" },
+                    "base_url": { "type": "string" },
+                    "model_hash": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        // inbox.* namespace (v0.9.2 BMAD Agent Inbox - 3 tools)
+        ToolMeta {
+            name: "inbox_list",
+            namespace: "inbox",
+            description: "Lista propostas pendentes ou históricas no BMAD Agent Inbox (com contagem de pendências e redação de tokens Gravity Lock).",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "status": { "type": "string", "enum": ["all", "pending", "approved", "executed", "rejected", "failed", "expired"], "default": "all" },
+                    "limit": { "type": "integer", "default": 50 }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "inbox_inspect_diff",
+            namespace: "inbox",
+            description: "Inspeciona o Myers Diff completo, snapshots before/after, nível de risco e status de taint de uma proposta no BMAD Agent Inbox.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "proposal_id": { "type": "string" }
+                },
+                "required": ["proposal_id"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "inbox_propose",
+            namespace: "inbox",
+            description: "Enfileira uma proposta de mutação externa no BMAD Agent Inbox computando Myers Diff real via souls_ast e herdando estado de Taint Guard da sessão.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "account_id": { "type": "string" },
+                    "service": { "type": "string" },
+                    "action": { "type": "string" },
+                    "title": { "type": "string" },
+                    "summary": { "type": "string" },
+                    "tier": { "type": "string", "enum": ["tier0_read_only", "tier1_safe_reversible", "tier2_external_destructive"] },
+                    "target_resource": { "type": "string" },
+                    "before_snapshot": { "type": "string" },
+                    "after_snapshot": { "type": "string" },
+                    "myers_diff": { "type": "string" },
+                    "payload_json": { "type": "object" },
+                    "ttl_secs": { "type": "integer" },
+                    "session_id": { "type": "string" }
+                },
+                "required": ["service", "action", "title", "target_resource"],
                 "additionalProperties": false
             }),
         },

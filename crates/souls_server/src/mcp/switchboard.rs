@@ -21,7 +21,7 @@ pub struct SkillMeta {
     pub keywords: &'static [&'static str],
 }
 
-/// Static catalog of all 15 canonical skills.
+/// Static catalog of all 16 canonical skills.
 pub static CANONICAL_SKILLS: &[SkillMeta] = &[
     SkillMeta {
         name: "souls-code-surgeon",
@@ -113,6 +113,24 @@ pub static CANONICAL_SKILLS: &[SkillMeta] = &[
         primary_tools: &["knowledge", "thinking"],
         keywords: &["learn", "learning", "patch", "correction", "loop", "feedback", "rule"],
     },
+    SkillMeta {
+        name: "google-life-hub",
+        description: "Life Hub pessoal e profissional Google (Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, Contacts, Maps, YouTube, NotebookLM, Gems) com governança BMAD Agent Inbox e Myers Diff.",
+        primary_tools: &[
+            "google_briefing",
+            "google_gmail",
+            "google_calendar",
+            "google_docs_scratchpad",
+            "google_notebooklm",
+            "inbox_propose",
+            "inbox_list",
+        ],
+        keywords: &[
+            "gmail", "email", "calendar", "agenda", "drive", "docs", "sheets", "slides",
+            "tasks", "keep", "contacts", "maps", "commute", "youtube", "transcript",
+            "notebooklm", "podcast", "audio", "gems", "inbox", "bmad", "diff", "google",
+        ],
+    },
 ];
 
 /// Ranked tool candidate from Stage 1.
@@ -199,6 +217,18 @@ fn compute_semantic_score(
             }
             "cloud" | "arena" | "pricing" | "cost" | "pareto" | "nous" | "openrouter" | "custo" | "preco" => {
                 if namespace == "ops" || target_lower.contains("cloud") {
+                    domain_boost = 1.8;
+                }
+            }
+            "gmail" | "email" | "calendar" | "agenda" | "drive" | "docs" | "sheets" | "slides"
+            | "tasks" | "keep" | "contacts" | "maps" | "commute" | "youtube" | "transcript"
+            | "notebooklm" | "podcast" | "audio" | "gems" | "google" => {
+                if namespace == "google" || namespace == "inbox" || target_lower.contains("google") {
+                    domain_boost = 1.8;
+                }
+            }
+            "inbox" | "bmad" | "approval" | "proposal" => {
+                if namespace == "inbox" || target_lower.contains("inbox") || target_lower.contains("bmad") {
                     domain_boost = 1.8;
                 }
             }
@@ -317,6 +347,8 @@ pub async fn evaluate_switchboard(
                         "memory" | "recall" => Some("memory"),
                         "think" | "reasoning" => Some("think"),
                         "terminal" | "shell" | "ops" => Some("ops"),
+                        "google" | "gmail" | "calendar" | "notebooklm" => Some("google"),
+                        "inbox" | "bmad" => Some("inbox"),
                         _ => None,
                     };
 

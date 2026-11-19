@@ -32,6 +32,99 @@ pub struct ProviderStatusDto {
     pub latency_factor: f64,
     pub models_count: usize,
     pub models: Vec<ProviderModelDto>,
+    pub console_url: String,
+    pub purpose_summary: String,
+    pub has_free_tier: bool,
+}
+
+fn provider_ux_meta(provider: &CloudProvider) -> (&'static str, &'static str, bool) {
+    match provider {
+        CloudProvider::OpenRouter => (
+            "https://openrouter.ai/keys",
+            "Acesso unificado a dezenas de modelos (Claude, GPT, Gemini, DeepSeek) com uma única chave.",
+            true,
+        ),
+        CloudProvider::Gemini => (
+            "https://aistudio.google.com/apikey",
+            "Modelos Google Gemini Flash e Pro direto pelo AI Studio (ótimo custo-benefício e cota gratuita).",
+            true,
+        ),
+        CloudProvider::DeepSeek => (
+            "https://platform.deepseek.com/api_keys",
+            "Raciocínio e código de alta eficiência (DeepSeek Chat e R1) com grande desconto de cache.",
+            false,
+        ),
+        CloudProvider::Groq => (
+            "https://console.groq.com/keys",
+            "Respostas ultrarrápidas em LPU para triagem, classificação e agentes de baixa latência.",
+            true,
+        ),
+        CloudProvider::Cerebras => (
+            "https://cloud.cerebras.ai/",
+            "Altíssima velocidade de geração (400+ tokens/s) para tarefas rápidas e código.",
+            true,
+        ),
+        CloudProvider::Together => (
+            "https://api.together.xyz/settings/api-keys",
+            "Hospedagem rápida de modelos open-weight (Llama, Qwen, DeepSeek) na nuvem.",
+            false,
+        ),
+        CloudProvider::OpenAI => (
+            "https://platform.openai.com/api-keys",
+            "Modelos GPT e família o-series diretamente pela API oficial da OpenAI.",
+            false,
+        ),
+        CloudProvider::Anthropic => (
+            "https://console.anthropic.com/settings/keys",
+            "Modelos Claude Sonnet, Haiku e Opus diretamente pela API oficial da Anthropic.",
+            false,
+        ),
+        CloudProvider::NousPortal => (
+            "https://portal.nousresearch.com/",
+            "Acesso aos modelos Hermes e DeepHermes no portal oficial da Nous Research.",
+            true,
+        ),
+        CloudProvider::AlibabaDashScope => (
+            "https://dashscope.console.aliyun.com/apiKey",
+            "Modelos Qwen (2.5 / 3 / Coder / Max) diretamente pela nuvem Alibaba DashScope.",
+            false,
+        ),
+        CloudProvider::MoonshotKimi => (
+            "https://platform.moonshot.ai/console/api-keys",
+            "Modelos Kimi com janela longa para análise documental e raciocínio.",
+            false,
+        ),
+        CloudProvider::ZhipuGLM => (
+            "https://open.bigmodel.cn/usercenter/apikeys",
+            "Modelos da família GLM diretamente pela API da Zhipu AI.",
+            false,
+        ),
+        CloudProvider::MiniMax => (
+            "https://platform.minimaxi.com/",
+            "Modelos MiniMax de uso geral, código e agentes de contexto longo.",
+            false,
+        ),
+        CloudProvider::SiliconFlow => (
+            "https://cloud.siliconflow.cn/account/ak",
+            "Gateway asiático econômico para modelos open-weight com suporte a cache.",
+            true,
+        ),
+        CloudProvider::Bedrock => (
+            "https://console.aws.amazon.com/bedrock/",
+            "Claude, Nova e outros modelos gerenciados dentro da sua conta AWS.",
+            false,
+        ),
+        CloudProvider::AzureOpenAI => (
+            "https://portal.azure.com/",
+            "Modelos OpenAI e agentes com governança corporativa no Microsoft Azure.",
+            false,
+        ),
+        CloudProvider::LocalSilicon | CloudProvider::Custom(_) => (
+            "https://openrouter.ai/keys",
+            "Endpoint local ou customizado.",
+            true,
+        ),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,6 +189,7 @@ pub async fn list_providers_handler() -> impl IntoResponse {
             })
             .collect();
 
+        let (console_url, purpose_summary, has_free_tier) = provider_ux_meta(&s.provider);
         providers.push(ProviderStatusDto {
             slug: s.provider.canonical_slug().to_string(),
             name: s.name,
@@ -107,6 +201,9 @@ pub async fn list_providers_handler() -> impl IntoResponse {
             latency_factor: s.latency_factor,
             models_count,
             models,
+            console_url: console_url.to_string(),
+            purpose_summary: purpose_summary.to_string(),
+            has_free_tier,
         });
     }
 
