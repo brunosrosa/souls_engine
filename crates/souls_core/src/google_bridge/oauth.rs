@@ -5,7 +5,7 @@ use super::session::{generate_entropy_bytes, GoogleMultiAccountVault};
 use crate::error::CoreError;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use souls_protocol::google::{GoogleCliProbeDto, GoogleDoctorReportDto};
+use souls_protocol::google::{GoogleAccountKind, GoogleCliProbeDto, GoogleDoctorReportDto};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -214,7 +214,8 @@ pub struct OAuthTokenResponse {
     pub id_token: Option<String>,
 }
 
-/// Builds a Google OAuth2 authorization URL with PKCE S256 and offline refresh consent.
+/// Builds a Google OAuth2 authorization URL with PKCE S256, offline refresh consent,
+/// and incremental scope granting (`include_granted_scopes=true`).
 pub fn build_google_auth_url(
     cfg: &OAuth2Config,
     pkce: &PkceChallenge,
@@ -228,6 +229,7 @@ pub fn build_google_auth_url(
         ("scope", scope_str.as_str()),
         ("access_type", "offline"),
         ("prompt", "consent"),
+        ("include_granted_scopes", "true"),
         ("code_challenge", pkce.code_challenge.as_str()),
         ("code_challenge_method", "S256"),
         ("state", pkce.state.as_str()),
@@ -248,6 +250,76 @@ pub fn build_google_auth_url(
         "?"
     };
     format!("{}{}{}", cfg.auth_endpoint, sep, query)
+}
+
+const V0921_COMMON_SCOPES: &[&str] = &[
+    "https://www.googleapis.com/auth/script.projects",
+    "https://www.googleapis.com/auth/script.deployments",
+    "https://www.googleapis.com/auth/script.processes",
+    "https://www.googleapis.com/auth/forms.body",
+    "https://www.googleapis.com/auth/forms.responses.readonly",
+];
+
+const V0921_ENTERPRISE_CHAT_SCOPES: &[&str] = &[
+    "https://www.googleapis.com/auth/chat.spaces.readonly",
+    "https://www.googleapis.com/auth/chat.messages",
+];
+
+/// Returns the recommended Google OAuth2 scopes for the given account classification,
+/// including Apps Script and Forms for all accounts and Google Chat exclusively for
+/// `GoogleAccountKind::WorkspaceEnterprise`.
+pub fn recommended_scopes_for_kind(kind: GoogleAccountKind) -> Vec<String> {
+    let mut scopes: Vec<String> = [
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/presentations",
+        "https://www.googleapis.com/auth/tasks",
+        "https://www.googleapis.com/auth/contacts.readonly",
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect();
+
+    for scope in V0921_COMMON_SCOPES {
+        scopes.push((*scope).to_string());
+    }
+    if kind == GoogleAccountKind::WorkspaceEnterprise {
+        for scope in V0921_ENTERPRISE_CHAT_SCOPES {
+            scopes.push((*scope).to_string());
+        }
+    }
+    scopes
+}
+
+/// Computes which v0.9.2.1 incremental scopes (Apps Script, Forms, and Chat for Enterprise)
+/// are missing from `granted`.
+pub fn missing_v0921_scopes(granted: &[String], kind: GoogleAccountKind) -> Vec<String> {
+    let has_scope = |target: &str| {
+        granted
+            .iter()
+            .any(|g| g.trim().eq_ignore_ascii_case(target))
+    };
+
+    let mut missing = Vec::new();
+    for &scope in V0921_COMMON_SCOPES {
+        if !has_scope(scope) {
+            missing.push(scope.to_string());
+        }
+    }
+    if kind == GoogleAccountKind::WorkspaceEnterprise {
+        for &scope in V0921_ENTERPRISE_CHAT_SCOPES {
+            if !has_scope(scope) {
+                missing.push(scope.to_string());
+            }
+        }
+    }
+    missing
 }
 
 /// Exchanges an authorization code + PKCE `code_verifier` for OAuth2 tokens.

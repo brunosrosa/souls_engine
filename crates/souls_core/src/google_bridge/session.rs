@@ -414,6 +414,7 @@ impl GoogleAccountRecord {
             has_nlm_bridge: self.has_nlm_bridge,
             secondary_web_opt_in: self.secondary_web_opt_in,
             write_whitelist_ids: self.write_whitelist_ids.clone(),
+            missing_recommended_scopes: super::oauth::missing_v0921_scopes(&self.scopes, self.kind),
             updated_at: self.updated_at,
         }
     }

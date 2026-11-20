@@ -162,6 +162,50 @@ impl GoogleWorkspaceClient {
         ))
     }
 
+    /// Fetches all messages in a Gmail thread and wraps the combined transcript
+    /// in a randomized untrusted delimiter.
+    pub async fn get_gmail_thread_text(
+        &self,
+        access_token: &str,
+        thread_id: &str,
+    ) -> Result<String, CoreError> {
+        let url = format!(
+            "{}/users/me/threads/{}?format=full",
+            self.gmail_base,
+            percent_encode(thread_id)
+        );
+        let thread_val = self.get_json(&url, access_token).await?;
+        let messages = thread_val
+            .get("messages")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+
+        let mut parts = Vec::with_capacity(messages.len());
+        for msg in &messages {
+            let msg_id = msg
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or(thread_id);
+            let summary = parse_gmail_summary(msg_id, msg);
+            let body_text = msg
+                .get("payload")
+                .and_then(extract_gmail_body)
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or_else(|| summary.snippet.clone());
+            parts.push(format!(
+                "From: {}\nSubject: {}\nDate: {}\n\n{}",
+                summary.from, summary.subject, summary.date, body_text
+            ));
+        }
+
+        let combined = parts.join("\n\n---\n\n");
+        Ok(wrap_untrusted_content(
+            &format!("gmail:thread:{thread_id}"),
+            &combined,
+        ))
+    }
+
     /// Deterministically scores and classifies Gmail messages, separating newsletters
     /// and framing untrusted snippets.
     pub fn triage_inbox_deterministically(
@@ -511,6 +555,90 @@ impl GoogleWorkspaceClient {
 
         write_bytes_atomic(&target_path, &bytes)?;
         Ok(target_path)
+    }
+
+    /// Exports a native Google Workspace document (Docs/Sheets/Slides) as plain text or CSV/HTML.
+    pub async fn export_drive_file_text(
+        &self,
+        access_token: &str,
+        file_id: &str,
+        mime_type: &str,
+    ) -> Result<String, CoreError> {
+        let url = format!(
+            "{}/files/{}/export?mimeType={}",
+            self.drive_base,
+            percent_encode(file_id),
+            percent_encode(mime_type)
+        );
+        let resp = self
+            .http
+            .get(&url)
+            .bearer_auth(access_token)
+            .send()
+            .await
+            .map_err(|e| CoreError::SubprocessError(format!("Drive export failed: {e}")))?;
+        let status = resp.status();
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| CoreError::SubprocessError(format!("Drive export read failed: {e}")))?;
+        if !status.is_success() {
+            return Err(CoreError::SubprocessError(format!(
+                "Drive export HTTP {status}: {text}"
+            )));
+        }
+        Ok(text)
+    }
+
+    /// Downloads raw Drive file bytes into memory while enforcing a hard `max_bytes` cap.
+    pub async fn download_drive_file_bytes(
+        &self,
+        access_token: &str,
+        file_id: &str,
+        max_bytes: usize,
+    ) -> Result<Vec<u8>, CoreError> {
+        let url = format!(
+            "{}/files/{}?alt=media",
+            self.drive_base,
+            percent_encode(file_id)
+        );
+        let mut resp = self
+            .http
+            .get(&url)
+            .bearer_auth(access_token)
+            .send()
+            .await
+            .map_err(|e| CoreError::SubprocessError(format!("Drive download failed: {e}")))?;
+        let status = resp.status();
+        if !status.is_success() {
+            let err_text = resp.text().await.unwrap_or_default();
+            return Err(CoreError::SubprocessError(format!(
+                "Drive download HTTP {status}: {err_text}"
+            )));
+        }
+
+        if let Some(cl) = resp.content_length() {
+            if cl as usize > max_bytes {
+                return Err(CoreError::SubprocessError(format!(
+                    "Drive file size ({cl} bytes) exceeds max_bytes limit ({max_bytes})"
+                )));
+            }
+        }
+
+        let mut buf = Vec::new();
+        while let Some(chunk) = resp
+            .chunk()
+            .await
+            .map_err(|e| CoreError::SubprocessError(format!("Drive stream read failed: {e}")))?
+        {
+            if buf.len().saturating_add(chunk.len()) > max_bytes {
+                return Err(CoreError::SubprocessError(format!(
+                    "Drive file download exceeded max_bytes limit ({max_bytes})"
+                )));
+            }
+            buf.extend_from_slice(&chunk);
+        }
+        Ok(buf)
     }
 
     /// Updates sharing permissions on a Drive file (`Tier2ExternalDestructive`).

