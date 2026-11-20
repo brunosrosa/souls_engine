@@ -32,7 +32,8 @@ use souls_core::google_bridge::{
     WizRpcId, WizRpcPayload,
 };
 use souls_inference_runtime::{
-    resolve_llama_completion_binary, MinionBatchOrchestrator, MinionTask, MinionTaskKind,
+    resolve_llama_completion_binary, MinionBatchOrchestrator, MinionDeviceTarget, MinionTask,
+    MinionTaskKind,
 };
 use souls_llm_inventory::{
     probe_hardware, resolve_canonical_models_dir, scan_local_models, ModelFormat,
@@ -1845,27 +1846,12 @@ impl GoogleHubService {
         .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
 
         if mode == MinionAnalyzeMode::FastDeterministic {
-            return Ok(MinionGoogleAnalysisDto {
-                source_kind: prep.source_kind,
-                source_ref: prep.source_ref,
-                query: prep.query,
-                mode_requested: mode,
-                mode_used: "tier0_deterministic".to_string(),
-                executed_device: "CPU Host (Tier 0 BM25)".to_string(),
-                cache_hit: prep.cache_hit,
-                raw_chars: prep.raw_chars,
-                retained_chars: prep.retained_chars,
-                estimated_token_savings_pct: prep.estimated_token_savings_pct,
-                chunks_total: prep.chunks_total,
-                chunks_selected: prep.chunks_selected,
-                executive_summary: prep.executive_summary,
-                top_passages: prep.top_passages,
-                factual_claims: prep.factual_claims,
-                statistical_data: prep.statistical_data,
-                direct_quotes: prep.direct_quotes,
-                markdown_export: prep.markdown_export,
-                latency_ms: start.elapsed().as_millis() as u64,
-            });
+            return Ok(build_tier0_minion_dto(
+                prep,
+                mode,
+                "tier0_deterministic",
+                start.elapsed().as_millis() as u64,
+            ));
         }
 
         let model_opt = resolve_local_minions_model();
@@ -1873,34 +1859,37 @@ impl GoogleHubService {
 
         match (model_opt, bin_opt) {
             (Some(model_path), Some(_bin_path)) => {
-                let framed_context = prep.framed_context_for_slm.clone();
+                let model_size_bytes = std::fs::metadata(&model_path)
+                    .map(|m| m.len())
+                    .unwrap_or(0);
+                let use_cpu_avx2 = model_size_bytes > 0 && model_size_bytes <= 2_000_000_000;
+                let bounded_context: String =
+                    prep.framed_context_for_slm.chars().take(4_500).collect();
                 let query_brief = query.clone();
-                let slm_result = tokio::task::spawn_blocking(move || {
-                    let orchestrator = MinionBatchOrchestrator::new().with_model_path(&model_path);
+
+                let blocking_fut = tokio::task::spawn_blocking(move || {
+                    let mut orchestrator = MinionBatchOrchestrator::new().with_model_path(&model_path);
+                    if use_cpu_avx2 {
+                        orchestrator = orchestrator.with_forced_device(MinionDeviceTarget::CpuAvx2);
+                    }
                     let task = MinionTask {
                         task_id: format!("google_minions_{}", Utc::now().timestamp()),
                         kind: MinionTaskKind::SynthesizeSection,
-                        passage_text: framed_context,
+                        passage_text: bounded_context,
                         context_brief: Some(query_brief),
-                        max_tokens: 768,
+                        max_tokens: 256,
                     };
                     orchestrator.execute_task(&task)
-                })
-                .await
-                .map_err(|e| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("Falha na thread de inferencia MinionS: {e}"),
-                    )
-                })?;
+                });
 
-                match slm_result {
-                    Ok(slm_out) => {
-                        let executive_summary = if slm_out.executive_summary.trim().is_empty() {
-                            prep.executive_summary.clone()
-                        } else {
-                            slm_out.executive_summary
-                        };
+                let slm_outcome =
+                    tokio::time::timeout(std::time::Duration::from_secs(22), blocking_fut).await;
+
+                match slm_outcome {
+                    Ok(Ok(Ok(slm_out)))
+                        if !is_placeholder_slm_summary(&slm_out.executive_summary) =>
+                    {
+                        let executive_summary = slm_out.executive_summary;
                         let factual_claims = if slm_out.factual_claims.is_empty() {
                             prep.factual_claims.clone()
                         } else {
@@ -1954,34 +1943,65 @@ impl GoogleHubService {
                             latency_ms: start.elapsed().as_millis() as u64,
                         })
                     }
-                    Err(err) => {
+                    Ok(Ok(Ok(_placeholder))) => {
+                        if mode == MinionAnalyzeMode::ForceLocalSlm {
+                            return Err((
+                                StatusCode::UNPROCESSABLE_ENTITY,
+                                "O modelo local retornou resposta vazia/placeholder. Tente outro modelo ou use o modo Automatico.".to_string(),
+                            ));
+                        }
+                        Ok(build_tier0_minion_dto(
+                            prep,
+                            mode,
+                            "tier0_bm25_fallback",
+                            start.elapsed().as_millis() as u64,
+                        ))
+                    }
+                    Ok(Ok(Err(err))) => {
                         if mode == MinionAnalyzeMode::ForceLocalSlm {
                             return Err((
                                 StatusCode::UNPROCESSABLE_ENTITY,
                                 format!("Execucao local Tier 1 MinionS falhou: {err}"),
                             ));
                         }
-                        Ok(MinionGoogleAnalysisDto {
-                            source_kind: prep.source_kind,
-                            source_ref: prep.source_ref,
-                            query: prep.query,
-                            mode_requested: mode,
-                            mode_used: "tier0_bm25_fallback".to_string(),
-                            executed_device: "CPU Host (Tier 0 BM25)".to_string(),
-                            cache_hit: prep.cache_hit,
-                            raw_chars: prep.raw_chars,
-                            retained_chars: prep.retained_chars,
-                            estimated_token_savings_pct: prep.estimated_token_savings_pct,
-                            chunks_total: prep.chunks_total,
-                            chunks_selected: prep.chunks_selected,
-                            executive_summary: prep.executive_summary,
-                            top_passages: prep.top_passages,
-                            factual_claims: prep.factual_claims,
-                            statistical_data: prep.statistical_data,
-                            direct_quotes: prep.direct_quotes,
-                            markdown_export: prep.markdown_export,
-                            latency_ms: start.elapsed().as_millis() as u64,
-                        })
+                        Ok(build_tier0_minion_dto(
+                            prep,
+                            mode,
+                            "tier0_bm25_fallback",
+                            start.elapsed().as_millis() as u64,
+                        ))
+                    }
+                    Ok(Err(join_err)) => {
+                        if mode == MinionAnalyzeMode::ForceLocalSlm {
+                            return Err((
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                format!("Falha na thread de inferencia MinionS: {join_err}"),
+                            ));
+                        }
+                        Ok(build_tier0_minion_dto(
+                            prep,
+                            mode,
+                            "tier0_bm25_fallback",
+                            start.elapsed().as_millis() as u64,
+                        ))
+                    }
+                    Err(_elapsed) => {
+                        warn!(
+                            target: "souls_server::google_hub",
+                            "Local MinionS SLM exceeded 22s timeout; degrading to Tier 0 BM25 fallback"
+                        );
+                        if mode == MinionAnalyzeMode::ForceLocalSlm {
+                            return Err((
+                                StatusCode::UNPROCESSABLE_ENTITY,
+                                "Tempo limite excedido (22s) na execucao do modelo local MinionS. Use o modo Automatico/Economico.".to_string(),
+                            ));
+                        }
+                        Ok(build_tier0_minion_dto(
+                            prep,
+                            mode,
+                            "tier0_bm25_fallback",
+                            start.elapsed().as_millis() as u64,
+                        ))
                     }
                 }
             }
@@ -1992,27 +2012,12 @@ impl GoogleHubService {
                         "Nenhum modelo .gguf local ou binario llama-completion instalado. Baixe um modelo pequeno em Modelos & Hardware ou selecione o modo Automatico/Economico.".to_string(),
                     ));
                 }
-                Ok(MinionGoogleAnalysisDto {
-                    source_kind: prep.source_kind,
-                    source_ref: prep.source_ref,
-                    query: prep.query,
-                    mode_requested: mode,
-                    mode_used: "tier0_bm25_fallback".to_string(),
-                    executed_device: "CPU Host (Tier 0 BM25)".to_string(),
-                    cache_hit: prep.cache_hit,
-                    raw_chars: prep.raw_chars,
-                    retained_chars: prep.retained_chars,
-                    estimated_token_savings_pct: prep.estimated_token_savings_pct,
-                    chunks_total: prep.chunks_total,
-                    chunks_selected: prep.chunks_selected,
-                    executive_summary: prep.executive_summary,
-                    top_passages: prep.top_passages,
-                    factual_claims: prep.factual_claims,
-                    statistical_data: prep.statistical_data,
-                    direct_quotes: prep.direct_quotes,
-                    markdown_export: prep.markdown_export,
-                    latency_ms: start.elapsed().as_millis() as u64,
-                })
+                Ok(build_tier0_minion_dto(
+                    prep,
+                    mode,
+                    "tier0_bm25_fallback",
+                    start.elapsed().as_millis() as u64,
+                ))
             }
         }
     }
@@ -2138,6 +2143,45 @@ pub struct GoogleMinionsRequest {
     pub api_base_override: Option<String>,
 }
 
+fn build_tier0_minion_dto(
+    prep: souls_core::google_bridge::Tier0MinionPrep,
+    mode_requested: MinionAnalyzeMode,
+    mode_used: &str,
+    latency_ms: u64,
+) -> MinionGoogleAnalysisDto {
+    MinionGoogleAnalysisDto {
+        source_kind: prep.source_kind,
+        source_ref: prep.source_ref,
+        query: prep.query,
+        mode_requested,
+        mode_used: mode_used.to_string(),
+        executed_device: "CPU Host (Tier 0 BM25)".to_string(),
+        cache_hit: prep.cache_hit,
+        raw_chars: prep.raw_chars,
+        retained_chars: prep.retained_chars,
+        estimated_token_savings_pct: prep.estimated_token_savings_pct,
+        chunks_total: prep.chunks_total,
+        chunks_selected: prep.chunks_selected,
+        executive_summary: prep.executive_summary,
+        top_passages: prep.top_passages,
+        factual_claims: prep.factual_claims,
+        statistical_data: prep.statistical_data,
+        direct_quotes: prep.direct_quotes,
+        markdown_export: prep.markdown_export,
+        latency_ms,
+    }
+}
+
+fn is_placeholder_slm_summary(summary: &str) -> bool {
+    let trimmed = summary.trim();
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("string") {
+        return true;
+    }
+    let lower = trimmed.to_ascii_lowercase();
+    lower.contains("\"executive_summary\": \"string\"")
+        || lower.starts_with("{\"executive_summary\":\"string\"")
+}
+
 fn resolve_local_minions_model() -> Option<PathBuf> {
     if let Ok(path) = std::env::var("SOULS_MINIONS_MODEL_PATH") {
         let trimmed = path.trim();
@@ -2151,14 +2195,45 @@ fn resolve_local_minions_model() -> Option<PathBuf> {
     let root = resolve_canonical_models_dir();
     let diag = probe_hardware();
     let models = scan_local_models(&root, &diag).unwrap_or_default();
-    models
+    let mut candidates: Vec<(u8, u64, PathBuf)> = models
         .into_iter()
-        .find(|m| {
-            m.format == ModelFormat::Gguf
-                && !m.file_name.to_ascii_lowercase().contains("mmproj")
-                && m.absolute_path.is_file()
+        .filter(|m| {
+            if m.format != ModelFormat::Gguf || !m.absolute_path.is_file() {
+                return false;
+            }
+            if m.size_bytes == 0 || m.size_bytes > 3_500_000_000 {
+                return false;
+            }
+            let lower = m.file_name.to_ascii_lowercase();
+            !(lower.contains("mmproj")
+                || lower.contains("-vl-")
+                || lower.contains("_vl_")
+                || lower.contains("vision")
+                || lower.contains("hy-mt")
+                || lower.contains("embed")
+                || lower.contains("rerank"))
         })
-        .map(|m| m.absolute_path)
+        .map(|m| {
+            let lower = m.file_name.to_ascii_lowercase();
+            let is_preferred_size = (250_000_000..=1_800_000_000).contains(&m.size_bytes);
+            let is_instruct_worker = lower.contains("instruct")
+                || lower.contains("temper")
+                || lower.contains("xlam")
+                || lower.contains("hermes")
+                || lower.contains("phi-4")
+                || lower.contains("qwen2.5")
+                || lower.contains("qwen3.5");
+            let priority = match (is_preferred_size, is_instruct_worker) {
+                (true, true) => 0,
+                (true, false) => 1,
+                (false, _) => 2,
+            };
+            (priority, m.size_bytes, m.absolute_path)
+        })
+        .collect();
+
+    candidates.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+    candidates.into_iter().next().map(|(_, _, path)| path)
 }
 
 fn pulse_category_key(cat: PulseCategory) -> &'static str {
