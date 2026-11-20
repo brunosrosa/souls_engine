@@ -36,6 +36,29 @@
         </div>
       </div>
 
+      <!-- BARRA DE VISOES DO LIFE HUB -->
+      <div class="subtabs-bar u-mb-4 u-d-flex u-gap-2 u-flex-wrap" id="gh-views-bar">
+        <button type="button" class="subtab-btn active" data-gh-view="pulse" onclick="switchGoogleHubView('pulse', this)">
+          <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-activity"></use></svg>
+          <span>Resumo &amp; Pulso</span>
+        </button>
+        <button type="button" class="subtab-btn" data-gh-view="automations" onclick="switchGoogleHubView('automations', this)">
+          <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg>
+          <span>Automações 24/7</span>
+        </button>
+        <button type="button" class="subtab-btn" data-gh-view="forms_minions" onclick="switchGoogleHubView('forms_minions', this)">
+          <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-bar-chart"></use></svg>
+          <span>Formulários &amp; Leitura Econômica</span>
+        </button>
+        <button type="button" class="subtab-btn" data-gh-view="routine" onclick="switchGoogleHubView('routine', this)">
+          <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-layers"></use></svg>
+          <span>Rotina &amp; Ferramentas</span>
+        </button>
+      </div>
+
+      <!-- VISAO 1: RESUMO DO DIA & PULSO AUTOMATICO -->
+      <div class="gh-view-pane active" id="gh-view-pulse">
+
       <!-- CARD HERO: BRIEFING DIARIO & DESLOCAMENTO -->
       <div class="card card-highlight u-mb-6 google-hub-briefing-card">
         <div class="card-header u-mb-3">
@@ -108,6 +131,424 @@
           </div>
         </div>
       </div>
+
+      <!-- CARD PULSO AUTOMATICO (5m / 10m / 15m) -->
+      <div class="card u-mb-6 gh-pulse-card" id="gh-pulse-card">
+        <div class="card-header u-mb-3">
+          <div class="card-title">
+            <div class="card-icon icon-purple">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-radio"></use></svg>
+            </div>
+            <div>
+              <div class="u-fw-700 u-text-white u-s-7a04c0">Pulso Automático (5m / 10m / 15m)</div>
+              <div class="u-text-muted u-mt-2p u-s-d3bc8d">
+                Monitoramento proativo em segundo plano &bull; Trânsito/Login 1x &middot; E-mails VIP 2x &middot; Formulários/Drive 3x
+              </div>
+            </div>
+          </div>
+          <div class="u-d-flex u-gap-2 u-items-center u-flex-wrap">
+            <span class="badge badge-value" id="gh-pulse-status-badge">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-activity"></use></svg>
+              <span>Ativo</span>
+            </span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="runGooglePulseNow()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg>
+              <span>Verificar Tudo Agora</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="gh-pulse-config-grid u-mb-4">
+          <div class="gh-subpanel">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-clock"></use></svg>
+              <span>Frequência &amp; Horário Silencioso</span>
+            </h4>
+            <div class="gh-form-stack">
+              <label class="gh-checkbox-label">
+                <input type="checkbox" id="gh-pulse-enabled" checked />
+                <span>Ativar monitoramento automático</span>
+              </label>
+
+              <div>
+                <label for="gh-pulse-interval" class="gh-field-label">Intervalo base do Pulso</label>
+                <select id="gh-pulse-interval" class="form-control">
+                  <option value="5" selected>A cada 5 minutos (Trânsito/Login 5m &middot; VIP 10m &middot; Forms/Drive 15m)</option>
+                  <option value="10">A cada 10 minutos (Trânsito/Login 10m &middot; VIP 20m &middot; Forms/Drive 30m)</option>
+                  <option value="15">A cada 15 minutos</option>
+                  <option value="30">A cada 30 minutos</option>
+                  <option value="60">A cada 60 minutos</option>
+                </select>
+              </div>
+
+              <label class="gh-checkbox-label">
+                <input type="checkbox" id="gh-pulse-qh-enabled" checked />
+                <span>Ativar Horário Silencioso — evita alertas externos à noite</span>
+              </label>
+
+              <div class="gh-two-col">
+                <div>
+                  <label for="gh-pulse-qh-start" class="gh-field-label">Início do Silêncio</label>
+                  <select id="gh-pulse-qh-start" class="form-control">
+                    <option value="0">00h</option><option value="1">01h</option><option value="2">02h</option><option value="3">03h</option>
+                    <option value="4">04h</option><option value="5">05h</option><option value="6">06h</option><option value="7">07h</option>
+                    <option value="8">08h</option><option value="9">09h</option><option value="10">10h</option><option value="11">11h</option>
+                    <option value="12">12h</option><option value="13">13h</option><option value="14">14h</option><option value="15">15h</option>
+                    <option value="16">16h</option><option value="17">17h</option><option value="18">18h</option><option value="19">19h</option>
+                    <option value="20">20h</option><option value="21">21h</option><option value="22" selected>22h</option><option value="23">23h</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="gh-pulse-qh-end" class="gh-field-label">Fim do Silêncio</label>
+                  <select id="gh-pulse-qh-end" class="form-control">
+                    <option value="0">00h</option><option value="1">01h</option><option value="2">02h</option><option value="3">03h</option>
+                    <option value="4">04h</option><option value="5">05h</option><option value="6">06h</option><option value="7">07h</option>
+                    <option value="8" selected>08h</option><option value="9">09h</option><option value="10">10h</option><option value="11">11h</option>
+                    <option value="12">12h</option><option value="13">13h</option><option value="14">14h</option><option value="15">15h</option>
+                    <option value="16">16h</option><option value="17">17h</option><option value="18">18h</option><option value="19">19h</option>
+                    <option value="20">20h</option><option value="21">21h</option><option value="22">22h</option><option value="23">23h</option>
+                  </select>
+                </div>
+              </div>
+
+              <label class="gh-checkbox-label">
+                <input type="checkbox" id="gh-pulse-browser-notif" onchange="onPulseBrowserNotifChange(this)" />
+                <span>Notificações no navegador</span>
+              </label>
+              <label class="gh-checkbox-label">
+                <input type="checkbox" id="gh-pulse-hermes-prefetch" checked />
+                <span>Enviar alertas para o Hermes no próximo turno</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="gh-subpanel">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-sliders"></use></svg>
+              <span>Sensores &amp; Filtros Monitorados</span>
+            </h4>
+            <div class="gh-form-stack">
+              <div class="gh-pulse-toggles-grid">
+                <label class="gh-checkbox-label"><input type="checkbox" id="gh-pulse-m-commute" checked /><span>Trânsito</span></label>
+                <label class="gh-checkbox-label"><input type="checkbox" id="gh-pulse-m-oauth" checked /><span>Login Google</span></label>
+                <label class="gh-checkbox-label"><input type="checkbox" id="gh-pulse-m-gmail" checked /><span>E-mails VIP</span></label>
+                <label class="gh-checkbox-label"><input type="checkbox" id="gh-pulse-m-forms" checked /><span>Formulários</span></label>
+                <label class="gh-checkbox-label"><input type="checkbox" id="gh-pulse-m-sync" checked /><span>Cadernos Drive</span></label>
+              </div>
+              <div>
+                <label for="gh-pulse-vip-senders" class="gh-field-label">Remetentes VIP (e-mails separados por vírgula)</label>
+                <input id="gh-pulse-vip-senders" type="text" class="form-control" placeholder="ex: chefia@empresa.com, financeiro@banco.com" />
+              </div>
+              <div>
+                <label for="gh-pulse-forms" class="gh-field-label">IDs de Formulários monitorados (separados por vírgula)</label>
+                <input id="gh-pulse-forms" type="text" class="form-control u-mono" placeholder="ex: 1FAIpQL..., form_feedback" />
+              </div>
+              <div>
+                <label for="gh-pulse-origin" class="gh-field-label">Endereço de origem para cálculo de trânsito</label>
+                <input id="gh-pulse-origin" type="text" class="form-control" placeholder="ex: Av. Paulista, 1000, São Paulo" />
+              </div>
+              <button type="button" class="btn btn-sm btn-primary" onclick="saveGooglePulseConfig()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-check-circle"></use></svg>
+                <span>Salvar Preferências do Pulso</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <details class="lab-drawer u-mb-4" id="drawer-pulse-external-alerts">
+          <summary class="lab-drawer-header">
+            <div class="lab-drawer-title">
+              <svg class="ui-icon icon-sm lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+              <svg class="ui-icon icon-sm u-text-amber" aria-hidden="true"><use href="#icon-message-square"></use></svg>
+              <span>Alertas Críticos no Celular (Opcional — Webhook / Telegram)</span>
+            </div>
+            <div class="u-d-flex u-gap-2 u-items-center">
+              <span class="badge badge-dominated" id="gh-pulse-webhook-badge">Webhook: Desligado</span>
+              <span class="badge badge-dominated" id="gh-pulse-tg-badge">Telegram: Desligado</span>
+            </div>
+          </summary>
+          <div class="lab-drawer-body gh-form-stack">
+            <div class="gh-policy-note">
+              <svg class="ui-icon icon-xs u-text-amber" aria-hidden="true"><use href="#icon-info"></use></svg>
+              <span>Apenas alertas de urgência Alta/Crítica fora do Horário Silencioso são encaminhados (nunca em segredo ou durante a madrugada).</span>
+            </div>
+            <input id="gh-pulse-webhook-url" type="password" class="form-control u-mono" placeholder="URL Webhook HTTPS (Slack, Discord, Google Chat ou ntfy)" />
+            <div class="gh-two-col">
+              <input id="gh-pulse-tg-token" type="password" class="form-control u-mono" placeholder="Token do Bot Telegram (opcional)" />
+              <input id="gh-pulse-tg-chat" type="text" class="form-control u-mono" placeholder="Chat ID Telegram (opcional)" />
+            </div>
+            <div>
+              <button type="button" class="btn btn-xs btn-secondary" onclick="saveGooglePulseConfig()">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg>
+                <span>Salvar Canais Externos</span>
+              </button>
+            </div>
+          </div>
+        </details>
+
+        <div class="gh-pulse-monitors-strip u-mb-4" id="gh-pulse-monitors-list">
+          <div class="gh-empty-state">Aguardando leitura dos sensores do Pulso...</div>
+        </div>
+
+        <div class="gh-subpanel">
+          <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2 u-mb-2">
+            <h4 class="gh-subpanel-title u-m-0">
+              <svg class="ui-icon icon-sm u-text-amber" aria-hidden="true"><use href="#icon-activity"></use></svg>
+              <span>Feed de Alertas em Tempo Real</span>
+            </h4>
+            <button type="button" class="btn btn-xs btn-secondary" onclick="ackAllPulseEvents()">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+              <span>Marcar como lidos</span>
+            </button>
+          </div>
+          <div class="gh-list-container gh-scroll-panel" id="gh-pulse-events-list">
+            <div class="gh-empty-state">Nenhum alerta recente no Pulso Automático.</div>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- FIM #gh-view-pulse -->
+
+      <!-- VISAO 2: AUTOMACOES 24/7 (APPS SCRIPT) -->
+      <div class="gh-view-pane" id="gh-view-automations">
+        <div class="gh-oauth-banner is-hidden" id="gh-apps-script-scope-banner">
+          <div class="gh-oauth-banner-body">
+            <svg class="ui-icon icon-md u-text-amber" aria-hidden="true"><use href="#icon-alert-triangle"></use></svg>
+            <div>
+              <div class="u-fw-600 u-text-white">Permissões adicionais recomendadas para Automações 24/7</div>
+              <div class="u-text-muted gh-text-sm" id="gh-apps-script-scope-desc">
+                Sua conta Google atual ainda não tem permissão para criar e gerenciar Google Apps Script ou Formulários.
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" onclick="upgradeActiveAccountOAuthScopes()">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-key"></use></svg>
+            <span>Atualizar Permissões no Google</span>
+          </button>
+        </div>
+
+        <div class="card u-mb-6">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-zap"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Automações 24/7 na Nuvem do Google (Apps Script)</div>
+                <div class="u-text-muted gh-text-xs">Rode rotinas mesmo com seu computador desligado — com revisão de segurança e aprovação antes de publicar.</div>
+              </div>
+            </div>
+            <a class="btn btn-sm btn-secondary" href="https://script.google.com/home/usersettings" target="_blank" rel="noopener noreferrer">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-link"></use></svg>
+              <span>Ativar API de Automações no Google &rarr;</span>
+            </a>
+          </div>
+          <p class="u-text-muted gh-text-sm u-m-0">
+            Para criar automações na sua conta pela primeira vez, ative a chave "API do Google Apps Script" nas configurações do Google Apps Script (leva 10 segundos) e escolha um modelo pronto abaixo.
+          </p>
+        </div>
+
+        <div class="card u-mb-6">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-purple">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Galeria de Modelos Prontos 24/7</div>
+                <div class="u-text-muted gh-text-xs">Cada modelo passa por análise de segurança e mostra o Cartão de Permissões antes da ativação</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-xs btn-secondary" onclick="loadAppsScriptTemplates()">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Recarregar Modelos</span>
+            </button>
+          </div>
+          <div class="gh-templates-grid" id="gh-apps-script-templates">
+            <div class="gh-empty-state">Carregando modelos prontos de automação 24/7...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-amber">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-code"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Inspetor &amp; Controle de Projeto Apps Script</div>
+                <div class="u-text-muted gh-text-xs">Inspecione arquivos, proponha publicação ou execute uma função sob sua confirmação</div>
+              </div>
+            </div>
+          </div>
+          <div class="gh-form-stack">
+            <div class="gh-three-col">
+              <div>
+                <label for="gh-as-script-id" class="gh-field-label">ID do Projeto (Script ID)</label>
+                <input id="gh-as-script-id" type="text" class="form-control u-mono" placeholder="Cole o script_id criado" />
+              </div>
+              <div>
+                <label for="gh-as-deploy-desc" class="gh-field-label">Descrição da Publicação</label>
+                <input id="gh-as-deploy-desc" type="text" class="form-control" value="Versão revisada pelo Souls Hub" placeholder="Ex: v1 produção" />
+              </div>
+              <div>
+                <label for="gh-as-run-fn" class="gh-field-label">Função para Executar</label>
+                <input id="gh-as-run-fn" type="text" class="form-control u-mono" value="main" placeholder="ex: main" />
+              </div>
+            </div>
+            <div class="gh-btn-row">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="inspectAppsScriptProject()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-search"></use></svg>
+                <span>Inspecionar Conteúdo</span>
+              </button>
+              <button type="button" class="btn btn-sm btn-primary" onclick="proposeAppsScriptDeploy()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-rocket"></use></svg>
+                <span>Propor Publicação (Pede Confirmação)</span>
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="proposeAppsScriptRun()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-play"></use></svg>
+                <span>Propor Execução de Função</span>
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="loadAppsScriptProcesses()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-history"></use></svg>
+                <span>Ver Execuções Recentes</span>
+              </button>
+            </div>
+            <div class="gh-result-box is-hidden" id="gh-as-output"></div>
+          </div>
+        </div>
+      </div><!-- FIM #gh-view-automations -->
+
+      <!-- VISAO 3: FORMULARIOS, LEITURA ECONOMICA (MINIONS) & GOOGLE CHAT -->
+      <div class="gh-view-pane" id="gh-view-forms_minions">
+        <div class="google-hub-grid">
+          <!-- GOOGLE FORMS -->
+          <div class="card google-hub-card">
+            <div class="card-header u-mb-3">
+              <div class="card-title">
+                <div class="card-icon icon-purple">
+                  <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-list"></use></svg>
+                </div>
+                <div>
+                  <div class="u-fw-700 u-text-white">Google Forms — Estatísticas &amp; Criação</div>
+                  <div class="u-text-muted gh-text-xs">Consolide respostas em segundos e exporte para Obsidian ou NotebookLM</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="gh-form-stack u-mb-4">
+              <div class="gh-inline-form">
+                <input id="gh-form-id" type="text" class="form-control u-mono gh-flex-1" placeholder="ID do Google Form (ex: 1FAIpQL...)" />
+                <button type="button" class="btn btn-sm btn-primary" onclick="loadGoogleFormStats()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-bar-chart"></use></svg>
+                  <span>Ver Estatísticas</span>
+                </button>
+              </div>
+              <div class="gh-result-box is-hidden" id="gh-forms-result"></div>
+            </div>
+
+            <div class="gh-divider-block">
+              <h4 class="gh-subpanel-title">
+                <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                <span>Criar Novo Formulário (Pede Confirmação)</span>
+              </h4>
+              <div class="gh-inline-form">
+                <input id="gh-form-new-title" type="text" class="form-control gh-flex-1" placeholder="Título do novo formulário" />
+                <button type="button" class="btn btn-sm btn-secondary" onclick="proposeCreateGoogleForm()">
+                  <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                  <span>Criar Novo Formulário</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- LEITURA PROFUNDA ECONOMICA (MINIONS) -->
+          <div class="card google-hub-card">
+            <div class="card-header u-mb-3">
+              <div class="card-title">
+                <div class="card-icon icon-green">
+                  <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-scissors"></use></svg>
+                </div>
+                <div>
+                  <div class="u-fw-700 u-text-white">Leitura Profunda Econômica (MinionS)</div>
+                  <div class="u-text-muted gh-text-xs">Extrai só os trechos essenciais no seu computador antes de usar IA na nuvem</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="gh-form-stack">
+              <div class="gh-two-col">
+                <div>
+                  <label for="gh-minion-source-kind" class="gh-field-label">Tipo de Fonte</label>
+                  <select id="gh-minion-source-kind" class="form-control">
+                    <option value="raw_text">Texto / Documento Colado</option>
+                    <option value="drive_doc">Google Docs (por ID)</option>
+                    <option value="drive_pdf">PDF no Drive (por ID)</option>
+                    <option value="gmail_thread">Conversa Gmail (por ID)</option>
+                    <option value="google_form">Respostas Google Form (por ID)</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="gh-minion-mode" class="gh-field-label">Modo de Economia</label>
+                  <select id="gh-minion-mode" class="form-control">
+                    <option value="auto" selected>Automático (Equilibrado)</option>
+                    <option value="fast_deterministic">Rápido Local (Zero GPU)</option>
+                    <option value="force_local_slm">Modelo Local Profundo</option>
+                  </select>
+                </div>
+              </div>
+              <div class="gh-two-col">
+                <input id="gh-minion-source-ref" type="text" class="form-control u-mono" placeholder="ID ou referência (ex: relatorio_q4)" />
+                <input id="gh-minion-query" type="text" class="form-control" placeholder="O que deseja extrair? (ex: riscos e receita)" />
+              </div>
+              <textarea id="gh-minion-raw-text" rows="4" class="form-control gh-textarea" placeholder="Cole aqui um documento longo, ata ou relatório para comprimir e extrair citações exatas..."></textarea>
+              <button type="button" class="btn btn-sm btn-primary" onclick="runGoogleMinionAnalysis()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-zap"></use></svg>
+                <span>Analisar com Economia</span>
+              </button>
+              <div class="gh-result-box is-hidden" id="gh-minion-result"></div>
+            </div>
+          </div>
+
+          <!-- GOOGLE CHAT (CONTAS CORPORATIVAS) -->
+          <div class="card google-hub-card">
+            <div class="card-header u-mb-3">
+              <div class="card-title">
+                <div class="card-icon icon-cyan">
+                  <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-message-square"></use></svg>
+                </div>
+                <div>
+                  <div class="u-fw-700 u-text-white">Google Chat (Contas Corporativas)</div>
+                  <div class="u-text-muted gh-text-xs">Espaços Google Workspace ou Webhook autorizado</div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-xs btn-secondary" onclick="loadGoogleChatSpaces()">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+                <span>Listar Espaços</span>
+              </button>
+            </div>
+
+            <div class="gh-list-container gh-scroll-panel-sm u-mb-3" id="gh-chat-spaces-list">
+              <div class="gh-empty-state">Clique em Listar Espaços para verificar salas corporativas (contas @gmail.com pessoais usam webhook opcional).</div>
+            </div>
+
+            <div class="gh-form-stack">
+              <div class="gh-two-col">
+                <input id="gh-chat-space" type="text" class="form-control u-mono" placeholder="Espaço (ex: spaces/AAAA...)" />
+                <input id="gh-chat-webhook" type="password" class="form-control u-mono" placeholder="Ou Webhook URL Google Chat (opcional)" />
+              </div>
+              <textarea id="gh-chat-text" rows="2" class="form-control gh-textarea" placeholder="Mensagem para enviar ao canal (exige sua confirmação)..."></textarea>
+              <button type="button" class="btn btn-sm btn-primary" onclick="proposeGoogleChatSend()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-lock"></use></svg>
+                <span>Preparar Envio (Pede Confirmação)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div><!-- FIM #gh-view-forms_minions -->
+
+      <!-- VISAO 4: ROTINA & FERRAMENTAS -->
+      <div class="gh-view-pane" id="gh-view-routine">
 
       <!-- GRID DE PRODUTIVIDADE DIARIA -->
       <div class="google-hub-grid">
@@ -474,4 +915,5 @@
         </div>
 
       </div>
+      </div><!-- FIM #gh-view-routine -->
     </section>

@@ -6,12 +6,15 @@
 
 #![forbid(unsafe_code)]
 
+use std::convert::Infallible;
 use std::io::SeekFrom;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use axum::body::{Body, Bytes};
 use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, StatusCode};
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use chrono::{Duration as ChronoDuration, Utc};
@@ -24,22 +27,24 @@ use tracing::{debug, error, info};
 use souls_ast::compute_safe_myers_diff;
 use souls_core::error::CoreError;
 use souls_core::google_bridge::{
-    build_google_auth_url, build_secondary_stream_generate_payload, compute_commute_alert,
-    dispatch_gem_official_api, evaluate_action_policy, exchange_code_for_tokens,
-    find_binary_on_path, import_gws_credentials, import_gws_credentials_from_dir,
-    parse_google_client_secret_json, quick_capture_to_obsidian, upcoming_birthdays,
-    wrap_untrusted_content, DualLayerWorkspace, GoogleAccountRecord, GoogleSessionCredentials,
-    GoogleSessionVault, GoogleTasksClient, GoogleWorkspaceClient, JulesMigrationRouter,
-    LegacyJulesCommand, NewProposalInput, NlmCliBridge, OAuth2Config, PeopleClient, PkceChallenge,
-    PolicyVerdict, RoutesV2Client, WizRpcClient, WizRpcId, WizRpcPayload, YouTubeClient,
+    build_google_auth_url, build_secondary_stream_generate_payload, builtin_apps_script_templates,
+    check_chat_eligibility, compute_commute_alert, compute_form_stats, dispatch_gem_official_api,
+    evaluate_action_policy, exchange_code_for_tokens, find_binary_on_path, import_gws_credentials,
+    import_gws_credentials_from_dir, parse_google_client_secret_json, quick_capture_to_obsidian,
+    recommended_scopes_for_kind, scan_apps_script_security, upcoming_birthdays,
+    wrap_untrusted_content, DualLayerWorkspace, GoogleAccountRecord, GoogleAppsScriptClient,
+    GoogleChatClient, GoogleFormsClient, GoogleSessionCredentials, GoogleSessionVault,
+    GoogleTasksClient, GoogleWorkspaceClient, JulesMigrationRouter, LegacyJulesCommand,
+    NewProposalInput, NlmCliBridge, OAuth2Config, PeopleClient, PkceChallenge, PolicyVerdict,
+    RoutesV2Client, WizRpcClient, WizRpcId, WizRpcPayload, YouTubeClient,
 };
 use souls_core::harness::AgenticHarnessDispatcher;
 use souls_protocol::google::{
-    AccountPermissionPolicy, BlastRadiusTier, GemProfileDto, GmailTriageResultDto,
-    GoogleAccountKind,
+    AccountPermissionPolicy, AppsScriptFileDto, BlastRadiusTier, DriveNotebookSyncLinkDto,
+    GemProfileDto, GmailTriageResultDto, GoogleAccountKind, PulseConfigDto,
 };
 
-use crate::google_hub::{is_safe_path_segment, PendingPkce, PkceOAuthMeta};
+use crate::google_hub::{is_safe_path_segment, GoogleMinionsRequest, PendingPkce, PkceOAuthMeta};
 use crate::state::AppState;
 
 // ============================================================================
@@ -747,15 +752,38 @@ pub async fn oauth_start_handler(
         .unwrap_or("http://127.0.0.1:9123/api/v1/google/oauth/callback")
         .to_string();
 
+    let existing_acct = if let Some(ref aid) = req.account_id {
+        let trimmed = aid.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            state.google_hub.vault.read().await.get_account(trimmed).cloned()
+        }
+    } else {
+        None
+    };
+
     let label = req
         .label
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        .unwrap_or("Google Account")
-        .to_string();
-    let kind = req.kind.unwrap_or(GoogleAccountKind::PersonalGmail);
-    let policy = req.policy.unwrap_or(AccountPermissionPolicy::BalancedHotlHitl);
+        .map(ToString::to_string)
+        .or_else(|| {
+            existing_acct
+                .as_ref()
+                .map(|a| a.label.trim().to_string())
+                .filter(|s| !s.is_empty())
+        })
+        .unwrap_or_else(|| "Google Account".to_string());
+    let kind = req
+        .kind
+        .or_else(|| existing_acct.as_ref().map(|a| a.kind))
+        .unwrap_or(GoogleAccountKind::PersonalGmail);
+    let policy = req
+        .policy
+        .or_else(|| existing_acct.as_ref().map(|a| a.policy))
+        .unwrap_or(AccountPermissionPolicy::BalancedHotlHitl);
 
     let gws_imported = import_gws_credentials().ok().flatten();
     let configured_client_id = req
@@ -764,6 +792,7 @@ pub async fn oauth_start_handler(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(ToString::to_string)
+        .or_else(|| existing_acct.as_ref().and_then(|a| a.client_id.clone()))
         .or_else(|| env_opt("GOOGLE_OAUTH_CLIENT_ID"))
         .or_else(|| env_opt("GOOGLE_CLIENT_ID"))
         .or_else(|| gws_imported.as_ref().and_then(|g| g.client_id.clone()));
@@ -774,11 +803,27 @@ pub async fn oauth_start_handler(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(ToString::to_string)
+        .or_else(|| existing_acct.as_ref().and_then(|a| a.client_secret.clone()))
         .or_else(|| env_opt("GOOGLE_OAUTH_CLIENT_SECRET"))
         .or_else(|| env_opt("GOOGLE_CLIENT_SECRET"))
         .or_else(|| gws_imported.as_ref().and_then(|g| g.client_secret.clone()));
 
-    let scopes = req.scopes.unwrap_or_else(default_google_workspace_scopes);
+    let login_hint = req
+        .login_hint
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+        .or_else(|| {
+            existing_acct
+                .as_ref()
+                .map(|a| a.email.trim().to_string())
+                .filter(|s| !s.is_empty())
+        });
+
+    let scopes = req
+        .scopes
+        .unwrap_or_else(|| recommended_scopes_for_kind(kind));
 
     let effective_client_id = configured_client_id
         .clone()
@@ -801,7 +846,7 @@ pub async fn oauth_start_handler(
         cfg = cfg.with_endpoints(auth_ep, token_ep);
     }
 
-    let auth_url = build_google_auth_url(&cfg, &pkce, req.login_hint.as_deref());
+    let auth_url = build_google_auth_url(&cfg, &pkce, login_hint.as_deref());
     let pending = PendingPkce {
         state: pkce.state.clone(),
         code_verifier: pkce.code_verifier,
@@ -985,9 +1030,21 @@ pub async fn oauth_callback_handler(
         record.oauth_refresh_token = Some(refresh);
     }
     record.token_expires_at = token_resp.expires_in.map(|secs| now.saturating_add(secs));
-    if !scopes.is_empty() {
-        record.scopes = scopes;
+    let mut merged_scopes = record.scopes.clone();
+    for s in scopes {
+        if !merged_scopes.iter().any(|existing| existing == &s) {
+            merged_scopes.push(s);
+        }
     }
+    if let Some(ref returned_scope) = token_resp.scope {
+        for s in returned_scope.split_whitespace() {
+            let trimmed = s.trim();
+            if !trimmed.is_empty() && !merged_scopes.iter().any(|existing| existing == trimmed) {
+                merged_scopes.push(trimmed.to_string());
+            }
+        }
+    }
+    record.scopes = merged_scopes;
     record.oauth_testing_mode_warning = true;
     record.updated_at = now;
 
@@ -1147,23 +1204,6 @@ pub struct UploadOAuthCredentialsRequest {
 }
 
 /// `POST /api/v1/google/oauth/upload-credentials`
-///
-fn default_google_workspace_scopes() -> Vec<String> {
-    vec![
-        "openid".to_string(),
-        "email".to_string(),
-        "profile".to_string(),
-        "https://www.googleapis.com/auth/gmail.modify".to_string(),
-        "https://www.googleapis.com/auth/calendar".to_string(),
-        "https://www.googleapis.com/auth/drive.readonly".to_string(),
-        "https://www.googleapis.com/auth/documents".to_string(),
-        "https://www.googleapis.com/auth/spreadsheets".to_string(),
-        "https://www.googleapis.com/auth/presentations".to_string(),
-        "https://www.googleapis.com/auth/tasks".to_string(),
-        "https://www.googleapis.com/auth/contacts.readonly".to_string(),
-    ]
-}
-
 /// Parses an official Google Cloud `client_secret.json`, persists it in the vault, and optionally
 /// starts the OAuth2 PKCE flow returning `auth_url` in a single step.
 pub async fn oauth_upload_credentials_handler(
@@ -1249,7 +1289,7 @@ pub async fn oauth_upload_credentials_handler(
 
     if payload.auto_start_oauth.unwrap_or(true) {
         let pkce = PkceChallenge::generate();
-        let scopes = default_google_workspace_scopes();
+        let scopes = recommended_scopes_for_kind(kind);
         let cfg = OAuth2Config::google_default(
             parsed.client_id.clone(),
             parsed.client_secret.clone(),
@@ -3667,8 +3707,1319 @@ pub async fn notebook_audio_stream_handler(
 }
 
 // ============================================================================
+// v0.9.2.1 PROACTIVE PULSE, APPS SCRIPT 24/7, FORMS, CHAT, MINIONS & AUTO-SYNC
+// ============================================================================
+
+#[derive(Debug, Default, Deserialize)]
+pub struct PulsePendingQuery {
+    pub limit: Option<usize>,
+    pub drain: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct PulseAckRequest {
+    pub event_ids: Option<Vec<String>>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct AccountOverrideQuery {
+    pub account_id: Option<String>,
+    pub api_base_override: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct AppsScriptCreateRequest {
+    pub title: Option<String>,
+    pub parent_id: Option<String>,
+    pub template_id: Option<String>,
+    pub account_id: Option<String>,
+    pub api_base_override: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AppsScriptPushRequest {
+    pub files: Vec<AppsScriptFileDto>,
+    #[serde(default)]
+    pub previous_files: Option<Vec<AppsScriptFileDto>>,
+    pub title: Option<String>,
+    pub account_id: Option<String>,
+    pub session_id: Option<String>,
+    pub api_base_override: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct AppsScriptDeployRequest {
+    pub description: Option<String>,
+    pub account_id: Option<String>,
+    pub session_id: Option<String>,
+    pub api_base_override: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AppsScriptRunRequest {
+    pub function_name: String,
+    pub parameters: Option<Vec<Value>>,
+    pub dev_mode: Option<bool>,
+    pub account_id: Option<String>,
+    pub session_id: Option<String>,
+    pub api_base_override: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateGoogleFormRequest {
+    pub title: String,
+    pub document_title: Option<String>,
+    pub requests: Option<Value>,
+    pub account_id: Option<String>,
+    pub session_id: Option<String>,
+    pub api_base_override: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GoogleChatSendRequest {
+    pub space_name: Option<String>,
+    pub webhook_url: Option<String>,
+    pub text: String,
+    pub account_id: Option<String>,
+    pub session_id: Option<String>,
+    pub api_base_override: Option<String>,
+    pub allow_local_test_webhook: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpsertSyncLinkRequest {
+    pub id: Option<String>,
+    pub notebook_id: String,
+    #[serde(default)]
+    pub notebook_title: Option<String>,
+    pub source_id: String,
+    pub drive_file_id: String,
+    #[serde(default)]
+    pub drive_file_name: Option<String>,
+    #[serde(default)]
+    pub auto_sync_enabled: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ToggleSyncLinkRequest {
+    pub enabled: Option<bool>,
+}
+
+/// `GET /api/v1/google/pulse`
+pub async fn pulse_status_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let snapshot = state.google_hub.build_pulse_snapshot().await;
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "pulse": snapshot
+        })),
+    )
+}
+
+/// `POST /api/v1/google/pulse/run`
+pub async fn pulse_run_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let snapshot = state.google_hub.run_proactive_pulse_cycle(true).await;
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "pulse": snapshot
+        })),
+    )
+}
+
+/// `GET /api/v1/google/pulse/config`
+pub async fn pulse_get_config_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let cfg = state.google_hub.pulse.config();
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "config": cfg
+        })),
+    )
+}
+
+/// `POST /api/v1/google/pulse/config`
+///
+/// Updates non-secret `PulseConfigDto` fields (supporting partial patches) and optionally updates
+/// external Webhook / Telegram credentials in `pulse_secrets.json` without echoing secrets.
+pub async fn pulse_update_config_handler(
+    State(state): State<AppState>,
+    Json(body): Json<Value>,
+) -> impl IntoResponse {
+    let extract_secret = |key: &str| -> Option<String> {
+        body.get(key)
+            .or_else(|| body.get("secrets").and_then(|s| s.get(key)))
+            .and_then(Value::as_str)
+            .map(ToString::to_string)
+    };
+
+    let webhook_url = extract_secret("webhook_url");
+    let telegram_bot_token = extract_secret("telegram_bot_token");
+    let telegram_chat_id = extract_secret("telegram_chat_id");
+
+    let current = state.google_hub.pulse.config();
+    let mut merged = serde_json::to_value(&current).unwrap_or_else(|_| json!({}));
+    let patch_source = body.get("config").unwrap_or(&body);
+    if let (Some(base_obj), Some(patch_obj)) = (merged.as_object_mut(), patch_source.as_object()) {
+        for (k, v) in patch_obj {
+            if matches!(
+                k.as_str(),
+                "webhook_url" | "telegram_bot_token" | "telegram_chat_id" | "secrets" | "config"
+            ) {
+                continue;
+            }
+            base_obj.insert(k.clone(), v.clone());
+        }
+    }
+
+    let next_cfg: PulseConfigDto = match serde_json::from_value(merged) {
+        Ok(cfg) => cfg,
+        Err(err) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "status": "error",
+                    "message": format!("Configuracao de Pulso invalida: {err}")
+                })),
+            );
+        }
+    };
+
+    if let Err(err) = state.google_hub.pulse.update_config(next_cfg) {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        );
+    }
+
+    let final_cfg = if webhook_url.is_some() || telegram_bot_token.is_some() || telegram_chat_id.is_some() {
+        match state.google_hub.pulse.update_secrets(
+            webhook_url,
+            telegram_bot_token,
+            telegram_chat_id,
+        ) {
+            Ok(c) => c,
+            Err(err) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "status": "error", "message": err.to_string() })),
+                );
+            }
+        }
+    } else {
+        state.google_hub.pulse.config()
+    };
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "config": final_cfg
+        })),
+    )
+}
+
+/// `GET /api/v1/google/pulse/pending`
+pub async fn pulse_pending_handler(
+    State(state): State<AppState>,
+    Query(query): Query<PulsePendingQuery>,
+) -> impl IntoResponse {
+    let cfg = state.google_hub.pulse.config();
+    if !cfg.hermes_prefetch_enabled {
+        return (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "count": 0,
+                "events": []
+            })),
+        );
+    }
+
+    let limit = query.limit.unwrap_or(3).clamp(1, 20);
+    let drain = query.drain.unwrap_or(true);
+    match state.google_hub.pulse.pending_for_hermes(limit, drain) {
+        Ok(events) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "count": events.len(),
+                "events": events
+            })),
+        ),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `POST /api/v1/google/pulse/ack`
+pub async fn pulse_ack_handler(
+    State(state): State<AppState>,
+    body: Option<Json<PulseAckRequest>>,
+) -> impl IntoResponse {
+    let ids = body.and_then(|Json(b)| b.event_ids);
+    match state.google_hub.pulse.ack_events(ids.as_deref()) {
+        Ok(acked) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "acked": acked,
+                "unacked_count": state.google_hub.pulse.unacked_count()
+            })),
+        ),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `GET /api/v1/google/events/stream`
+///
+/// Server-Sent Events (SSE) live stream of `PulseEventDto` notifications.
+pub async fn google_events_stream_handler(
+    State(state): State<AppState>,
+) -> Sse<ReceiverStream<Result<Event, Infallible>>> {
+    let mut rx_broadcast = state.google_hub.pulse_tx.subscribe();
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(32);
+
+    tokio::spawn(async move {
+        let ready = Event::default()
+            .event("ready")
+            .data(json!({ "connected": true }).to_string());
+        if tx.send(Ok(ready)).await.is_err() {
+            return;
+        }
+
+        loop {
+            match rx_broadcast.recv().await {
+                Ok(ev) => {
+                    let sse_ev = match Event::default()
+                        .event("pulse")
+                        .id(ev.id.clone())
+                        .json_data(&ev)
+                    {
+                        Ok(built) => built,
+                        Err(_) => continue,
+                    };
+                    if tx.send(Ok(sse_ev)).await.is_err() {
+                        break;
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+
+    Sse::new(ReceiverStream::new(rx))
+        .keep_alive(KeepAlive::new().interval(Duration::from_secs(15)).text("keepalive"))
+}
+
+/// `GET /api/v1/google/apps-script/templates`
+pub async fn apps_script_templates_handler() -> impl IntoResponse {
+    let templates = builtin_apps_script_templates();
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "count": templates.len(),
+            "templates": templates
+        })),
+    )
+}
+
+/// `POST /api/v1/google/apps-script/create`
+pub async fn apps_script_create_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<AppsScriptCreateRequest>,
+) -> impl IntoResponse {
+    let (_acct, token) = match require_account_oauth(&state, payload.account_id.as_deref()).await {
+        Ok(ok) => ok,
+        Err(resp) => return resp,
+    };
+
+    let matched_template = payload.template_id.as_deref().and_then(|tid| {
+        builtin_apps_script_templates()
+            .into_iter()
+            .find(|t| t.id == tid.trim())
+    });
+
+    let title = payload
+        .title
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+        .or_else(|| matched_template.as_ref().map(|t| t.name.clone()))
+        .unwrap_or_else(|| "Nova Automacao Google".to_string());
+
+    let client = apps_script_client_from_override(payload.api_base_override.as_deref());
+    match client
+        .create_project(&token, &title, payload.parent_id.as_deref())
+        .await
+    {
+        Ok(project) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "project": project,
+                "template": matched_template
+            })),
+        ),
+        Err(err) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `GET /api/v1/google/apps-script/:id/content`
+pub async fn apps_script_get_content_handler(
+    State(state): State<AppState>,
+    Path(script_id): Path<String>,
+    Query(query): Query<AccountOverrideQuery>,
+) -> impl IntoResponse {
+    let (_acct, token) = match require_account_oauth(&state, query.account_id.as_deref()).await {
+        Ok(ok) => ok,
+        Err(resp) => return resp,
+    };
+
+    let client = apps_script_client_from_override(query.api_base_override.as_deref());
+    match client.get_content(&token, &script_id).await {
+        Ok(files) => {
+            let scan = scan_apps_script_security(&files);
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "status": "success",
+                    "script_id": script_id,
+                    "files": files,
+                    "security_scan": scan
+                })),
+            )
+        }
+        Err(err) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `POST /api/v1/google/apps-script/:id/push`
+pub async fn apps_script_push_propose_handler(
+    State(state): State<AppState>,
+    Path(script_id): Path<String>,
+    Json(payload): Json<AppsScriptPushRequest>,
+) -> impl IntoResponse {
+    if payload.files.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Forneca ao menos um arquivo em 'files' para enviar ao Apps Script."
+            })),
+        );
+    }
+
+    let acct_opt = state
+        .google_hub
+        .resolve_account_strict(payload.account_id.as_deref())
+        .await;
+    let (acct_id, policy, write_wl) = match acct_opt.as_ref() {
+        Some(a) => (
+            a.account_id.clone(),
+            a.policy,
+            a.write_whitelist_ids.clone(),
+        ),
+        None => (
+            "default".to_string(),
+            AccountPermissionPolicy::BalancedHotlHitl,
+            Vec::new(),
+        ),
+    };
+
+    let sess = payload
+        .session_id
+        .as_deref()
+        .unwrap_or("web_dashboard");
+    let tainted = state.google_hub.taint_tracker.is_tainted(sess);
+    let is_whitelisted = write_wl.iter().any(|w| w == &script_id);
+
+    if let PolicyVerdict::Denied { reason } = evaluate_action_policy(
+        BlastRadiusTier::Tier2ExternalDestructive,
+        policy,
+        tainted,
+        is_whitelisted,
+    ) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "status": "forbidden",
+                "message": reason
+            })),
+        );
+    }
+
+    let previous_files = if let Some(prev) = payload.previous_files {
+        prev
+    } else if let Some(tok) = acct_opt
+        .as_ref()
+        .and_then(|a| a.oauth_access_token.as_deref())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        let client = apps_script_client_from_override(payload.api_base_override.as_deref());
+        client
+            .get_content(tok, &script_id)
+            .await
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+
+    let scan = scan_apps_script_security(&payload.files);
+    let before_text = format_apps_script_bundle(&previous_files);
+    let after_text = format_apps_script_bundle(&payload.files);
+
+    let mut summary = format!(
+        "Atualizar {} arquivo(s) no projeto Apps Script '{}'. Pontuacao de seguranca: {}/100.",
+        payload.files.len(),
+        script_id,
+        scan.safe_score
+    );
+    if scan.hardcoded_secrets_detected || !scan.manifest_json_valid || !scan.warnings.is_empty() {
+        summary.push_str(" ATENCAO: revise os alertas de seguranca e o cartao de permissoes antes de aprovar.");
+    }
+
+    let title = payload
+        .title
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+        .unwrap_or_else(|| format!("Apps Script Push: {script_id}"));
+
+    let mut payload_json = json!({
+        "script_id": script_id,
+        "files": payload.files,
+        "security_scan": scan,
+        "human_permission_summary": scan.human_permission_summary,
+    });
+    if let Some(ref ep) = payload.api_base_override {
+        payload_json["api_base_override"] = json!(ep);
+    }
+
+    let input = NewProposalInput {
+        account_id: acct_id,
+        service: "apps_script".to_string(),
+        action: "push_content".to_string(),
+        tier: BlastRadiusTier::Tier2ExternalDestructive,
+        title,
+        summary,
+        target_resource: script_id,
+        payload_json,
+        before_snapshot: Some(before_text),
+        after_snapshot: Some(after_text),
+        myers_diff: None,
+        tainted_origin: tainted,
+        ttl_secs: 3600,
+    };
+
+    queue_proposal_response(&state, sess, "apps_script.push_content", input)
+}
+
+/// `POST /api/v1/google/apps-script/:id/deploy`
+pub async fn apps_script_deploy_propose_handler(
+    State(state): State<AppState>,
+    Path(script_id): Path<String>,
+    body: Option<Json<AppsScriptDeployRequest>>,
+) -> impl IntoResponse {
+    let payload = body.map(|Json(b)| b).unwrap_or_default();
+    let (acct_id, policy, _) =
+        resolve_policy_context(&state, payload.account_id.as_deref()).await;
+    let sess = payload
+        .session_id
+        .as_deref()
+        .unwrap_or("web_dashboard");
+    let tainted = state.google_hub.taint_tracker.is_tainted(sess);
+    if let PolicyVerdict::Denied { reason } = evaluate_action_policy(
+        BlastRadiusTier::Tier2ExternalDestructive,
+        policy,
+        tainted,
+        false,
+    ) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "status": "forbidden",
+                "message": reason
+            })),
+        );
+    }
+    let mut payload_json = json!({
+        "script_id": script_id,
+        "description": payload.description,
+    });
+    if let Some(ref ep) = payload.api_base_override {
+        payload_json["api_base_override"] = json!(ep);
+    }
+
+    let input = NewProposalInput {
+        account_id: acct_id,
+        service: "apps_script".to_string(),
+        action: "deploy".to_string(),
+        tier: BlastRadiusTier::Tier2ExternalDestructive,
+        title: format!("Publicar versao Apps Script: {script_id}"),
+        summary: format!(
+            "Criar nova versao imutavel e deployment ativo para o projeto Apps Script '{script_id}'."
+        ),
+        target_resource: script_id,
+        payload_json,
+        before_snapshot: None,
+        after_snapshot: None,
+        myers_diff: None,
+        tainted_origin: tainted,
+        ttl_secs: 3600,
+    };
+
+    queue_proposal_response(&state, sess, "apps_script.deploy", input)
+}
+
+/// `POST /api/v1/google/apps-script/:id/run`
+pub async fn apps_script_run_propose_handler(
+    State(state): State<AppState>,
+    Path(script_id): Path<String>,
+    Json(payload): Json<AppsScriptRunRequest>,
+) -> impl IntoResponse {
+    let fn_name = payload.function_name.trim();
+    if fn_name.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Campo 'function_name' e obrigatorio."
+            })),
+        );
+    }
+
+    let (acct_id, policy, _) =
+        resolve_policy_context(&state, payload.account_id.as_deref()).await;
+    let sess = payload
+        .session_id
+        .as_deref()
+        .unwrap_or("web_dashboard");
+    let tainted = state.google_hub.taint_tracker.is_tainted(sess);
+    if let PolicyVerdict::Denied { reason } = evaluate_action_policy(
+        BlastRadiusTier::Tier2ExternalDestructive,
+        policy,
+        tainted,
+        false,
+    ) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "status": "forbidden",
+                "message": reason
+            })),
+        );
+    }
+    let mut payload_json = json!({
+        "script_id": script_id,
+        "function_name": fn_name,
+        "parameters": payload.parameters,
+        "dev_mode": payload.dev_mode.unwrap_or(false),
+    });
+    if let Some(ref ep) = payload.api_base_override {
+        payload_json["api_base_override"] = json!(ep);
+    }
+
+    let input = NewProposalInput {
+        account_id: acct_id,
+        service: "apps_script".to_string(),
+        action: "run_function".to_string(),
+        tier: BlastRadiusTier::Tier2ExternalDestructive,
+        title: format!("Executar funcao '{fn_name}' no Apps Script"),
+        summary: format!("Execucao remota da funcao '{fn_name}' no projeto '{script_id}'."),
+        target_resource: script_id,
+        payload_json,
+        before_snapshot: None,
+        after_snapshot: None,
+        myers_diff: None,
+        tainted_origin: tainted,
+        ttl_secs: 3600,
+    };
+
+    queue_proposal_response(&state, sess, "apps_script.run_function", input)
+}
+
+/// `GET /api/v1/google/apps-script/:id/processes`
+pub async fn apps_script_processes_handler(
+    State(state): State<AppState>,
+    Path(script_id): Path<String>,
+    Query(query): Query<AccountOverrideQuery>,
+) -> impl IntoResponse {
+    let (_acct, token) = match require_account_oauth(&state, query.account_id.as_deref()).await {
+        Ok(ok) => ok,
+        Err(resp) => return resp,
+    };
+
+    let client = apps_script_client_from_override(query.api_base_override.as_deref());
+    match client.list_processes(&token, Some(&script_id)).await {
+        Ok(processes) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "script_id": script_id,
+                "count": processes.len(),
+                "processes": processes
+            })),
+        ),
+        Err(err) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `GET /api/v1/google/forms/:id`
+pub async fn forms_get_handler(
+    State(state): State<AppState>,
+    Path(form_id): Path<String>,
+    Query(query): Query<AccountOverrideQuery>,
+) -> impl IntoResponse {
+    let (_acct, token) = match require_account_oauth(&state, query.account_id.as_deref()).await {
+        Ok(ok) => ok,
+        Err(resp) => return resp,
+    };
+
+    let client = forms_client_from_override(query.api_base_override.as_deref());
+    match client.get_form(&token, &form_id).await {
+        Ok(form) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "form": form
+            })),
+        ),
+        Err(err) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `POST /api/v1/google/forms`
+pub async fn forms_create_propose_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<CreateGoogleFormRequest>,
+) -> impl IntoResponse {
+    let title = payload.title.trim();
+    if title.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Campo 'title' e obrigatorio para criar um formulario."
+            })),
+        );
+    }
+
+    let (acct_id, policy, _) =
+        resolve_policy_context(&state, payload.account_id.as_deref()).await;
+    let sess = payload
+        .session_id
+        .as_deref()
+        .unwrap_or("web_dashboard");
+    let tainted = state.google_hub.taint_tracker.is_tainted(sess);
+    if let PolicyVerdict::Denied { reason } = evaluate_action_policy(
+        BlastRadiusTier::Tier2ExternalDestructive,
+        policy,
+        tainted,
+        false,
+    ) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "status": "forbidden",
+                "message": reason
+            })),
+        );
+    }
+    let mut payload_json = json!({
+        "title": title,
+        "document_title": payload.document_title,
+        "requests": payload.requests,
+    });
+    if let Some(ref ep) = payload.api_base_override {
+        payload_json["api_base_override"] = json!(ep);
+    }
+
+    let input = NewProposalInput {
+        account_id: acct_id,
+        service: "forms".to_string(),
+        action: "create_form".to_string(),
+        tier: BlastRadiusTier::Tier2ExternalDestructive,
+        title: format!("Criar Google Form: {title}"),
+        summary: format!("Criar novo formulario '{title}' na conta Google conectada."),
+        target_resource: "new_form".to_string(),
+        payload_json,
+        before_snapshot: None,
+        after_snapshot: None,
+        myers_diff: None,
+        tainted_origin: tainted,
+        ttl_secs: 3600,
+    };
+
+    queue_proposal_response(&state, sess, "forms.create_form", input)
+}
+
+/// `GET /api/v1/google/forms/:id/responses`
+pub async fn forms_responses_handler(
+    State(state): State<AppState>,
+    Path(form_id): Path<String>,
+    Query(query): Query<AccountOverrideQuery>,
+) -> impl IntoResponse {
+    let (_acct, token) = match require_account_oauth(&state, query.account_id.as_deref()).await {
+        Ok(ok) => ok,
+        Err(resp) => return resp,
+    };
+
+    let client = forms_client_from_override(query.api_base_override.as_deref());
+    let form = match client.get_form(&token, &form_id).await {
+        Ok(f) => f,
+        Err(err) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "status": "error", "message": err.to_string() })),
+            );
+        }
+    };
+    let responses = match client.list_responses(&token, &form_id).await {
+        Ok(r) => r,
+        Err(err) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "status": "error", "message": err.to_string() })),
+            );
+        }
+    };
+    let stats = compute_form_stats(&form, &responses);
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "form": form,
+            "responses": responses,
+            "stats": stats
+        })),
+    )
+}
+
+/// `GET /api/v1/google/chat/spaces`
+pub async fn chat_spaces_handler(
+    State(state): State<AppState>,
+    Query(query): Query<AccountOverrideQuery>,
+) -> impl IntoResponse {
+    let Some(acct) = state
+        .google_hub
+        .resolve_account_strict(query.account_id.as_deref())
+        .await
+    else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "status": "unauthorized",
+                "message": "Nenhuma conta Google configurada. Conecte uma conta Google Workspace corporativa para usar o Google Chat."
+            })),
+        );
+    };
+
+    if let Err(err) = check_chat_eligibility(acct.kind) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "status": "forbidden",
+                "eligible": false,
+                "account_kind": acct.kind,
+                "message": err.to_string(),
+                "note": "Contas @gmail.com pessoais nao possuem acesso aa API do Google Chat. Use Google Workspace corporativo ou configure um webhook autorizado."
+            })),
+        );
+    }
+
+    let Some(token) = acct
+        .oauth_access_token
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "status": "unauthorized",
+                "message": "Conta Workspace configurada sem token OAuth2 ativo."
+            })),
+        );
+    };
+
+    let client = chat_client_from_override(query.api_base_override.as_deref());
+    match client.list_spaces(token).await {
+        Ok(spaces) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "eligible": true,
+                "count": spaces.len(),
+                "spaces": spaces
+            })),
+        ),
+        Err(err) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `POST /api/v1/google/chat/send`
+pub async fn chat_send_propose_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<GoogleChatSendRequest>,
+) -> impl IntoResponse {
+    let text = payload.text.trim();
+    if text.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Campo 'text' e obrigatorio para enviar mensagem no Google Chat."
+            })),
+        );
+    }
+
+    let sess = payload
+        .session_id
+        .as_deref()
+        .unwrap_or("web_dashboard");
+
+    if let Some(webhook_url) = payload
+        .webhook_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        let allow_local = payload.allow_local_test_webhook.unwrap_or(false)
+            || payload.api_base_override.is_some();
+        let valid_prefix = webhook_url.starts_with("https://chat.googleapis.com/v1/spaces/")
+            || (allow_local
+                && (webhook_url.starts_with("http://127.0.0.1:")
+                    || webhook_url.starts_with("http://localhost:")));
+        if !valid_prefix {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "status": "error",
+                    "message": "Webhook URL invalida. Deve iniciar com 'https://chat.googleapis.com/v1/spaces/'."
+                })),
+            );
+        }
+
+        let (acct_id, policy, _) =
+            resolve_policy_context(&state, payload.account_id.as_deref()).await;
+        let tainted = state.google_hub.taint_tracker.is_tainted(sess);
+        if let PolicyVerdict::Denied { reason } = evaluate_action_policy(
+            BlastRadiusTier::Tier2ExternalDestructive,
+            policy,
+            tainted,
+            false,
+        ) {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "status": "forbidden",
+                    "message": reason
+                })),
+            );
+        }
+
+        let mut payload_json = json!({
+            "webhook_url": webhook_url,
+            "text": text,
+        });
+        if allow_local {
+            payload_json["allow_local_test_webhook"] = json!(true);
+        }
+
+        let input = NewProposalInput {
+            account_id: acct_id,
+            service: "chat".to_string(),
+            action: "webhook".to_string(),
+            tier: BlastRadiusTier::Tier2ExternalDestructive,
+            title: "Enviar alerta via Webhook Google Chat".to_string(),
+            summary: format!("Publicar mensagem via webhook no Google Chat: \"{text}\""),
+            target_resource: webhook_url.to_string(),
+            payload_json,
+            before_snapshot: None,
+            after_snapshot: Some(text.to_string()),
+            myers_diff: None,
+            tainted_origin: tainted,
+            ttl_secs: 3600,
+        };
+        return queue_proposal_response(&state, sess, "chat.webhook", input);
+    }
+
+    let Some(space_name) = payload
+        .space_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Informe 'space_name' (Workspace) ou 'webhook_url' para enviar mensagem."
+            })),
+        );
+    };
+
+    let Some(acct) = state
+        .google_hub
+        .resolve_account_strict(payload.account_id.as_deref())
+        .await
+    else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "status": "unauthorized",
+                "message": "Nenhuma conta Google configurada para enviar mensagens no Google Chat."
+            })),
+        );
+    };
+
+    if let Err(err) = check_chat_eligibility(acct.kind) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "status": "forbidden",
+                "eligible": false,
+                "account_kind": acct.kind,
+                "message": err.to_string()
+            })),
+        );
+    }
+
+    let tainted = state.google_hub.taint_tracker.is_tainted(sess);
+    let is_whitelisted = acct.write_whitelist_ids.iter().any(|w| w == space_name);
+    if let PolicyVerdict::Denied { reason } = evaluate_action_policy(
+        BlastRadiusTier::Tier2ExternalDestructive,
+        acct.policy,
+        tainted,
+        is_whitelisted,
+    ) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "status": "forbidden",
+                "message": reason
+            })),
+        );
+    }
+
+    let mut payload_json = json!({
+        "space_name": space_name,
+        "text": text,
+    });
+    if let Some(ref ep) = payload.api_base_override {
+        payload_json["api_base_override"] = json!(ep);
+    }
+
+    let input = NewProposalInput {
+        account_id: acct.account_id,
+        service: "chat".to_string(),
+        action: "create_message".to_string(),
+        tier: BlastRadiusTier::Tier2ExternalDestructive,
+        title: format!("Enviar mensagem no espaco '{space_name}'"),
+        summary: format!("Publicar no Google Chat ({space_name}): \"{text}\""),
+        target_resource: space_name.to_string(),
+        payload_json,
+        before_snapshot: None,
+        after_snapshot: Some(text.to_string()),
+        myers_diff: None,
+        tainted_origin: tainted,
+        ttl_secs: 3600,
+    };
+
+    queue_proposal_response(&state, sess, "chat.create_message", input)
+}
+
+/// `POST /api/v1/google/analyze/minions`
+pub async fn analyze_minions_handler(
+    State(state): State<AppState>,
+    Json(req): Json<GoogleMinionsRequest>,
+) -> impl IntoResponse {
+    match state.google_hub.run_google_minions_analysis(req).await {
+        Ok(analysis) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "analysis": analysis
+            })),
+        ),
+        Err((code, msg)) => (
+            code,
+            Json(json!({
+                "status": "error",
+                "message": msg
+            })),
+        ),
+    }
+}
+
+/// `GET /api/v1/google/notebooks/sync-links`
+pub async fn sync_links_list_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let links = state.google_hub.pulse.list_sync_links();
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "success",
+            "count": links.len(),
+            "links": links
+        })),
+    )
+}
+
+/// `POST /api/v1/google/notebooks/sync-links`
+pub async fn sync_links_upsert_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<UpsertSyncLinkRequest>,
+) -> impl IntoResponse {
+    let notebook_id = payload.notebook_id.trim().to_string();
+    let source_id = payload.source_id.trim().to_string();
+    let drive_file_id = payload.drive_file_id.trim().to_string();
+    if notebook_id.is_empty() || drive_file_id.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "message": "Campos 'notebook_id' e 'drive_file_id' sao obrigatorios."
+            })),
+        );
+    }
+
+    let id = payload
+        .id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+        .unwrap_or_else(|| format!("sync_{notebook_id}_{drive_file_id}"));
+
+    let link = DriveNotebookSyncLinkDto {
+        id,
+        notebook_id: notebook_id.clone(),
+        notebook_title: payload
+            .notebook_title
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&notebook_id)
+            .to_string(),
+        source_id: if source_id.is_empty() {
+            drive_file_id.clone()
+        } else {
+            source_id
+        },
+        drive_file_id: drive_file_id.clone(),
+        drive_file_name: payload
+            .drive_file_name
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&drive_file_id)
+            .to_string(),
+        auto_sync_enabled: payload.auto_sync_enabled.unwrap_or(true),
+        last_checked_at: None,
+        last_synced_at: None,
+        last_status: "linked".to_string(),
+    };
+
+    match state.google_hub.pulse.upsert_sync_link(link) {
+        Ok(saved) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "link": saved
+            })),
+        ),
+        Err(err) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `DELETE /api/v1/google/notebooks/sync-links/:id`
+pub async fn sync_links_delete_handler(
+    State(state): State<AppState>,
+    Path(link_id): Path<String>,
+) -> impl IntoResponse {
+    match state.google_hub.pulse.delete_sync_link(&link_id) {
+        Ok(true) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "deleted": true,
+                "id": link_id
+            })),
+        ),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "status": "not_found",
+                "message": format!("Vinculo '{link_id}' nao encontrado.")
+            })),
+        ),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "status": "error", "message": err.to_string() })),
+        ),
+    }
+}
+
+/// `POST /api/v1/google/notebooks/sync-links/:id/toggle`
+pub async fn sync_links_toggle_handler(
+    State(state): State<AppState>,
+    Path(link_id): Path<String>,
+    body: Option<Json<ToggleSyncLinkRequest>>,
+) -> impl IntoResponse {
+    let target_enabled = match body.and_then(|Json(b)| b.enabled) {
+        Some(flag) => flag,
+        None => {
+            let current = state
+                .google_hub
+                .pulse
+                .list_sync_links()
+                .into_iter()
+                .find(|l| l.id == link_id);
+            match current {
+                Some(l) => !l.auto_sync_enabled,
+                None => {
+                    return (
+                        StatusCode::NOT_FOUND,
+                        Json(json!({
+                            "status": "not_found",
+                            "message": format!("Vinculo '{link_id}' nao encontrado.")
+                        })),
+                    );
+                }
+            }
+        }
+    };
+
+    match state
+        .google_hub
+        .pulse
+        .toggle_sync_link(&link_id, target_enabled)
+    {
+        Ok(link) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "success",
+                "link": link
+            })),
+        ),
+        Err(err) => {
+            let msg = err.to_string();
+            let code = if msg.contains("not found") {
+                StatusCode::NOT_FOUND
+            } else {
+                StatusCode::BAD_REQUEST
+            };
+            (
+                code,
+                Json(json!({ "status": "error", "message": msg })),
+            )
+        }
+    }
+}
+
+// ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
+
+async fn require_account_oauth(
+    state: &AppState,
+    account_id: Option<&str>,
+) -> Result<(GoogleAccountRecord, String), (StatusCode, Json<Value>)> {
+    let Some(acct) = state.google_hub.resolve_account_strict(account_id).await else {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "status": "unauthorized",
+                "message": "Nenhuma conta Google OAuth configurada. Conecte em Conexoes & CLIs."
+            })),
+        ));
+    };
+
+    let Some(token) = acct
+        .oauth_access_token
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(ToString::to_string)
+    else {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "status": "unauthorized",
+                "message": "Conta Google sem token OAuth2 ativo. Autorize primeiro via OAuth2."
+            })),
+        ));
+    };
+
+    Ok((acct, token))
+}
+
+fn apps_script_client_from_override(base_override: Option<&str>) -> GoogleAppsScriptClient {
+    match base_override.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(base) => GoogleAppsScriptClient::with_base_url(base),
+        None => GoogleAppsScriptClient::new(),
+    }
+}
+
+fn forms_client_from_override(base_override: Option<&str>) -> GoogleFormsClient {
+    match base_override.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(base) => GoogleFormsClient::with_base_url(base),
+        None => GoogleFormsClient::new(),
+    }
+}
+
+fn chat_client_from_override(base_override: Option<&str>) -> GoogleChatClient {
+    match base_override.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(base) => GoogleChatClient::with_base_url(base),
+        None => GoogleChatClient::new(),
+    }
+}
+
+fn format_apps_script_bundle(files: &[AppsScriptFileDto]) -> String {
+    let mut out = String::new();
+    for f in files {
+        out.push_str(&format!(
+            "// === {} ({}) ===\n{}\n\n",
+            f.name,
+            f.file_type,
+            f.source.replace("\r\n", "\n")
+        ));
+    }
+    out
+}
 
 async fn resolve_policy_context(
     state: &AppState,

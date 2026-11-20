@@ -1,4 +1,4 @@
-//! MCP Tool Implementations for `google.*` (14 tools) and `inbox.*` (3 tools).
+//! MCP Tool Implementations for `google.*` (19 tools) and `inbox.*` (3 tools).
 //!
 //! Enforces BMAD governance across every MCP boundary:
 //! - External Google reads mark the active MCP session as tainted in `SessionTaintTracker`.
@@ -11,27 +11,32 @@
 
 use std::path::PathBuf;
 
+use axum::http::StatusCode;
 use chrono::{Duration as ChronoDuration, Utc};
 use serde_json::{json, Value};
 
 use souls_core::error::CoreError;
 use souls_core::google_bridge::{
-    build_secondary_stream_generate_payload, check_keep_eligibility, dispatch_gem_official_api,
-    evaluate_action_policy, import_gws_credentials, quick_capture_to_obsidian, run_google_doctor,
-    upcoming_birthdays, wrap_untrusted_content, GoogleAccountRecord, GoogleSessionCredentials,
-    GoogleTasksClient, GoogleWorkspaceClient, NewProposalInput, NlmCliBridge, PeopleClient,
-    PolicyVerdict, RoutesV2Client, WizRpcClient, WizRpcId, WizRpcPayload, YouTubeClient,
+    build_secondary_stream_generate_payload, builtin_apps_script_templates, check_chat_eligibility,
+    check_keep_eligibility, compute_form_stats, dispatch_gem_official_api, evaluate_action_policy,
+    import_gws_credentials, quick_capture_to_obsidian, run_google_doctor, scan_apps_script_security,
+    upcoming_birthdays, wrap_untrusted_content, GoogleAccountRecord, GoogleAppsScriptClient,
+    GoogleChatClient, GoogleFormsClient, GoogleSessionCredentials, GoogleTasksClient,
+    GoogleWorkspaceClient, NewProposalInput, NlmCliBridge, PeopleClient, PolicyVerdict,
+    RoutesV2Client, WizRpcClient, WizRpcId, WizRpcPayload, YouTubeClient,
 };
 use souls_protocol::error::McpDomainError;
 use souls_protocol::google::{
-    AccountPermissionPolicy, BlastRadiusTier, BmadProposalDto, ContactCardDto, GemProfileDto,
-    GoogleAccountKind, ProposalStatus,
+    AccountPermissionPolicy, AppsScriptFileDto, BlastRadiusTier, BmadProposalDto, ContactCardDto,
+    DriveNotebookSyncLinkDto, GemProfileDto, GoogleAccountKind, MinionAnalyzeMode,
+    MinionGoogleSourceKind, ProposalStatus, PulseConfigDto,
 };
 
+use crate::google_hub::GoogleMinionsRequest;
 use crate::routes::google::resolve_wiz_rpc_id;
 use crate::state::AppState;
 
-/// Dispatches any of the 17 Google/Inbox MCP tools. Returns `None` if `tool_name` is unrelated.
+/// Dispatches any of the 22 Google/Inbox MCP tools. Returns `None` if `tool_name` is unrelated.
 pub async fn try_dispatch_google_tool(
     state: &AppState,
     tool_name: &str,
@@ -59,6 +64,11 @@ pub async fn try_dispatch_google_tool(
         "google_youtube" => handle_google_youtube(state, args, sess).await,
         "google_notebooklm" => handle_google_notebooklm(state, args, sess).await,
         "google_gems" => handle_google_gems(state, args).await,
+        "google_pulse" => handle_google_pulse(state, args).await,
+        "google_apps_script" => handle_google_apps_script(state, args, sess).await,
+        "google_forms" => handle_google_forms(state, args, sess).await,
+        "google_chat" => handle_google_chat(state, args, sess).await,
+        "google_deep_analyze" => handle_google_deep_analyze(state, args, sess).await,
         "inbox_list" => handle_inbox_list(state, args),
         "inbox_inspect_diff" => handle_inbox_inspect_diff(state, args),
         "inbox_propose" => handle_inbox_propose(state, args, sess),
@@ -2108,4 +2118,1023 @@ fn infer_kind(email: &str) -> GoogleAccountKind {
     } else {
         GoogleAccountKind::WorkspaceEnterprise
     }
+}
+
+// ============================================================================
+// v0.9.2.1 TOOLS: google_pulse, google_apps_script, google_forms,
+//                 google_chat, google_deep_analyze
+// ============================================================================
+
+async fn handle_google_pulse(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+) -> Result<Value, McpDomainError> {
+    let action = args
+        .get("action")
+        .and_then(Value::as_str)
+        .unwrap_or("status")
+        .to_ascii_lowercase();
+
+    match action.as_str() {
+        "status" => {
+            let snap = state.google_hub.build_pulse_snapshot().await;
+            Ok(mcp_ok(
+                format!(
+                    "Google Pulse running={}, tick_count={}, unacked_count={}.",
+                    snap.running, snap.tick_count, snap.unacked_count
+                ),
+                json!({ "status": "success", "pulse": snap }),
+            ))
+        }
+        "run_now" => {
+            let snap = state.google_hub.run_proactive_pulse_cycle(true).await;
+            Ok(mcp_ok(
+                format!(
+                    "Proactive Google Pulse cycle finished (tick_count={}, unacked={}).",
+                    snap.tick_count, snap.unacked_count
+                ),
+                json!({ "status": "success", "pulse": snap }),
+            ))
+        }
+        "pending" => {
+            let cfg = state.google_hub.pulse.config();
+            if !cfg.hermes_prefetch_enabled {
+                return Ok(mcp_ok(
+                    "Hermes pulse prefetch is currently disabled.",
+                    json!({ "status": "success", "count": 0, "events": [] }),
+                ));
+            }
+            let limit = args
+                .get("limit")
+                .and_then(Value::as_u64)
+                .unwrap_or(3)
+                .clamp(1, 20) as usize;
+            let drain = args.get("drain").and_then(Value::as_bool).unwrap_or(true);
+            let events = state
+                .google_hub
+                .pulse
+                .pending_for_hermes(limit, drain)
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            Ok(mcp_ok(
+                format!("Fetched {} pending pulse event(s) (drain={drain}).", events.len()),
+                json!({ "status": "success", "count": events.len(), "events": events }),
+            ))
+        }
+        "ack" => {
+            let ids = args.get("event_ids").and_then(|v| {
+                serde_json::from_value::<Vec<String>>(v.clone()).ok()
+            });
+            let acked = state
+                .google_hub
+                .pulse
+                .ack_events(ids.as_deref())
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            Ok(mcp_ok(
+                format!("Acknowledged {acked} pulse event(s)."),
+                json!({
+                    "status": "success",
+                    "acked": acked,
+                    "unacked_count": state.google_hub.pulse.unacked_count()
+                }),
+            ))
+        }
+        "configure" => {
+            let current = state.google_hub.pulse.config();
+            let mut merged = serde_json::to_value(&current).unwrap_or_else(|_| json!({}));
+            if let Some(patch) = args.get("config").and_then(Value::as_object) {
+                if let Some(base_obj) = merged.as_object_mut() {
+                    for (k, v) in patch {
+                        base_obj.insert(k.clone(), v.clone());
+                    }
+                }
+            }
+            let next_cfg: PulseConfigDto = serde_json::from_value(merged)
+                .map_err(|_| McpDomainError::InvalidInputParameters)?;
+            state
+                .google_hub
+                .pulse
+                .update_config(next_cfg)
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+
+            let webhook = args
+                .get("webhook_url")
+                .and_then(Value::as_str)
+                .map(ToString::to_string);
+            let tg_token = args
+                .get("telegram_bot_token")
+                .and_then(Value::as_str)
+                .map(ToString::to_string);
+            let tg_chat = args
+                .get("telegram_chat_id")
+                .and_then(Value::as_str)
+                .map(ToString::to_string);
+            let final_cfg = if webhook.is_some() || tg_token.is_some() || tg_chat.is_some() {
+                state
+                    .google_hub
+                    .pulse
+                    .update_secrets(webhook, tg_token, tg_chat)
+                    .map_err(|_| McpDomainError::StructuredFailure)?
+            } else {
+                state.google_hub.pulse.config()
+            };
+
+            Ok(mcp_ok(
+                "Updated Google Pulse configuration.",
+                json!({ "status": "success", "config": final_cfg }),
+            ))
+        }
+        "sync_links_list" => {
+            let links = state.google_hub.pulse.list_sync_links();
+            Ok(mcp_ok(
+                format!("{} Drive <-> NotebookLM sync link(s).", links.len()),
+                json!({ "status": "success", "count": links.len(), "links": links }),
+            ))
+        }
+        "sync_links_add" => {
+            let notebook_id = args
+                .get("notebook_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let drive_file_id = args
+                .get("drive_file_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let source_id = args
+                .get("source_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or(drive_file_id);
+            let id = args
+                .get("id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(ToString::to_string)
+                .unwrap_or_else(|| format!("sync_{notebook_id}_{drive_file_id}"));
+
+            let link = DriveNotebookSyncLinkDto {
+                id,
+                notebook_id: notebook_id.to_string(),
+                notebook_title: args
+                    .get("notebook_title")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or(notebook_id)
+                    .to_string(),
+                source_id: source_id.to_string(),
+                drive_file_id: drive_file_id.to_string(),
+                drive_file_name: args
+                    .get("drive_file_name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or(drive_file_id)
+                    .to_string(),
+                auto_sync_enabled: args
+                    .get("auto_sync_enabled")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(true),
+                last_checked_at: None,
+                last_synced_at: None,
+                last_status: "linked".to_string(),
+            };
+            let saved = state
+                .google_hub
+                .pulse
+                .upsert_sync_link(link)
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            Ok(mcp_ok(
+                format!(
+                    "Saved sync link '{}' (auto_sync_enabled={}).",
+                    saved.id, saved.auto_sync_enabled
+                ),
+                json!({ "status": "success", "link": saved }),
+            ))
+        }
+        "sync_links_toggle" => {
+            let id = args
+                .get("id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let target_enabled = match args.get("enabled").and_then(Value::as_bool) {
+                Some(flag) => flag,
+                None => state
+                    .google_hub
+                    .pulse
+                    .list_sync_links()
+                    .into_iter()
+                    .find(|l| l.id == id)
+                    .map(|l| !l.auto_sync_enabled)
+                    .ok_or(McpDomainError::SymbolNotFound)?,
+            };
+            let updated = state
+                .google_hub
+                .pulse
+                .toggle_sync_link(id, target_enabled)
+                .map_err(|_| McpDomainError::SymbolNotFound)?;
+            Ok(mcp_ok(
+                format!(
+                    "Sync link '{}' auto_sync_enabled={}.",
+                    updated.id, updated.auto_sync_enabled
+                ),
+                json!({ "status": "success", "link": updated }),
+            ))
+        }
+        _ => Err(McpDomainError::InvalidInputParameters),
+    }
+}
+
+async fn handle_google_apps_script(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+    sess: &str,
+) -> Result<Value, McpDomainError> {
+    let action = args
+        .get("action")
+        .and_then(Value::as_str)
+        .unwrap_or("templates")
+        .to_ascii_lowercase();
+    let account_id_arg = args.get("account_id").and_then(Value::as_str);
+    let base_override = args.get("api_base_override").and_then(Value::as_str);
+
+    match action.as_str() {
+        "templates" => {
+            let templates = builtin_apps_script_templates();
+            Ok(mcp_ok(
+                format!("{} built-in 24/7 Apps Script templates available.", templates.len()),
+                json!({ "status": "success", "count": templates.len(), "templates": templates }),
+            ))
+        }
+        "scan_security" => {
+            let files: Vec<AppsScriptFileDto> = args
+                .get("files")
+                .cloned()
+                .and_then(|v| serde_json::from_value(v).ok())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let scan = scan_apps_script_security(&files);
+            Ok(mcp_ok(
+                format!(
+                    "Apps Script static scan: safe_score={}/100, manifest_valid={}, secrets_detected={}.",
+                    scan.safe_score, scan.manifest_json_valid, scan.hardcoded_secrets_detected
+                ),
+                json!({ "status": "success", "security_scan": scan }),
+            ))
+        }
+        "create" => {
+            let (_acct_id, _policy, token_opt) = resolve_account_ctx(state, account_id_arg).await;
+            let Some(token) = token_opt else {
+                return Ok(unauthenticated_response("apps_script.create"));
+            };
+            let matched = args.get("template_id").and_then(Value::as_str).and_then(|tid| {
+                builtin_apps_script_templates()
+                    .into_iter()
+                    .find(|t| t.id == tid.trim())
+            });
+            let title = args
+                .get("title")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(ToString::to_string)
+                .or_else(|| matched.as_ref().map(|t| t.name.clone()))
+                .unwrap_or_else(|| "Nova Automacao Google".to_string());
+            let parent_id = args.get("parent_id").and_then(Value::as_str);
+            let client = apps_script_client(base_override);
+            let project = client
+                .create_project(&token, &title, parent_id)
+                .await
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            Ok(mcp_ok(
+                format!("Created Apps Script project '{}'.", project.script_id),
+                json!({ "status": "success", "project": project, "template": matched }),
+            ))
+        }
+        "get_content" => {
+            let script_id = args
+                .get("script_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let (_acct_id, _policy, token_opt) = resolve_account_ctx(state, account_id_arg).await;
+            let Some(token) = token_opt else {
+                return Ok(unauthenticated_response("apps_script.get_content"));
+            };
+            let client = apps_script_client(base_override);
+            let files = client
+                .get_content(&token, script_id)
+                .await
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            let scan = scan_apps_script_security(&files);
+            state
+                .google_hub
+                .taint_tracker
+                .mark_tainted(sess, &format!("apps_script:{script_id}"));
+            Ok(mcp_ok(
+                format!(
+                    "Loaded {} Apps Script file(s) from '{}'.",
+                    files.len(),
+                    script_id
+                ),
+                json!({ "status": "success", "script_id": script_id, "files": files, "security_scan": scan }),
+            ))
+        }
+        "propose_push" => {
+            let script_id = args
+                .get("script_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let files: Vec<AppsScriptFileDto> = args
+                .get("files")
+                .cloned()
+                .and_then(|v| serde_json::from_value(v).ok())
+                .filter(|v: &Vec<AppsScriptFileDto>| !v.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let (acct_id, policy, token_opt) = resolve_account_ctx(state, account_id_arg).await;
+            let is_tainted = state.google_hub.taint_tracker.is_tainted(sess);
+            if matches!(
+                evaluate_action_policy(
+                    BlastRadiusTier::Tier2ExternalDestructive,
+                    policy,
+                    is_tainted,
+                    false
+                ),
+                PolicyVerdict::Denied { .. }
+            ) {
+                return Err(McpDomainError::HitlDenied);
+            }
+
+            let previous_files: Vec<AppsScriptFileDto> = if let Some(prev) = args
+                .get("previous_files")
+                .cloned()
+                .and_then(|v| serde_json::from_value(v).ok())
+            {
+                prev
+            } else if let Some(tok) = token_opt.as_deref() {
+                apps_script_client(base_override)
+                    .get_content(tok, script_id)
+                    .await
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            };
+
+            let scan = scan_apps_script_security(&files);
+            let before_text = format_script_bundle(&previous_files);
+            let after_text = format_script_bundle(&files);
+
+            let mut payload_json = json!({
+                "script_id": script_id,
+                "files": files,
+                "security_scan": scan,
+                "human_permission_summary": scan.human_permission_summary,
+            });
+            if let Some(ep) = base_override {
+                payload_json["api_base_override"] = json!(ep);
+            }
+
+            let title = args
+                .get("title")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(ToString::to_string)
+                .unwrap_or_else(|| format!("Apps Script Push: {script_id}"));
+
+            let input = NewProposalInput {
+                account_id: acct_id,
+                service: "apps_script".to_string(),
+                action: "push_content".to_string(),
+                tier: BlastRadiusTier::Tier2ExternalDestructive,
+                title,
+                summary: format!(
+                    "Atualizar codigo Apps Script '{script_id}' (safe_score={}/100).",
+                    scan.safe_score
+                ),
+                target_resource: script_id.to_string(),
+                payload_json,
+                before_snapshot: Some(before_text),
+                after_snapshot: Some(after_text),
+                myers_diff: None,
+                tainted_origin: is_tainted,
+                ttl_secs: 3600,
+            };
+            propose_and_mcp_ok(state, sess, "google_apps_script.propose_push", is_tainted, input)
+        }
+        "propose_deploy" => {
+            let script_id = args
+                .get("script_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let (acct_id, policy, _) = resolve_account_ctx(state, account_id_arg).await;
+            let is_tainted = state.google_hub.taint_tracker.is_tainted(sess);
+            if matches!(
+                evaluate_action_policy(
+                    BlastRadiusTier::Tier2ExternalDestructive,
+                    policy,
+                    is_tainted,
+                    false
+                ),
+                PolicyVerdict::Denied { .. }
+            ) {
+                return Err(McpDomainError::HitlDenied);
+            }
+            let desc = args.get("description").and_then(Value::as_str);
+            let mut payload_json = json!({
+                "script_id": script_id,
+                "description": desc,
+            });
+            if let Some(ep) = base_override {
+                payload_json["api_base_override"] = json!(ep);
+            }
+            let input = NewProposalInput {
+                account_id: acct_id,
+                service: "apps_script".to_string(),
+                action: "deploy".to_string(),
+                tier: BlastRadiusTier::Tier2ExternalDestructive,
+                title: format!("Publicar Apps Script '{script_id}'"),
+                summary: format!("Publicar nova versao e deployment do projeto '{script_id}'."),
+                target_resource: script_id.to_string(),
+                payload_json,
+                before_snapshot: None,
+                after_snapshot: None,
+                myers_diff: None,
+                tainted_origin: is_tainted,
+                ttl_secs: 3600,
+            };
+            propose_and_mcp_ok(
+                state,
+                sess,
+                "google_apps_script.propose_deploy",
+                is_tainted,
+                input,
+            )
+        }
+        "propose_run" => {
+            let script_id = args
+                .get("script_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let function_name = args
+                .get("function_name")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let (acct_id, policy, _) = resolve_account_ctx(state, account_id_arg).await;
+            let is_tainted = state.google_hub.taint_tracker.is_tainted(sess);
+            if matches!(
+                evaluate_action_policy(
+                    BlastRadiusTier::Tier2ExternalDestructive,
+                    policy,
+                    is_tainted,
+                    false
+                ),
+                PolicyVerdict::Denied { .. }
+            ) {
+                return Err(McpDomainError::HitlDenied);
+            }
+            let mut payload_json = json!({
+                "script_id": script_id,
+                "function_name": function_name,
+                "parameters": args.get("parameters").cloned(),
+                "dev_mode": args.get("dev_mode").and_then(Value::as_bool).unwrap_or(false),
+            });
+            if let Some(ep) = base_override {
+                payload_json["api_base_override"] = json!(ep);
+            }
+            let input = NewProposalInput {
+                account_id: acct_id,
+                service: "apps_script".to_string(),
+                action: "run_function".to_string(),
+                tier: BlastRadiusTier::Tier2ExternalDestructive,
+                title: format!("Executar '{function_name}' no Apps Script"),
+                summary: format!("Executar funcao '{function_name}' em '{script_id}'."),
+                target_resource: script_id.to_string(),
+                payload_json,
+                before_snapshot: None,
+                after_snapshot: None,
+                myers_diff: None,
+                tainted_origin: is_tainted,
+                ttl_secs: 3600,
+            };
+            propose_and_mcp_ok(state, sess, "google_apps_script.propose_run", is_tainted, input)
+        }
+        "processes" => {
+            let script_id = args.get("script_id").and_then(Value::as_str);
+            let (_acct_id, _policy, token_opt) = resolve_account_ctx(state, account_id_arg).await;
+            let Some(token) = token_opt else {
+                return Ok(unauthenticated_response("apps_script.processes"));
+            };
+            let client = apps_script_client(base_override);
+            let processes = client
+                .list_processes(&token, script_id)
+                .await
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            Ok(mcp_ok(
+                format!("Found {} Apps Script execution process(es).", processes.len()),
+                json!({ "status": "success", "count": processes.len(), "processes": processes }),
+            ))
+        }
+        _ => Err(McpDomainError::InvalidInputParameters),
+    }
+}
+
+async fn handle_google_forms(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+    sess: &str,
+) -> Result<Value, McpDomainError> {
+    let action = args
+        .get("action")
+        .and_then(Value::as_str)
+        .unwrap_or("get")
+        .to_ascii_lowercase();
+    let account_id_arg = args.get("account_id").and_then(Value::as_str);
+    let base_override = args.get("api_base_override").and_then(Value::as_str);
+
+    match action.as_str() {
+        "create" => {
+            let title = args
+                .get("title")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let (acct_id, policy, _) = resolve_account_ctx(state, account_id_arg).await;
+            let is_tainted = state.google_hub.taint_tracker.is_tainted(sess);
+            if matches!(
+                evaluate_action_policy(
+                    BlastRadiusTier::Tier2ExternalDestructive,
+                    policy,
+                    is_tainted,
+                    false
+                ),
+                PolicyVerdict::Denied { .. }
+            ) {
+                return Err(McpDomainError::HitlDenied);
+            }
+            let mut payload_json = json!({
+                "title": title,
+                "document_title": args.get("document_title").and_then(Value::as_str),
+                "requests": args.get("requests").cloned(),
+            });
+            if let Some(ep) = base_override {
+                payload_json["api_base_override"] = json!(ep);
+            }
+            let input = NewProposalInput {
+                account_id: acct_id,
+                service: "forms".to_string(),
+                action: "create_form".to_string(),
+                tier: BlastRadiusTier::Tier2ExternalDestructive,
+                title: format!("Criar Google Form: {title}"),
+                summary: format!("Criar novo Google Form '{title}'."),
+                target_resource: "new_form".to_string(),
+                payload_json,
+                before_snapshot: None,
+                after_snapshot: None,
+                myers_diff: None,
+                tainted_origin: is_tainted,
+                ttl_secs: 3600,
+            };
+            propose_and_mcp_ok(state, sess, "google_forms.create", is_tainted, input)
+        }
+        "get" | "responses" | "stats" => {
+            let form_id = args
+                .get("form_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let (_acct_id, _policy, token_opt) = resolve_account_ctx(state, account_id_arg).await;
+            let Some(token) = token_opt else {
+                return Ok(unauthenticated_response(&format!("google_forms.{action}")));
+            };
+            let client = forms_client(base_override);
+            let form = client
+                .get_form(&token, form_id)
+                .await
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            state
+                .google_hub
+                .taint_tracker
+                .mark_tainted(sess, &format!("forms:{form_id}"));
+
+            if action == "get" {
+                return Ok(mcp_ok(
+                    format!("Google Form '{}' ({} question(s)).", form.title, form.questions.len()),
+                    json!({ "status": "success", "form": form }),
+                ));
+            }
+
+            let responses = client
+                .list_responses(&token, form_id)
+                .await
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            let stats = compute_form_stats(&form, &responses);
+            if action == "stats" {
+                Ok(mcp_ok(
+                    stats.markdown_summary.clone(),
+                    json!({ "status": "success", "stats": stats }),
+                ))
+            } else {
+                Ok(mcp_ok(
+                    format!(
+                        "{} response(s) fetched for '{}'.\n\n{}",
+                        responses.len(),
+                        form.title,
+                        stats.markdown_summary
+                    ),
+                    json!({
+                        "status": "success",
+                        "form": form,
+                        "responses": responses,
+                        "stats": stats
+                    }),
+                ))
+            }
+        }
+        _ => Err(McpDomainError::InvalidInputParameters),
+    }
+}
+
+async fn handle_google_chat(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+    sess: &str,
+) -> Result<Value, McpDomainError> {
+    let action = args
+        .get("action")
+        .and_then(Value::as_str)
+        .unwrap_or("check_eligibility")
+        .to_ascii_lowercase();
+    let account_id_arg = args.get("account_id").and_then(Value::as_str);
+    let base_override = args.get("api_base_override").and_then(Value::as_str);
+
+    match action.as_str() {
+        "check_eligibility" => {
+            let acct = state.google_hub.resolve_account_strict(account_id_arg).await;
+            let kind = acct
+                .as_ref()
+                .map(|a| a.kind)
+                .unwrap_or(GoogleAccountKind::PersonalGmail);
+            match check_chat_eligibility(kind) {
+                Ok(()) => Ok(mcp_ok(
+                    "Account is eligible for Workspace Enterprise Google Chat API.",
+                    json!({ "eligible": true, "kind": kind }),
+                )),
+                Err(err) => Ok(mcp_ok(
+                    err.to_string(),
+                    json!({
+                        "eligible": false,
+                        "kind": kind,
+                        "fallback": "propose_webhook (when incoming webhook URL is provided)"
+                    }),
+                )),
+            }
+        }
+        "list_spaces" => {
+            let Some(acct) = state.google_hub.resolve_account_strict(account_id_arg).await else {
+                return Ok(unauthenticated_response("google_chat.list_spaces"));
+            };
+            if let Err(err) = check_chat_eligibility(acct.kind) {
+                return Ok(mcp_ok(
+                    err.to_string(),
+                    json!({ "status": "forbidden", "eligible": false, "kind": acct.kind }),
+                ));
+            }
+            let Some(token) = acct
+                .oauth_access_token
+                .as_deref()
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+            else {
+                return Ok(unauthenticated_response("google_chat.list_spaces"));
+            };
+            let client = chat_client(base_override);
+            let spaces = client
+                .list_spaces(token)
+                .await
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            state.google_hub.taint_tracker.mark_tainted(sess, "chat:spaces");
+            Ok(mcp_ok(
+                format!("Found {} Google Chat space(s).", spaces.len()),
+                json!({ "status": "success", "count": spaces.len(), "spaces": spaces }),
+            ))
+        }
+        "list_messages" => {
+            let space_name = args
+                .get("space_name")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let Some(acct) = state.google_hub.resolve_account_strict(account_id_arg).await else {
+                return Ok(unauthenticated_response("google_chat.list_messages"));
+            };
+            if let Err(err) = check_chat_eligibility(acct.kind) {
+                return Ok(mcp_ok(
+                    err.to_string(),
+                    json!({ "status": "forbidden", "eligible": false, "kind": acct.kind }),
+                ));
+            }
+            let Some(token) = acct
+                .oauth_access_token
+                .as_deref()
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+            else {
+                return Ok(unauthenticated_response("google_chat.list_messages"));
+            };
+            let page_size = args
+                .get("page_size")
+                .and_then(Value::as_u64)
+                .unwrap_or(20)
+                .clamp(1, 100) as usize;
+            let client = chat_client(base_override);
+            let messages = client
+                .list_messages(token, space_name, page_size)
+                .await
+                .map_err(|_| McpDomainError::StructuredFailure)?;
+            state
+                .google_hub
+                .taint_tracker
+                .mark_tainted(sess, &format!("chat:{space_name}"));
+            let combined: String = messages
+                .iter()
+                .map(|m| {
+                    format!(
+                        "[{}] {}",
+                        m.sender_name.as_deref().unwrap_or("unknown"),
+                        m.text
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            let framed = wrap_untrusted_content(&format!("chat:{space_name}"), &combined);
+            Ok(mcp_ok(
+                framed,
+                json!({ "status": "success", "count": messages.len(), "messages": messages }),
+            ))
+        }
+        "propose_send" => {
+            let space_name = args
+                .get("space_name")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let text = args
+                .get("text")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let Some(acct) = state.google_hub.resolve_account_strict(account_id_arg).await else {
+                return Ok(unauthenticated_response("google_chat.propose_send"));
+            };
+            if let Err(err) = check_chat_eligibility(acct.kind) {
+                return Ok(mcp_ok(
+                    err.to_string(),
+                    json!({ "status": "forbidden", "eligible": false, "kind": acct.kind }),
+                ));
+            }
+            let is_tainted = state.google_hub.taint_tracker.is_tainted(sess);
+            let is_whitelisted = acct.write_whitelist_ids.iter().any(|w| w == space_name);
+            if matches!(
+                evaluate_action_policy(
+                    BlastRadiusTier::Tier2ExternalDestructive,
+                    acct.policy,
+                    is_tainted,
+                    is_whitelisted
+                ),
+                PolicyVerdict::Denied { .. }
+            ) {
+                return Err(McpDomainError::HitlDenied);
+            }
+            let mut payload_json = json!({
+                "space_name": space_name,
+                "text": text,
+            });
+            if let Some(ep) = base_override {
+                payload_json["api_base_override"] = json!(ep);
+            }
+            let input = NewProposalInput {
+                account_id: acct.account_id,
+                service: "chat".to_string(),
+                action: "create_message".to_string(),
+                tier: BlastRadiusTier::Tier2ExternalDestructive,
+                title: format!("Enviar mensagem no Google Chat ({space_name})"),
+                summary: format!("Enviar para {space_name}: \"{text}\""),
+                target_resource: space_name.to_string(),
+                payload_json,
+                before_snapshot: None,
+                after_snapshot: Some(text.to_string()),
+                myers_diff: None,
+                tainted_origin: is_tainted,
+                ttl_secs: 3600,
+            };
+            propose_and_mcp_ok(state, sess, "google_chat.propose_send", is_tainted, input)
+        }
+        "propose_webhook" => {
+            let webhook_url = args
+                .get("webhook_url")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let text = args
+                .get("text")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or(McpDomainError::InvalidInputParameters)?;
+            let allow_local = args
+                .get("allow_local_test_webhook")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+                || base_override.is_some();
+            let valid_prefix = webhook_url.starts_with("https://chat.googleapis.com/v1/spaces/")
+                || (allow_local
+                    && (webhook_url.starts_with("http://127.0.0.1:")
+                        || webhook_url.starts_with("http://localhost:")));
+            if !valid_prefix {
+                return Err(McpDomainError::InvalidInputParameters);
+            }
+
+            let (acct_id, policy, _) = resolve_account_ctx(state, account_id_arg).await;
+            let is_tainted = state.google_hub.taint_tracker.is_tainted(sess);
+            if matches!(
+                evaluate_action_policy(
+                    BlastRadiusTier::Tier2ExternalDestructive,
+                    policy,
+                    is_tainted,
+                    false
+                ),
+                PolicyVerdict::Denied { .. }
+            ) {
+                return Err(McpDomainError::HitlDenied);
+            }
+
+            let mut payload_json = json!({
+                "webhook_url": webhook_url,
+                "text": text,
+            });
+            if allow_local {
+                payload_json["allow_local_test_webhook"] = json!(true);
+            }
+            let input = NewProposalInput {
+                account_id: acct_id,
+                service: "chat".to_string(),
+                action: "webhook".to_string(),
+                tier: BlastRadiusTier::Tier2ExternalDestructive,
+                title: "Enviar alerta via Webhook Google Chat".to_string(),
+                summary: format!("Enviar para webhook Google Chat: \"{text}\""),
+                target_resource: webhook_url.to_string(),
+                payload_json,
+                before_snapshot: None,
+                after_snapshot: Some(text.to_string()),
+                myers_diff: None,
+                tainted_origin: is_tainted,
+                ttl_secs: 3600,
+            };
+            propose_and_mcp_ok(state, sess, "google_chat.propose_webhook", is_tainted, input)
+        }
+        _ => Err(McpDomainError::InvalidInputParameters),
+    }
+}
+
+async fn handle_google_deep_analyze(
+    state: &AppState,
+    args: &serde_json::Map<String, Value>,
+    sess: &str,
+) -> Result<Value, McpDomainError> {
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or(McpDomainError::InvalidInputParameters)?
+        .to_string();
+
+    let source_kind: MinionGoogleSourceKind = args
+        .get("source_kind")
+        .cloned()
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or(MinionGoogleSourceKind::RawText);
+
+    let mode: Option<MinionAnalyzeMode> = args
+        .get("mode")
+        .cloned()
+        .and_then(|v| serde_json::from_value(v).ok());
+
+    let req = GoogleMinionsRequest {
+        source_kind,
+        source_ref: args
+            .get("source_ref")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        query,
+        text: args
+            .get("text")
+            .and_then(Value::as_str)
+            .map(ToString::to_string),
+        mode,
+        top_k: args
+            .get("top_k")
+            .and_then(Value::as_u64)
+            .map(|n| n as usize),
+        account_id: args
+            .get("account_id")
+            .and_then(Value::as_str)
+            .map(ToString::to_string),
+        api_base_override: args
+            .get("api_base_override")
+            .and_then(Value::as_str)
+            .map(ToString::to_string),
+    };
+
+    if source_kind != MinionGoogleSourceKind::RawText {
+        state
+            .google_hub
+            .taint_tracker
+            .mark_tainted(sess, &format!("minions:{}", req.source_ref));
+    }
+
+    match state.google_hub.run_google_minions_analysis(req).await {
+        Ok(analysis) => Ok(mcp_ok(
+            format!(
+                "MinionS analysis complete (mode_used={}, device={}, savings={:.1}%, cache_hit={}).\n\n{}",
+                analysis.mode_used,
+                analysis.executed_device,
+                analysis.estimated_token_savings_pct,
+                analysis.cache_hit,
+                analysis.markdown_export
+            ),
+            json!({
+                "status": "success",
+                "analysis": analysis
+            }),
+        )),
+        Err((StatusCode::UNAUTHORIZED, _)) => Ok(unauthenticated_response("google_deep_analyze")),
+        Err((StatusCode::BAD_REQUEST, _)) => Err(McpDomainError::InvalidInputParameters),
+        Err((code, msg)) => Ok(json!({
+            "content": [{ "type": "text", "text": msg }],
+            "structuredContent": {
+                "status": "error",
+                "code": code.as_u16(),
+                "message": msg
+            },
+            "isError": true
+        })),
+    }
+}
+
+fn apps_script_client(base_override: Option<&str>) -> GoogleAppsScriptClient {
+    match base_override.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(base) => GoogleAppsScriptClient::with_base_url(base),
+        None => GoogleAppsScriptClient::new(),
+    }
+}
+
+fn forms_client(base_override: Option<&str>) -> GoogleFormsClient {
+    match base_override.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(base) => GoogleFormsClient::with_base_url(base),
+        None => GoogleFormsClient::new(),
+    }
+}
+
+fn chat_client(base_override: Option<&str>) -> GoogleChatClient {
+    match base_override.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(base) => GoogleChatClient::with_base_url(base),
+        None => GoogleChatClient::new(),
+    }
+}
+
+fn format_script_bundle(files: &[AppsScriptFileDto]) -> String {
+    let mut out = String::new();
+    for f in files {
+        out.push_str(&format!(
+            "// === {} ({}) ===\n{}\n\n",
+            f.name,
+            f.file_type,
+            f.source.replace("\r\n", "\n")
+        ));
+    }
+    out
 }

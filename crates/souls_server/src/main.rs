@@ -309,6 +309,20 @@ async fn main() -> ExitCode {
         }
     });
 
+    // 11. Proactive Google Pulse Heartbeat Loop (checks every 30s if dynamic cadence is due)
+    let google_for_pulse = Arc::clone(&state.google_hub);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+        interval.tick().await;
+        loop {
+            interval.tick().await;
+            let now_ts = chrono::Utc::now().timestamp();
+            if google_for_pulse.pulse.is_due(now_ts) {
+                let _ = google_for_pulse.run_proactive_pulse_cycle(false).await;
+            }
+        }
+    });
+
     // Record PID file for process tracking and zombie cleanup
     let pid_file = data_dir.join("souls_server.pid");
     let _ = std::fs::write(&pid_file, std::process::id().to_string());
@@ -675,7 +689,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 80, "Full mode must expose all 80 canonical tools (63 baseline + 14 google.* + 3 inbox.*)");
+        assert_eq!(tools_full.len(), 85, "Full mode must expose all 85 canonical tools (63 baseline + 19 google.* + 3 inbox.*)");
     }
 
     #[tokio::test]
@@ -2068,7 +2082,7 @@ model:
         let json_h: serde_json::Value = serde_json::from_slice(&bytes_h).unwrap();
         assert_eq!(json_h["status"], "healthy");
         assert_eq!(json_h["total_skills"], 16);
-        assert_eq!(json_h["total_tools"], 80);
+        assert_eq!(json_h["total_tools"], 85);
 
         // 2. GET /api/v1/switchboard/skills
         let req_skills = Request::builder()
@@ -4222,6 +4236,530 @@ model:
         let _ = std::fs::remove_dir_all(&google_dir);
     }
 
+    #[tokio::test]
+    async fn test_v0921_pulse_cadence_pending_ack_and_incremental_oauth() {
+        let mut state = create_test_state().await;
+        let test_dir = std::env::temp_dir().join(format!(
+            "souls_srv_v0921_pulse_{}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        let hub = Arc::new(crate::google_hub::GoogleHubService::new(test_dir.clone()));
+
+        {
+            let mut vault = hub.vault.write().await;
+            let mut acct = souls_core::google_bridge::GoogleAccountRecord::new(
+                "personal_main",
+                "user@gmail.com",
+                souls_protocol::google::GoogleAccountKind::PersonalGmail,
+            );
+            acct.label = "Personal Main".to_string();
+            acct.client_id = Some("cid-personal-123".to_string());
+            acct.client_secret = Some("csec-personal-xyz".to_string());
+            acct.scopes = vec!["openid".to_string(), "email".to_string()];
+            vault.upsert_account(acct).unwrap();
+
+            let mut corp = souls_core::google_bridge::GoogleAccountRecord::new(
+                "corp_ws",
+                "eng@empresa.com",
+                souls_protocol::google::GoogleAccountKind::WorkspaceEnterprise,
+            );
+            corp.scopes = vec!["openid".to_string(), "email".to_string()];
+            vault.upsert_account(corp).unwrap();
+        }
+
+        state = state.with_google_hub(Arc::clone(&hub));
+        let app = build_router(state);
+
+        // 1. Account listing includes missing_recommended_scopes (Enterprise expects chat.spaces, Personal does not)
+        let resp_accts = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/accounts")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_accts.status(), StatusCode::OK);
+        let accts_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_accts.into_body(), usize::MAX).await.unwrap()).unwrap();
+        let accts_arr = accts_json["accounts"].as_array().unwrap();
+        let personal = accts_arr.iter().find(|a| a["account_id"] == "personal_main").unwrap();
+        let corp = accts_arr.iter().find(|a| a["account_id"] == "corp_ws").unwrap();
+        let p_missing: Vec<&str> = personal["missing_recommended_scopes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|v| v.as_str())
+            .collect();
+        let c_missing: Vec<&str> = corp["missing_recommended_scopes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|v| v.as_str())
+            .collect();
+        assert!(p_missing.iter().any(|s| s.contains("script.projects")));
+        assert!(!p_missing.iter().any(|s| s.contains("chat.spaces")));
+        assert!(c_missing.iter().any(|s| s.contains("chat.spaces")));
+
+        // 2. Incremental OAuth start inherits client_id, kind, email login_hint and uses include_granted_scopes=true
+        let resp_oauth = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/oauth/start")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "account_id": "corp_ws" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_oauth.status(), StatusCode::OK);
+        let oauth_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_oauth.into_body(), usize::MAX).await.unwrap()).unwrap();
+        let auth_url = oauth_json["auth_url"].as_str().unwrap();
+        assert!(auth_url.contains("include_granted_scopes=true"));
+        assert!(auth_url.contains("login_hint=eng%40empresa.com"));
+        assert!(auth_url.contains("chat.spaces"));
+
+        // 3. Pulse Config patch + isolated secret persistence (never echoed)
+        let resp_cfg = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/pulse/config")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "quiet_hours_enabled": false,
+                            "interval_mins": 5,
+                            "webhook_url": "https://example.invalid/hook-secret-123"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_cfg.status(), StatusCode::OK);
+        let cfg_text = String::from_utf8(
+            to_bytes(resp_cfg.into_body(), usize::MAX).await.unwrap().to_vec(),
+        )
+        .unwrap();
+        assert!(!cfg_text.contains("hook-secret-123"));
+        let cfg_val: serde_json::Value = serde_json::from_str(&cfg_text).unwrap();
+        assert_eq!(cfg_val["config"]["quiet_hours_enabled"], false);
+        assert_eq!(cfg_val["config"]["webhook_configured"], true);
+
+        // 4. Pulse Run + emit + pending drain + ack lifecycle
+        let resp_run = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/pulse/run")
+                    .method("POST")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_run.status(), StatusCode::OK);
+        let run_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_run.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(run_json["pulse"]["tick_count"], 1);
+        assert_eq!(run_json["pulse"]["in_quiet_hours"], false);
+
+        let inserted = hub
+            .emit_pulse_event(souls_protocol::google::PulseEventDto {
+                id: "ev_v0921_test_1".to_string(),
+                created_at: chrono::Utc::now().timestamp(),
+                category: souls_protocol::google::PulseCategory::EmailVip,
+                urgency: souls_protocol::google::PulseUrgency::High,
+                title: "Email VIP urgente".to_string(),
+                summary: "Diretoria solicitou relatorio".to_string(),
+                account_id: Some("personal_main".to_string()),
+                source_ref: Some("msg_vip_1".to_string()),
+                action_hint: Some("gmail:msg_vip_1".to_string()),
+                acknowledged: false,
+                delivered_to_hermes: false,
+                delivered_externally: false,
+                dedup_key: "vip_test_1".to_string(),
+            })
+            .await;
+        assert!(inserted);
+
+        let resp_pending = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/pulse/pending?limit=3&drain=true")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_pending.status(), StatusCode::OK);
+        let pend_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_pending.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(pend_json["count"], 1);
+
+        let resp_pending_again = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/pulse/pending?limit=3&drain=true")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let pend2_json: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_pending_again.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(pend2_json["count"], 0);
+
+        let resp_ack = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/pulse/ack")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "event_ids": ["ev_v0921_test_1"] }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_ack.status(), StatusCode::OK);
+        let ack_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_ack.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(ack_json["acked"], 1);
+        assert_eq!(ack_json["unacked_count"], 0);
+
+        let _ = std::fs::remove_dir_all(&test_dir);
+    }
+
+    #[tokio::test]
+    async fn test_v0921_apps_script_forms_chat_gate_minions_and_mcp_tools() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        // Start lightweight HTTP mock server for Forms & Apps Script API calls
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mock_addr = listener.local_addr().unwrap();
+        let mock_base = format!("http://127.0.0.1:{}", mock_addr.port());
+
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    break;
+                };
+                tokio::spawn(async move {
+                    let mut buf = vec![0u8; 8192];
+                    let n = sock.read(&mut buf).await.unwrap_or(0);
+                    let req_str = String::from_utf8_lossy(&buf[..n]).to_string();
+                    let body = if req_str.contains("GET /forms/form_abc/responses") {
+                        serde_json::json!({
+                            "responses": [
+                                {
+                                    "responseId": "r1",
+                                    "createTime": "2026-11-19T10:00:00Z",
+                                    "answers": { "q1": { "textAnswers": { "answers": [{ "value": "Sim" }] } } }
+                                },
+                                {
+                                    "responseId": "r2",
+                                    "createTime": "2026-11-19T11:00:00Z",
+                                    "answers": { "q1": { "textAnswers": { "answers": [{ "value": "Sim" }] } } }
+                                }
+                            ]
+                        })
+                        .to_string()
+                    } else if req_str.contains("GET /forms/form_abc") {
+                        serde_json::json!({
+                            "formId": "form_abc",
+                            "info": { "title": "Pesquisa NPS" },
+                            "items": [
+                                {
+                                    "itemId": "q1",
+                                    "title": "Voce recomenda?",
+                                    "questionItem": { "question": { "questionId": "q1", "required": true } }
+                                }
+                            ]
+                        })
+                        .to_string()
+                    } else if req_str.contains("PUT /projects/script_123/content") {
+                        serde_json::json!({
+                            "scriptId": "script_123",
+                            "files": [{ "name": "Code", "type": "SERVER_JS", "source": "function main() {}" }]
+                        })
+                        .to_string()
+                    } else {
+                        serde_json::json!({ "ok": true }).to_string()
+                    };
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(),
+                        body
+                    );
+                    let _ = sock.write_all(resp.as_bytes()).await;
+                });
+            }
+        });
+
+        let mut state = create_test_state().await;
+        let test_dir = std::env::temp_dir().join(format!(
+            "souls_srv_v0921_hub_{}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        let hub = Arc::new(crate::google_hub::GoogleHubService::new(test_dir.clone()));
+        {
+            let mut vault = hub.vault.write().await;
+            let mut acct = souls_core::google_bridge::GoogleAccountRecord::new(
+                "personal_1",
+                "dev@gmail.com",
+                souls_protocol::google::GoogleAccountKind::PersonalGmail,
+            );
+            acct.oauth_access_token = Some("mock-access-token".to_string());
+            vault.upsert_account(acct).unwrap();
+        }
+        state = state.with_google_hub(Arc::clone(&hub));
+        let app = build_router(state);
+
+        // 1. Apps Script templates + Push proposal embeds security_scan, human_permission_summary & real Myers Diff
+        let resp_tpl = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/apps-script/templates")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_tpl.status(), StatusCode::OK);
+        let tpl_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_tpl.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(tpl_json["count"], 5);
+
+        let push_body = serde_json::json!({
+            "account_id": "personal_1",
+            "api_base_override": mock_base,
+            "previous_files": [
+                { "name": "Code", "file_type": "SERVER_JS", "source": "function run() { return 1; }" }
+            ],
+            "files": [
+                {
+                    "name": "Code",
+                    "file_type": "SERVER_JS",
+                    "source": "function run() { GmailApp.getInboxThreads(); return 2; }"
+                },
+                {
+                    "name": "appsscript",
+                    "file_type": "JSON",
+                    "source": "{\"timeZone\":\"America/Sao_Paulo\",\"oauthScopes\":[\"https://www.googleapis.com/auth/gmail.readonly\"]}"
+                }
+            ]
+        });
+        let resp_push = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/apps-script/script_123/push")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(push_body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_push.status(), StatusCode::ACCEPTED);
+        let push_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_push.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(push_json["status"], "queued_for_approval");
+        let proposal_id = push_json["proposal"]["id"].as_str().unwrap().to_string();
+        assert!(push_json["myers_diff"].as_str().unwrap().contains("- function run() { return 1; }"));
+        assert!(push_json["proposal"]["payload_json"]["security_scan"]["manifest_json_valid"]
+            .as_bool()
+            .unwrap());
+        assert!(!push_json["proposal"]["payload_json"]["human_permission_summary"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+
+        let token = push_json["proposal"]["gravity_lock_token"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let approved = hub
+            .execute_approved_proposal(&proposal_id, Some(&token))
+            .await
+            .unwrap();
+        assert_eq!(approved.status, souls_protocol::google::ProposalStatus::Executed);
+
+        // 2. Google Chat blocks personal @gmail.com with 403 FORBIDDEN
+        let resp_chat = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/chat/spaces?account_id=personal_1")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_chat.status(), StatusCode::FORBIDDEN);
+
+        // 3. Google Forms responses & deterministic stats via mock TcpListener
+        let resp_forms = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(&format!(
+                        "/api/v1/google/forms/form_abc/responses?account_id=personal_1&api_base_override={mock_base}"
+                    ))
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_forms.status(), StatusCode::OK);
+        let forms_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_forms.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(forms_json["stats"]["total_responses"], 2);
+        assert!(forms_json["stats"]["markdown_summary"]
+            .as_str()
+            .unwrap()
+            .contains("Pesquisa NPS"));
+
+        // 4. MinionS Deep Analyze FastDeterministic + SHA-256 disk cache hit on 2nd call
+        let long_doc = "Relatorio Financeiro Q3 2026: A receita recorrente cresceu 42% para R$ 1.8M.\n\n"
+            .repeat(8);
+        let minions_req = serde_json::json!({
+            "source_kind": "raw_text",
+            "source_ref": "relatorio_q3",
+            "query": "receita recorrente",
+            "text": long_doc,
+            "mode": "fast_deterministic",
+            "top_k": 3
+        });
+        let resp_m1 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/analyze/minions")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(minions_req.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_m1.status(), StatusCode::OK);
+        let m1_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_m1.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(m1_json["analysis"]["mode_used"], "tier0_deterministic");
+        assert_eq!(m1_json["analysis"]["cache_hit"], false);
+
+        let resp_m2 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/analyze/minions")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(minions_req.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_m2.status(), StatusCode::OK);
+        let m2_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_m2.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(m2_json["analysis"]["cache_hit"], true);
+
+        // 5. Sync links CRUD + MCP progressive tool calls (google_pulse + google_deep_analyze)
+        let resp_sync = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/notebooks/sync-links")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "id": "link_doc_1",
+                            "notebook_id": "nb_99",
+                            "notebook_title": "Pesquisa",
+                            "source_id": "src_1",
+                            "drive_file_id": "doc_1",
+                            "drive_file_name": "Spec.docx",
+                            "auto_sync_enabled": true
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_sync.status(), StatusCode::OK);
+
+        let resp_toggle = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/notebooks/sync-links/link_doc_1/toggle")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_toggle.status(), StatusCode::OK);
+        let tog_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_toggle.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(tog_json["link"]["auto_sync_enabled"], false);
+
+        let mcp_call = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 91,
+            "method": "tools/call",
+            "params": {
+                "name": "google_pulse",
+                "arguments": { "action": "status" }
+            }
+        });
+        let resp_mcp = app
+            .oneshot(
+                Request::builder()
+                    .uri("/mcp")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(mcp_call.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_mcp.status(), StatusCode::OK);
+        let mcp_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_mcp.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert!(mcp_json["result"]["structuredContent"]["pulse"]["tick_count"].is_number());
+
+        let _ = std::fs::remove_dir_all(&test_dir);
+    }
+
     #[test]
     fn test_milestone_v092_google_life_hub_ui_integrity() {
         let html = crate::templates::DASHBOARD_HTML;
@@ -4244,6 +4782,17 @@ model:
             "saveInlineApiKey",
             "setProviderFilter",
             "saveProviderInlineKey",
+            r#"id="gh-views-bar""#,
+            "gh-pulse-qh-enabled",
+            "gh-apps-script-templates",
+            "nb-sync-links-list",
+            "switchGoogleHubView",
+            "runGooglePulseNow",
+            "saveGooglePulseConfig",
+            "upgradeAccountOAuthScopes",
+            "exportMarkdownToObsidian",
+            "exportMarkdownToNotebook",
+            "script.google.com/home/usersettings",
         ] {
             assert!(
                 html.contains(required),
@@ -4316,5 +4865,253 @@ model:
         assert!(!html.contains("9980HK"));
         assert!(!html.contains(r"Z:\souls_engine"));
         assert!(!html.contains(r"Z:\\souls_engine"));
+    }
+
+    #[tokio::test]
+    async fn test_v0921_drive_notebook_sync_links_post_push_and_sse_stream() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        // 1. Mock TCP server accepting Docs batchUpdate
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mock_addr = listener.local_addr().unwrap();
+        let mock_base = format!("http://127.0.0.1:{}", mock_addr.port());
+
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    break;
+                };
+                tokio::spawn(async move {
+                    let mut buf = vec![0u8; 4096];
+                    let _ = sock.read(&mut buf).await;
+                    let body = serde_json::json!({
+                        "documentId": "doc_sync_1",
+                        "replies": []
+                    })
+                    .to_string();
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(),
+                        body
+                    );
+                    let _ = sock.write_all(resp.as_bytes()).await;
+                });
+            }
+        });
+
+        let mut state = create_test_state().await;
+        let test_dir = std::env::temp_dir().join(format!(
+            "souls_srv_v0921_sync_{}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        let hub = Arc::new(crate::google_hub::GoogleHubService::new(test_dir.clone()));
+        {
+            let mut vault = hub.vault.write().await;
+            let mut acct = souls_core::google_bridge::GoogleAccountRecord::new(
+                "acct_sync",
+                "sync@gmail.com",
+                souls_protocol::google::GoogleAccountKind::PersonalGmail,
+            );
+            acct.oauth_access_token = Some("mock-oauth-token".to_string());
+            vault.upsert_account(acct).unwrap();
+        }
+        state = state.with_google_hub(Arc::clone(&hub));
+        let app = build_router(state);
+
+        // 2. Sync link CRUD + toggle
+        let create_link = serde_json::json!({
+            "id": "link_doc_sync_1",
+            "notebook_id": "nb_sync_99",
+            "notebook_title": "Caderno Vivo",
+            "source_id": "src_sync_1",
+            "drive_file_id": "doc_sync_1",
+            "drive_file_name": "Plano Vivo",
+            "auto_sync_enabled": false
+        });
+        let resp_create = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/notebooks/sync-links")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(create_link.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_create.status(), StatusCode::OK);
+
+        let resp_list = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/notebooks/sync-links")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_list.status(), StatusCode::OK);
+        let list_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_list.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(list_json["count"], 1);
+
+        let resp_tog = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/notebooks/sync-links/link_doc_sync_1/toggle")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::json!({ "enabled": true }).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_tog.status(), StatusCode::OK);
+        let tog_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_tog.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(tog_json["link"]["auto_sync_enabled"], true);
+
+        // 3. Docs scratchpad edit + push -> approve -> triggers post-push NotebookLM auto-sync hook
+        let edit_req = serde_json::json!({
+            "doc_id": "doc_sync_1",
+            "title": "Plano Vivo",
+            "op": "insert",
+            "at_line": 1,
+            "lines": ["Linha atualizada para sincronizar"]
+        });
+        let resp_edit = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/docs/scratchpad")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(edit_req.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_edit.status(), StatusCode::OK);
+
+        let push_req = serde_json::json!({
+            "doc_id": "doc_sync_1",
+            "account_id": "acct_sync",
+            "api_base_override": mock_base
+        });
+        let resp_push = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/docs/scratchpad/push")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(push_req.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_push.status(), StatusCode::ACCEPTED);
+        let push_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_push.into_body(), usize::MAX).await.unwrap()).unwrap();
+        let prop_id = push_json["proposal"]["id"].as_str().unwrap().to_string();
+        let gl_token = push_json["proposal"]["gravity_lock_token"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let approve_req = serde_json::json!({
+            "gravity_lock_confirmed": true,
+            "gravity_lock_token": gl_token
+        });
+        let resp_approve = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(&format!("/api/v1/inbox/proposals/{prop_id}/approve"))
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(approve_req.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_approve.status(), StatusCode::OK);
+        let app_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_approve.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(app_json["proposal"]["status"], "executed");
+        assert!(app_json["proposal"]["execution_receipt"]["notebook_autosync"]
+            .as_array()
+            .is_some_and(|arr| !arr.is_empty()));
+
+        // Verify sync link was checked and pulse event emitted
+        let updated_links = hub.pulse.list_sync_links();
+        assert_eq!(updated_links.len(), 1);
+        assert!(updated_links[0].last_checked_at.is_some());
+        assert_ne!(updated_links[0].last_status, "linked");
+        assert!(hub
+            .pulse
+            .list_events(10)
+            .iter()
+            .any(|ev| ev.category == souls_protocol::google::PulseCategory::DriveSync));
+
+        // Delete sync link
+        let resp_del = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/notebooks/sync-links/link_doc_sync_1")
+                    .method("DELETE")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_del.status(), StatusCode::OK);
+        let del_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_del.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(del_json["deleted"], true);
+
+        // 4. SSE stream endpoint returns 200 text/event-stream and initial ready event
+        let resp_sse = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/google/events/stream")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_sse.status(), StatusCode::OK);
+        let ct = resp_sse
+            .headers()
+            .get(axum::http::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        assert!(
+            ct.contains("text/event-stream"),
+            "Expected text/event-stream content-type, got '{ct}'"
+        );
+        use tokio_stream::StreamExt;
+        let mut body_stream = resp_sse.into_body().into_data_stream();
+        let first_chunk = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            body_stream.next(),
+        )
+        .await
+        .expect("SSE ready frame timeout")
+        .expect("SSE stream ended early")
+        .expect("SSE chunk error");
+        let frame_text = String::from_utf8_lossy(&first_chunk);
+        assert!(
+            frame_text.contains("event: ready") || frame_text.contains("connected"),
+            "Expected initial SSE ready event, got: {frame_text}"
+        );
+
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 }

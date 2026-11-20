@@ -115,12 +115,17 @@ pub static CANONICAL_SKILLS: &[SkillMeta] = &[
     },
     SkillMeta {
         name: "google-life-hub",
-        description: "Life Hub pessoal e profissional Google (Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, Contacts, Maps, YouTube, NotebookLM, Gems) com governança BMAD Agent Inbox e Myers Diff.",
+        description: "Life Hub pessoal e profissional Google (Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, Contacts, Maps, YouTube, NotebookLM, Gems, Pulso 24/7, Apps Script, Forms, Chat Workspace e Leitura Econômica MinionS) com governança BMAD Agent Inbox e Myers Diff.",
         primary_tools: &[
             "google_briefing",
+            "google_pulse",
             "google_gmail",
             "google_calendar",
             "google_docs_scratchpad",
+            "google_apps_script",
+            "google_forms",
+            "google_chat",
+            "google_deep_analyze",
             "google_notebooklm",
             "inbox_propose",
             "inbox_list",
@@ -129,6 +134,9 @@ pub static CANONICAL_SKILLS: &[SkillMeta] = &[
             "gmail", "email", "calendar", "agenda", "drive", "docs", "sheets", "slides",
             "tasks", "keep", "contacts", "maps", "commute", "youtube", "transcript",
             "notebooklm", "podcast", "audio", "gems", "inbox", "bmad", "diff", "google",
+            "pulse", "proativo", "heartbeat", "apps script", "automacao", "clasp",
+            "forms", "formulario", "chat", "minions", "analise profunda", "auto sync",
+            "drive notebook",
         ],
     },
 ];

@@ -4,13 +4,21 @@
   const state = {
     accounts: [],
     selectedAccountId: '',
+    activeHubView: 'pulse',
     inboxStatusFilter: 'pending',
     proposalsById: {},
     notebooks: [],
     selectedNotebookId: null,
     selectedNotebookSources: [],
     lastYouTubeSummary: null,
-    audioBound: false
+    audioBound: false,
+    pulseEventSource: null,
+    pulseEvents: [],
+    appsScriptTemplates: [],
+    lastFormsMarkdown: '',
+    lastFormsTitle: '',
+    lastMinionMarkdown: '',
+    lastMinionTitle: ''
   };
 
   function escapeHtml(raw) {
@@ -150,16 +158,40 @@
     const sel = document.getElementById('gh-account-select');
     state.selectedAccountId = sel ? sel.value : '';
     updateSelectedAccountPolicyBadge();
+    refreshAppsScriptScopeBanner();
     loadGoogleBriefing(false);
     loadGoogleTasks();
   }
   window.onGoogleHubAccountChange = onGoogleHubAccountChange;
 
+  function switchGoogleHubView(viewKey, btn) {
+    const key = viewKey || 'pulse';
+    state.activeHubView = key;
+    document.querySelectorAll('#gh-views-bar .subtab-btn').forEach((el) => {
+      el.classList.toggle('active', el.getAttribute('data-gh-view') === key);
+    });
+    if (btn) btn.classList.add('active');
+    document.querySelectorAll('#tab-google-hub .gh-view-pane').forEach((pane) => {
+      pane.classList.toggle('active', pane.id === `gh-view-${key}`);
+    });
+    if (key === 'automations') {
+      refreshAppsScriptScopeBanner();
+      if (!state.appsScriptTemplates.length) loadAppsScriptTemplates();
+    } else if (key === 'pulse') {
+      loadGooglePulse(false);
+    }
+  }
+  window.switchGoogleHubView = switchGoogleHubView;
+
   async function loadGoogleHubTab() {
     await loadGoogleAccountsSelect();
+    refreshAppsScriptScopeBanner();
+    initGooglePulseEventStream();
     await Promise.all([
       loadGoogleBriefing(false),
       loadGoogleTasks(),
+      loadGooglePulse(false),
+      loadAppsScriptTemplates(),
       refreshInboxBadgeCount()
     ]);
   }
@@ -1041,7 +1073,10 @@
 
   async function loadGeminiNotebooksTab() {
     bindNotebookAudioPlayer();
-    await loadNotebooksGallery(false);
+    await Promise.all([
+      loadNotebooksGallery(false),
+      loadDriveNotebookSyncLinks()
+    ]);
   }
   window.loadGeminiNotebooksTab = loadGeminiNotebooksTab;
 
@@ -1389,6 +1424,49 @@
       ? `<span class="taint-badge">${icon('alert-triangle', 'icon-xs')} <span>Origem Externa (Revisar)</span></span>`
       : '';
 
+    let securityCardHtml = '';
+    const scan = p.payload_json && p.payload_json.security_scan ? p.payload_json.security_scan : null;
+    const permSummary = (p.payload_json && Array.isArray(p.payload_json.human_permission_summary))
+      ? p.payload_json.human_permission_summary
+      : (scan && Array.isArray(scan.human_permission_summary) ? scan.human_permission_summary : []);
+
+    if (scan || permSummary.length > 0) {
+      const score = scan && typeof scan.safe_score === 'number' ? scan.safe_score : 100;
+      const scoreCls = score >= 80 ? 'badge-value' : (score >= 50 ? 'badge-lowcost' : 'badge-danger');
+      const permItems = permSummary.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+      const warningMessages = [];
+      if (scan) {
+        if (scan.hardcoded_secrets_detected) {
+          warningMessages.push('Possivel chave ou senha fixa detectada no codigo.');
+        }
+        if (Array.isArray(scan.external_urls_detected) && scan.external_urls_detected.length > 0) {
+          warningMessages.push(`URLs externas acessadas: ${scan.external_urls_detected.join(', ')}`);
+        }
+        if (Array.isArray(scan.destructive_calls_detected) && scan.destructive_calls_detected.length > 0) {
+          warningMessages.push(`Chamadas destrutivas/remocao: ${scan.destructive_calls_detected.join(', ')}`);
+        }
+        if (Array.isArray(scan.warnings)) {
+          scan.warnings.forEach((w) => {
+            if (w && w.message) warningMessages.push(w.message);
+          });
+        }
+      }
+      const warningsHtml = warningMessages.length > 0
+        ? `<div class="inbox-security-warnings">${warningMessages.map((msg) => `<div class="inbox-security-warn-item">${icon('alert-triangle', 'icon-xs')} <span>${escapeHtml(msg)}</span></div>`).join('')}</div>`
+        : '';
+
+      securityCardHtml = `
+        <div class="inbox-security-card">
+          <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2 u-mb-2">
+            <span class="inbox-security-title">${icon('shield', 'icon-xs')} <span>Cartão de Permissões (Revisão de Segurança)</span></span>
+            <span class="badge ${scoreCls}">Segurança: ${escapeHtml(score)}/100</span>
+          </div>
+          ${permItems ? `<ul class="gh-compact-list">${permItems}</ul>` : '<div class="gh-item-meta">Nenhuma permissão externa declarada.</div>'}
+          ${warningsHtml}
+        </div>
+      `;
+    }
+
     let diffHtml = '';
     if (p.myers_diff) {
       diffHtml = renderMyersDiffHtml(p.myers_diff);
@@ -1437,6 +1515,7 @@
           </div>
         </div>
         <div class="gh-item-sub u-mb-2">${escapeHtml(p.summary)} &bull; Alvo: <code>${escapeHtml(p.target_resource)}</code></div>
+        ${securityCardHtml}
         ${diffHtml}
         ${controlsHtml}
       </div>
@@ -1620,6 +1699,9 @@
           <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap u-mt-2">
             <span class="badge ${a.has_oauth ? 'badge-value' : 'badge-dominated'}">${a.has_oauth ? 'Login Google Ativo' : 'Aguardando Login'}</span>
             ${a.has_nlm_bridge ? '<span class="badge badge-champion">NotebookLM Web</span>' : ''}
+            ${(Array.isArray(a.missing_recommended_scopes) && a.missing_recommended_scopes.length > 0)
+              ? `<button type="button" class="btn btn-xs btn-secondary" onclick="upgradeAccountOAuthScopes('${escapeHtml(a.account_id)}')" title="Adicionar permissões para Automações 24/7 e Formulários">${icon('key', 'icon-xs')} <span>Atualizar Permissões</span></button>`
+              : ''}
             <select class="form-control gh-select-xs" onchange="updateGoogleAccountPolicy('${escapeHtml(a.account_id)}', this.value)" aria-label="Nível de autonomia da conta">
               <option value="read_only" ${a.policy === 'read_only' ? 'selected' : ''}>Somente Leitura</option>
               <option value="drafts_and_tasks_only" ${a.policy === 'drafts_and_tasks_only' ? 'selected' : ''}>Seguro (Rascunhos e Tarefas)</option>
@@ -1629,6 +1711,7 @@
           </div>
         </div>
       `).join('');
+      refreshAppsScriptScopeBanner();
     } catch (err) {
       if (listEl) listEl.innerHTML = `<div class="gh-empty-state">${escapeHtml(err.message)}</div>`;
     }
@@ -2176,4 +2259,996 @@
     }
   }
   window.dispatchGoogleGem = dispatchGoogleGem;
+
+  // =========================================================================
+  // 5. PULSO AUTOMATICO (5m / 10m / 15m) & SSE LIVE FEED (v0.9.2.1)
+  // =========================================================================
+
+  function renderPulseSnapshot(pulse) {
+    if (!pulse) return;
+    const cfg = pulse.config || {};
+
+    const badge = document.getElementById('gh-pulse-status-badge');
+    if (badge) {
+      if (!cfg.enabled) {
+        badge.className = 'badge badge-dominated';
+        badge.innerHTML = `${icon('pause', 'icon-xs')} <span>Pausado</span>`;
+      } else if (pulse.in_quiet_hours) {
+        badge.className = 'badge badge-lowcost';
+        badge.innerHTML = `${icon('clock', 'icon-xs')} <span>Ativo &bull; Horário Silencioso</span>`;
+      } else {
+        badge.className = 'badge badge-value';
+        badge.innerHTML = `${icon('activity', 'icon-xs')} <span>Ativo &bull; ${escapeHtml(cfg.interval_mins || 5)}m</span>`;
+      }
+    }
+
+    const setChecked = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = Boolean(val);
+    };
+    const setValue = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val !== undefined && val !== null) el.value = String(val);
+    };
+
+    setChecked('gh-pulse-enabled', cfg.enabled !== false);
+    setValue('gh-pulse-interval', cfg.interval_mins ?? 5);
+    setChecked('gh-pulse-qh-enabled', cfg.quiet_hours_enabled !== false);
+    setValue('gh-pulse-qh-start', cfg.quiet_hours_start ?? 22);
+    setValue('gh-pulse-qh-end', cfg.quiet_hours_end ?? 8);
+    setChecked('gh-pulse-browser-notif', cfg.browser_notifications_enabled);
+    setChecked('gh-pulse-hermes-prefetch', cfg.hermes_prefetch_enabled !== false);
+    setChecked('gh-pulse-m-gmail', cfg.monitor_gmail_vip !== false);
+    setChecked('gh-pulse-m-commute', cfg.monitor_commute !== false);
+    setChecked('gh-pulse-m-oauth', cfg.monitor_oauth_health !== false);
+    setChecked('gh-pulse-m-forms', cfg.monitor_forms !== false);
+    setChecked('gh-pulse-m-sync', cfg.monitor_drive_sync !== false);
+    setValue('gh-pulse-vip-senders', Array.isArray(cfg.vip_senders) ? cfg.vip_senders.join(', ') : '');
+    setValue('gh-pulse-forms', Array.isArray(cfg.monitored_form_ids) ? cfg.monitored_form_ids.join(', ') : '');
+    setValue('gh-pulse-origin', cfg.commute_origin || '');
+
+    const whBadge = document.getElementById('gh-pulse-webhook-badge');
+    if (whBadge) {
+      whBadge.className = `badge ${cfg.webhook_configured ? 'badge-value' : 'badge-dominated'}`;
+      whBadge.textContent = cfg.webhook_configured ? 'Webhook: Configurado' : 'Webhook: Desligado';
+    }
+    const tgBadge = document.getElementById('gh-pulse-tg-badge');
+    if (tgBadge) {
+      tgBadge.className = `badge ${cfg.telegram_configured ? 'badge-value' : 'badge-dominated'}`;
+      tgBadge.textContent = cfg.telegram_configured ? 'Telegram: Configurado' : 'Telegram: Desligado';
+    }
+
+    renderPulseMonitors(pulse.monitors || []);
+    state.pulseEvents = Array.isArray(pulse.recent_events) ? pulse.recent_events : [];
+    renderPulseEvents(state.pulseEvents);
+  }
+
+  function renderPulseMonitors(monitors) {
+    const el = document.getElementById('gh-pulse-monitors-list');
+    if (!el) return;
+    if (!monitors.length) {
+      el.innerHTML = '<div class="gh-empty-state">Nenhum sensor de Pulso executado ainda.</div>';
+      return;
+    }
+    const friendly = {
+      commute: 'Trânsito',
+      oauth_health: 'Login Google',
+      gmail_vip: 'E-mails VIP',
+      forms: 'Formulários',
+      drive_sync: 'Cadernos Drive'
+    };
+    el.innerHTML = monitors.map((m) => {
+      const hasErr = Boolean(m.last_error) || (m.consecutive_errors || 0) > 0;
+      const chipCls = hasErr ? 'badge-lowcost' : 'badge-value';
+      const statusText = hasErr ? `Aviso (${m.consecutive_errors || 1}x)` : `OK (${m.cadence_mins}m)`;
+      return `
+        <div class="gh-pulse-monitor-chip">
+          <span class="gh-item-title">${escapeHtml(friendly[m.monitor] || m.monitor)}</span>
+          <span class="badge ${chipCls}">${escapeHtml(statusText)}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderPulseEvents(events) {
+    const el = document.getElementById('gh-pulse-events-list');
+    if (!el) return;
+    if (!events || !events.length) {
+      el.innerHTML = '<div class="gh-empty-state">Nenhum alerta recente no Pulso Automático.</div>';
+      return;
+    }
+    el.innerHTML = events.map((ev) => {
+      const urg = String(ev.urgency || 'low').toLowerCase();
+      const urgCls = (urg === 'critical' || urg === 'high')
+        ? 'badge-danger'
+        : (urg === 'medium' ? 'badge-lowcost' : 'badge-champion');
+      const ackBadge = ev.acknowledged
+        ? '<span class="badge badge-dominated">Lido</span>'
+        : '<span class="badge badge-value">Novo</span>';
+      return `
+        <div class="gh-item-row ${ev.acknowledged ? '' : 'gh-item-alert'}">
+          <div class="u-d-flex u-justify-between u-items-start u-gap-2">
+            <div class="gh-item-title">${escapeHtml(ev.title)}</div>
+            <div class="u-d-flex u-gap-1">
+              <span class="badge ${urgCls}">${escapeHtml(ev.urgency || 'low')}</span>
+              ${ackBadge}
+            </div>
+          </div>
+          <div class="gh-item-sub">${escapeHtml(ev.summary)}</div>
+          <div class="gh-item-meta u-mono">${escapeHtml(formatUnixTime(ev.created_at))} &bull; ${escapeHtml(ev.category)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function loadGooglePulse(isManual = false) {
+    try {
+      const res = await fetch('/api/v1/google/pulse');
+      if (!res.ok) return;
+      const data = await res.json();
+      renderPulseSnapshot(data.pulse);
+      if (isManual) toast('Status do Pulso Automático atualizado.', 'success');
+    } catch (err) {
+      if (isManual) toast('Erro ao carregar Pulso: ' + err.message, 'error');
+    }
+  }
+  window.loadGooglePulse = loadGooglePulse;
+
+  async function runGooglePulseNow() {
+    try {
+      const res = await fetch('/api/v1/google/pulse/run', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.pulse) {
+        renderPulseSnapshot(data.pulse);
+        toast('Verificação completa do Pulso executada agora.', 'success');
+      } else {
+        toast(data.message || 'Falha ao executar ciclo do Pulso.', 'error');
+      }
+    } catch (err) {
+      toast('Erro ao executar Pulso: ' + err.message, 'error');
+    }
+  }
+  window.runGooglePulseNow = runGooglePulseNow;
+
+  async function saveGooglePulseConfig() {
+    const parseCsv = (id) => (document.getElementById(id)?.value || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const payload = {
+      enabled: Boolean(document.getElementById('gh-pulse-enabled')?.checked),
+      interval_mins: parseInt(document.getElementById('gh-pulse-interval')?.value || '5', 10),
+      quiet_hours_enabled: Boolean(document.getElementById('gh-pulse-qh-enabled')?.checked),
+      quiet_hours_start: parseInt(document.getElementById('gh-pulse-qh-start')?.value || '22', 10),
+      quiet_hours_end: parseInt(document.getElementById('gh-pulse-qh-end')?.value || '8', 10),
+      browser_notifications_enabled: Boolean(document.getElementById('gh-pulse-browser-notif')?.checked),
+      hermes_prefetch_enabled: Boolean(document.getElementById('gh-pulse-hermes-prefetch')?.checked),
+      monitor_gmail_vip: Boolean(document.getElementById('gh-pulse-m-gmail')?.checked),
+      monitor_commute: Boolean(document.getElementById('gh-pulse-m-commute')?.checked),
+      monitor_oauth_health: Boolean(document.getElementById('gh-pulse-m-oauth')?.checked),
+      monitor_drive_sync: Boolean(document.getElementById('gh-pulse-m-sync')?.checked),
+      monitor_forms: Boolean(document.getElementById('gh-pulse-m-forms')?.checked),
+      vip_senders: parseCsv('gh-pulse-vip-senders'),
+      monitored_form_ids: parseCsv('gh-pulse-forms'),
+      commute_origin: document.getElementById('gh-pulse-origin')?.value?.trim() || null
+    };
+
+    const webhookUrl = document.getElementById('gh-pulse-webhook-url')?.value?.trim();
+    const tgToken = document.getElementById('gh-pulse-tg-token')?.value?.trim();
+    const tgChat = document.getElementById('gh-pulse-tg-chat')?.value?.trim();
+    if (webhookUrl) payload.webhook_url = webhookUrl;
+    if (tgToken) payload.telegram_bot_token = tgToken;
+    if (tgChat) payload.telegram_chat_id = tgChat;
+
+    try {
+      const res = await fetch('/api/v1/google/pulse/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Preferências do Pulso Automático salvas.', 'success');
+        loadGooglePulse(false);
+      } else {
+        toast(data.message || 'Falha ao salvar preferências do Pulso.', 'error');
+      }
+    } catch (err) {
+      toast('Erro ao salvar Pulso: ' + err.message, 'error');
+    }
+  }
+  window.saveGooglePulseConfig = saveGooglePulseConfig;
+
+  async function ackAllPulseEvents() {
+    try {
+      const res = await fetch('/api/v1/google/pulse/ack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_ids: null })
+      });
+      if (res.ok) {
+        toast('Alertas marcados como lidos.', 'info');
+        loadGooglePulse(false);
+      }
+    } catch (err) {
+      toast('Erro ao marcar alertas: ' + err.message, 'error');
+    }
+  }
+  window.ackAllPulseEvents = ackAllPulseEvents;
+
+  function onPulseBrowserNotifChange(checkbox) {
+    if (checkbox && checkbox.checked && typeof window.Notification !== 'undefined') {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then((perm) => {
+          if (perm !== 'granted') {
+            toast('Permissão de notificação no navegador não concedida.', 'warning');
+          }
+        });
+      }
+    }
+  }
+  window.onPulseBrowserNotifChange = onPulseBrowserNotifChange;
+
+  function initGooglePulseEventStream() {
+    if (window.location.search.includes('no_sse') || typeof window.EventSource === 'undefined') {
+      return;
+    }
+    if (state.pulseEventSource && state.pulseEventSource.readyState !== 2) {
+      return;
+    }
+    try {
+      const es = new EventSource('/api/v1/google/events/stream');
+      state.pulseEventSource = es;
+      es.addEventListener('pulse', (evt) => {
+        try {
+          const ev = JSON.parse(evt.data);
+          if (!ev || !ev.id) return;
+          if (!state.pulseEvents.some((item) => item.id === ev.id)) {
+            state.pulseEvents = [ev].concat(state.pulseEvents).slice(0, 30);
+            renderPulseEvents(state.pulseEvents);
+          }
+          const notifEnabled = Boolean(document.getElementById('gh-pulse-browser-notif')?.checked);
+          if (notifEnabled && typeof window.Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification(ev.title || 'Souls Google Hub', { body: ev.summary || '' });
+          }
+          refreshInboxBadgeCount();
+        } catch (_) {}
+      });
+    } catch (_) {}
+  }
+  window.initGooglePulseEventStream = initGooglePulseEventStream;
+
+  // =========================================================================
+  // 6. AUTOMACOES 24/7 (APPS SCRIPT) & ATUALIZACAO DE ESCOPOS OAUTH
+  // =========================================================================
+
+  function refreshAppsScriptScopeBanner() {
+    const banner = document.getElementById('gh-apps-script-scope-banner');
+    const desc = document.getElementById('gh-apps-script-scope-desc');
+    if (!banner) return;
+    const active = state.accounts.find((a) => a.account_id === getActiveAccountId())
+      || state.accounts.find((a) => a.is_primary)
+      || state.accounts[0];
+    const missing = active && Array.isArray(active.missing_recommended_scopes)
+      ? active.missing_recommended_scopes
+      : [];
+    if (missing.length > 0) {
+      banner.classList.remove('is-hidden');
+      if (desc) {
+        desc.textContent = `A conta '${active.label || active.email || active.account_id}' ainda precisa de ${missing.length} permissão(ões) adicional(is) para Automações 24/7 e Formulários.`;
+      }
+    } else {
+      banner.classList.add('is-hidden');
+    }
+  }
+
+  async function upgradeAccountOAuthScopes(accountId) {
+    try {
+      const res = await fetch('/api/v1/google/oauth/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_id: accountId || null })
+      });
+      const data = await res.json();
+      if (res.ok && data.auth_url) {
+        toast('Abrindo autorização Google com permissões atualizadas...', 'info');
+        window.open(data.auth_url, '_blank', 'noopener,noreferrer');
+        const outBox = document.getElementById('gh-as-output');
+        if (outBox) {
+          outBox.classList.remove('is-hidden');
+          outBox.innerHTML = `
+            <div class="gh-item-title u-text-cyan">Autorização incremental pronta</div>
+            <a class="btn btn-xs btn-primary u-mt-2" href="${escapeHtml(data.auth_url)}" target="_blank" rel="noopener noreferrer">
+              ${icon('link', 'icon-xs')} <span>Confirmar Permissões no Google</span>
+            </a>
+          `;
+        }
+      } else {
+        toast(data.message || 'Não foi possível gerar link de atualização de permissões.', 'warning');
+      }
+    } catch (err) {
+      toast('Erro ao atualizar permissões Google: ' + err.message, 'error');
+    }
+  }
+  window.upgradeAccountOAuthScopes = upgradeAccountOAuthScopes;
+
+  function upgradeActiveAccountOAuthScopes() {
+    const active = state.accounts.find((a) => a.account_id === getActiveAccountId())
+      || state.accounts.find((a) => a.is_primary)
+      || state.accounts[0];
+    return upgradeAccountOAuthScopes(active ? active.account_id : null);
+  }
+  window.upgradeActiveAccountOAuthScopes = upgradeActiveAccountOAuthScopes;
+
+  async function loadAppsScriptTemplates() {
+    const grid = document.getElementById('gh-apps-script-templates');
+    try {
+      const res = await fetch('/api/v1/google/apps-script/templates');
+      if (!res.ok) return;
+      const data = await res.json();
+      const templates = Array.isArray(data.templates) ? data.templates : [];
+      state.appsScriptTemplates = templates;
+      if (!grid) return;
+      if (!templates.length) {
+        grid.innerHTML = '<div class="gh-empty-state">Nenhum modelo disponível.</div>';
+        return;
+      }
+      grid.innerHTML = templates.map((t) => {
+        const permPills = (t.human_permissions || []).map((perm) =>
+          `<span class="badge badge-dominated">${escapeHtml(perm)}</span>`
+        ).join(' ');
+        return `
+          <div class="gh-subpanel gh-template-card">
+            <div class="u-d-flex u-justify-between u-items-start u-gap-2 u-mb-2">
+              <div class="gh-item-title">${escapeHtml(t.name)}</div>
+              <span class="badge badge-champion">${escapeHtml(t.schedule_label)}</span>
+            </div>
+            <div class="gh-item-sub u-mb-2">${escapeHtml(t.tagline || t.description)}</div>
+            <div class="u-d-flex u-gap-1 u-flex-wrap u-mb-3">${permPills}</div>
+            <button type="button" class="btn btn-sm btn-primary" onclick="prepareAppsScriptTemplate('${escapeHtml(t.id)}')">
+              ${icon('shield', 'icon-sm')} <span>Preparar e Revisar</span>
+            </button>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      if (grid) grid.innerHTML = `<div class="gh-empty-state">${escapeHtml(err.message)}</div>`;
+    }
+  }
+  window.loadAppsScriptTemplates = loadAppsScriptTemplates;
+
+  async function prepareAppsScriptTemplate(templateId) {
+    const tpl = state.appsScriptTemplates.find((t) => t.id === templateId);
+    if (!tpl) {
+      toast('Modelo não encontrado.', 'warning');
+      return;
+    }
+    const accountId = getActiveAccountId() || null;
+    const outBox = document.getElementById('gh-as-output');
+    let scriptId = document.getElementById('gh-as-script-id')?.value?.trim() || '';
+
+    try {
+      const createRes = await fetch('/api/v1/google/apps-script/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: tpl.name,
+          template_id: tpl.id,
+          account_id: accountId
+        })
+      });
+      const createData = await createRes.json();
+      if (createRes.ok && createData.project?.script_id) {
+        scriptId = createData.project.script_id;
+        const idInput = document.getElementById('gh-as-script-id');
+        if (idInput) idInput.value = scriptId;
+      } else if (!scriptId) {
+        if (outBox) {
+          outBox.classList.remove('is-hidden');
+          outBox.innerHTML = `
+            <div class="u-text-amber">${escapeHtml(createData.message || 'Não foi possível criar o projeto automaticamente.')}</div>
+            <div class="gh-item-sub u-mt-1">Ative a API em <a href="https://script.google.com/home/usersettings" target="_blank" rel="noopener noreferrer">script.google.com/home/usersettings</a> ou informe um Script ID existente acima.</div>
+          `;
+        }
+        toast(createData.message || 'Verifique o login Google e a API do Apps Script.', 'warning');
+        return;
+      }
+
+      const pushRes = await fetch(`/api/v1/google/apps-script/${encodeURIComponent(scriptId)}/push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          files: tpl.files,
+          title: `Ativar Automação 24/7: ${tpl.name}`,
+          account_id: accountId
+        })
+      });
+      const pushData = await pushRes.json();
+      if (outBox) outBox.classList.remove('is-hidden');
+
+      if (pushRes.status === 202 || pushData.status === 'queued_for_approval') {
+        if (outBox) {
+          outBox.innerHTML = `
+            <div class="gh-item-title u-text-green">Modelo '${escapeHtml(tpl.name)}' preparado para revisão!</div>
+            <div class="gh-item-sub">Abra a <strong>Central de Aprovações</strong> para conferir o Cartão de Permissões e confirmar o envio para o projeto <code>${escapeHtml(scriptId)}</code>.</div>
+            <button type="button" class="btn btn-xs btn-primary u-mt-2" onclick="switchTab('tab-agent-inbox')">
+              ${icon('inbox', 'icon-xs')} <span>Revisar e Aprovar Agora</span>
+            </button>
+          `;
+        }
+        refreshInboxBadgeCount();
+        toast('Automação preparada! Revise o Cartão de Permissões na Central de Aprovações.', 'success');
+      } else if (outBox) {
+        outBox.innerHTML = `<div class="u-text-amber">${escapeHtml(pushData.message || 'Não foi possível preparar a revisão.')}</div>`;
+      }
+    } catch (err) {
+      toast('Erro ao preparar automação: ' + err.message, 'error');
+    }
+  }
+  window.prepareAppsScriptTemplate = prepareAppsScriptTemplate;
+
+  async function inspectAppsScriptProject() {
+    const scriptId = document.getElementById('gh-as-script-id')?.value?.trim() || '';
+    const outBox = document.getElementById('gh-as-output');
+    if (!scriptId) {
+      toast('Informe o Script ID para inspecionar.', 'warning');
+      return;
+    }
+    const qs = getActiveAccountId() ? `?account_id=${encodeURIComponent(getActiveAccountId())}` : '';
+    try {
+      const res = await fetch(`/api/v1/google/apps-script/${encodeURIComponent(scriptId)}/content${qs}`);
+      const data = await res.json();
+      if (outBox) {
+        outBox.classList.remove('is-hidden');
+        if (res.ok) {
+          const score = data.security_scan?.safe_score ?? 100;
+          const filesCount = (data.files || []).length;
+          outBox.innerHTML = `
+            <div class="gh-item-title">Projeto <code>${escapeHtml(scriptId)}</code> &bull; ${filesCount} arquivo(s) &bull; Segurança ${escapeHtml(score)}/100</div>
+            <pre class="gh-pre-preview">${escapeHtml(JSON.stringify(data.security_scan || {}, null, 2))}</pre>
+          `;
+        } else {
+          outBox.innerHTML = `<div class="u-text-amber">${escapeHtml(data.message || 'Erro ao ler projeto.')}</div>`;
+        }
+      }
+    } catch (err) {
+      toast('Erro ao inspecionar projeto: ' + err.message, 'error');
+    }
+  }
+  window.inspectAppsScriptProject = inspectAppsScriptProject;
+
+  async function proposeAppsScriptDeploy() {
+    const scriptId = document.getElementById('gh-as-script-id')?.value?.trim() || '';
+    const description = document.getElementById('gh-as-deploy-desc')?.value?.trim() || '';
+    if (!scriptId) {
+      toast('Informe o Script ID para propor publicação.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/v1/google/apps-script/${encodeURIComponent(scriptId)}/deploy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: description || null, account_id: getActiveAccountId() || null })
+      });
+      const data = await res.json();
+      if (res.status === 202 || data.status === 'queued_for_approval') {
+        refreshInboxBadgeCount();
+        toast('Publicação enviada para sua confirmação na Central de Aprovações.', 'success');
+      } else {
+        toast(data.message || 'Erro ao propor publicação.', 'error');
+      }
+    } catch (err) {
+      toast('Erro: ' + err.message, 'error');
+    }
+  }
+  window.proposeAppsScriptDeploy = proposeAppsScriptDeploy;
+
+  async function proposeAppsScriptRun() {
+    const scriptId = document.getElementById('gh-as-script-id')?.value?.trim() || '';
+    const fnName = document.getElementById('gh-as-run-fn')?.value?.trim() || 'main';
+    if (!scriptId) {
+      toast('Informe o Script ID para propor execução.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/v1/google/apps-script/${encodeURIComponent(scriptId)}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          function_name: fnName,
+          parameters: [],
+          dev_mode: false,
+          account_id: getActiveAccountId() || null
+        })
+      });
+      const data = await res.json();
+      if (res.status === 202 || data.status === 'queued_for_approval') {
+        refreshInboxBadgeCount();
+        toast(`Execução de '${fnName}' aguardando sua confirmação na Central de Aprovações.`, 'success');
+      } else {
+        toast(data.message || 'Erro ao propor execução.', 'error');
+      }
+    } catch (err) {
+      toast('Erro: ' + err.message, 'error');
+    }
+  }
+  window.proposeAppsScriptRun = proposeAppsScriptRun;
+
+  async function loadAppsScriptProcesses() {
+    const scriptId = document.getElementById('gh-as-script-id')?.value?.trim() || '';
+    const outBox = document.getElementById('gh-as-output');
+    if (!scriptId) {
+      toast('Informe o Script ID para consultar execuções.', 'warning');
+      return;
+    }
+    const qs = getActiveAccountId() ? `?account_id=${encodeURIComponent(getActiveAccountId())}` : '';
+    try {
+      const res = await fetch(`/api/v1/google/apps-script/${encodeURIComponent(scriptId)}/processes${qs}`);
+      const data = await res.json();
+      if (outBox) {
+        outBox.classList.remove('is-hidden');
+        outBox.innerHTML = res.ok
+          ? `<pre class="gh-pre-preview">${escapeHtml(JSON.stringify(data.processes || [], null, 2))}</pre>`
+          : `<div class="u-text-amber">${escapeHtml(data.message || 'Falha ao consultar execuções.')}</div>`;
+      }
+    } catch (err) {
+      toast('Erro: ' + err.message, 'error');
+    }
+  }
+  window.loadAppsScriptProcesses = loadAppsScriptProcesses;
+
+  // =========================================================================
+  // 7. FORMS, MINIONS (LEITURA ECONOMICA), CHAT & EXPORTACAO 1-CLIQUE
+  // =========================================================================
+
+  async function exportMarkdownToObsidian(title, markdownBody, tags) {
+    if (!markdownBody) {
+      toast('Nenhum conteúdo disponível para salvar no Obsidian.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/v1/google/quick-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title || 'Resumo Google Hub',
+          body: markdownBody,
+          tags: Array.isArray(tags) && tags.length ? tags : ['google-hub']
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`Resumo salvo no Obsidian: ${data.note_path || 'raw/inbox/'}`, 'success');
+      } else {
+        toast(data.message || 'Erro ao salvar no Obsidian.', 'error');
+      }
+    } catch (err) {
+      toast('Erro ao salvar no Obsidian: ' + err.message, 'error');
+    }
+  }
+  window.exportMarkdownToObsidian = exportMarkdownToObsidian;
+
+  async function exportMarkdownToNotebook(title, markdownBody) {
+    if (!markdownBody) {
+      toast('Nenhum conteúdo disponível para enviar ao NotebookLM.', 'warning');
+      return;
+    }
+    let nbId = state.selectedNotebookId;
+    if (!nbId) {
+      try {
+        const listRes = await fetch('/api/v1/google/notebooks');
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          if (Array.isArray(listData.notebooks) && listData.notebooks.length > 0) {
+            const first = listData.notebooks[0];
+            nbId = first.notebook_id || first.id || (Array.isArray(first) ? first[2] : null);
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (!nbId) {
+      const typeEl = document.getElementById('nb-source-type');
+      const titleEl = document.getElementById('nb-source-title');
+      const contentEl = document.getElementById('nb-source-content');
+      if (typeEl) typeEl.value = 'text';
+      if (titleEl) titleEl.value = title || 'Resumo Importado';
+      if (contentEl) contentEl.value = markdownBody;
+      if (typeof window.switchTab === 'function') window.switchTab('tab-gemini-notebooks');
+      toast('Selecione um caderno na galeria e clique em Adicionar Fonte ao Caderno.', 'info');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/google/notebooks/${encodeURIComponent(nbId)}/sources`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_type: 'text',
+          title: title || 'Resumo Google Hub',
+          content: markdownBody
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`Fonte adicionada ao caderno '${nbId}'!`, 'success');
+      } else {
+        toast(data.message || 'Falha ao enviar para Gemini Notebooks.', 'warning');
+      }
+    } catch (err) {
+      toast('Erro ao enviar para caderno: ' + err.message, 'error');
+    }
+  }
+  window.exportMarkdownToNotebook = exportMarkdownToNotebook;
+
+  async function loadGoogleFormStats() {
+    const formId = document.getElementById('gh-form-id')?.value?.trim() || '';
+    const box = document.getElementById('gh-forms-result');
+    if (!formId) {
+      toast('Informe o ID do Google Form.', 'warning');
+      return;
+    }
+    const qs = getActiveAccountId() ? `?account_id=${encodeURIComponent(getActiveAccountId())}` : '';
+    try {
+      const res = await fetch(`/api/v1/google/forms/${encodeURIComponent(formId)}/responses${qs}`);
+      const data = await res.json();
+      if (box) box.classList.remove('is-hidden');
+      if (!res.ok) {
+        if (box) box.innerHTML = `<div class="u-text-amber">${escapeHtml(data.message || 'Erro ao buscar respostas.')}</div>`;
+        return;
+      }
+      const stats = data.stats || {};
+      state.lastFormsMarkdown = stats.markdown_summary || '';
+      state.lastFormsTitle = `Form: ${stats.form_title || formId}`;
+      const qHtml = (stats.question_stats || []).map((q) => {
+        const opts = (q.option_counts || []).map((o) =>
+          `<li>${escapeHtml(o.option)}: <strong>${escapeHtml(o.count)}</strong> (${Number(o.percentage || 0).toFixed(0)}%)</li>`
+        ).join('');
+        return `
+          <div class="gh-item-row">
+            <div class="gh-item-title">${escapeHtml(q.question_title)} (${escapeHtml(q.total_answers)} respostas)</div>
+            ${opts ? `<ul class="gh-compact-list">${opts}</ul>` : ''}
+          </div>
+        `;
+      }).join('');
+      if (box) {
+        box.innerHTML = `
+          <div class="gh-item-title u-mb-2">${escapeHtml(stats.form_title || formId)} &bull; ${escapeHtml(stats.total_responses ?? 0)} resposta(s)</div>
+          <div class="gh-list-container u-mb-3">${qHtml || '<div class="gh-empty-state">Sem respostas ainda.</div>'}</div>
+          <div class="gh-btn-row">
+            <button type="button" class="btn btn-xs btn-secondary" onclick="exportLastFormToObsidian()">
+              ${icon('database', 'icon-xs')} <span>Salvar no Obsidian</span>
+            </button>
+            <button type="button" class="btn btn-xs btn-primary" onclick="exportLastFormToNotebook()">
+              ${icon('book', 'icon-xs')} <span>Enviar para Gemini Notebooks</span>
+            </button>
+          </div>
+        `;
+      }
+    } catch (err) {
+      toast('Erro ao carregar estatísticas do formulário: ' + err.message, 'error');
+    }
+  }
+  window.loadGoogleFormStats = loadGoogleFormStats;
+
+  function exportLastFormToObsidian() {
+    exportMarkdownToObsidian(state.lastFormsTitle, state.lastFormsMarkdown, ['google-forms', 'pesquisa']);
+  }
+  window.exportLastFormToObsidian = exportLastFormToObsidian;
+
+  function exportLastFormToNotebook() {
+    exportMarkdownToNotebook(state.lastFormsTitle, state.lastFormsMarkdown);
+  }
+  window.exportLastFormToNotebook = exportLastFormToNotebook;
+
+  async function proposeCreateGoogleForm() {
+    const title = document.getElementById('gh-form-new-title')?.value?.trim() || '';
+    if (!title) {
+      toast('Informe um título para o novo formulário.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/v1/google/forms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          document_title: title,
+          account_id: getActiveAccountId() || null
+        })
+      });
+      const data = await res.json();
+      if (res.status === 202 || data.status === 'queued_for_approval') {
+        refreshInboxBadgeCount();
+        toast('Criação do formulário enviada para sua confirmação na Central de Aprovações.', 'success');
+      } else {
+        toast(data.message || 'Erro ao propor criação do formulário.', 'error');
+      }
+    } catch (err) {
+      toast('Erro: ' + err.message, 'error');
+    }
+  }
+  window.proposeCreateGoogleForm = proposeCreateGoogleForm;
+
+  async function runGoogleMinionAnalysis() {
+    const sourceKind = document.getElementById('gh-minion-source-kind')?.value || 'raw_text';
+    const sourceRef = document.getElementById('gh-minion-source-ref')?.value?.trim() || 'documento_local';
+    const query = document.getElementById('gh-minion-query')?.value?.trim() || '';
+    const mode = document.getElementById('gh-minion-mode')?.value || 'auto';
+    const text = document.getElementById('gh-minion-raw-text')?.value || '';
+    const box = document.getElementById('gh-minion-result');
+
+    if (!query) {
+      toast('Informe o que deseja extrair do documento.', 'warning');
+      return;
+    }
+    if (sourceKind === 'raw_text' && !text.trim()) {
+      toast('Cole o texto do documento para analisar.', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/v1/google/analyze/minions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_kind: sourceKind,
+          source_ref: sourceRef,
+          query,
+          text: text.trim() ? text : null,
+          mode,
+          top_k: 5,
+          account_id: getActiveAccountId() || null
+        })
+      });
+      const data = await res.json();
+      if (box) box.classList.remove('is-hidden');
+      if (!res.ok || !data.analysis) {
+        if (box) box.innerHTML = `<div class="u-text-amber">${escapeHtml(data.message || 'Falha na análise econômica.')}</div>`;
+        return;
+      }
+
+      const a = data.analysis;
+      state.lastMinionMarkdown = a.markdown_export || a.executive_summary || '';
+      state.lastMinionTitle = `Análise: ${a.source_ref || sourceRef}`;
+      const savings = Number(a.estimated_token_savings_pct || 0).toFixed(1);
+      const cacheBadge = a.cache_hit
+        ? '<span class="badge badge-value">Cache Instantâneo</span>'
+        : '<span class="badge badge-champion">Processado Agora</span>';
+      const passagesHtml = (a.top_passages || []).map((p) => `
+        <div class="gh-item-row">
+          <div class="gh-item-meta u-mono">${escapeHtml(p.citation)} &bull; relevância ${Number(p.score || 0).toFixed(2)}</div>
+          <div class="gh-item-sub">${escapeHtml(p.excerpt)}</div>
+        </div>
+      `).join('');
+
+      if (box) {
+        box.innerHTML = `
+          <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2 u-mb-2">
+            <span class="badge badge-value">${escapeHtml(savings)}% Economia de Tokens</span>
+            ${cacheBadge}
+            <span class="badge badge-dominated">${escapeHtml(a.executed_device || a.mode_used || 'local')}</span>
+          </div>
+          <div class="gh-item-sub u-mb-2">${escapeHtml(a.executive_summary || '')}</div>
+          <div class="gh-list-container u-mb-3">${passagesHtml}</div>
+          <div class="gh-btn-row">
+            <button type="button" class="btn btn-xs btn-secondary" onclick="exportLastMinionToObsidian()">
+              ${icon('database', 'icon-xs')} <span>Salvar no Obsidian</span>
+            </button>
+            <button type="button" class="btn btn-xs btn-primary" onclick="exportLastMinionToNotebook()">
+              ${icon('book', 'icon-xs')} <span>Enviar para Gemini Notebooks</span>
+            </button>
+          </div>
+        `;
+      }
+      toast(`Análise concluída com ${savings}% de economia!`, 'success');
+    } catch (err) {
+      toast('Erro na análise econômica: ' + err.message, 'error');
+    }
+  }
+  window.runGoogleMinionAnalysis = runGoogleMinionAnalysis;
+
+  function exportLastMinionToObsidian() {
+    exportMarkdownToObsidian(state.lastMinionTitle, state.lastMinionMarkdown, ['minions', 'analise']);
+  }
+  window.exportLastMinionToObsidian = exportLastMinionToObsidian;
+
+  function exportLastMinionToNotebook() {
+    exportMarkdownToNotebook(state.lastMinionTitle, state.lastMinionMarkdown);
+  }
+  window.exportLastMinionToNotebook = exportLastMinionToNotebook;
+
+  async function loadGoogleChatSpaces() {
+    const listEl = document.getElementById('gh-chat-spaces-list');
+    const qs = getActiveAccountId() ? `?account_id=${encodeURIComponent(getActiveAccountId())}` : '';
+    try {
+      const res = await fetch(`/api/v1/google/chat/spaces${qs}`);
+      const data = await res.json();
+      if (!listEl) return;
+      if (res.status === 403 || data.eligible === false) {
+        listEl.innerHTML = `
+          <div class="gh-policy-note">
+            ${icon('info', 'icon-xs')}
+            <span>${escapeHtml(data.note || data.message || 'Contas @gmail.com pessoais não possuem acesso aos espaços do Google Chat. Use conta Google Workspace corporativa ou informe um Webhook abaixo.')}</span>
+          </div>
+        `;
+        return;
+      }
+      if (!res.ok) {
+        listEl.innerHTML = `<div class="gh-empty-state">${escapeHtml(data.message || 'Erro ao listar espaços.')}</div>`;
+        return;
+      }
+      const spaces = Array.isArray(data.spaces) ? data.spaces : [];
+      if (!spaces.length) {
+        listEl.innerHTML = '<div class="gh-empty-state">Nenhum espaço Google Chat encontrado nesta conta Workspace.</div>';
+        return;
+      }
+      listEl.innerHTML = spaces.map((s) => `
+        <div class="gh-item-row u-d-flex u-justify-between u-items-center u-gap-2">
+          <div>
+            <div class="gh-item-title">${escapeHtml(s.display_name || s.name)}</div>
+            <div class="gh-item-meta u-mono">${escapeHtml(s.name)}</div>
+          </div>
+          <button type="button" class="btn btn-xs btn-secondary" onclick="selectGoogleChatSpace('${escapeHtml(s.name)}')">
+            Selecionar
+          </button>
+        </div>
+      `).join('');
+    } catch (err) {
+      if (listEl) listEl.innerHTML = `<div class="gh-empty-state">${escapeHtml(err.message)}</div>`;
+    }
+  }
+  window.loadGoogleChatSpaces = loadGoogleChatSpaces;
+
+  function selectGoogleChatSpace(spaceName) {
+    const input = document.getElementById('gh-chat-space');
+    if (input) input.value = spaceName || '';
+  }
+  window.selectGoogleChatSpace = selectGoogleChatSpace;
+
+  async function proposeGoogleChatSend() {
+    const spaceName = document.getElementById('gh-chat-space')?.value?.trim() || null;
+    const webhookUrl = document.getElementById('gh-chat-webhook')?.value?.trim() || null;
+    const text = document.getElementById('gh-chat-text')?.value?.trim() || '';
+    if (!text) {
+      toast('Digite a mensagem para enviar no Google Chat.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/v1/google/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          space_name: spaceName,
+          webhook_url: webhookUrl,
+          text,
+          account_id: getActiveAccountId() || null
+        })
+      });
+      const data = await res.json();
+      if (res.status === 202 || data.status === 'queued_for_approval') {
+        refreshInboxBadgeCount();
+        toast('Mensagem preparada! Confirme o envio na Central de Aprovações.', 'success');
+      } else {
+        toast(data.message || 'Falha ao preparar envio no Google Chat.', 'warning');
+      }
+    } catch (err) {
+      toast('Erro ao enviar para Google Chat: ' + err.message, 'error');
+    }
+  }
+  window.proposeGoogleChatSend = proposeGoogleChatSend;
+
+  // =========================================================================
+  // 8. VINCULOS VIVOS DRIVE <-> NOTEBOOKLM (AUTO-SYNC)
+  // =========================================================================
+
+  async function loadDriveNotebookSyncLinks() {
+    const listEl = document.getElementById('nb-sync-links-list');
+    try {
+      const res = await fetch('/api/v1/google/notebooks/sync-links');
+      if (!res.ok) return;
+      const data = await res.json();
+      const links = Array.isArray(data.links) ? data.links : [];
+      if (!listEl) return;
+      if (!links.length) {
+        listEl.innerHTML = '<div class="gh-empty-state">Nenhum vínculo vivo configurado ainda.</div>';
+        return;
+      }
+      listEl.innerHTML = links.map((l) => `
+        <div class="gh-item-row u-d-flex u-justify-between u-items-center u-gap-2">
+          <div>
+            <div class="gh-item-title">${escapeHtml(l.drive_file_name || l.drive_file_id)} &rarr; ${escapeHtml(l.notebook_title || l.notebook_id)}</div>
+            <div class="gh-item-meta u-mono">Status: ${escapeHtml(l.last_status || 'linked')} &bull; Drive: ${escapeHtml(l.drive_file_id)}</div>
+          </div>
+          <div class="gh-btn-row">
+            <button type="button" class="btn btn-xs ${l.auto_sync_enabled ? 'btn-primary' : 'btn-secondary'}" onclick="toggleDriveNotebookSyncLink('${escapeHtml(l.id)}', ${!l.auto_sync_enabled})">
+              ${icon('refresh', 'icon-xs')} <span>${l.auto_sync_enabled ? 'Auto-Sync Ativo' : 'Pausado'}</span>
+            </button>
+            <button type="button" class="btn btn-xs btn-danger" onclick="deleteDriveNotebookSyncLink('${escapeHtml(l.id)}')" title="Remover vínculo">
+              ${icon('trash', 'icon-xs')}
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      if (listEl) listEl.innerHTML = `<div class="gh-empty-state">${escapeHtml(err.message)}</div>`;
+    }
+  }
+  window.loadDriveNotebookSyncLinks = loadDriveNotebookSyncLinks;
+
+  async function createDriveNotebookSyncLink() {
+    const nbId = state.selectedNotebookId || document.getElementById('nb-selected-id')?.textContent?.trim() || '';
+    const nbTitle = document.getElementById('nb-selected-title')?.textContent?.trim() || nbId;
+    const driveFileId = document.getElementById('nb-sync-drive-file-id')?.value?.trim() || '';
+    const driveName = document.getElementById('nb-sync-drive-name')?.value?.trim() || driveFileId;
+    const sourceId = document.getElementById('nb-sync-source-id')?.value?.trim() || driveFileId;
+    const autoSync = Boolean(document.getElementById('nb-sync-auto-enabled')?.checked);
+
+    if (!nbId || nbId === 'Nenhum caderno selecionado') {
+      toast('Selecione um caderno na galeria à esquerda antes de criar um vínculo.', 'warning');
+      return;
+    }
+    if (!driveFileId) {
+      toast('Informe o ID do arquivo no Google Drive.', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/v1/google/notebooks/sync-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notebook_id: nbId,
+          notebook_title: nbTitle,
+          source_id: sourceId,
+          drive_file_id: driveFileId,
+          drive_file_name: driveName,
+          auto_sync_enabled: autoSync
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Vínculo vivo criado com sucesso!', 'success');
+        loadDriveNotebookSyncLinks();
+      } else {
+        toast(data.message || 'Erro ao criar vínculo.', 'error');
+      }
+    } catch (err) {
+      toast('Erro ao vincular arquivo: ' + err.message, 'error');
+    }
+  }
+  window.createDriveNotebookSyncLink = createDriveNotebookSyncLink;
+
+  async function toggleDriveNotebookSyncLink(linkId, nextEnabled) {
+    try {
+      const res = await fetch(`/api/v1/google/notebooks/sync-links/${encodeURIComponent(linkId)}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: Boolean(nextEnabled) })
+      });
+      if (res.ok) {
+        toast(`Auto-Sync ${nextEnabled ? 'ativado' : 'pausado'}.`, 'info');
+        loadDriveNotebookSyncLinks();
+      }
+    } catch (err) {
+      toast('Erro ao alternar vínculo: ' + err.message, 'error');
+    }
+  }
+  window.toggleDriveNotebookSyncLink = toggleDriveNotebookSyncLink;
+
+  async function deleteDriveNotebookSyncLink(linkId) {
+    try {
+      const res = await fetch(`/api/v1/google/notebooks/sync-links/${encodeURIComponent(linkId)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        toast('Vínculo removido.', 'info');
+        loadDriveNotebookSyncLinks();
+      }
+    } catch (err) {
+      toast('Erro ao remover vínculo: ' + err.message, 'error');
+    }
+  }
+  window.deleteDriveNotebookSyncLink = deleteDriveNotebookSyncLink;
 })();

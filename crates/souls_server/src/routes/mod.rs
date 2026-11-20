@@ -159,6 +159,41 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/google/notebooks/:id/query", post(google::notebook_query_handler))
         .route("/api/v1/google/notebooks/:id/studio", post(google::notebook_studio_handler))
         .route("/api/v1/google/notebooks/:id/audio/:artifact_id", get(google::notebook_audio_stream_handler))
+        // Milestone v0.9.2.1: Proactive Pulse, Apps Script 24/7, Forms, Chat, MinionS & Auto-Sync
+        .route("/api/v1/google/pulse", get(google::pulse_status_handler))
+        .route("/api/v1/google/pulse/run", post(google::pulse_run_handler))
+        .route(
+            "/api/v1/google/pulse/config",
+            get(google::pulse_get_config_handler).post(google::pulse_update_config_handler),
+        )
+        .route("/api/v1/google/pulse/pending", get(google::pulse_pending_handler))
+        .route("/api/v1/google/pulse/ack", post(google::pulse_ack_handler))
+        .route("/api/v1/google/events/stream", get(google::google_events_stream_handler))
+        .route("/api/v1/google/apps-script/templates", get(google::apps_script_templates_handler))
+        .route("/api/v1/google/apps-script/create", post(google::apps_script_create_handler))
+        .route("/api/v1/google/apps-script/:id/content", get(google::apps_script_get_content_handler))
+        .route("/api/v1/google/apps-script/:id/push", post(google::apps_script_push_propose_handler))
+        .route("/api/v1/google/apps-script/:id/deploy", post(google::apps_script_deploy_propose_handler))
+        .route("/api/v1/google/apps-script/:id/run", post(google::apps_script_run_propose_handler))
+        .route("/api/v1/google/apps-script/:id/processes", get(google::apps_script_processes_handler))
+        .route("/api/v1/google/forms", post(google::forms_create_propose_handler))
+        .route("/api/v1/google/forms/:id", get(google::forms_get_handler))
+        .route("/api/v1/google/forms/:id/responses", get(google::forms_responses_handler))
+        .route("/api/v1/google/chat/spaces", get(google::chat_spaces_handler))
+        .route("/api/v1/google/chat/send", post(google::chat_send_propose_handler))
+        .route("/api/v1/google/analyze/minions", post(google::analyze_minions_handler))
+        .route(
+            "/api/v1/google/notebooks/sync-links",
+            get(google::sync_links_list_handler).post(google::sync_links_upsert_handler),
+        )
+        .route(
+            "/api/v1/google/notebooks/sync-links/:id",
+            delete(google::sync_links_delete_handler),
+        )
+        .route(
+            "/api/v1/google/notebooks/sync-links/:id/toggle",
+            post(google::sync_links_toggle_handler),
+        )
         // Milestone v0.8.3: Cognitive Vision O(1) & AXTree LEAN (ADR-029)
         .route("/api/v1/vision/status", get(vision::vision_status_handler))
         .route("/api/v1/vision/axtree/serialize", post(vision::serialize_axtree_handler))

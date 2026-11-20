@@ -1301,6 +1301,123 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 "additionalProperties": false
             }),
         },
+        ToolMeta {
+            name: "google_pulse",
+            namespace: "google",
+            description: "Pulso Proativo Google 24/7: status multi-cadência, disparo sob demanda, eventos pendentes, reconhecimento, configuração de Quiet Hours e vínculos Drive <-> NotebookLM.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["status", "run_now", "pending", "ack", "configure", "sync_links_list", "sync_links_add", "sync_links_toggle"], "default": "status" },
+                    "limit": { "type": "integer", "default": 3 },
+                    "drain": { "type": "boolean", "default": true },
+                    "event_ids": { "type": "array", "items": { "type": "string" } },
+                    "config": { "type": "object" },
+                    "webhook_url": { "type": "string" },
+                    "telegram_bot_token": { "type": "string" },
+                    "telegram_chat_id": { "type": "string" },
+                    "id": { "type": "string" },
+                    "notebook_id": { "type": "string" },
+                    "notebook_title": { "type": "string" },
+                    "source_id": { "type": "string" },
+                    "drive_file_id": { "type": "string" },
+                    "drive_file_name": { "type": "string" },
+                    "auto_sync_enabled": { "type": "boolean" },
+                    "enabled": { "type": "boolean" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_apps_script",
+            namespace: "google",
+            description: "Automações 24/7 no Google Apps Script: templates prontos, criação de projeto, inspeção estática de segredos/permissões em português e propostas push/deploy/run com Myers Diff no BMAD Agent Inbox.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["templates", "create", "get_content", "scan_security", "propose_push", "propose_deploy", "propose_run", "processes"], "default": "templates" },
+                    "title": { "type": "string" },
+                    "parent_id": { "type": "string" },
+                    "template_id": { "type": "string" },
+                    "script_id": { "type": "string" },
+                    "files": { "type": "array" },
+                    "previous_files": { "type": "array" },
+                    "description": { "type": "string" },
+                    "function_name": { "type": "string" },
+                    "parameters": { "type": "array" },
+                    "dev_mode": { "type": "boolean" },
+                    "account_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_forms",
+            namespace: "google",
+            description: "Google Forms API v1: leitura de esquema, criação governada via BMAD Agent Inbox, listagem de respostas e estatísticas determinísticas com resumo Markdown.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["get", "create", "responses", "stats"], "default": "get" },
+                    "form_id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "document_title": { "type": "string" },
+                    "requests": {},
+                    "account_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_chat",
+            namespace: "google",
+            description: "Google Chat API v1 (exclusivo Workspace corporativo para Spaces/Messages) + propostas de envio via Webhook ou Espaço governadas pelo BMAD Agent Inbox.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["check_eligibility", "list_spaces", "list_messages", "propose_send", "propose_webhook"], "default": "check_eligibility" },
+                    "space_name": { "type": "string" },
+                    "webhook_url": { "type": "string" },
+                    "text": { "type": "string" },
+                    "page_size": { "type": "integer", "default": 20 },
+                    "account_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" },
+                    "allow_local_test_webhook": { "type": "boolean" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "google_deep_analyze",
+            namespace: "google",
+            description: "Leitura econômica MinionS em documentos Google, PDFs (até 25MB), threads Gmail, Formulários e textos extensos usando Tier 0 BM25 + cache local e escalonamento opcional para SLM local.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "source_kind": { "type": "string", "enum": ["drive_doc", "drive_pdf", "gmail_thread", "google_form", "raw_text"], "default": "raw_text" },
+                    "source_ref": { "type": "string" },
+                    "query": { "type": "string" },
+                    "text": { "type": "string" },
+                    "mode": { "type": "string", "enum": ["auto", "fast_deterministic", "force_local_slm"], "default": "auto" },
+                    "top_k": { "type": "integer", "default": 8 },
+                    "account_id": { "type": "string" },
+                    "session_id": { "type": "string" },
+                    "api_base_override": { "type": "string" }
+                },
+                "required": ["query"],
+                "additionalProperties": false
+            }),
+        },
         // inbox.* namespace (v0.9.2 BMAD Agent Inbox - 3 tools)
         ToolMeta {
             name: "inbox_list",

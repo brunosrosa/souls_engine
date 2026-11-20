@@ -209,6 +209,43 @@
                 <div class="gh-empty-state">Nenhum audio em cache detectado para este caderno.</div>
               </div>
             </div>
+
+            <!-- VINCULOS VIVOS COM O DRIVE (SINCRONIZACAO AUTOMATICA) -->
+            <div class="gh-subpanel" id="nb-sync-links-panel">
+              <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2 u-mb-2">
+                <h4 class="gh-subpanel-title u-m-0">
+                  <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-link"></use></svg>
+                  <span>Vínculos Vivos com o Drive (Sincronização Automática)</span>
+                </h4>
+                <button type="button" class="btn btn-xs btn-secondary" onclick="loadDriveNotebookSyncLinks()">
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+                  <span>Atualizar Vínculos</span>
+                </button>
+              </div>
+              <p class="u-text-muted gh-text-xs u-mb-3">
+                Sempre que você editar um Documento ou Planilha ligada a este caderno e aprovar o envio, o caderno sincroniza automaticamente.
+              </p>
+              <div class="gh-form-stack u-mb-3">
+                <div class="gh-three-col">
+                  <input id="nb-sync-drive-file-id" type="text" class="form-control u-mono" placeholder="ID do arquivo no Drive" />
+                  <input id="nb-sync-drive-name" type="text" class="form-control" placeholder="Nome amigável (ex: Spec Q4)" />
+                  <input id="nb-sync-source-id" type="text" class="form-control u-mono" placeholder="ID da fonte (opcional)" />
+                </div>
+                <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2">
+                  <label class="gh-checkbox-label">
+                    <input type="checkbox" id="nb-sync-auto-enabled" checked />
+                    <span>Sincronizar automaticamente após edições aprovadas</span>
+                  </label>
+                  <button type="button" class="btn btn-sm btn-primary" onclick="createDriveNotebookSyncLink()">
+                    <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-link"></use></svg>
+                    <span>Vincular ao Caderno</span>
+                  </button>
+                </div>
+              </div>
+              <div class="gh-list-container gh-scroll-panel-sm" id="nb-sync-links-list">
+                <div class="gh-empty-state">Nenhum vínculo vivo configurado ainda.</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
