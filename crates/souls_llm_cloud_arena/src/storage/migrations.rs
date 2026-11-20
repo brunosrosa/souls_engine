@@ -74,9 +74,43 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), CloudArenaError> {
         FOREIGN KEY (canonical_id) REFERENCES canonical_models(id) ON DELETE CASCADE
     ) STRICT;
 
+    CREATE TABLE IF NOT EXISTS hermes_usage_ledger (
+        usage_key TEXT PRIMARY KEY NOT NULL,
+        session_id TEXT NOT NULL,
+        profile_name TEXT NOT NULL,
+        source_channel TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        canonical_id TEXT NOT NULL,
+        billing_provider TEXT NOT NULL,
+        task_kind TEXT NOT NULL,
+        api_call_count INTEGER NOT NULL DEFAULT 0,
+        input_tokens INTEGER NOT NULL DEFAULT 0,
+        output_tokens INTEGER NOT NULL DEFAULT 0,
+        cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+        cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+        reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+        hermes_reported_cost_usd REAL NOT NULL DEFAULT 0.0,
+        computed_cost_usd REAL NOT NULL DEFAULT 0.0,
+        cache_saved_usd REAL NOT NULL DEFAULT 0.0,
+        first_seen_ts REAL NOT NULL,
+        last_seen_ts REAL NOT NULL,
+        synced_at TEXT NOT NULL
+    ) STRICT;
+
+    DELETE FROM daily_evaluations
+    WHERE id NOT IN (
+        SELECT MAX(id)
+        FROM daily_evaluations
+        GROUP BY canonical_id, evaluation_date, profile_task
+    );
+
     CREATE INDEX IF NOT EXISTS idx_pricing_lookup ON pricing_telemetry_snapshots(canonical_id, recorded_at);
+    CREATE INDEX IF NOT EXISTS idx_pricing_source_date ON pricing_telemetry_snapshots(source, recorded_at, canonical_id);
     CREATE INDEX IF NOT EXISTS idx_bench_lookup ON benchmark_snapshots(canonical_id, recorded_at);
     CREATE INDEX IF NOT EXISTS idx_eval_date ON daily_evaluations(evaluation_date, profile_task);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_eval_unique ON daily_evaluations(canonical_id, evaluation_date, profile_task);
+    CREATE INDEX IF NOT EXISTS idx_hermes_usage_last_seen ON hermes_usage_ledger(last_seen_ts);
+    CREATE INDEX IF NOT EXISTS idx_hermes_usage_provider ON hermes_usage_ledger(billing_provider, last_seen_ts);
     "#;
 
     for statement in ddl.split(';') {

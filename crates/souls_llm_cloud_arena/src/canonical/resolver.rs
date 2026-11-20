@@ -42,11 +42,14 @@ impl CanonicalResolver {
         self.known_canonicals.insert(norm.clone());
         self.register_alias(&norm, &norm);
 
-        // Sem prefixo de fornecedor (ex: "claude-sonnet-5.5" -> "anthropic/claude-sonnet-5.5")
-        if let Some((_, model)) = norm.split_once('/') {
-            self.register_alias(model, &norm);
-            let dashed = model.replace('.', "-").replace('_', "-");
-            self.aliases.entry(dashed).or_insert_with(|| norm.clone());
+        // Variantes :free mantêm identidade distinta e não criam aliases sem prefixo sobre modelos pagos.
+        if !norm.ends_with(":free") {
+            // Sem prefixo de fornecedor (ex: "claude-sonnet-5.5" -> "anthropic/claude-sonnet-5.5")
+            if let Some((_, model)) = norm.split_once('/') {
+                self.aliases.entry(model.to_string()).or_insert_with(|| norm.clone());
+                let dashed = model.replace('.', "-").replace('_', "-");
+                self.aliases.entry(dashed).or_insert_with(|| norm.clone());
+            }
         }
         // Com prefixo de roteador ~ (ex: "~openai/gpt-6-sol" -> "openai/gpt-6-sol")
         self.register_alias(&format!("~{}", norm), &norm);
@@ -85,6 +88,11 @@ impl CanonicalResolver {
         let without_tilde = normalized.trim_start_matches('~');
         if let Some(canonical) = self.aliases.get(without_tilde) {
             return canonical.clone();
+        }
+
+        // Modelos gratuitos (:free) jamais devem colapsar no modelo pago ao remover a tag `:free`.
+        if without_tilde.ends_with(":free") {
+            return without_tilde.to_string();
         }
 
         // 2. Normalização heurística de fallback

@@ -138,8 +138,9 @@ impl NousPortalClient {
                             continue;
                         }
 
-                        // Trata variações nitro ou free como aliases para o base
-                        if clean_id.ends_with(":nitro") || clean_id.ends_with(":free") {
+                        // Trata variações :nitro como aliases de velocidade para o base pago;
+                        // preserva :free como modelo gratuito canônico ($0.00/1M) utilizável no Hermes.
+                        if clean_id.ends_with(":nitro") {
                             let base_id = clean_id.split(':').next().unwrap_or(&clean_id).to_string();
                             aliases.push((raw_id.clone(), base_id.clone(), "nous_variant".to_string()));
                             if raw_id != clean_id {
@@ -175,7 +176,13 @@ impl NousPortalClient {
                             .map(|params| params.iter().any(|p| p == "response_format"))
                             .unwrap_or(false);
 
-                        let (prompt_m, comp_m, cread_m, cwrite_m) = extract_pricing(item.pricing.as_ref());
+                        let (mut prompt_m, mut comp_m, mut cread_m, mut cwrite_m) = extract_pricing(item.pricing.as_ref());
+                        if clean_id.ends_with(":free") {
+                            prompt_m = 0.0;
+                            comp_m = 0.0;
+                            cread_m = 0.0;
+                            cwrite_m = 0.0;
+                        }
                         let supports_caching = cread_m > 0.0;
 
                         let is_multimodal = item
@@ -193,7 +200,7 @@ impl NousPortalClient {
                             })
                             .unwrap_or(false);
 
-                        let display_name = item.name.clone().unwrap_or_else(|| clean_id.clone());
+                        let display_name = format_model_display_name(item.name.clone(), &clean_id);
                         let context_window = item.context_length.unwrap_or(128_000);
 
                         canonical_models.push(CanonicalModel {
@@ -311,8 +318,21 @@ fn extract_pricing(pricing: Option<&NousPricing>) -> (f64, f64, f64, f64) {
     }
 }
 
+/// Formata o display_name oficial preservando marcador explícito em variantes `:free`.
+pub(crate) fn format_model_display_name(raw_name: Option<String>, id: &str) -> String {
+    let base = raw_name
+        .map(|n| n.trim().to_string())
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| id.to_string());
+    if id.ends_with(":free") && !base.to_lowercase().contains("free") {
+        format!("{} (Free)", base)
+    } else {
+        base
+    }
+}
+
 /// Faz parsing flexível de campos de preço (string ou número).
-fn parse_price_value(val: Option<&serde_json::Value>) -> f64 {
+pub(crate) fn parse_price_value(val: Option<&serde_json::Value>) -> f64 {
     match val {
         Some(serde_json::Value::Number(n)) => n.as_f64().unwrap_or(0.0),
         Some(serde_json::Value::String(s)) => s.parse::<f64>().unwrap_or(0.0),
@@ -321,7 +341,7 @@ fn parse_price_value(val: Option<&serde_json::Value>) -> f64 {
 }
 
 /// Infere fornecedor (developer) e família a partir do slug do modelo.
-fn infer_developer_and_family(id: &str) -> (String, String) {
+pub(crate) fn infer_developer_and_family(id: &str) -> (String, String) {
     let clean = id.trim_start_matches('~');
     let parts: Vec<&str> = clean.split('/').collect();
     let developer = if parts.len() > 1 {

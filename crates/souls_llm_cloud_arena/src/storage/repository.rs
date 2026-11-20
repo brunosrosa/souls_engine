@@ -139,7 +139,7 @@ impl CloudArenaRepository {
         Ok(())
     }
 
-    /// Grava uma avaliação diária de Pareto.
+    /// Grava uma avaliação diária de Pareto de forma idempotente por (modelo, data, perfil).
     pub async fn record_daily_evaluation(
         &self,
         e: &DailyEvaluation,
@@ -149,7 +149,13 @@ impl CloudArenaRepository {
             INSERT INTO daily_evaluations (
                 canonical_id, evaluation_date, profile_task, composite_score,
                 task_blended_cost, roi_index, is_pareto_optimal, pareto_tag
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(canonical_id, evaluation_date, profile_task) DO UPDATE SET
+                composite_score = excluded.composite_score,
+                task_blended_cost = excluded.task_blended_cost,
+                roi_index = excluded.roi_index,
+                is_pareto_optimal = excluded.is_pareto_optimal,
+                pareto_tag = excluded.pareto_tag;
             "#,
         )
         .bind(&e.canonical_id)
@@ -230,12 +236,21 @@ impl CloudArenaRepository {
                 de.roi_index,
                 de.pareto_tag,
                 cm.context_window,
-                (SELECT source FROM pricing_telemetry_snapshots pts 
-                 WHERE pts.canonical_id = de.canonical_id 
-                 ORDER BY CASE WHEN pts.source = 'nous_portal' THEN 0 WHEN pts.source LIKE '%nous%' THEN 1 ELSE 2 END, pts.recorded_at DESC, pts.id DESC LIMIT 1) as best_provider,
+                (SELECT CASE
+                    WHEN pts.source LIKE '%nous%' THEN 'nous'
+                    WHEN pts.source LIKE '%openrouter%' THEN 'openrouter'
+                    ELSE pts.source
+                 END
+                 FROM pricing_telemetry_snapshots pts
+                 WHERE pts.canonical_id = de.canonical_id
+                   AND pts.recorded_at = de.evaluation_date
+                   AND pts.source != 'nous_portal_batch'
+                 ORDER BY CASE WHEN pts.source = 'nous_portal' THEN 0 WHEN pts.source LIKE '%nous%' THEN 1 ELSE 2 END, pts.id DESC LIMIT 1) as best_provider,
                 (SELECT throughput_tps FROM pricing_telemetry_snapshots pts 
-                 WHERE pts.canonical_id = de.canonical_id 
-                 ORDER BY CASE WHEN pts.source = 'nous_portal' THEN 0 WHEN pts.source LIKE '%nous%' THEN 1 ELSE 2 END, pts.recorded_at DESC, pts.id DESC LIMIT 1) as tps
+                 WHERE pts.canonical_id = de.canonical_id
+                   AND pts.recorded_at = de.evaluation_date
+                   AND pts.source != 'nous_portal_batch'
+                 ORDER BY CASE WHEN pts.source = 'nous_portal' THEN 0 WHEN pts.source LIKE '%nous%' THEN 1 ELSE 2 END, pts.id DESC LIMIT 1) as tps
             FROM daily_evaluations de
             JOIN canonical_models cm ON cm.id = de.canonical_id
             WHERE de.profile_task = ? AND de.evaluation_date = ?
@@ -259,7 +274,8 @@ impl CloudArenaRepository {
             let roi_index: f64 = r.get("roi_index");
             let pareto_tag_str: String = r.get("pareto_tag");
             let context_window: i64 = r.get("context_window");
-            let provider: String = r.try_get("best_provider").unwrap_or_else(|_| "openrouter".to_string());
+            let raw_provider: String = r.try_get("best_provider").unwrap_or_else(|_| "openrouter".to_string());
+            let provider = normalize_hermes_provider_slug(&raw_provider);
             let throughput_tps: Option<f64> = r.try_get("tps").ok();
 
             let entry = ChampionEntry {
@@ -315,5 +331,19 @@ impl CloudArenaRepository {
         } else {
             Ok(None)
         }
+    }
+}
+
+/// Normaliza fontes internas de snapshot para slugs de gateway aceitos pelo Hermes Agent.
+fn normalize_hermes_provider_slug(raw: &str) -> String {
+    let lower = raw.trim().to_lowercase();
+    if lower.contains("nous") {
+        "nous".to_string()
+    } else if lower.contains("openrouter") {
+        "openrouter".to_string()
+    } else if lower.is_empty() {
+        "openrouter".to_string()
+    } else {
+        lower
     }
 }

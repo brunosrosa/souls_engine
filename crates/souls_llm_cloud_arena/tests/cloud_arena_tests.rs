@@ -7,7 +7,7 @@ use souls_llm_cloud_arena::{
     },
     canonical::CanonicalResolver,
     domain::{
-        BenchmarkSnapshot, CanonicalModel, ParetoTag, PricingTelemetrySnapshot,
+        BenchmarkSnapshot, CanonicalModel, DailyEvaluation, ParetoTag, PricingTelemetrySnapshot,
         TaskProfileKind,
     },
     report::generate_markdown_report,
@@ -326,4 +326,223 @@ fn test_universal_cloud_gateway_canonical_resolution() {
     // Bedrock & Azure
     assert_eq!(resolver.resolve("bedrock/anthropic.claude-3-5-sonnet"), "anthropic/claude-3.5-sonnet");
     assert_eq!(resolver.resolve("azure/gpt-4o"), "openai/gpt-4o");
+}
+
+#[test]
+fn test_variant_and_free_preservation_in_resolver() {
+    let mut resolver = CanonicalResolver::new();
+    resolver.register_canonical("openai/gpt-6.1-sol");
+    resolver.register_canonical("openai/gpt-6.1-sol-pro");
+    resolver.register_canonical("openai/gpt-sol-latest");
+    resolver.register_canonical("deepseek/deepseek-v4-pro");
+    resolver.register_canonical("deepseek/deepseek-v4.1-flash");
+    resolver.register_canonical("qwen/qwen4-max");
+    resolver.register_canonical("qwen/qwen4-max:free");
+
+    assert_eq!(resolver.resolve("openai/gpt-6.1-sol"), "openai/gpt-6.1-sol");
+    assert_eq!(resolver.resolve("openai/gpt-6.1-sol-pro"), "openai/gpt-6.1-sol-pro");
+    assert_eq!(resolver.resolve("openai/gpt-sol-latest"), "openai/gpt-sol-latest");
+    assert_eq!(resolver.resolve("deepseek/deepseek-v4-pro"), "deepseek/deepseek-v4-pro");
+    assert_eq!(resolver.resolve("deepseek/deepseek-v4.1-flash"), "deepseek/deepseek-v4.1-flash");
+
+    // :free nunca colapsa para o modelo pago
+    assert_eq!(resolver.resolve("qwen/qwen4-max:free"), "qwen/qwen4-max:free");
+    assert_eq!(resolver.resolve("inclusionai/ling-3.2-flash:free"), "inclusionai/ling-3.2-flash:free");
+    assert_eq!(resolver.try_resolve("qwen/qwen4-max:free"), Some("qwen/qwen4-max:free".to_string()));
+    assert_eq!(resolver.try_resolve("unregistered/model:free"), None);
+}
+
+#[tokio::test]
+async fn test_hermes_usage_ledger_ddl_daily_eval_idempotency_and_canonical_provider() {
+    let pool = SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .expect("Falha ao abrir SQLite em memória");
+
+    run_migrations(&pool).await.expect("Falha nas migrations");
+    let repo = CloudArenaRepository::new(pool.clone());
+
+    // Verifica criação da tabela STRICT hermes_usage_ledger
+    sqlx::query(
+        r#"
+        INSERT INTO hermes_usage_ledger (
+            usage_key, session_id, profile_name, source_channel, model_id, canonical_id,
+            billing_provider, task_kind, api_call_count, input_tokens, output_tokens,
+            cache_read_tokens, cache_write_tokens, reasoning_tokens,
+            hermes_reported_cost_usd, computed_cost_usd, cache_saved_usd,
+            first_seen_ts, last_seen_ts, synced_at
+        ) VALUES (
+            'default::s1::deepseek/deepseek-chat::nous::', 's1', 'default', 'desktop',
+            'deepseek/deepseek-chat', 'deepseek/deepseek-chat', 'nous', '',
+            3, 12000, 1500, 8000, 0, 0, 0.0, 0.0042, 0.0018, 1791000000.0, 1791000100.0, '2026-11-20T00:00:00Z'
+        )
+        "#,
+    )
+    .execute(&pool)
+    .await
+    .expect("Tabela hermes_usage_ledger deve aceitar registros STRICT");
+
+    // Idempotência de daily_evaluations sem duplicação
+    let model = CanonicalModel {
+        id: "openai/gpt-6.1-sol-pro".to_string(),
+        display_name: "OpenAI: GPT-6.1 Sol Pro".to_string(),
+        family: "gpt".to_string(),
+        developer: "openai".to_string(),
+        context_window: 1_050_000,
+        supports_tools: true,
+        supports_structured_outputs: true,
+        supports_caching: true,
+        is_multimodal: true,
+        created_at: "2026-11-20T00:00:00Z".to_string(),
+    };
+    repo.upsert_canonical_model(&model).await.unwrap();
+    repo.record_pricing_snapshot(&PricingTelemetrySnapshot {
+        canonical_id: model.id.clone(),
+        source: "nous_portal".to_string(),
+        prompt_price_per_m: 2.0,
+        completion_price_per_m: 10.0,
+        cache_read_price_per_m: 0.2,
+        cache_write_price_per_m: 2.5,
+        ttft_ms: Some(400.0),
+        throughput_tps: Some(85.0),
+        recorded_at: "2026-11-20".to_string(),
+    })
+    .await
+    .unwrap();
+
+    let eval1 = DailyEvaluation {
+        canonical_id: model.id.clone(),
+        evaluation_date: "2026-11-20".to_string(),
+        profile_task: TaskProfileKind::Executive,
+        composite_score: 88.5,
+        task_blended_cost: 2.40,
+        roi_index: 40.0,
+        is_pareto_optimal: true,
+        pareto_tag: ParetoTag::Leader,
+    };
+    repo.record_daily_evaluation(&eval1).await.unwrap();
+    repo.record_daily_evaluation(&DailyEvaluation {
+        composite_score: 90.0,
+        ..eval1.clone()
+    })
+    .await
+    .unwrap();
+
+    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM daily_evaluations WHERE canonical_id = ?")
+        .bind(&model.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count.0, 1, "Índice único deve impedir duplicação diária");
+
+    // Champion provider deve ser slug canônico do Hermes ("nous", nunca "nous_portal")
+    let report = repo.get_champions(TaskProfileKind::Executive, "2026-11-20").await.unwrap();
+    let leader = report.quality_leader.expect("Leader esperado");
+    assert_eq!(leader.provider, "nous");
+}
+
+#[tokio::test]
+async fn test_sync_ingests_free_and_openrouter_exclusive_models() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let server_handle = tokio::spawn(async move {
+        for _ in 0..2 {
+            if let Ok((mut socket, _)) = listener.accept().await {
+                let mut buf = [0u8; 4096];
+                let n = socket.read(&mut buf).await.unwrap_or(0);
+                let req = String::from_utf8_lossy(&buf[..n]);
+                let body = if req.contains("GET /nous/models") {
+                    serde_json::json!({
+                        "data": [
+                            {
+                                "id": "meituan/longcat-2.5:free",
+                                "name": "LongCat-2.5:Free",
+                                "context_length": 1048576,
+                                "supported_parameters": ["tools", "response_format"],
+                                "pricing": {"prompt": "0", "completion": "0"}
+                            },
+                            {
+                                "id": "openai/gpt-6.1-sol-pro",
+                                "name": "OpenAI: GPT-6.1 Sol Pro",
+                                "context_length": 1050000,
+                                "supported_parameters": ["tools", "response_format"],
+                                "pricing": {"prompt": "0.000002", "completion": "0.00001"}
+                            }
+                        ]
+                    })
+                    .to_string()
+                } else {
+                    serde_json::json!({
+                        "data": [
+                            {
+                                "id": "openai/gpt-6.1-sol-pro",
+                                "name": "OpenAI: GPT-6.1 Sol Pro",
+                                "context_length": 1050000,
+                                "supported_parameters": ["tools", "response_format"],
+                                "pricing": {"prompt": "0.0000021", "completion": "0.00001"}
+                            },
+                            {
+                                "id": "openai/gpt-6.1-sol-pro:batch",
+                                "name": "OpenAI: GPT-6.1 Sol Pro (batch)",
+                                "context_length": 1050000,
+                                "pricing": {"prompt": "0.000001", "completion": "0.000005"}
+                            },
+                            {
+                                "id": "exclusive-lab/or-only-pro",
+                                "name": "Exclusive Lab: OR Only Pro",
+                                "context_length": 200000,
+                                "supported_parameters": ["tools", "response_format"],
+                                "pricing": {"prompt": "0.000001", "completion": "0.000003"}
+                            },
+                            {
+                                "id": "exclusive-lab/or-free-chat:free",
+                                "name": "Exclusive Lab: Free Chat (free)",
+                                "context_length": 128000,
+                                "supported_parameters": ["tools"],
+                                "pricing": {"prompt": "0", "completion": "0"}
+                            }
+                        ]
+                    })
+                    .to_string()
+                };
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = socket.write_all(resp.as_bytes()).await;
+            }
+        }
+    });
+
+    let pool = SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let config = CloudArenaConfig {
+        database_path: std::path::PathBuf::from(":memory:"),
+        nous_api_key: None,
+        openrouter_api_key: None,
+        nous_base_url: format!("http://{}/nous", addr),
+        openrouter_base_url: format!("http://{}/or", addr),
+        request_timeout_secs: 5,
+    };
+
+    let coordinator = CloudArenaCoordinator::from_pool(config, pool.clone());
+    let outcome = coordinator.force_sync(Some("2026-11-20")).await.unwrap();
+    server_handle.abort();
+
+    assert_eq!(outcome.models_synced, 4, "Deve incluir Nous (:free + Pro) + 2 exclusivos OpenRouter");
+
+    let ids: Vec<(String,)> = sqlx::query_as("SELECT id FROM canonical_models ORDER BY id")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+    let id_list: Vec<String> = ids.into_iter().map(|r| r.0).collect();
+    assert!(id_list.contains(&"meituan/longcat-2.5:free".to_string()));
+    assert!(id_list.contains(&"openai/gpt-6.1-sol-pro".to_string()));
+    assert!(id_list.contains(&"exclusive-lab/or-only-pro".to_string()));
+    assert!(id_list.contains(&"exclusive-lab/or-free-chat:free".to_string()));
+    assert!(!id_list.contains(&"openai/gpt-6.1-sol-pro:batch".to_string()));
 }

@@ -87,12 +87,14 @@ impl CloudArenaSync {
             warning = Some("Utilizando catálogo offline de fallback para o Nous Portal.".to_string());
         }
 
-        // 3. Registra os modelos canônicos e aliases dinamicamente no banco e no resolver
+        // 3. Registra os modelos canônicos do Nous Portal e aliases dinamicamente no banco e no resolver
         let mut registered_ids: HashSet<String> = HashSet::new();
+        let mut all_canonical_models: Vec<CanonicalModel> = Vec::new();
         for model in &nous_result.canonical_models {
             self.repo.upsert_canonical_model(model).await?;
             resolver.register_canonical(&model.id);
             registered_ids.insert(model.id.clone());
+            all_canonical_models.push(model.clone());
         }
 
         for (alias, canonical_id, source) in &nous_result.aliases {
@@ -102,7 +104,7 @@ impl CloudArenaSync {
             }
         }
 
-        // 4. Ingestão OpenRouter (Preços de mercado spot + Artificial Analysis Intelligence Index)
+        // 4. Ingestão OpenRouter (Preços de mercado spot + modelos exclusivos + Artificial Analysis)
         let openrouter_result = match self
             .openrouter
             .fetch_market_pricing_and_benchmarks(&resolver, target_date)
@@ -113,11 +115,22 @@ impl CloudArenaSync {
                 warn!("Falha ao consultar OpenRouter ({}). Continuando sem preços de mercado.", e);
                 warning = Some(format!("OpenRouter offline: {}", e));
                 crate::sources::openrouter::OpenRouterIngestionResult {
+                    canonical_models: Vec::new(),
                     pricing_snapshots: Vec::new(),
                     benchmark_snapshots: Vec::new(),
                 }
             }
         };
+
+        // 4.1 Registra modelos exclusivos da OpenRouter no catálogo e resolver sem sobrescrever modelos já vindos do Nous Portal
+        for model in &openrouter_result.canonical_models {
+            if !registered_ids.contains(&model.id) {
+                self.repo.upsert_canonical_model(model).await?;
+                resolver.register_canonical(&model.id);
+                registered_ids.insert(model.id.clone());
+                all_canonical_models.push(model.clone());
+            }
+        }
 
         // 5. Ingestão LMSYS Chatbot Arena via Hugging Face API
         let lmsys_snapshots = match BenchmarkSource::fetch_lmsys_arena(&resolver, target_date).await {
@@ -201,7 +214,7 @@ impl CloudArenaSync {
         }
 
         // 7.3 Modelos sem benchmark empírico recebem estimativa conservadora e NÃO entram em verified_models
-        for m in &nous_result.canonical_models {
+        for m in &all_canonical_models {
             bench_by_model.entry(m.id.clone()).or_insert_with(|| {
                 let baseline = estimate_baseline_score(m);
                 BenchmarkSnapshot {
@@ -243,8 +256,7 @@ impl CloudArenaSync {
         }
 
         // 9. Calcula avaliações na Fronteira de Pareto nos 9 Perfis Cognitivos (ADR-009)
-        let model_map: HashMap<&str, &CanonicalModel> = nous_result
-            .canonical_models
+        let model_map: HashMap<&str, &CanonicalModel> = all_canonical_models
             .iter()
             .map(|m| (m.id.as_str(), m))
             .collect();
@@ -284,7 +296,7 @@ impl CloudArenaSync {
 
         info!(
             "Sincronização Cloud Arena concluída: {} modelos canônicos ({} verificados), {} tarifas, {} benchmarks, {} avaliações de Pareto.",
-            nous_result.canonical_models.len(),
+            all_canonical_models.len(),
             verified_models.len(),
             total_pricing,
             total_bench,
@@ -293,7 +305,7 @@ impl CloudArenaSync {
 
         Ok(SyncOutcome {
             date: target_date.to_string(),
-            models_synced: nous_result.canonical_models.len(),
+            models_synced: all_canonical_models.len(),
             pricing_snapshots: total_pricing,
             benchmark_snapshots: total_bench,
             evaluations_calculated: total_evals,

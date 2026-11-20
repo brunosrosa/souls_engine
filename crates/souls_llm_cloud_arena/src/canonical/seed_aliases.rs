@@ -98,7 +98,6 @@ pub fn get_initial_seed_models() -> Vec<ModelSeed> {
             },
             aliases: vec![
                 ("gpt-6.1-sol-pro", "nous_portal"),
-                ("~openai/gpt-sol-latest", "nous_router"),
             ],
         },
         ModelSeed {
