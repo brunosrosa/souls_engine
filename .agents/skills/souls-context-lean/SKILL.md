@@ -27,3 +27,8 @@ Quando for necessário ler múltiplos arquivos de documentação simultaneamente
 ### 3. Compressão Semântica com `compress` e Reidratação CCR com `fill`
 * `compress(text="...")`: remove ruído sintático, comentários redundantes e espaços extras, substituindo trechos repetitivos por hashes de referência CCR na RAM.
 * `fill(hash="...")`: reidrata um bloco comprimido de volta para o texto lossless quando o modelo precisar do conteúdo integral exato.
+
+### 4. Chunking Resiliente de Corpus Denso (MinionS / BM25)
+Textos reais vindos do Google Docs, Gmail, PDFs ou transcrições frequentemente usam quebras simples (`\n`) em vez de linhas em branco (`\n\n`).
+* **Regra de Subdivisão:** Após o particionamento inicial por parágrafos (`"\n\n"`), todo bloco com mais de `350` palavras DEVE ser subdividido por janela deslizante de `300` palavras com sobreposição (`overlap`) de `50` palavras antes do ranqueamento BM25.
+* **Verificação de Sanidade:** Nunca considere um pipeline de compressão validado se `savings_pct == 0` em documentos multi-KB sem inspecionar `chunks_total`; um corpus de ~33 KB deve gerar ~15–20 chunks e economia típica de `80%+` em `<10 ms`.

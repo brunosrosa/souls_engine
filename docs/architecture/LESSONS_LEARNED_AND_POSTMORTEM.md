@@ -116,4 +116,23 @@ Ao rodar `hermes update`, pacotes binários dentro de `%LOCALAPPDATA%\hermes\too
 2. **Model Hub Evolutivo, Híbrido & Físico:** Implementação do Trio Recomendado em **Modo Evolutivo** (campeão local + próximo upgrade compatível com o teto VRAM da GPU), catálogo híbrido (curados + HF live/trending), detecção estrita `is_installed` por variante de quantização (alternando dinamicamente `⚡ Usar` vs `⬇ Baixar`), estimativa física de TPS por largura de banda e Explorer HF unificado com autocomplete (`250 ms` debounce).
 3. **Telemetria 100% Real & Feedback Visual Zero-Atrito:** Substituição integral dos stubs em `/api/v1/system/pulse` e Settings por métricas auditáveis em 4 pilares (SQLite STRICT, LadybugDB, Obsidian e NVML), com formatação concisa de hardware (`Estável (XX°C • X.X/X.X GB)`) e trava visual anti-duplo clique com pulso de confirmação no botão `Atualizar`.
 
+---
 
+## 7. POST-MORTEM & APRENDIZADOS: SMOKE TEST AO VIVO DO MINIONS, SUBPROCESSOS ZUMBIS NO WINDOWS E PULSO MULTI-CADÊNCIA (v0.9.2.1)
+
+### 7.1 Contexto & Sintomas Identificados
+Durante o teste ao vivo (*live smoke test*) de `POST /api/v1/google/analyze/minions` no daemon real `souls_engine.exe` (`127.0.0.1:9123`) sobre um documento real de ~33 KB:
+1. **Travamento >60s e Processo Zumbi (`PID 24532`):** O modo `"auto"` estourou timeout de cliente HTTP sem encerrar o filho `llama-completion.exe`, deixando um processo órfão com `Threads: {}` ativo no Windows.
+2. **Economia de Tokens `0%` no Modo Determinístico:** O modo `"fast_deterministic"` retornou `savings_pct = 0.0` porque todo o corpus de 33 KB foi tratado como um único chunk.
+3. **Condição de Corrida em Testes Paralelos:** `cargo test -p souls_server` apresentou flakiness pontual em testes que mutam `SOULS_HERMES_CONFIG_PATH` concorrentemente.
+
+### 7.2 Causa-Raiz Técnica
+1. **Subprocesso Bloqueante Sem Drenagem nem Kill:** `Tier1GenerativeEngine::execute_model_pass` (`souls_inference_runtime`) usava `cmd.output()` sem timeout nem limpeza do processo filho.
+2. **Seleção Alfabética de GGUF + Contenção WDDM:** `resolve_local_minions_model()` selecionava o primeiro `.gguf` alfabeticamente (`Arch-Function-Chat-3B-Q5_K_M.gguf`) e o despachava com `-ngl 33` na RTX 2060m sob WDDM, travando a inicialização CUDA; além disso, modelos pequenos podem ecoar placeholders de gramática GBNF (`"string"`).
+3. **Quebra Ingênua de Parágrafos:** `chunk_document` (`souls_core::research::chunker`) dividia exclusivamente por `"\n\n"`, falhando em textos densos separados apenas por `\n` simples.
+
+### 7.3 Solução Implementada & Evidências Verificadas no Host Real
+1. **Subprocessos Acotados e Imunes a Deadlock (commit `77d5fc5`):** `llama-completion.exe` passou a ser iniciado com `Stdio::null()` em `stdin`, thread OS dedicada drenando `stdout`, polling `try_wait()` sob `SOULS_LLAMA_TIMEOUT_SECS` e `child.kill()` + `child.wait()` obrigatórios no vencimento.
+2. **Worker SLMs Compactos em CPU AVX2 (`0 MB VRAM`) (commit `7e65cb1`):** Filtro explícito de `mmproj`/`vl`/`vision`/`hy-mt`/`embed`/`rerank`, ranqueamento menor-primeiro na faixa `250 MB–1,8 GB` e execução em `CpuAvx2` (`-ngl 0`). Benchmark real no Intel i9-9880H com `Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf`: carga em `170 ms`, geração a `50,5 tok/s`, análise MinionS completa em `8.596 ms` com `0 MB VRAM` e proteção contra eco GBNF (`"string"`).
+3. **Janela Deslizante para Corpus Denso (commit `090ba13`):** Subdivisão automática de blocos `>350` palavras em janelas de `300` palavras (`overlap` de `50`). No mesmo documento de 33 KB, o resultado saltou de `1` chunk / `0%` para `17` chunks / `85,9%` de economia em `5 ms` (e cache SHA-256 em `<1 ms`).
+4. **Arquitetura de Pulso Multi-Cadência & SemVer 2.0 (commits `ce122d6`, `b41ef7b`, `193fcb0`):** Padronização de heartbeat base de 5 min com multiplicadores (`1x`/`2x`/`3x`), *backoff* isolado por monitor, **Quiet Hours configurável e desligável**, auditoria pré-spec de APIs externas (evitando Jules descontinuado e bloqueando Keep/Chat em `@gmail.com`) e versão SemVer 2.0 `0.9.2+1` no Cargo.

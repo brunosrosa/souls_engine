@@ -33,3 +33,12 @@ execute({
 ### 2. Uso de Shell com Poda de Logs
 Se o comando produzir grandes volumes de log:
 * Use `shell(command="...", max_output_lines=200)` para prevenir estouro de contexto do agente.
+
+### 3. Higiene Bare-Metal de Subprocessos Rust no Windows
+Ao implementar ou auditar chamadas de subprocessos em Rust (`std::process::Command`) sob Windows 11:
+1. **Nunca use `.output()` sem teto temporal:** Se o processo filho travar (ex.: `llama-completion.exe` sob WDDM), o handle permanece preso indefinidamente e gera processos zumbis órfãos.
+2. **Padrão Canônico Anti-Deadlock:**
+   * Configure `.stdin(Stdio::null())`, `.stdout(Stdio::piped())`, `.stderr(Stdio::null())` (ou drenado).
+   * Drene `stdout` em uma `std::thread::spawn` dedicada enquanto o loop principal faz polling em `child.try_wait()` (evita *deadlock* no buffer de 4 KB de pipe do Windows).
+   * No vencimento do timeout (ex.: `SOULS_LLAMA_TIMEOUT_SECS`), execute compulsoriamente `let _ = child.kill(); let _ = child.wait();` antes de retornar erro.
+3. **Testes Determinísticos com Env Vars:** Crates cujos testes alteram variáveis globais do processo (`SOULS_HERMES_CONFIG_PATH`, `SOULS_GOOGLE_DATA_DIR`) devem ser validadas com `cargo test -p <crate> -- --test-threads=1`.

@@ -30,3 +30,10 @@ Antes de inicializar subagentes pesados locais ou batches de inferência:
 ### 2. Auditoria FinOps com `feedback`
 Para inspecionar o histórico de custos acumulados e score $E^3$:
 * `feedback(limit=20)`: extrai médias de tokens gerados, tempos até o primeiro token ($TTFT$) e custos agregados.
+
+### 3. Roteamento de Worker SLMs Compactos (CPU AVX2 vs WDDM)
+Para tarefas auxiliares locais (ex.: MinionS `google_deep_analyze`, extração JSON, resumos de chunks), NUNCA confie na ordem alfabética de `.gguf` nem force `-ngl > 0` na RTX 2060m sob WDDM:
+1. **Filtro Obrigatório de Artefatos:** Exclua modelos auxiliares/não-instruct cujo nome contenha `mmproj`, `-vl-`, `_vl_`, `vision`, `hy-mt`, `embed` ou `rerank`.
+2. **Seleção por Faixa Compacta:** Ranqueie primeiro modelos *instruct* entre `250 MB` e `1,8 GB` em ordem crescente de tamanho (ex.: `Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf` — benchmark verificado no host Intel i9 AVX2: carregamento em `170 ms`, geração a `50,5 tok/s`, `0 MB VRAM`).
+3. **Execução em CPU AVX2 (`0 MB VRAM`):** Force `ExecutionTarget::CpuAvx2` (`-ngl 0`), limite o prompt de entrada (~`4.500` caracteres) e `max_tokens` (`256`) para evitar explosão de latência.
+4. **Timeout e Guarda Semântica:** Envolva a chamada `spawn_blocking` em `tokio::time::timeout` com *fallback* gracioso para síntese determinística Tier 0, e descarte saídas que apenas ecoem placeholders de gramática GBNF (ex.: `"string"`).
