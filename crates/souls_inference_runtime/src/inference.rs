@@ -468,20 +468,28 @@ impl Tier1GenerativeEngine {
                     .stdout(std::process::Stdio::piped())
                     .stderr(std::process::Stdio::null());
 
-                let run_result = cmd.output();
+                let timeout = resolve_llama_timeout();
+                let run_result = spawn_command_with_timeout(&mut cmd, timeout);
 
                 if let Some(ref pf) = temp_prompt_file {
                     let _ = std::fs::remove_file(pf);
                 }
 
-                if let Ok(output) = run_result {
-                    if output.status.success() {
-                        let raw = String::from_utf8_lossy(&output.stdout).to_string();
+                match run_result {
+                    Ok((true, stdout_bytes, false)) => {
+                        let raw = String::from_utf8_lossy(&stdout_bytes).to_string();
                         let clean = Self::clean_cli_output(&raw, prompt);
                         if !clean.trim().is_empty() {
                             return clean;
                         }
                     }
+                    Ok((_, _, true)) => {
+                        warn!(
+                            "llama-completion timed out after {}s; killed child process",
+                            timeout.as_secs()
+                        );
+                    }
+                    _ => {}
                 }
             }
         }
@@ -877,6 +885,64 @@ impl Default for Tier1GenerativeEngine {
     }
 }
 
+/// Resolves bounded execution timeout for `llama-completion` subprocesses.
+fn resolve_llama_timeout() -> std::time::Duration {
+    let secs = std::env::var("SOULS_LLAMA_TIMEOUT_SECS")
+        .ok()
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .unwrap_or(20)
+        .clamp(1, 300);
+    std::time::Duration::from_secs(secs)
+}
+
+/// Spawns `cmd`, drains `stdout` on a dedicated reader thread to prevent pipe deadlocks,
+/// enforces `timeout`, and forcefully kills orphaned child processes if exceeded.
+fn spawn_command_with_timeout(
+    cmd: &mut std::process::Command,
+    timeout: std::time::Duration,
+) -> std::io::Result<(bool, Vec<u8>, bool)> {
+    let mut child = cmd.spawn()?;
+    let stdout_pipe = child.stdout.take();
+    let stdout_handle = std::thread::spawn(move || -> Vec<u8> {
+        use std::io::Read;
+        let mut buf = Vec::new();
+        if let Some(mut reader) = stdout_pipe {
+            let _ = reader.read_to_end(&mut buf);
+        }
+        buf
+    });
+
+    let deadline = Instant::now() + timeout;
+    let mut exited_ok = false;
+    let mut timed_out = false;
+
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                exited_ok = status.success();
+                break;
+            }
+            Ok(None) => {
+                if Instant::now() >= deadline {
+                    timed_out = true;
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(40));
+            }
+            Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                break;
+            }
+        }
+    }
+
+    let stdout_bytes = stdout_handle.join().unwrap_or_default();
+    Ok((exited_ok, stdout_bytes, timed_out))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -976,5 +1042,29 @@ mod tests {
 
         let invalid_json = json!({ "ast_node": "FunctionDef" });
         assert!(g1.validate(&invalid_json).is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_llama_runner_timeout_kills_child_process() {
+        let mut cmd = std::process::Command::new("ping");
+        cmd.args(["-n", "10", "127.0.0.1"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null());
+
+        let start = Instant::now();
+        let (ok, _out, timed_out) =
+            spawn_command_with_timeout(&mut cmd, std::time::Duration::from_millis(200))
+                .expect("spawn ping command");
+        let elapsed = start.elapsed();
+
+        assert!(!ok);
+        assert!(timed_out, "Expected child process to time out and be killed");
+        assert!(
+            elapsed < std::time::Duration::from_millis(2000),
+            "Timeout + kill took too long: {:?}",
+            elapsed
+        );
     }
 }
