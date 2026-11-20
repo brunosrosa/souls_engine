@@ -716,9 +716,9 @@ pub async fn sync_and_summarize_hermes_finops(
                     let is_local_or_free = billing_provider == "custom"
                         || model_id.to_ascii_lowercase().ends_with(":free");
                     let canonical_id = if price_map.contains_key(&model_id.to_ascii_lowercase()) {
-                        Some(model_id.clone())
+                        model_id.clone()
                     } else {
-                        None
+                        String::new()
                     };
                     let reported_cost = if act_cost > 0.0 { act_cost } else { est_cost };
 
@@ -738,7 +738,7 @@ pub async fn sync_and_summarize_hermes_finops(
                         (reported_cost, 0.0)
                     };
 
-                    let _ = sqlx::query(
+                    if let Err(err) = sqlx::query(
                         r#"
                         INSERT INTO hermes_usage_ledger (
                             usage_key, session_id, profile_name, source_channel, model_id,
@@ -786,8 +786,12 @@ pub async fn sync_and_summarize_hermes_finops(
                     .bind(last_seen)
                     .bind(&now_rfc)
                     .execute(&mut *tx)
-                    .await;
-                    synced_rows += 1;
+                    .await
+                    {
+                        tracing::warn!(usage_key = %usage_key, error = %err, "Falha ao persistir registro em hermes_usage_ledger");
+                    } else {
+                        synced_rows += 1;
+                    }
                 }
                 let _ = tx.commit().await;
             }

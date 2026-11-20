@@ -5190,6 +5190,12 @@ fallback_providers:
             .execute(&h_pool)
             .await
             .unwrap();
+        sqlx::query("INSERT INTO session_model_usage VALUES ('sess-fallback-1', 'Qwen3.5-4B-Uncensored-HauhauCS', 'llamacpp', '', 'chat_completions', 'chat', 1, 12000, 1000, 30000, 0, 0, 0.0, 0.0, 'unknown', 'none', ?, ?)")
+            .bind(now_s - 500.0)
+            .bind(now_s - 50.0)
+            .execute(&h_pool)
+            .await
+            .unwrap();
         h_pool.close().await;
 
         // Verify FinOps ledger sync against an isolated mock vault DB
@@ -5218,9 +5224,11 @@ fallback_providers:
         let finops_summary = crate::routes::cloud::sync_and_summarize_hermes_finops(&hermes_dir, &mock_vault)
             .await
             .unwrap();
-        assert_eq!(finops_summary["synced_rows"], 1);
+        assert_eq!(finops_summary["synced_rows"], 2);
         assert!(finops_summary["periods"]["today"]["spend_usd"].as_f64().unwrap() > 0.09);
+        assert!(finops_summary["periods"]["today"]["zero_cost_tokens"].as_i64().unwrap() == 13000);
         assert!(finops_summary["periods"]["all_time"]["cache_saved_usd"].as_f64().unwrap() > 0.07);
+        assert_eq!(finops_summary["by_gateway"].as_array().unwrap().len(), 2);
 
         // Save/restore SOULS_HERMES_CONFIG_PATH around HTTP router verification
         let prev_env = std::env::var("SOULS_HERMES_CONFIG_PATH").ok();
