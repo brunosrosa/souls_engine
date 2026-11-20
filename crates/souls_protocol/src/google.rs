@@ -72,6 +72,8 @@ pub struct GoogleAccountProfileDto {
     pub has_nlm_bridge: bool,
     pub secondary_web_opt_in: bool,
     pub write_whitelist_ids: Vec<String>,
+    #[serde(default)]
+    pub missing_recommended_scopes: Vec<String>,
     pub updated_at: i64,
 }
 
@@ -355,7 +357,368 @@ pub struct GemProfileDto {
 }
 
 // ============================================================================
-// 5. Unit Tests (JSON Round-Trip Verification)
+// 5. Proactive Pulse & Multi-Cadence DTOs
+// ============================================================================
+
+/// Urgency level assigned to a proactive pulse alert.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PulseUrgency {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// Source domain category for a proactive pulse alert.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PulseCategory {
+    EmailVip,
+    CommuteAlert,
+    OAuthExpiry,
+    DriveSync,
+    FormResponse,
+    AppsScript,
+    System,
+}
+
+/// User-configurable settings for the multi-cadence Google proactive pulse.
+///
+/// Never contains plaintext webhook URLs or bot tokens.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PulseConfigDto {
+    pub enabled: bool,
+    pub interval_mins: u32,
+    pub gmail_tick_multiplier: u32,
+    pub forms_sync_tick_multiplier: u32,
+    pub quiet_hours_enabled: bool,
+    pub quiet_hours_start: u8,
+    pub quiet_hours_end: u8,
+    pub browser_notifications_enabled: bool,
+    pub hermes_prefetch_enabled: bool,
+    pub external_cooldown_mins: u32,
+    pub monitor_gmail_vip: bool,
+    pub monitor_commute: bool,
+    pub monitor_oauth_health: bool,
+    pub monitor_drive_sync: bool,
+    pub monitor_forms: bool,
+    pub vip_senders: Vec<String>,
+    pub monitored_form_ids: Vec<String>,
+    pub commute_origin: Option<String>,
+    pub webhook_configured: bool,
+    pub telegram_configured: bool,
+}
+
+impl Default for PulseConfigDto {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            interval_mins: 5,
+            gmail_tick_multiplier: 2,
+            forms_sync_tick_multiplier: 3,
+            quiet_hours_enabled: true,
+            quiet_hours_start: 22,
+            quiet_hours_end: 8,
+            browser_notifications_enabled: false,
+            hermes_prefetch_enabled: true,
+            external_cooldown_mins: 30,
+            monitor_gmail_vip: true,
+            monitor_commute: true,
+            monitor_oauth_health: true,
+            monitor_drive_sync: true,
+            monitor_forms: true,
+            vip_senders: Vec::new(),
+            monitored_form_ids: Vec::new(),
+            commute_origin: None,
+            webhook_configured: false,
+            telegram_configured: false,
+        }
+    }
+}
+
+/// Per-monitor health and isolated backoff telemetry.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PulseMonitorHealthDto {
+    pub monitor: String,
+    pub cadence_mins: u32,
+    pub consecutive_errors: u32,
+    pub backoff_until: Option<i64>,
+    pub last_ok_at: Option<i64>,
+    pub last_error: Option<String>,
+}
+
+/// Single proactive pulse alert event emitted by a Google monitor.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PulseEventDto {
+    pub id: String,
+    pub created_at: i64,
+    pub category: PulseCategory,
+    pub urgency: PulseUrgency,
+    pub title: String,
+    pub summary: String,
+    pub account_id: Option<String>,
+    pub source_ref: Option<String>,
+    pub action_hint: Option<String>,
+    pub acknowledged: bool,
+    pub delivered_to_hermes: bool,
+    pub delivered_externally: bool,
+    pub dedup_key: String,
+}
+
+/// Consolidated runtime snapshot of the Google proactive pulse daemon state.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PulseSnapshotDto {
+    pub config: PulseConfigDto,
+    pub running: bool,
+    pub in_quiet_hours: bool,
+    pub tick_count: u64,
+    pub last_run_at: Option<i64>,
+    pub next_run_at: Option<i64>,
+    pub unacked_count: usize,
+    pub recent_events: Vec<PulseEventDto>,
+    pub monitors: Vec<PulseMonitorHealthDto>,
+    pub sync_links_count: usize,
+}
+
+// ============================================================================
+// 6. Google Apps Script 24/7 DTOs
+// ============================================================================
+
+/// Source file entry inside a Google Apps Script project.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppsScriptFileDto {
+    pub name: String,
+    pub file_type: String,
+    pub source: String,
+}
+
+/// Metadata summary for a Google Apps Script project.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppsScriptProjectDto {
+    pub script_id: String,
+    pub title: String,
+    pub parent_id: Option<String>,
+    pub create_time: Option<String>,
+    pub update_time: Option<String>,
+    pub editor_url: Option<String>,
+}
+
+/// Published deployment record for a Google Apps Script project.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppsScriptDeploymentDto {
+    pub deployment_id: String,
+    pub version_number: Option<i64>,
+    pub description: Option<String>,
+    pub entry_points: Vec<String>,
+    pub update_time: Option<String>,
+}
+
+/// Execution process record returned by the Apps Script Processes API.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppsScriptProcessDto {
+    pub project_name: Option<String>,
+    pub function_name: String,
+    pub process_type: String,
+    pub process_status: String,
+    pub start_time: Option<String>,
+    pub duration: Option<String>,
+}
+
+/// Curated 24/7 cloud automation template for Google Apps Script.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppsScriptTemplateDto {
+    pub id: String,
+    pub name: String,
+    pub tagline: String,
+    pub description: String,
+    pub schedule_label: String,
+    pub required_scopes: Vec<String>,
+    pub human_permissions: Vec<String>,
+    pub files: Vec<AppsScriptFileDto>,
+}
+
+/// Static security or manifest risk finding in Apps Script source files.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppsScriptRiskWarningDto {
+    pub severity: String,
+    pub code: String,
+    pub message: String,
+}
+
+/// Static security scan result and human-readable permissions card for Apps Script.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppsScriptStaticScanDto {
+    pub safe_score: u8,
+    pub manifest_json_valid: bool,
+    pub hardcoded_secrets_detected: bool,
+    pub external_urls_detected: Vec<String>,
+    pub destructive_calls_detected: Vec<String>,
+    pub human_permission_summary: Vec<String>,
+    pub warnings: Vec<AppsScriptRiskWarningDto>,
+}
+
+// ============================================================================
+// 7. Google Forms & Google Chat DTOs
+// ============================================================================
+
+/// Question item definition extracted from a Google Form.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleFormQuestionDto {
+    pub item_id: String,
+    pub title: String,
+    pub question_type: String,
+    pub required: bool,
+    pub options: Vec<String>,
+}
+
+/// Metadata and question schema summary of a Google Form.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleFormSummaryDto {
+    pub form_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub responder_uri: Option<String>,
+    pub linked_sheet_id: Option<String>,
+    pub questions: Vec<GoogleFormQuestionDto>,
+}
+
+/// Individual submitted response entry from Google Forms.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleFormResponseDto {
+    pub response_id: String,
+    pub create_time: String,
+    pub last_submitted_time: String,
+    pub respondent_email: Option<String>,
+    pub answers: Vec<(String, String)>,
+}
+
+/// Frequency count and percentage share for a choice option in a form question.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleFormOptionCountDto {
+    pub option: String,
+    pub count: usize,
+    pub percentage: f32,
+}
+
+/// Aggregated statistics for a single Google Form question.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleFormQuestionStatsDto {
+    pub question_title: String,
+    pub total_answers: usize,
+    pub option_counts: Vec<GoogleFormOptionCountDto>,
+    pub sample_text_answers: Vec<String>,
+}
+
+/// Consolidated analytical statistics and Markdown report for a Google Form.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleFormStatsDto {
+    pub form_id: String,
+    pub form_title: String,
+    pub total_responses: usize,
+    pub latest_submission_at: Option<String>,
+    pub question_stats: Vec<GoogleFormQuestionStatsDto>,
+    pub markdown_summary: String,
+}
+
+/// Google Chat space metadata (Workspace accounts only).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleChatSpaceDto {
+    pub name: String,
+    pub display_name: String,
+    pub space_type: String,
+    pub threaded: bool,
+}
+
+/// Message item inside a Google Chat space.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleChatMessageDto {
+    pub name: String,
+    pub sender_name: Option<String>,
+    pub text: String,
+    pub create_time: Option<String>,
+    pub thread_name: Option<String>,
+}
+
+// ============================================================================
+// 8. MinionS Google Deep Analyze DTOs
+// ============================================================================
+
+/// Execution mode for MinionS low-cost Google corpus decomposition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MinionAnalyzeMode {
+    Auto,
+    FastDeterministic,
+    ForceLocalSlm,
+}
+
+/// Source corpus classification for MinionS Google analysis.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MinionGoogleSourceKind {
+    DriveDoc,
+    DrivePdf,
+    GmailThread,
+    GoogleForm,
+    RawText,
+}
+
+/// Ranked relevant passage excerpt selected by MinionS BM25/local-SLM pass.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MinionPassageHitDto {
+    pub chunk_index: usize,
+    pub score: f32,
+    pub citation: String,
+    pub excerpt: String,
+}
+
+/// Complete MinionS deep-analysis result with token-savings and device telemetry.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MinionGoogleAnalysisDto {
+    pub source_kind: MinionGoogleSourceKind,
+    pub source_ref: String,
+    pub query: String,
+    pub mode_requested: MinionAnalyzeMode,
+    pub mode_used: String,
+    pub executed_device: String,
+    pub cache_hit: bool,
+    pub raw_chars: usize,
+    pub retained_chars: usize,
+    pub estimated_token_savings_pct: f32,
+    pub chunks_total: usize,
+    pub chunks_selected: usize,
+    pub executive_summary: String,
+    pub top_passages: Vec<MinionPassageHitDto>,
+    pub factual_claims: Vec<Value>,
+    pub statistical_data: Vec<Value>,
+    pub direct_quotes: Vec<String>,
+    pub markdown_export: String,
+    pub latency_ms: u64,
+}
+
+// ============================================================================
+// 9. Drive <-> NotebookLM Auto-Sync DTOs
+// ============================================================================
+
+/// Persistent synchronization link between a Drive file and a NotebookLM source.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DriveNotebookSyncLinkDto {
+    pub id: String,
+    pub notebook_id: String,
+    pub notebook_title: String,
+    pub source_id: String,
+    pub drive_file_id: String,
+    pub drive_file_name: String,
+    pub auto_sync_enabled: bool,
+    pub last_checked_at: Option<i64>,
+    pub last_synced_at: Option<i64>,
+    pub last_status: String,
+}
+
+// ============================================================================
+// 10. Unit Tests (JSON Round-Trip Verification)
 // ============================================================================
 
 #[cfg(test)]
@@ -495,9 +858,31 @@ mod tests {
             has_nlm_bridge: true,
             secondary_web_opt_in: false,
             write_whitelist_ids: vec!["sheet_123".to_string()],
+            missing_recommended_scopes: vec![
+                "https://www.googleapis.com/auth/script.projects".to_string(),
+            ],
             updated_at: 1_763_517_972,
         };
         assert_json_round_trip(&profile);
+
+        let legacy_json = json!({
+            "account_id": "acct_legacy",
+            "label": "Legacy",
+            "email": "legacy@gmail.com",
+            "kind": "personal_gmail",
+            "policy": "read_only",
+            "is_primary": false,
+            "has_oauth": true,
+            "has_refresh_token": true,
+            "oauth_testing_mode_warning": false,
+            "has_nlm_bridge": false,
+            "secondary_web_opt_in": false,
+            "write_whitelist_ids": [],
+            "updated_at": 1_763_517_000
+        });
+        let legacy_profile: GoogleAccountProfileDto =
+            serde_json::from_value(legacy_json).expect("deserialize legacy profile without missing_recommended_scopes");
+        assert!(legacy_profile.missing_recommended_scopes.is_empty());
 
         let cli_probe = GoogleCliProbeDto {
             name: "gws".to_string(),
@@ -753,5 +1138,347 @@ mod tests {
             remote_gem_id: None,
         };
         assert_json_round_trip(&gem);
+    }
+
+    #[test]
+    fn test_pulse_dtos_defaults_and_round_trip() {
+        assert_eq!(
+            serde_json::to_string(&PulseUrgency::Low).unwrap(),
+            "\"low\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseUrgency::Medium).unwrap(),
+            "\"medium\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseUrgency::High).unwrap(),
+            "\"high\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseUrgency::Critical).unwrap(),
+            "\"critical\""
+        );
+
+        assert_eq!(
+            serde_json::to_string(&PulseCategory::EmailVip).unwrap(),
+            "\"email_vip\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseCategory::CommuteAlert).unwrap(),
+            "\"commute_alert\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseCategory::OAuthExpiry).unwrap(),
+            "\"o_auth_expiry\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseCategory::DriveSync).unwrap(),
+            "\"drive_sync\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseCategory::FormResponse).unwrap(),
+            "\"form_response\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseCategory::AppsScript).unwrap(),
+            "\"apps_script\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PulseCategory::System).unwrap(),
+            "\"system\""
+        );
+
+        let default_cfg = PulseConfigDto::default();
+        assert!(default_cfg.enabled);
+        assert_eq!(default_cfg.interval_mins, 5);
+        assert_eq!(default_cfg.gmail_tick_multiplier, 2);
+        assert_eq!(default_cfg.forms_sync_tick_multiplier, 3);
+        assert!(default_cfg.quiet_hours_enabled);
+        assert_eq!(default_cfg.quiet_hours_start, 22);
+        assert_eq!(default_cfg.quiet_hours_end, 8);
+        assert!(!default_cfg.browser_notifications_enabled);
+        assert!(default_cfg.hermes_prefetch_enabled);
+        assert_eq!(default_cfg.external_cooldown_mins, 30);
+        assert!(default_cfg.monitor_gmail_vip);
+        assert!(default_cfg.monitor_commute);
+        assert!(default_cfg.monitor_oauth_health);
+        assert!(default_cfg.monitor_drive_sync);
+        assert!(default_cfg.monitor_forms);
+        assert!(default_cfg.vip_senders.is_empty());
+        assert!(default_cfg.monitored_form_ids.is_empty());
+        assert!(default_cfg.commute_origin.is_none());
+        assert!(!default_cfg.webhook_configured);
+        assert!(!default_cfg.telegram_configured);
+        assert_json_round_trip(&default_cfg);
+
+        // Partial JSON deserialization must inherit PulseConfigDto::default()
+        let partial_json = json!({
+            "quiet_hours_enabled": false,
+            "interval_mins": 10,
+            "vip_senders": ["vip@example.com"]
+        });
+        let parsed_partial: PulseConfigDto =
+            serde_json::from_value(partial_json).expect("deserialize partial PulseConfigDto");
+        assert!(!parsed_partial.quiet_hours_enabled);
+        assert_eq!(parsed_partial.interval_mins, 10);
+        assert_eq!(parsed_partial.vip_senders, vec!["vip@example.com"]);
+        assert_eq!(parsed_partial.quiet_hours_start, 22);
+        assert_eq!(parsed_partial.quiet_hours_end, 8);
+        assert!(parsed_partial.enabled);
+        assert!(parsed_partial.hermes_prefetch_enabled);
+
+        let monitor = PulseMonitorHealthDto {
+            monitor: "gmail_vip".to_string(),
+            cadence_mins: 10,
+            consecutive_errors: 0,
+            backoff_until: None,
+            last_ok_at: Some(1_763_600_000),
+            last_error: None,
+        };
+        assert_json_round_trip(&monitor);
+
+        let event = PulseEventDto {
+            id: "pulse_001".to_string(),
+            created_at: 1_763_600_010,
+            category: PulseCategory::EmailVip,
+            urgency: PulseUrgency::High,
+            title: "VIP message from Alice".to_string(),
+            summary: "Urgent contract sign-off requested".to_string(),
+            account_id: Some("acct_primary".to_string()),
+            source_ref: Some("thread_xyz".to_string()),
+            action_hint: Some("open_gmail_triage".to_string()),
+            acknowledged: false,
+            delivered_to_hermes: true,
+            delivered_externally: false,
+            dedup_key: "gmail:thread_xyz".to_string(),
+        };
+        assert_json_round_trip(&event);
+
+        let snapshot = PulseSnapshotDto {
+            config: parsed_partial,
+            running: true,
+            in_quiet_hours: false,
+            tick_count: 12,
+            last_run_at: Some(1_763_600_010),
+            next_run_at: Some(1_763_600_310),
+            unacked_count: 1,
+            recent_events: vec![event],
+            monitors: vec![monitor],
+            sync_links_count: 2,
+        };
+        assert_json_round_trip(&snapshot);
+    }
+
+    #[test]
+    fn test_apps_script_dtos_round_trip() {
+        let file = AppsScriptFileDto {
+            name: "Code".to_string(),
+            file_type: "SERVER_JS".to_string(),
+            source: "function runHourly() { Logger.log('ok'); }".to_string(),
+        };
+        assert_json_round_trip(&file);
+
+        let project = AppsScriptProjectDto {
+            script_id: "1AbCdEfGhIjKlMnOp".to_string(),
+            title: "Inbox VIP Archiver".to_string(),
+            parent_id: None,
+            create_time: Some("2026-11-19T10:00:00Z".to_string()),
+            update_time: Some("2026-11-20T00:00:00Z".to_string()),
+            editor_url: Some("https://script.google.com/d/1AbCdEfGhIjKlMnOp/edit".to_string()),
+        };
+        assert_json_round_trip(&project);
+
+        let deployment = AppsScriptDeploymentDto {
+            deployment_id: "AKfycbx_test".to_string(),
+            version_number: Some(3),
+            description: Some("Production trigger".to_string()),
+            entry_points: vec!["EXECUTION_API".to_string()],
+            update_time: Some("2026-11-20T00:05:00Z".to_string()),
+        };
+        assert_json_round_trip(&deployment);
+
+        let process = AppsScriptProcessDto {
+            project_name: Some("Inbox VIP Archiver".to_string()),
+            function_name: "runHourly".to_string(),
+            process_type: "TIME_DRIVEN".to_string(),
+            process_status: "COMPLETED".to_string(),
+            start_time: Some("2026-11-20T00:00:00Z".to_string()),
+            duration: Some("0.842s".to_string()),
+        };
+        assert_json_round_trip(&process);
+
+        let template = AppsScriptTemplateDto {
+            id: "tpl_gmail_digest".to_string(),
+            name: "Resumo Matinal de E-mails".to_string(),
+            tagline: "Envia resumo diario automatico".to_string(),
+            description: "Agrupa mensagens prioritarias em rascunho.".to_string(),
+            schedule_label: "Diario as 07:30".to_string(),
+            required_scopes: vec!["https://www.googleapis.com/auth/gmail.readonly".to_string()],
+            human_permissions: vec!["Ler titulos de e-mails no Gmail".to_string()],
+            files: vec![file],
+        };
+        assert_json_round_trip(&template);
+
+        let warning = AppsScriptRiskWarningDto {
+            severity: "medium".to_string(),
+            code: "EXTERNAL_FETCH".to_string(),
+            message: "Calls external endpoint via UrlFetchApp".to_string(),
+        };
+        assert_json_round_trip(&warning);
+
+        let scan = AppsScriptStaticScanDto {
+            safe_score: 85,
+            manifest_json_valid: true,
+            hardcoded_secrets_detected: false,
+            external_urls_detected: vec!["https://api.example.com/hook".to_string()],
+            destructive_calls_detected: vec![],
+            human_permission_summary: vec!["Enviar requisicoes HTTP externas".to_string()],
+            warnings: vec![warning],
+        };
+        assert_json_round_trip(&scan);
+    }
+
+    #[test]
+    fn test_forms_and_chat_dtos_round_trip() {
+        let question = GoogleFormQuestionDto {
+            item_id: "q_1".to_string(),
+            title: "Satisfacao geral".to_string(),
+            question_type: "MULTIPLE_CHOICE".to_string(),
+            required: true,
+            options: vec!["Excelente".to_string(), "Bom".to_string()],
+        };
+        assert_json_round_trip(&question);
+
+        let form_summary = GoogleFormSummaryDto {
+            form_id: "form_123".to_string(),
+            title: "Pesquisa de Produto".to_string(),
+            description: Some("Feedback trimestral".to_string()),
+            responder_uri: Some("https://docs.google.com/forms/d/e/form_123/viewform".to_string()),
+            linked_sheet_id: Some("sheet_999".to_string()),
+            questions: vec![question],
+        };
+        assert_json_round_trip(&form_summary);
+
+        let form_response = GoogleFormResponseDto {
+            response_id: "resp_1".to_string(),
+            create_time: "2026-11-19T18:00:00Z".to_string(),
+            last_submitted_time: "2026-11-19T18:01:00Z".to_string(),
+            respondent_email: Some("client@example.com".to_string()),
+            answers: vec![("Satisfacao geral".to_string(), "Excelente".to_string())],
+        };
+        assert_json_round_trip(&form_response);
+
+        let opt_count = GoogleFormOptionCountDto {
+            option: "Excelente".to_string(),
+            count: 8,
+            percentage: 80.0,
+        };
+        assert_json_round_trip(&opt_count);
+
+        let q_stats = GoogleFormQuestionStatsDto {
+            question_title: "Satisfacao geral".to_string(),
+            total_answers: 10,
+            option_counts: vec![opt_count],
+            sample_text_answers: vec!["Muito rapido".to_string()],
+        };
+        assert_json_round_trip(&q_stats);
+
+        let form_stats = GoogleFormStatsDto {
+            form_id: "form_123".to_string(),
+            form_title: "Pesquisa de Produto".to_string(),
+            total_responses: 10,
+            latest_submission_at: Some("2026-11-19T18:01:00Z".to_string()),
+            question_stats: vec![q_stats],
+            markdown_summary: "# Pesquisa de Produto\n- Total: 10".to_string(),
+        };
+        assert_json_round_trip(&form_stats);
+
+        let space = GoogleChatSpaceDto {
+            name: "spaces/AAAA123".to_string(),
+            display_name: "Engenharia".to_string(),
+            space_type: "ROOM".to_string(),
+            threaded: true,
+        };
+        assert_json_round_trip(&space);
+
+        let msg = GoogleChatMessageDto {
+            name: "spaces/AAAA123/messages/m1".to_string(),
+            sender_name: Some("Alice".to_string()),
+            text: "Deploy concluido.".to_string(),
+            create_time: Some("2026-11-19T23:50:00Z".to_string()),
+            thread_name: Some("spaces/AAAA123/threads/t1".to_string()),
+        };
+        assert_json_round_trip(&msg);
+    }
+
+    #[test]
+    fn test_minions_and_sync_link_dtos_round_trip() {
+        assert_eq!(
+            serde_json::to_string(&MinionAnalyzeMode::Auto).unwrap(),
+            "\"auto\""
+        );
+        assert_eq!(
+            serde_json::to_string(&MinionAnalyzeMode::FastDeterministic).unwrap(),
+            "\"fast_deterministic\""
+        );
+        assert_eq!(
+            serde_json::to_string(&MinionAnalyzeMode::ForceLocalSlm).unwrap(),
+            "\"force_local_slm\""
+        );
+
+        for kind in [
+            MinionGoogleSourceKind::DriveDoc,
+            MinionGoogleSourceKind::DrivePdf,
+            MinionGoogleSourceKind::GmailThread,
+            MinionGoogleSourceKind::GoogleForm,
+            MinionGoogleSourceKind::RawText,
+        ] {
+            assert_json_round_trip(&kind);
+        }
+
+        let passage = MinionPassageHitDto {
+            chunk_index: 4,
+            score: 12.75,
+            citation: "chunk#4".to_string(),
+            excerpt: "Clausula de SLA exige uptime de 99.9%.".to_string(),
+        };
+        assert_json_round_trip(&passage);
+
+        let analysis = MinionGoogleAnalysisDto {
+            source_kind: MinionGoogleSourceKind::DrivePdf,
+            source_ref: "file_pdf_42".to_string(),
+            query: "Quais sao os termos de SLA e multas?".to_string(),
+            mode_requested: MinionAnalyzeMode::Auto,
+            mode_used: "fast_deterministic".to_string(),
+            executed_device: "cpu_bm25".to_string(),
+            cache_hit: false,
+            raw_chars: 120_000,
+            retained_chars: 4_800,
+            estimated_token_savings_pct: 96.0,
+            chunks_total: 60,
+            chunks_selected: 5,
+            executive_summary: "SLA de 99.9% com multa de 5%.".to_string(),
+            top_passages: vec![passage],
+            factual_claims: vec![json!({ "claim": "Uptime >= 99.9%" })],
+            statistical_data: vec![json!({ "metric": "sla", "value": 99.9 })],
+            direct_quotes: vec!["Clausula de SLA exige uptime de 99.9%.".to_string()],
+            markdown_export: "# Analise MinionS\n- Economia: 96%".to_string(),
+            latency_ms: 4,
+        };
+        assert_json_round_trip(&analysis);
+
+        let sync_link = DriveNotebookSyncLinkDto {
+            id: "sync_1".to_string(),
+            notebook_id: "nb_1".to_string(),
+            notebook_title: "Contratos 2026".to_string(),
+            source_id: "src_9".to_string(),
+            drive_file_id: "drv_9".to_string(),
+            drive_file_name: "Contrato_Master.docx".to_string(),
+            auto_sync_enabled: true,
+            last_checked_at: Some(1_763_600_000),
+            last_synced_at: Some(1_763_599_500),
+            last_status: "synced".to_string(),
+        };
+        assert_json_round_trip(&sync_link);
     }
 }
