@@ -68,7 +68,23 @@
           <div class="u-text-muted u-mt-1 u-s-dbc8d1" id="quick-apply-provider-tag">--</div>
         </div>
 
+        <!-- SELEÇÃO DE GATEWAY & VERIFICAÇÃO REAL DE CREDENCIAL (ALFÂNDEGA) -->
         <div class="modal-field">
+          <label class="modal-label">Gateway de Conexão no Hermes Desktop:</label>
+          <div class="gateway-selector-grid" id="quick-apply-gateway-list">
+            <!-- Preenchido via openQuickApplyModal() -->
+          </div>
+          <div class="inline-auth-helper is-hidden" id="quick-apply-auth-helper">
+            <!-- Facilitador inline 1-clique caso gateway escolhido esteja sem login ou chave -->
+          </div>
+        </div>
+
+        <!-- SIMULADOR DE IMPACTO FINANCEIRO MENSAL -->
+        <div class="finops-impact-box is-hidden" id="quick-apply-cost-impact">
+          <!-- Calculado com volume real do Hermes -->
+        </div>
+
+        <div class="modal-field u-mt-3">
           <label class="modal-label">Onde você deseja aplicar este modelo?</label>
           <div class="u-d-flex u-flex-col u-gap-10p u-mt-2">
             <!-- Opção 1: Master Brain -->
@@ -76,7 +92,7 @@
               <input class="u-mt-3p" type="radio" name="apply-target" value="master" checked onchange="toggleApplyTarget()">
               <div>
                 <strong class="u-text-white u-s-933a8e"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-crown"></use></svg> Master Brain Geral (Hermes Chat Mestre)</strong>
-                <div class="u-text-muted u-mt-2p u-s-dbc8d1">Atualiza o <code>config.yaml</code> do Hermes Agent para usar este modelo no chat diário interativo.</div>
+                <div class="u-text-muted u-mt-2p u-s-dbc8d1">Atualiza o <code>config.yaml</code> e favoritos do Hermes Desktop para usar este modelo e gateway canônico.</div>
               </div>
             </label>
             <!-- Opção 2: Domínio Canônico de Subagente -->
@@ -84,7 +100,7 @@
               <input class="u-mt-3p" type="radio" name="apply-target" value="domain" onchange="toggleApplyTarget()">
               <div>
                 <strong class="u-text-white u-s-933a8e"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-bot"></use></svg> Domínio Canônico de Subagente (Especialidade)</strong>
-                <div class="u-text-muted u-mt-2p u-s-dbc8d1">Atribui o modelo à especialidade de subagente delegada pelo ParetoBandit (Coding, Reasoning, Fast, etc.).</div>
+                <div class="u-text-muted u-mt-2p u-s-dbc8d1">Atribui o modelo à especialidade de subagente delegada (Coding, Reasoning, Fast, etc.).</div>
               </div>
             </label>
             <!-- Opção 3: Perfil Customizado -->
@@ -94,6 +110,24 @@
                 <strong class="u-text-white u-s-933a8e"><svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-plus"></use></svg> Perfil de Trabalho Customizado</strong>
                 <div class="u-text-muted u-mt-2p u-s-dbc8d1">Associa ou cria um perfil personalizado de subagente no Souls Engine.</div>
               </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Opções de sincronização no Hermes quando aplicado no Master Brain -->
+        <div class="modal-field u-mt-2" id="quick-apply-hermes-options">
+          <div class="u-d-flex u-flex-col u-gap-2">
+            <label class="col-toggle-item">
+              <input type="checkbox" id="quick-apply-all-profiles" checked>
+              Aplicar também nos sub-perfis do Hermes (financas, saude, hiperfocos)
+            </label>
+            <label class="col-toggle-item">
+              <input type="checkbox" id="quick-apply-unpin-sessions" checked>
+              Destravar conversas abertas presas em modelo local de emergência
+            </label>
+            <label class="col-toggle-item is-hidden" id="quick-apply-force-row">
+              <input type="checkbox" id="quick-apply-force-unauth">
+              Aplicar mesmo sem credencial validada (pode acionar fallback local ao enviar mensagem)
             </label>
           </div>
         </div>

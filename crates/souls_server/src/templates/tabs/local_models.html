@@ -412,33 +412,131 @@
           </div>
         </div>
 
-        <!-- CARD DE DESTAQUE: MODELO ATIVO NO HERMES (MASTER BRAIN) -->
-        <div class="u-mb-4 u-d-flex u-items-center u-justify-between u-flex-wrap u-gap-3 u-s-440459" id="active-hermes-brain-banner">
-          <div class="u-d-flex u-items-center u-gap-3">
-            <div class="u-d-flex u-items-center u-justify-center u-shrink-0 u-s-82eb64">
-              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-target"></use></svg>
+        <!-- CARD DE DESTAQUE & ALFÂNDEGA: MODELO ATIVO NO HERMES (MASTER BRAIN) -->
+        <div class="customs-banner-shell u-mb-4" id="active-hermes-brain-banner">
+          <div class="u-d-flex u-items-center u-justify-between u-flex-wrap u-gap-3">
+            <div class="u-d-flex u-items-center u-gap-3">
+              <div class="u-d-flex u-items-center u-justify-center u-shrink-0 u-s-82eb64">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-target"></use></svg>
+              </div>
+              <div>
+                <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+                  <span class="badge badge-active-hermes">
+                    <svg class="ui-icon icon-xs u-text-emerald" aria-hidden="true"><use href="#icon-check-circle"></use></svg> Cérebro Mestre Ativo no Hermes
+                  </span>
+                  <span class="u-text-muted u-mono u-s-dbc8d1" id="active-hermes-preset-tag">Preset: Frontier Balanced</span>
+                  <span class="customs-status-pill customs-pill-ok" id="active-hermes-customs-badge">Alfândega: Verificando...</span>
+                </div>
+                <div class="u-d-flex u-items-center u-gap-2 u-mt-3p u-flex-wrap">
+                  <span class="u-fw-700 u-text-white u-mono u-s-90c8f9" id="active-hermes-model-name">deepseek/deepseek-chat</span>
+                  <span class="badge badge-nous" id="active-hermes-provider-tag"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Nous Portal</span>
+                  <span class="customs-status-pill customs-pill-warn is-hidden" id="active-hermes-moa-badge">MoA Ativo</span>
+                  <span class="customs-status-pill customs-pill-crit is-hidden" id="active-hermes-stuck-badge">0 sessões presas em local</span>
+                </div>
+                <div class="u-text-slate u-mt-2p u-s-dbc8d1" id="active-hermes-meta-line">
+                  Verificando credenciais e rota canônica do Hermes Desktop...
+                </div>
+              </div>
             </div>
-            <div>
-              <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
-                <span class="badge badge-active-hermes">
-                  <svg class="ui-icon icon-xs u-text-emerald" aria-hidden="true"><use href="#icon-check-circle"></use></svg> Cérebro Mestre Ativo no Hermes
-                </span>
-                <span class="u-text-muted u-mono u-s-dbc8d1" id="active-hermes-preset-tag">Preset: Frontier Balanced</span>
-              </div>
-              <div class="u-d-flex u-items-center u-gap-2 u-mt-3p u-flex-wrap">
-                <span class="u-fw-700 u-text-white u-mono u-s-90c8f9" id="active-hermes-model-name">deepseek/deepseek-chat</span>
-                <span class="badge badge-nous" id="active-hermes-provider-tag"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Nous Portal (Crédito Ativo)</span>
-              </div>
-              <div class="u-text-slate u-mt-2p u-s-dbc8d1" id="active-hermes-meta-line">
-                Tarifa: $0.14 / 1M tokens • Janela: 64k tokens • Provedor Padrão: Nous Portal API
-              </div>
+            <div class="u-d-flex u-items-center u-gap-2 u-flex-wrap">
+              <button class="btn btn-sm is-hidden" id="btn-hermes-repair-customs" onclick="repairHermesCustoms(true, true, null)" title="Corrige slugs inválidos, base_url e destrava conversas presas no modelo local">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-wrench"></use></svg> Reparar Alfândega
+              </button>
+              <button class="btn btn-sm is-hidden" id="btn-hermes-moa-toggle" onclick="toggleHermesMoa()" title="Alterna o modo paralelo multi-modelo (MoA) nos perfis do Hermes">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-layers"></use></svg> <span id="btn-hermes-moa-label">Desligar MoA</span>
+              </button>
+              <button class="btn btn-sm is-hidden" id="btn-hermes-reconnect-nous" onclick="toggleCustomsAuthDrawer(true)" title="Reconectar Nous Portal OAuth ou salvar chave de outro gateway">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-key"></use></svg> Reconectar / Chaves
+              </button>
+              <button class="btn btn-purple u-fw-600 u-s-bf9e47" onclick="openQuickApplyModal(window.currentHermesMasterModel || 'deepseek/deepseek-chat', window.currentHermesMasterProvider || 'nous', false)">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Trocar Cérebro no Hermes
+              </button>
             </div>
           </div>
-          <div class="u-d-flex u-items-center u-gap-2">
-            <button class="btn btn-purple u-fw-600 u-s-bf9e47" onclick="openQuickApplyModal(window.currentHermesMasterModel || 'deepseek/deepseek-chat', 'nous', false)">
-              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-settings"></use></svg> Trocar Cérebro no Hermes
+
+          <div class="u-text-slate u-s-dbc8d1 is-hidden" id="active-hermes-customs-alert"></div>
+
+          <!-- FACILITADOR INLINE 1-CLIQUE DA ALFÂNDEGA -->
+          <div class="customs-inline-panel is-hidden" id="customs-inline-key-drawer">
+            <button type="button" class="btn btn-sm btn-cyan" onclick="launchHermesOauthLogin('nous')">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-terminal"></use></svg> Abrir Login Nous (hermes login)
+            </button>
+            <a class="btn btn-sm" href="https://portal.nousresearch.com" target="_blank" rel="noopener noreferrer">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-link"></use></svg> Abrir Portal Nous
+            </a>
+            <span class="u-text-muted">|</span>
+            <select id="customs-inline-key-env" class="setting-input u-s-3b3384" onchange="updateCustomsInlineKeyLink()">
+              <option value="OPENROUTER_API_KEY">OpenRouter (OPENROUTER_API_KEY)</option>
+              <option value="DEEPSEEK_API_KEY">DeepSeek (DEEPSEEK_API_KEY)</option>
+              <option value="ANTHROPIC_API_KEY">Anthropic (ANTHROPIC_API_KEY)</option>
+              <option value="OPENAI_API_KEY">OpenAI (OPENAI_API_KEY)</option>
+              <option value="GEMINI_API_KEY">Google Gemini (GEMINI_API_KEY)</option>
+              <option value="ZAI_API_KEY">Z.AI / GLM (ZAI_API_KEY)</option>
+              <option value="XAI_API_KEY">xAI Grok (XAI_API_KEY)</option>
+              <option value="NVIDIA_API_KEY">NVIDIA NIM (NVIDIA_API_KEY)</option>
+            </select>
+            <input type="password" id="customs-inline-key-val" class="setting-input u-flex-1" placeholder="Cole sua chave de API para ativar imediatamente no Hermes..." />
+            <button type="button" class="btn btn-sm btn-cyan" onclick="saveCustomsInlineCredential()">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg> Salvar e Ativar
+            </button>
+            <a id="customs-inline-key-link" class="btn btn-sm" href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener noreferrer">Obter chave oficial</a>
+          </div>
+
+          <details class="lab-drawer">
+            <summary class="u-text-muted u-pointer u-s-dbc8d1">Inspecionar perfis do Hermes (default, financas, saude, hiperfocos) e fallbacks</summary>
+            <div class="customs-profiles-grid" id="customs-profiles-audit-grid">
+              <div class="u-text-muted u-s-dbc8d1">Aguardando auditoria da Alfândega...</div>
+            </div>
+          </details>
+        </div>
+
+        <!-- LEDGER FINOPS REAL DO HERMES -->
+        <div class="finops-hermes-card u-mb-4" id="cloud-hermes-finops-strip">
+          <div class="u-d-flex u-items-center u-justify-between u-flex-wrap u-gap-2 u-mb-2">
+            <div class="u-d-flex u-items-center u-gap-2">
+              <svg class="ui-icon icon-sm u-text-emerald" aria-hidden="true"><use href="#icon-dollar"></use></svg>
+              <strong class="u-text-white u-s-604fde">Histórico de Gastos &amp; FinOps Real do Hermes</strong>
+              <span class="u-text-muted u-s-dbc8d1" id="hermes-finops-sync-meta">Sincronizando sessões reais...</span>
+            </div>
+            <button type="button" class="btn btn-sm" onclick="fetchCloudFinops(true)">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg> Atualizar Ledger
             </button>
           </div>
+          <div class="finops-hermes-grid">
+            <div class="finops-kpi-tile">
+              <div class="finops-kpi-label">Gasto Hoje (24h)</div>
+              <div class="finops-kpi-val u-text-cyan" id="hfin-today-spend">$0.000</div>
+              <div class="finops-kpi-sub" id="hfin-today-tokens">0 tokens</div>
+            </div>
+            <div class="finops-kpi-tile">
+              <div class="finops-kpi-label">Últimos 7 Dias</div>
+              <div class="finops-kpi-val" id="hfin-7d-spend">$0.000</div>
+              <div class="finops-kpi-sub" id="hfin-7d-sessions">0 sessões</div>
+            </div>
+            <div class="finops-kpi-tile">
+              <div class="finops-kpi-label">Últimos 30 Dias</div>
+              <div class="finops-kpi-val" id="hfin-30d-spend">$0.000</div>
+              <div class="finops-kpi-sub" id="hfin-30d-tokens">0 tokens</div>
+            </div>
+            <div class="finops-kpi-tile">
+              <div class="finops-kpi-label">Projeção Mensal</div>
+              <div class="finops-kpi-val u-text-amber" id="hfin-projected-month">$0.00 / mês</div>
+              <div class="finops-kpi-sub" id="hfin-alltime-spend">Acumulado: $0.000</div>
+            </div>
+            <div class="finops-kpi-tile">
+              <div class="finops-kpi-label">Economia Prompt Cache</div>
+              <div class="finops-kpi-val u-text-emerald" id="hfin-cache-saved">$0.000</div>
+              <div class="finops-kpi-sub" id="hfin-cache-hit">0% cache hit • 0 tokens $0</div>
+            </div>
+          </div>
+          <details class="lab-drawer u-mt-2">
+            <summary class="u-text-muted u-pointer u-s-dbc8d1">Ver detalhamento financeiro por Gateway, Modelo, Perfil e Sessões Recentes</summary>
+            <div class="finops-breakdown-grid" id="hermes-finops-breakdown">
+              <div class="finops-mini-box" id="hfin-by-gateway">Carregando gateways...</div>
+              <div class="finops-mini-box" id="hfin-by-model">Carregando modelos...</div>
+              <div class="finops-mini-box" id="hfin-recent-sessions">Carregando sessões recentes...</div>
+            </div>
+          </details>
         </div>
 
         <!-- BARRA DE CONTROLE: PERFIS COGNITIVOS + FILTRO DE PROVEDOR -->
@@ -455,18 +553,20 @@
             <button class="profile-pill" data-profile="curation" onclick="selectProfile('curation')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-book"></use></svg> Curation / Wiki</button>
           </div>
 
-          <!-- FILTRO DINÂMICO DE PROVEDOR CLOUD COM FOCO NO NOUS -->
-          <div class="u-d-flex u-items-center u-gap-6p u-s-b6a4dd">
-            <span class="u-text-muted u-uppercase u-mono u-fw-700 u-s-269495">Foco Provedor:</span>
-            <div class="filter-pills-group" id="cloud-provider-filter-pills">
-              <button class="filter-provider-btn active" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> Todos (Mercado)</button>
-              <button class="filter-provider-btn" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Nous Portal (Crédito Hermes)</button>
-              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-git-branch"></use></svg> OpenRouter (API)</button>
+          <!-- FILTRO DINÂMICO DE GATEWAY (NOUS PORTAL DEFAULT -> OPENROUTER -> ATIVAS -> GRATUITOS -> TODOS) -->
+          <div class="u-d-flex u-items-center u-gap-6p u-flex-wrap u-s-b6a4dd">
+            <span class="u-text-muted u-uppercase u-mono u-fw-700 u-s-269495">Gateway:</span>
+            <div class="filter-pills-group u-flex-wrap" id="cloud-provider-filter-pills">
+              <button class="filter-provider-btn active" id="btn-cloud-prov-nous" onclick="setCloudProviderFilter('nous')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-brain"></use></svg> Nous Portal</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-openrouter" onclick="setCloudProviderFilter('openrouter')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-git-branch"></use></svg> OpenRouter</button>
+              <span class="u-d-contents" id="cloud-dynamic-gateways-pills"></span>
+              <button class="filter-provider-btn" id="btn-cloud-prov-free" onclick="setCloudProviderFilter('free')"><svg class="ui-icon icon-xs u-text-emerald" aria-hidden="true"><use href="#icon-sparkles"></use></svg> Gratuitos ($0)</button>
+              <button class="filter-provider-btn" id="btn-cloud-prov-all" onclick="setCloudProviderFilter('all')"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> Todos (Mercado)</button>
             </div>
           </div>
         </div>
 
-        <!-- BARRA DE FILTROS SECUNDÁRIOS: MODALIDADE + FABRICANTE + CÉREBRO HERMES -->
+        <!-- BARRA DE FILTROS SECUNDÁRIOS: MODALIDADE + FABRICANTE + RESET + CÉREBRO HERMES -->
         <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-2 u-mb-10p u-s-9492d0">
           <div class="u-d-flex u-items-center u-gap-14p u-flex-wrap">
             <!-- Modalidade -->
@@ -479,7 +579,7 @@
                 <button class="filter-provider-btn" id="btn-cloud-modal-audio" onclick="setCloudModalityFilter('audio')" title="Modelos conversacionais de voz nativa e baixa latência (Realtime)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-mic"></use></svg> Áudio &amp; Voz</button>
                 <button class="filter-provider-btn" id="btn-cloud-modal-video" onclick="setCloudModalityFilter('video')" title="Modelos de compreensão temporal e dinâmica de múltiplos frames"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-play"></use></svg> Vídeo &amp; Temporal</button>
                 <button class="filter-provider-btn" id="btn-cloud-modal-world" onclick="setCloudModalityFilter('world')" title="Modelos de simulação física, ambientes espaciais e mundos 3D interativos"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-globe"></use></svg> World Models</button>
-                <button class="filter-provider-btn" id="btn-cloud-modal-decision" onclick="setCloudModalityFilter('decision')" title="Motores de decisão não-autorregressivos e tipagem estrita (estilo Jev / TypeSafe AI)"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Decisão (Jev)</button>
+                <button class="filter-provider-btn" id="btn-cloud-modal-decision" onclick="setCloudModalityFilter('decision')" title="Motores de decisão não-autorregressivos e tipagem estrita"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg> Decisão Estruturada</button>
                 <button class="filter-provider-btn" id="btn-cloud-modal-text" onclick="setCloudModalityFilter('text')" title="Modelos focados puramente em texto, código e raciocínio simbólico"><svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-file-text"></use></svg> Texto Puro</button>
               </div>
             </div>
@@ -487,7 +587,7 @@
             <!-- Fabricantes Multi-Select -->
             <div class="u-relative">
               <button class="btn u-text-slate u-d-flex u-items-center u-gap-6p u-pointer u-s-0ed328" id="btn-mfg-toggle" onclick="toggleMfgMenu(event)">
-                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-users"></use></svg> Fabricante: <span class="u-text-cyan u-fw-600" id="mfg-filter-label">Todos</span> ▾
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-users"></use></svg> Fabricante: <span class="u-text-cyan u-fw-600" id="mfg-filter-label">Todos</span>
               </button>
               <div class="u-s-0bee13 is-hidden" id="mfg-dropdown-menu">
                 <div class="u-d-flex u-justify-between u-items-center u-mb-2 u-s-6eff99">
@@ -503,6 +603,10 @@
                 </div>
               </div>
             </div>
+
+            <button type="button" class="filter-reset-btn" id="btn-cloud-reset-filters" onclick="resetCloudFilters()" title="Restaura filtro padrão (Nous Portal), modalidade Todas, fabricantes Todos e limpa a busca">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-refresh"></use></svg> Limpar Filtros
+            </button>
           </div>
 
           <!-- Indicador Cérebro Hermes Ativo -->
@@ -584,6 +688,7 @@
 
             <select class="u-text-slate u-s-b88634" id="cloud-sort-select" onchange="handleCloudSort(this.value)">
               <option value="score_desc">Maior Score Geral</option>
+              <option value="status_asc">Status Pareto</option>
               <option value="roi_desc">Maior Custo-Benefício (ROI)</option>
               <option value="nous_asc">Menor Tarifa Nous ($/1M)</option>
               <option value="or_asc">Menor Tarifa OpenRouter ($/1M)</option>

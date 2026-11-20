@@ -118,9 +118,17 @@
               </span>
               <input type="text" id="input-model-override" class="setting-input u-flex-1 u-s-8a5002" placeholder="Ex: deepseek/deepseek-chat ou anthropic/claude-3-7-sonnet">
               <select id="select-provider-override" class="setting-input u-s-3b3384">
-                <option value="nous">nous</option>
-                <option value="custom">custom</option>
-                <option value="openrouter">openrouter</option>
+                <option value="nous">Nous Portal (nous)</option>
+                <option value="openrouter">OpenRouter (openrouter)</option>
+                <option value="deepseek">DeepSeek Direct (deepseek)</option>
+                <option value="anthropic">Anthropic Direct (anthropic)</option>
+                <option value="openai-api">OpenAI Direct (openai-api)</option>
+                <option value="gemini">Google Gemini (gemini)</option>
+                <option value="zai">Z.AI / GLM (zai)</option>
+                <option value="xai">xAI Grok (xai)</option>
+                <option value="alibaba">Qwen Cloud (alibaba)</option>
+                <option value="copilot">GitHub Copilot (copilot)</option>
+                <option value="custom">Silício Local (custom)</option>
               </select>
               <button class="btn" onclick="applyCustomModelOverride()">
                 <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-target"></use></svg> Aplicar Modelo Manual

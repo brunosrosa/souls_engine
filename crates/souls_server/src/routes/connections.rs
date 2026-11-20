@@ -413,14 +413,19 @@ pub fn save_credential_atomic(key: &str, value: &str) -> Result<String, String> 
     let souls_env_file = data_dir.join("credentials.env");
     let _ = upsert_env_line(&souls_env_file, clean_key, clean_val);
 
-    // 3. Persiste em %LOCALAPPDATA%\hermes\.env se diretório existir
-    let local_appdata = std::env::var("LOCALAPPDATA")
-        .or_else(|_| std::env::var("USERPROFILE").map(|p| format!(r"{}\AppData\Local", p)))
-        .unwrap_or_else(|_| "C:\\Users\\Default\\AppData\\Local".to_string());
-    let hermes_dir = std::path::PathBuf::from(local_appdata).join("hermes");
+    // 3. Persiste em %LOCALAPPDATA%\hermes\.env (e sub-perfis com .env próprio) se existir
+    let hermes_dir = crate::profiles::resolve_hermes_root_dir(None);
     if hermes_dir.exists() {
         let hermes_env_file = hermes_dir.join(".env");
         let _ = upsert_env_line(&hermes_env_file, clean_key, clean_val);
+        if let Ok(entries) = std::fs::read_dir(hermes_dir.join("profiles")) {
+            for entry in entries.flatten() {
+                let prof_env = entry.path().join(".env");
+                if prof_env.exists() {
+                    let _ = upsert_env_line(&prof_env, clean_key, clean_val);
+                }
+            }
+        }
     }
 
     let masked = mask_api_key(clean_val).unwrap_or_else(|| "********".to_string());

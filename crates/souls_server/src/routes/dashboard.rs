@@ -650,6 +650,16 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
         .find(|p| p.is_active)
         .or_else(|| profiles.first());
 
+    let hermes_root = crate::profiles::resolve_hermes_root_dir(None);
+    let hermes_customs =
+        crate::profiles::inspect_hermes_customs_with_options(&hermes_root, true).await;
+    let hermes_finops = crate::routes::cloud::sync_and_summarize_hermes_finops(
+        &hermes_root,
+        &souls_llm_cloud_arena::resolve_heuristic_vault_path(),
+    )
+    .await
+    .ok();
+
     let mut master_brain = read_hermes_master_brain();
     if let Value::Object(ref mut mb_map) = master_brain {
         if let Some(ap) = active_profile {
@@ -657,6 +667,19 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
             mb_map.insert("active_profile_name".to_string(), json!(ap.name));
         }
         mb_map.insert("profiles_count".to_string(), json!(profiles.len()));
+        mb_map.insert("customs_health".to_string(), json!(hermes_customs.health));
+        mb_map.insert(
+            "provider_authenticated".to_string(),
+            json!(hermes_customs.active_provider_authenticated),
+        );
+        mb_map.insert(
+            "stuck_fallback_sessions".to_string(),
+            json!(hermes_customs.total_stuck_fallback_sessions),
+        );
+        mb_map.insert(
+            "moa_enabled".to_string(),
+            json!(hermes_customs.moa_enabled_anywhere),
+        );
     }
 
     let (last_task, last_model) = if let Some(row) = latest_subagent_row {
@@ -733,6 +756,8 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
         "local_share_pct": local_share_pct,
         "context_savings_pct": context_savings_pct,
         "finops_periods": finops_periods,
+        "hermes_finops": hermes_finops,
+        "hermes_customs": hermes_customs,
         "local_models_count": local_models_count,
         "benchmarked_models_count": vault_summary.benchmarked_count,
         "total_arena_runs": vault_summary.total_arena_runs,
@@ -769,12 +794,14 @@ pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
 /// Helper function to inspect the active master brain configured in Hermes Agent config.yaml.
 pub fn read_hermes_master_brain() -> Value {
     let cfg_path = crate::profiles::resolve_hermes_config_path();
-    let (model_name, provider) = crate::profiles::read_active_hermes_model(&cfg_path);
+    let (model_name, raw_provider) = crate::profiles::read_active_hermes_model(&cfg_path);
+    let route = crate::profiles::normalize_hermes_provider_and_route(&raw_provider, &model_name);
+    let provider = route.provider;
 
     let is_local = provider == "custom"
-        || provider == "local"
+        || provider == "lmstudio"
         || model_name.contains("gguf")
-        || model_name.contains("qwen")
+        || (!model_name.contains('/') && model_name.to_ascii_lowercase().contains("qwen"))
         || model_name.contains("smollm")
         || model_name.contains("hermes-3-llama");
     let target_type = if is_local {
@@ -786,6 +813,7 @@ pub fn read_hermes_master_brain() -> Value {
     json!({
         "model": model_name,
         "provider": provider,
+        "raw_provider": raw_provider,
         "is_local": is_local,
         "target_type": target_type,
         "status": "Online / Configurado",
@@ -1680,6 +1708,14 @@ pub struct HermesPresetRequest {
     pub preset_id: String,
     pub model_override: Option<String>,
     pub provider: Option<String>,
+    #[serde(default)]
+    pub apply_all_profiles: Option<bool>,
+    #[serde(default)]
+    pub unpin_fallback_sessions: Option<bool>,
+    #[serde(default)]
+    pub strict_auth: Option<bool>,
+    #[serde(default)]
+    pub force_unauthenticated: Option<bool>,
 }
 
 /// Applies a recommended operational preset to the Hermes Agent `config.yaml`.
@@ -1692,7 +1728,7 @@ pub async fn hermes_preset_handler(
     let profiles = crate::profiles::get_available_profiles(&state).await;
 
     // Resolve target model and provider based on preset_id, dynamic champions or manual override
-    let (target_model, target_provider) = if let Some(ref custom_model) = payload.model_override {
+    let (target_model, raw_provider) = if let Some(ref custom_model) = payload.model_override {
         (
             custom_model.as_str(),
             payload.provider.as_deref().unwrap_or("nous"),
@@ -1737,13 +1773,46 @@ pub async fn hermes_preset_handler(
         }
     };
 
-    match crate::profiles::apply_profile_to_hermes(
+    let route = crate::profiles::normalize_hermes_provider_and_route(raw_provider, target_model);
+    let hermes_root = crate::profiles::resolve_hermes_root_dir(None);
+    let customs = crate::profiles::inspect_hermes_customs_with_options(&hermes_root, true).await;
+    let gw_info = customs.gateways.iter().find(|g| g.id == route.provider);
+
+    if payload.strict_auth.unwrap_or(false) && !payload.force_unauthenticated.unwrap_or(false) {
+        if let Some(gw) = gw_info {
+            if !gw.authenticated && gw.id != "custom" {
+                return Json(json!({
+                    "status": "auth_required",
+                    "requires_auth": true,
+                    "provider": route.provider,
+                    "gateway": gw,
+                    "message": format!(
+                        "O gateway '{}' precisa estar autenticado no Hermes antes de aplicar para evitar queda no fallback local.",
+                        gw.label
+                    )
+                }));
+            }
+        }
+    }
+
+    match crate::profiles::apply_profile_to_hermes_extended(
         Some(&payload.preset_id),
         target_model,
-        Some(target_provider),
+        Some(&route.provider),
         None,
-    ) {
-        Ok(res) => Json(json!(res)),
+        payload.apply_all_profiles.unwrap_or(false),
+        payload.unpin_fallback_sessions.unwrap_or(true),
+    )
+    .await
+    {
+        Ok(mut res) => {
+            if let Some(gw) = gw_info {
+                if !gw.authenticated && gw.id != "custom" {
+                    res.warnings.push(gw.detail.clone());
+                }
+            }
+            Json(json!(res))
+        }
         Err(err) => Json(json!({
             "status": "error",
             "message": err,

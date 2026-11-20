@@ -5114,4 +5114,202 @@ model:
 
         let _ = std::fs::remove_dir_all(&test_dir);
     }
+
+    #[tokio::test]
+    async fn test_v0922_cloud_arena_customs_finops_and_ui_integrity() {
+        let dir = std::env::temp_dir().join(format!(
+            "souls_v0922_srv_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let hermes_dir = dir.join("hermes");
+        let prof_dir = hermes_dir.join("profiles").join("financas");
+        std::fs::create_dir_all(&prof_dir).unwrap();
+
+        let bad_cfg = r#"model:
+  default: "openai/gpt-6.1-sol-pro"
+  provider: "nous_portal"
+  base_url: 'https://inference-api.nousresearch.com/v1'
+  api_mode: chat_completions
+moa:
+  enabled: true
+fallback_providers:
+  - provider: llamacpp
+    model: Qwen3.5-4B-Uncensored-Q4_K_M
+"#;
+        let root_cfg = hermes_dir.join("config.yaml");
+        std::fs::write(&root_cfg, bad_cfg).unwrap();
+        std::fs::write(prof_dir.join("config.yaml"), bad_cfg).unwrap();
+        std::fs::write(
+            hermes_dir.join("auth.json"),
+            r#"{"providers":{"nous":{"last_auth_error":{"relogin_required":true,"code":"invalid_grant"}}},"credential_pool":{"nous":[]}}"#,
+        )
+        .unwrap();
+        std::fs::write(hermes_dir.join(".env"), "OPENROUTER_API_KEY=sk-or-v1-unit-test\n").unwrap();
+        std::fs::write(
+            hermes_dir.join("ui-preferences.json"),
+            r#"{"version":1,"generation":"g1","revision":1,"values":{"hermes.desktop.favorite-models":"[]"}}"#,
+        )
+        .unwrap();
+
+        // Mock Hermes state.db with trapped session + session_model_usage row
+        let state_db = hermes_dir.join("state.db");
+        let h_opts = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&state_db)
+            .create_if_missing(true);
+        let h_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(h_opts)
+            .await
+            .unwrap();
+        sqlx::query("CREATE TABLE sessions (id TEXT PRIMARY KEY, source TEXT, model TEXT, model_config TEXT, billing_provider TEXT, profile_name TEXT, started_at REAL, last_activity_at REAL, archived INTEGER DEFAULT 0)")
+            .execute(&h_pool)
+            .await
+            .unwrap();
+        sqlx::query("CREATE TABLE session_model_usage (session_id TEXT, model TEXT, billing_provider TEXT, billing_base_url TEXT, billing_mode TEXT, task TEXT, api_call_count INTEGER, input_tokens INTEGER, output_tokens INTEGER, cache_read_tokens INTEGER, cache_write_tokens INTEGER, reasoning_tokens INTEGER, estimated_cost_usd REAL, actual_cost_usd REAL, cost_status TEXT, cost_source TEXT, first_seen REAL, last_seen REAL)")
+            .execute(&h_pool)
+            .await
+            .unwrap();
+        let now_s = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f64();
+        sqlx::query("INSERT INTO sessions (id, source, model, model_config, billing_provider, profile_name, started_at, last_activity_at, archived) VALUES (?, 'desktop', 'Qwen3.5-4B', ?, 'llamacpp', 'default', ?, ?, 0)")
+            .bind("sess-fallback-1")
+            .bind(r#"{"gateway_runtime":{"provider":"llamacpp","model":"Qwen3.5-4B","fallback_active":true}}"#)
+            .bind(now_s - 600.0)
+            .bind(now_s - 100.0)
+            .execute(&h_pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO session_model_usage VALUES ('sess-fallback-1', 'deepseek/deepseek-v4-pro-0813', 'openrouter', '', 'chat_completions', '', 3, 25000, 4000, 50000, 0, 0, 0.0, 0.0, 'unknown', 'none', ?, ?)")
+            .bind(now_s - 600.0)
+            .bind(now_s - 100.0)
+            .execute(&h_pool)
+            .await
+            .unwrap();
+        h_pool.close().await;
+
+        // Verify FinOps ledger sync against an isolated mock vault DB
+        let mock_vault = dir.join("mock_vault.db");
+        let v_opts = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&mock_vault)
+            .create_if_missing(true);
+        let v_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(v_opts)
+            .await
+            .unwrap();
+        souls_llm_cloud_arena::storage::migrations::run_migrations(&v_pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO canonical_models (id, display_name, family, developer, context_window, supports_tools, supports_structured_outputs, supports_caching, is_multimodal, created_at) VALUES ('deepseek/deepseek-v4-pro-0813', 'DeepSeek V4 Pro', 'deepseek', 'deepseek', 131072, 1, 1, 1, 0, '2026-11-20T00:00:00Z')")
+            .execute(&v_pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO pricing_telemetry_snapshots (canonical_id, source, prompt_price_per_m, completion_price_per_m, cache_read_price_per_m, recorded_at) VALUES ('deepseek/deepseek-v4-pro-0813', 'openrouter_market', 2.0, 8.0, 0.4, '2026-11-20')")
+            .execute(&v_pool)
+            .await
+            .unwrap();
+        v_pool.close().await;
+
+        let finops_summary = crate::routes::cloud::sync_and_summarize_hermes_finops(&hermes_dir, &mock_vault)
+            .await
+            .unwrap();
+        assert_eq!(finops_summary["synced_rows"], 1);
+        assert!(finops_summary["periods"]["today"]["spend_usd"].as_f64().unwrap() > 0.09);
+        assert!(finops_summary["periods"]["all_time"]["cache_saved_usd"].as_f64().unwrap() > 0.07);
+
+        // Save/restore SOULS_HERMES_CONFIG_PATH around HTTP router verification
+        let prev_env = std::env::var("SOULS_HERMES_CONFIG_PATH").ok();
+        std::env::set_var("SOULS_HERMES_CONFIG_PATH", root_cfg.to_string_lossy().to_string());
+
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. GET /api/v1/hermes/customs
+        let resp_customs = app
+            .clone()
+            .oneshot(Request::builder().uri("/api/v1/hermes/customs").method("GET").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(resp_customs.status(), StatusCode::OK);
+        let customs_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_customs.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(customs_json["status"], "success");
+        assert_eq!(customs_json["health"], "critical");
+        assert_eq!(customs_json["needs_config_repair"], true);
+
+        // 2. strict_auth blocks unauthenticated Nous switch cleanly
+        let resp_blocked = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/settings/hermes-preset")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"preset_id":"frontier_balanced","model_override":"openai/gpt-6.1-sol-pro","provider":"nous_portal","strict_auth":true}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_blocked.status(), StatusCode::OK);
+        let blocked_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_blocked.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(blocked_json["status"], "auth_required");
+
+        // 3. Authenticated OpenRouter switch updates config.yaml, sub-profiles, favorites, and unpins fallback session
+        let resp_ok = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/settings/hermes-preset")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"preset_id":"frontier_balanced","model_override":"openai/gpt-6.1-sol-pro","provider":"openrouter_market","apply_all_profiles":true,"unpin_fallback_sessions":true,"strict_auth":true}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_ok.status(), StatusCode::OK);
+        let ok_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_ok.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(ok_json["status"], "success");
+        assert_eq!(ok_json["provider"], "openrouter");
+        assert_eq!(ok_json["unpinned_sessions"], 1);
+        assert_eq!(ok_json["favorites_synced"], true);
+
+        if let Some(prev) = prev_env {
+            std::env::set_var("SOULS_HERMES_CONFIG_PATH", prev);
+        } else {
+            std::env::remove_var("SOULS_HERMES_CONFIG_PATH");
+        }
+
+        // 4. UI integrity on Cloud Arena & Modals & Brain templates (zero style="...", zero raw emojis)
+        let templates = [
+            ("local_models.html", include_str!("templates/tabs/local_models.html")),
+            ("modals.html", include_str!("templates/components/modals.html")),
+            ("subtab_brain.html", include_str!("templates/settings/subtab_brain.html")),
+        ];
+        for (name, tpl) in templates {
+            assert!(!tpl.contains("style=\""), "Template {name} contains inline style=");
+            assert!(
+                !tpl.chars().any(|ch| {
+                    let cp = ch as u32;
+                    (0x1F300..=0x1FAFF).contains(&cp)
+                        || matches!(ch, '⚠' | '✅' | '❌' | '⚡' | '✨' | '⏳' | '🔒' | '✏' | '⚙')
+                }),
+                "Template {name} contains raw emoji"
+            );
+        }
+        let html_local = include_str!("templates/tabs/local_models.html");
+        assert!(html_local.contains("btn-cloud-prov-nous"));
+        assert!(html_local.contains("btn-cloud-prov-free"));
+        assert!(html_local.contains("btn-cloud-reset-filters"));
+        assert!(html_local.contains("cloud-hermes-finops-strip"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

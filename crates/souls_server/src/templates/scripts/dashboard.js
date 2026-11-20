@@ -2,9 +2,12 @@
     let activePreset = 'balanced';
     let currentProfile = 'executive';
     let cloudChampionsData = [];
-    let currentCloudProviderFilter = 'all';
+    let currentCloudProviderFilter = 'nous';
     let cachedCloudRankedModels = [];
+    window.cachedHermesCustoms = null;
+    window.cachedHermesFinops = null;
     window.currentHermesMasterModel = 'deepseek/deepseek-chat';
+    window.currentHermesMasterProvider = 'nous';
 
     // HELPER CANÔNICO DE ÍCONES VETORIAIS SVG DUOTONE (v0.9.1-B)
     const EMOJI_TO_ICON_MAP = {
@@ -840,13 +843,43 @@
         if (vEl) vEl.innerText = `(${data.version})`;
       }
 
-      // Atualiza Master Brain & Topbar Preset
+      // Atualiza Master Brain, Alfândega & Topbar Preset
+      if (data.hermes_customs) {
+        window.cachedHermesCustoms = data.hermes_customs;
+        if (typeof applyCustomsBannerData === 'function') {
+          applyCustomsBannerData(data.hermes_customs);
+        }
+      }
+      if (data.hermes_finops) {
+        window.cachedHermesFinops = data.hermes_finops;
+        if (typeof renderCloudFinopsData === 'function') {
+          renderCloudFinopsData(data.hermes_finops);
+        }
+      }
       if (data.master_brain) {
         const mb = data.master_brain;
+        window.currentHermesMasterModel = mb.model || window.currentHermesMasterModel;
+        window.currentHermesMasterProvider = mb.provider || 'nous';
         document.getElementById('top-brain-name').innerText = mb.model;
         document.getElementById('hero-brain-model').innerText = mb.model;
-        document.getElementById('hero-brain-provider').innerText = mb.provider;
+        document.getElementById('hero-brain-provider').innerText = humanizeProviderName(mb.provider);
         document.getElementById('hero-brain-ctx').innerText = (mb.context_window || 64000).toLocaleString() + ' tokens';
+
+        const heroStatusEl = document.getElementById('hero-brain-status');
+        if (heroStatusEl) {
+          const authOk = mb.provider_authenticated !== false;
+          const stuckCount = Number(mb.stuck_fallback_sessions || 0);
+          if (!authOk || mb.customs_health === 'critical') {
+            heroStatusEl.innerText = 'Atenção: Autenticação / Rota Pendente';
+            heroStatusEl.className = 'u-text-amber';
+          } else if (stuckCount > 0) {
+            heroStatusEl.innerText = `Ativo (${stuckCount} sessão em local)`;
+            heroStatusEl.className = 'u-text-amber';
+          } else {
+            heroStatusEl.innerText = 'Conectado / Saudável';
+            heroStatusEl.className = 'u-text-green';
+          }
+        }
 
         if (mb.active_profile_name) {
           const topPresetEl = document.getElementById('top-active-preset');
@@ -858,8 +891,17 @@
           badgeEl.innerText = 'Silício Bare-Metal';
           badgeEl.className = 'brain-badge badge-local';
         } else {
-          badgeEl.innerText = 'Cloud API (' + mb.provider + ')';
+          badgeEl.innerText = 'Cloud API (' + humanizeProviderName(mb.provider) + ')';
           badgeEl.className = 'brain-badge badge-cloud';
+        }
+      }
+
+      if (data.hermes_finops && data.hermes_finops.periods) {
+        const hAll = data.hermes_finops.periods.all_time || {};
+        const hProj = Number(data.hermes_finops.periods.projected_monthly_run_rate_usd || 0);
+        const pulseCache = document.getElementById('pulse-cache-eff');
+        if (pulseCache && Number(hAll.spend_usd || 0) > 0) {
+          pulseCache.innerText = `Hermes API: $${Number(hAll.spend_usd).toFixed(2)} (Proj: $${hProj.toFixed(2)}/mês) • Cache ${Number(hAll.cache_hit_pct || 0).toFixed(0)}%`;
         }
       }
     }
@@ -1045,16 +1087,15 @@
       }
     }
 
-    function humanizeModelName(id) {
+    function humanizeModelName(id, explicitDisplayName = null) {
       if (!id) return '--';
-      const lower = id.toLowerCase();
+      const rawId = String(id).trim();
+      const lower = rawId.toLowerCase();
 
       // 1. Catálogo Físico e Especialistas Canônicos Locais
       if (lower.includes('qwen3-5-4b-agentic-coder') || lower.includes('qwen3.5-4b-agentic-coder') || (lower.includes('qwen3-5-4b') && lower.includes('coder'))) return 'Qwen 3.5 4B Agentic Coder v4';
       if (lower.includes('qwen3-5-4b-uncensored') || lower.includes('qwen3.5-4b-uncensored') || (lower.includes('qwen3-5-4b') && lower.includes('mtp')) || lower.includes('hauhaucs')) return 'Qwen 3.5 4B Uncensored MTP';
       if (lower.includes('qwen3.8-4b') || lower.includes('qwen3-8-4b')) return 'Qwen 3.8 4B';
-      if (lower.includes('qwen4') || lower.includes('qwen-4')) return 'Qwen 4';
-      if (lower.includes('qwen3.7-flash') || lower.includes('qwen3-7-flash')) return 'Qwen 3.7 Flash';
       if (lower.includes('qwen2-5-vl-3b') || lower.includes('qwen2.5-vl-3b')) return 'Qwen 2.5 VL 3B Vision';
       if (lower.includes('qwen2-5-coder-0-5b') || lower.includes('qwen2.5-coder-0.5b')) return 'Qwen 2.5 Coder 0.5B';
       if (lower.includes('qwen2-5-coder-1-5b') || lower.includes('qwen2.5-coder-1.5b')) return 'Qwen 2.5 Coder 1.5B';
@@ -1075,7 +1116,6 @@
       if (lower.includes('temper-1-1-5b') || lower.includes('temper-1')) return 'Temper-1 1.5B';
       if (lower.includes('xlam-2-1b') || lower.includes('xlam-2')) return 'xLAM-2 1B FC (Salesforce)';
       if (lower.includes('mamba-codestral-7b')) return 'Mamba Codestral 7B';
-      if (lower.includes('gemma-4')) return 'Gemma 4 Ultra Uncensored';
       if (lower.includes('nimbus-4b')) return 'Nimbus 4B';
       if (lower.includes('bonsai-27b')) return 'Bonsai 27B';
 
@@ -1085,31 +1125,31 @@
       if (lower.includes('ladybug')) return 'LadybugDB Ontological Graph';
       if (lower.includes('nvml-barrier') || lower.includes('nvml-watchdog')) return 'NVML Physical Watchdog';
 
-      // 3. Modelos de Fronteira em Nuvem
-      if (lower.includes('claude-opus-5.5') || lower.includes('claude-5.5-opus')) return 'Claude Opus 5.5';
-      if (lower.includes('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
-      if (lower.includes('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
-      if (lower.includes('claude-3-5-haiku')) return 'Claude 3.5 Haiku';
-      if (lower.includes('gpt-6.1-sol')) return 'GPT-6.1 Sol';
-      if (lower.includes('gpt-6-astra') || lower.includes('gpt-astra')) return 'GPT-6 Astra';
-      if (lower.includes('deepseek-v4')) return 'DeepSeek-V4 Flash';
-      if (lower.includes('deepseek-chat') || lower.includes('deepseek-v3')) return 'DeepSeek-V3 Chat';
-      if (lower.includes('deepseek-r1')) return 'DeepSeek-R1 Reasoning';
-      if (lower.includes('deepseek-coder')) return 'DeepSeek Coder';
-      if (lower.includes('gemini-2.5-pro')) return 'Gemini 2.5 Pro';
-      if (lower.includes('gemini-2.0-flash')) return 'Gemini 2.0 Flash';
-      if (lower.includes('o3-mini')) return 'OpenAI o3-mini';
-      if (lower.includes('o1-mini')) return 'OpenAI o1-mini';
+      // 3. Prioridade ao Display Name oficial vindo do Catálogo (preservando Pro/Flash/Flex/High/:free sem colisões)
+      const isFreeTier = lower.endsWith(':free');
+      let catalogDisplay = explicitDisplayName;
+      if (!catalogDisplay && Array.isArray(cachedCloudRankedModels) && cachedCloudRankedModels.length > 0) {
+        const hit = cachedCloudRankedModels.find(x => (x.canonical_id || '').toLowerCase() === lower);
+        if (hit && hit.display_name) catalogDisplay = hit.display_name;
+      }
+      if (catalogDisplay && typeof catalogDisplay === 'string') {
+        let stripped = catalogDisplay.replace(/^[A-Za-z0-9.\-_ ]{2,22}:\s+/, '').trim();
+        stripped = stripped.replace(/\s*\(free\)\s*$/i, '').trim();
+        if (stripped && !stripped.includes('/')) {
+          return isFreeTier && !stripped.toLowerCase().includes('free') ? `${stripped} (Grátis)` : stripped;
+        }
+      }
 
-      // 4. Algoritmo Inteligente de Humanização de Fallback (sempre limpo, com Title Case e sem traços)
-      let clean = id;
+      // 4. Tokenizador Determinístico Sem Colisão (nunca colapsa Pro, Flash, Flex, High, Max, Mini, :free)
+      const colonIdx = rawId.lastIndexOf(':');
+      const basePart = colonIdx !== -1 ? rawId.slice(0, colonIdx) : rawId;
+      const tierTag = colonIdx !== -1 ? rawId.slice(colonIdx + 1).toLowerCase() : '';
+
+      let clean = basePart;
       if (clean.includes('/')) clean = clean.split('/').pop();
       if (clean.includes('\\')) clean = clean.split('\\').pop();
 
-      // Remove extensão .gguf ou .bin
       clean = clean.replace(/\.gguf$/i, '').replace(/\.bin$/i, '');
-
-      // Remove sufixos de quantização do final (-q4-k-m, -q8-0, .i1-q4_k_s, etc.)
       clean = clean.replace(/[-_.](i\d+[-_])?q\d+([-_][a-z0-9]+)*$/i, '');
       clean = clean.replace(/[-_.]f(16|32)$/i, '');
       clean = clean.replace(/[-_.]instruct$/i, '');
@@ -1134,6 +1174,10 @@
         'deepseek': 'DeepSeek',
         'glm': 'GLM',
         'kimi': 'Kimi',
+        'mimo': 'MiMo',
+        'hy3': 'HY3',
+        'hy4': 'HY4',
+        'ultraspeed': 'UltraSpeed',
         'avx2': 'AVX2',
         'cpu': 'CPU',
         'dgpu': 'dGPU',
@@ -1146,16 +1190,19 @@
 
       const words = clean.split(/[-_]+/).filter(Boolean);
       if (words.length > 0) {
-        return words.map(w => {
+        const formatted = words.map(w => {
           const wLow = w.toLowerCase();
           if (acronyms[wLow]) return acronyms[wLow];
           if (/^\d+(\.\d+)?[bmk]$/i.test(wLow)) return wLow.toUpperCase();
-          if (/^v\d+(\.\d+)?$/i.test(wLow)) return wLow.toLowerCase();
+          if (/^v\d+(\.\d+)?$/i.test(wLow)) return wLow.toUpperCase().replace(/^V/, 'V');
           return w.charAt(0).toUpperCase() + w.slice(1);
         }).join(' ');
+        if (tierTag === 'free') return `${formatted} (Grátis)`;
+        if (tierTag && tierTag !== 'latest') return `${formatted} (${tierTag})`;
+        return formatted;
       }
 
-      return id;
+      return rawId;
     }
 
     function formatModelDisplayName(canonicalId, isLocal) {
@@ -1200,20 +1247,237 @@
       `;
     }
 
-    // Modal de Aplicação Rápida de Modelo
+    // Modal de Aplicação Rápida de Modelo + Confirmação de Gateway
     let quickApplyTargetModel = null;
     let quickApplyTargetProvider = 'nous';
     let quickApplyIsLocal = false;
+    let quickApplyModelObj = null;
+
+    function canonicalizeGatewaySlug(prov) {
+      const p = (prov || 'nous').toLowerCase().trim();
+      if (p === 'nous_portal' || p === 'nous_portal_batch' || p === 'nous') return 'nous';
+      if (p === 'openrouter_market' || p === 'openrouter') return 'openrouter';
+      if (p === 'local_silicon' || p === 'llamacpp' || p === 'custom' || p === 'local') return 'custom';
+      return p;
+    }
+
+    function getGatewayCatalogMeta(slug) {
+      const c = canonicalizeGatewaySlug(slug);
+      const fromCustoms = window.cachedHermesCustoms?.gateways?.find(g => g.id === c);
+      if (fromCustoms) return fromCustoms;
+      const defaults = {
+        nous: { id: 'nous', label: 'Nous Portal', auth_mode: 'oauth_device', authenticated: false, key_url: 'https://portal.nousresearch.com', env_key: null, detail: 'Login OAuth do Nous Portal.' },
+        openrouter: { id: 'openrouter', label: 'OpenRouter', auth_mode: 'api_key', authenticated: false, key_url: 'https://openrouter.ai/settings/keys', env_key: 'OPENROUTER_API_KEY', detail: 'Chave OPENROUTER_API_KEY.' },
+        deepseek: { id: 'deepseek', label: 'DeepSeek Direct', auth_mode: 'api_key', authenticated: false, key_url: 'https://platform.deepseek.com/api_keys', env_key: 'DEEPSEEK_API_KEY', detail: 'Chave DEEPSEEK_API_KEY.' },
+        anthropic: { id: 'anthropic', label: 'Anthropic Direct', auth_mode: 'api_key', authenticated: false, key_url: 'https://console.anthropic.com/settings/keys', env_key: 'ANTHROPIC_API_KEY', detail: 'Chave ANTHROPIC_API_KEY.' },
+        'openai-api': { id: 'openai-api', label: 'OpenAI Direct', auth_mode: 'api_key', authenticated: false, key_url: 'https://platform.openai.com/api-keys', env_key: 'OPENAI_API_KEY', detail: 'Chave OPENAI_API_KEY.' },
+        gemini: { id: 'gemini', label: 'Google AI Studio', auth_mode: 'api_key', authenticated: false, key_url: 'https://aistudio.google.com/apikey', env_key: 'GEMINI_API_KEY', detail: 'Chave GEMINI_API_KEY.' },
+        zai: { id: 'zai', label: 'Z.AI / GLM', auth_mode: 'api_key', authenticated: false, key_url: 'https://z.ai/manage-apikey/apikey-list', env_key: 'ZAI_API_KEY', detail: 'Chave ZAI_API_KEY.' },
+        xai: { id: 'xai', label: 'xAI / Grok', auth_mode: 'api_key', authenticated: false, key_url: 'https://console.x.ai/', env_key: 'XAI_API_KEY', detail: 'Chave XAI_API_KEY.' },
+        nvidia: { id: 'nvidia', label: 'NVIDIA NIM', auth_mode: 'api_key', authenticated: false, key_url: 'https://build.nvidia.com/settings/api-keys', env_key: 'NVIDIA_API_KEY', detail: 'Chave NVIDIA_API_KEY.' },
+        copilot: { id: 'copilot', label: 'GitHub Copilot', auth_mode: 'oauth_external', authenticated: false, key_url: 'https://github.com/settings/tokens', env_key: 'GITHUB_TOKEN', detail: 'Token Copilot/GitHub.' },
+        custom: { id: 'custom', label: 'Silício Local (llama.cpp)', auth_mode: 'local', authenticated: true, key_url: null, env_key: null, detail: 'Servidor local em 127.0.0.1:18434.' }
+      };
+      return defaults[c] || { id: c, label: humanizeProviderName(c), auth_mode: 'api_key', authenticated: true, detail: `Rota ${c}` };
+    }
+
+    function renderQuickApplyGatewayCards() {
+      const listEl = document.getElementById('quick-apply-gateway-list');
+      const authBox = document.getElementById('quick-apply-auth-helper');
+      const forceRow = document.getElementById('quick-apply-force-row');
+      const tagEl = document.getElementById('quick-apply-provider-tag');
+      if (!listEl) return;
+
+      const m = quickApplyModelObj;
+      let candidateGateways = [];
+      if (quickApplyIsLocal) {
+        candidateGateways = ['custom'];
+      } else {
+        const set = new Set();
+        if (m) {
+          if (m.has_nous) set.add('nous');
+          if (m.has_openrouter) set.add('openrouter');
+          (m.available_gateways || []).forEach(g => set.add(canonicalizeGatewaySlug(g)));
+        }
+        (window.cachedHermesCustoms?.active_gateway_ids || []).forEach(ag => {
+          if (!m || !Array.isArray(m.available_gateways) || m.available_gateways.includes(ag)) {
+            set.add(ag);
+          }
+        });
+        set.add(canonicalizeGatewaySlug(quickApplyTargetProvider));
+        candidateGateways = Array.from(set).filter(g => g !== 'custom');
+      }
+
+      if (!candidateGateways.includes(quickApplyTargetProvider) && candidateGateways.length > 0) {
+        quickApplyTargetProvider = candidateGateways[0];
+      }
+
+      listEl.innerHTML = candidateGateways.map(gwId => {
+        const meta = getGatewayCatalogMeta(gwId);
+        const selected = gwId === quickApplyTargetProvider;
+        let priceHint = '';
+        if (gwId === 'custom') {
+          priceHint = 'Local ($0.00)';
+        } else if (m) {
+          if (m.is_free || (quickApplyTargetModel || '').endsWith(':free')) {
+            priceHint = 'Grátis ($0.00)';
+          } else if (gwId === 'nous' && m.nous_blended !== null && m.nous_blended !== undefined) {
+            priceHint = `$${Number(m.nous_blended).toFixed(2)}/1M`;
+          } else if (gwId === 'openrouter' && m.or_blended !== null && m.or_blended !== undefined) {
+            priceHint = `$${Number(m.or_blended).toFixed(2)}/1M`;
+          } else {
+            priceHint = 'API Direta / Base';
+          }
+        }
+        const statusClass = meta.authenticated ? 'customs-pill-ok' : 'customs-pill-warn';
+        const statusText = meta.id === 'custom' ? 'Ativo' : (meta.authenticated ? 'Autenticado' : (meta.status === 'expired' ? 'OAuth expirado' : 'Sem chave'));
+        return `
+          <button type="button" class="gateway-choice-card ${selected ? 'selected' : ''} ${meta.authenticated ? '' : 'unauth'}" onclick="selectQuickApplyGateway('${gwId}')">
+            <div class="u-d-flex u-justify-between u-items-center u-gap-1">
+              <strong class="u-text-white u-s-dbc8d1">${escapeHtml(meta.label || gwId)}</strong>
+              <span class="customs-status-pill ${statusClass}">${statusText}</span>
+            </div>
+            <div class="u-text-muted u-mono u-s-6262d0">${gwId} ${priceHint ? '• ' + priceHint : ''}</div>
+          </button>
+        `;
+      }).join('');
+
+      const activeMeta = getGatewayCatalogMeta(quickApplyTargetProvider);
+      if (tagEl) {
+        tagEl.innerText = `Gateway Selecionado: ${activeMeta.label} (${quickApplyTargetProvider}) • ${quickApplyIsLocal ? 'Silício Bare-Metal' : 'Cloud API'}`;
+      }
+
+      if (authBox) {
+        if (!activeMeta.authenticated && activeMeta.id !== 'custom') {
+          authBox.classList.remove('is-hidden');
+          if (forceRow) forceRow.classList.remove('is-hidden');
+          if (activeMeta.auth_mode === 'oauth_device' || activeMeta.id === 'nous') {
+            authBox.innerHTML = `
+              <div class="u-fw-700 u-text-amber u-mb-1">${uiIcon('alert-triangle', 'icon-xs')} Autenticação Nous Portal Pendente no Hermes</div>
+              <div class="u-text-slate u-mb-2">${escapeHtml(activeMeta.detail || 'O token OAuth expirou no Hermes Desktop. Sem login ativo, novas mensagens cairão para o modelo local.')}</div>
+              <div class="u-d-flex u-gap-2 u-flex-wrap">
+                <button type="button" class="btn btn-sm btn-cyan" onclick="launchHermesOauthLogin('nous')">${uiIcon('terminal', 'icon-xs')} Abrir Login (hermes login)</button>
+                <a class="btn btn-sm" href="https://portal.nousresearch.com" target="_blank" rel="noopener noreferrer">${uiIcon('link', 'icon-xs')} Abrir Portal Nous</a>
+                <button type="button" class="btn btn-sm" onclick="refreshModalCustomsStatus()">${uiIcon('refresh', 'icon-xs')} Já Autentiquei</button>
+              </div>
+            `;
+          } else if (activeMeta.env_key) {
+            authBox.innerHTML = `
+              <div class="u-fw-700 u-text-amber u-mb-1">${uiIcon('key', 'icon-xs')} Chave ${activeMeta.env_key} não detectada no Hermes</div>
+              <div class="u-text-slate u-mb-2">Cole sua chave abaixo para salvar e ativar imediatamente no Hermes Desktop (incluindo sub-perfis):</div>
+              <div class="u-d-flex u-gap-2 u-flex-wrap u-items-center">
+                <input type="password" id="modal-inline-api-key" class="setting-input u-flex-1" placeholder="Cole ${activeMeta.env_key} aqui..." />
+                <button type="button" class="btn btn-sm btn-cyan" onclick="saveModalInlineApiKey('${activeMeta.env_key}')">${uiIcon('check', 'icon-xs')} Salvar e Ativar</button>
+                ${activeMeta.key_url ? `<a class="btn btn-sm" href="${activeMeta.key_url}" target="_blank" rel="noopener noreferrer">Obter chave oficial</a>` : ''}
+              </div>
+            `;
+          }
+        } else {
+          authBox.classList.add('is-hidden');
+          authBox.innerHTML = '';
+          if (forceRow) forceRow.classList.add('is-hidden');
+        }
+      }
+
+      renderQuickApplyFinopsImpact();
+    }
+
+    function selectQuickApplyGateway(gwId) {
+      quickApplyTargetProvider = canonicalizeGatewaySlug(gwId);
+      renderQuickApplyGatewayCards();
+    }
+
+    function renderQuickApplyFinopsImpact() {
+      const box = document.getElementById('quick-apply-cost-impact');
+      if (!box) return;
+      if (quickApplyIsLocal || quickApplyTargetProvider === 'custom' || (quickApplyTargetModel || '').endsWith(':free')) {
+        box.classList.remove('is-hidden');
+        box.innerHTML = `
+          <div class="u-fw-700 u-text-emerald">${uiIcon('dollar', 'icon-xs')} Simulação FinOps Mensal: $0.00 / mês</div>
+          <div class="u-text-slate u-mt-1">Modelo de custo zero (${quickApplyIsLocal ? 'execução soberana local' : 'tier gratuito :free'}) — sem consumo adicional em dólar no gateway selecionado.</div>
+        `;
+        return;
+      }
+
+      const m = quickApplyModelObj;
+      if (!m) {
+        box.classList.add('is-hidden');
+        return;
+      }
+      const fin = window.cachedHermesFinops?.periods || {};
+      const inTok = Number(fin.monthly_input_tokens_estimate || 500000);
+      const outTok = Number(fin.monthly_output_tokens_estimate || 150000);
+      const cacheTok = Number(fin.monthly_cache_read_tokens_estimate || 0);
+      const pRate = quickApplyTargetProvider === 'openrouter'
+        ? Number(m.or_prompt_price ?? m.nous_prompt_price ?? m.blended_cost ?? 0)
+        : Number(m.nous_prompt_price ?? m.or_prompt_price ?? m.blended_cost ?? 0);
+      const cRate = quickApplyTargetProvider === 'openrouter'
+        ? Number(m.or_completion_price ?? m.nous_completion_price ?? m.blended_cost ?? 0)
+        : Number(m.nous_completion_price ?? m.or_completion_price ?? m.blended_cost ?? 0);
+      const estMonthUsd = (inTok * pRate + outTok * cRate + cacheTok * (pRate * 0.20)) / 1000000.0;
+      const curRunRate = Number(fin.projected_monthly_run_rate_usd || 0);
+      const tokVolLabel = formatContextTokens(Math.round(inTok + outTok + cacheTok));
+      box.classList.remove('is-hidden');
+      box.innerHTML = `
+        <div class="u-fw-700 u-text-cyan">${uiIcon('trending-up', 'icon-xs')} Simulador FinOps Mensal: ~$${estMonthUsd.toFixed(2)} / mês</div>
+        <div class="u-text-slate u-mt-1">Baseado no seu volume real no Hermes (~${tokVolLabel} tokens/mês • tarifa $${pRate.toFixed(2)} ent / $${cRate.toFixed(2)} saí por 1M). ${curRunRate > 0 ? `Projeção atual: $${curRunRate.toFixed(2)}/mês.` : ''}</div>
+      `;
+    }
+
+    async function refreshModalCustomsStatus() {
+      await fetchHermesCustoms();
+      renderQuickApplyGatewayCards();
+    }
+
+    async function saveModalInlineApiKey(envKey) {
+      const inp = document.getElementById('modal-inline-api-key');
+      const val = inp ? inp.value.trim() : '';
+      if (!val) {
+        showToast('Cole uma chave válida antes de salvar.', 'warning');
+        return;
+      }
+      try {
+        const res = await fetch('/api/v1/system/credentials/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: envKey, value: val })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          showToast(data.message || `Chave ${envKey} ativada no Hermes!`, 'success');
+          if (inp) inp.value = '';
+          await refreshModalCustomsStatus();
+        } else {
+          showToast(data.message || 'Falha ao salvar chave.', 'error');
+        }
+      } catch (e) {
+        showToast(`Erro ao salvar credencial: ${e.message}`, 'error');
+      }
+    }
 
     function openQuickApplyModal(modelId, provider, isLocal = false) {
       quickApplyTargetModel = modelId;
-      quickApplyTargetProvider = provider || (isLocal ? 'local_silicon' : 'nous');
       quickApplyIsLocal = Boolean(isLocal);
+      quickApplyModelObj = (!isLocal && Array.isArray(cachedCloudRankedModels))
+        ? cachedCloudRankedModels.find(x => (x.canonical_id || '').toLowerCase() === (modelId || '').toLowerCase()) || null
+        : null;
+
+      let chosenProv = canonicalizeGatewaySlug(provider || (isLocal ? 'custom' : 'nous'));
+      if (!isLocal && quickApplyModelObj) {
+        if (currentCloudProviderFilter === 'openrouter' && quickApplyModelObj.has_openrouter) {
+          chosenProv = 'openrouter';
+        } else if (currentCloudProviderFilter === 'nous' && quickApplyModelObj.has_nous) {
+          chosenProv = 'nous';
+        } else if (currentCloudProviderFilter !== 'all' && currentCloudProviderFilter !== 'free'
+            && Array.isArray(quickApplyModelObj.available_gateways)
+            && quickApplyModelObj.available_gateways.includes(currentCloudProviderFilter)) {
+          chosenProv = currentCloudProviderFilter;
+        }
+      }
+      quickApplyTargetProvider = chosenProv;
 
       const nameEl = document.getElementById('quick-apply-model-name');
-      const tagEl = document.getElementById('quick-apply-provider-tag');
       if (nameEl) nameEl.innerText = modelId;
-      if (tagEl) tagEl.innerText = `Provedor: ${quickApplyTargetProvider} • Tipo: ${isLocal ? 'Silício Bare-Metal' : 'Cloud API'}`;
 
       const sel = document.getElementById('quick-apply-profile-select');
       if (sel) {
@@ -1230,7 +1494,10 @@
 
       const radioMaster = document.querySelector('input[name="apply-target"][value="master"]');
       if (radioMaster) radioMaster.checked = true;
+      const forceChk = document.getElementById('quick-apply-force-unauth');
+      if (forceChk) forceChk.checked = false;
       toggleApplyTarget();
+      renderQuickApplyGatewayCards();
 
       const modal = document.getElementById('modal-quick-apply');
       if (modal) modal.classList.add('active');
@@ -1245,8 +1512,10 @@
       const val = document.querySelector('input[name="apply-target"]:checked')?.value;
       const fieldDomain = document.getElementById('field-select-domain');
       const fieldProfile = document.getElementById('field-select-custom-profile');
-      if (fieldDomain) fieldDomain.style.display = (val === 'domain') ? 'block' : 'none';
-      if (fieldProfile) fieldProfile.style.display = (val === 'custom_profile' || val === 'profile') ? 'block' : 'none';
+      const hermesOpts = document.getElementById('quick-apply-hermes-options');
+      if (fieldDomain) fieldDomain.classList.toggle('is-hidden', val !== 'domain');
+      if (fieldProfile) fieldProfile.classList.toggle('is-hidden', val !== 'custom_profile' && val !== 'profile');
+      if (hermesOpts) hermesOpts.classList.toggle('is-hidden', val !== 'master');
     }
 
     async function submitQuickApply() {
@@ -1254,8 +1523,16 @@
       const val = document.querySelector('input[name="apply-target"]:checked')?.value;
 
       if (val === 'master') {
-        closeQuickApplyModal();
-        await setHermesMasterModel(quickApplyTargetModel, quickApplyTargetProvider, activePreset);
+        const applyAll = Boolean(document.getElementById('quick-apply-all-profiles')?.checked);
+        const unpinSess = Boolean(document.getElementById('quick-apply-unpin-sessions')?.checked);
+        const forceUnauth = Boolean(document.getElementById('quick-apply-force-unauth')?.checked);
+        const ok = await setHermesMasterModel(quickApplyTargetModel, quickApplyTargetProvider, activePreset, {
+          applyAllProfiles: applyAll,
+          unpinFallbackSessions: unpinSess,
+          strictAuth: true,
+          forceUnauthenticated: forceUnauth
+        });
+        if (ok) closeQuickApplyModal();
       } else if (val === 'domain') {
         const domSelect = document.getElementById('quick-apply-domain-select');
         const domId = domSelect ? domSelect.value : 'coding';
@@ -1271,7 +1548,6 @@
           }
           localStorage.setItem('souls_domain_overrides', JSON.stringify(overrides));
 
-          // Also persist to souls_config.toml via /api/v1/profiles
           const matrixItem = (window.cachedRouterMatrix || []).find(m => m.id === domId || m.arena_category === domId);
           const profId = domId === 'agentic'
             ? 'agentic_dispatcher'
@@ -1286,11 +1562,11 @@
               role: domId === 'executive' ? 'orchestrator' : 'subagent',
               arena_category: domId,
               target_model: quickApplyTargetModel,
-              provider: quickApplyIsLocal ? 'local_silicon' : quickApplyTargetProvider
+              provider: quickApplyIsLocal ? 'custom' : quickApplyTargetProvider
             })
           });
           if (typeof fetchRouterMatrix === 'function') await fetchRouterMatrix();
-          showToast(`Modelo ${quickApplyTargetModel} atribuído e salvo para [${domId.toUpperCase()}]!`, 'green');
+          showToast(`Modelo ${quickApplyTargetModel} (${quickApplyTargetProvider}) atribuído para [${domId.toUpperCase()}]!`, 'green');
         } catch(e) {
           showToast(`Erro ao salvar domínio: ${e.message}`, 'red');
         }
@@ -5062,37 +5338,349 @@
       }
     }
 
-    // 4. FETCH CLOUD ARENA (llm_cloud)
+    // 4. FETCH CLOUD ARENA (llm_cloud), ALFÂNDEGA HERMES & FINOPS REAL
     let cloudSearchQuery = '';
     let cloudSortOrder = 'score_desc';
     let currentSortCol = 'score';
     let currentSortAsc = false;
+
+    const GATEWAY_KEY_URLS = {
+      OPENROUTER_API_KEY: 'https://openrouter.ai/settings/keys',
+      DEEPSEEK_API_KEY: 'https://platform.deepseek.com/api_keys',
+      ANTHROPIC_API_KEY: 'https://console.anthropic.com/settings/keys',
+      OPENAI_API_KEY: 'https://platform.openai.com/api-keys',
+      GEMINI_API_KEY: 'https://aistudio.google.com/apikey',
+      ZAI_API_KEY: 'https://z.ai/manage-apikey/apikey-list',
+      XAI_API_KEY: 'https://console.x.ai/',
+      NVIDIA_API_KEY: 'https://build.nvidia.com/settings/api-keys'
+    };
+
+    function updateCustomsInlineKeyLink() {
+      const sel = document.getElementById('customs-inline-key-env');
+      const lnk = document.getElementById('customs-inline-key-link');
+      if (sel && lnk) {
+        lnk.href = GATEWAY_KEY_URLS[sel.value] || 'https://openrouter.ai/settings/keys';
+      }
+    }
+
+    function toggleCustomsAuthDrawer(forceOpen = null) {
+      const drawer = document.getElementById('customs-inline-key-drawer');
+      if (!drawer) return;
+      if (forceOpen === true) drawer.classList.remove('is-hidden');
+      else if (forceOpen === false) drawer.classList.add('is-hidden');
+      else drawer.classList.toggle('is-hidden');
+    }
+
+    async function saveCustomsInlineCredential() {
+      const sel = document.getElementById('customs-inline-key-env');
+      const inp = document.getElementById('customs-inline-key-val');
+      const key = sel ? sel.value : '';
+      const val = inp ? inp.value.trim() : '';
+      if (!key || !val) {
+        showToast('Selecione o gateway e cole a chave antes de ativar.', 'warning');
+        return;
+      }
+      try {
+        const res = await fetch('/api/v1/system/credentials/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value: val })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          showToast(data.message || `Chave ${key} salva no Hermes e perfis!`, 'success');
+          if (inp) inp.value = '';
+          await fetchHermesCustoms();
+          renderCloudTable();
+          renderCloudRankedTable();
+        } else {
+          showToast(data.message || 'Erro ao salvar credencial.', 'error');
+        }
+      } catch (e) {
+        showToast(`Falha de rede ao salvar credencial: ${e.message}`, 'error');
+      }
+    }
+
+    async function launchHermesOauthLogin(provider = 'nous') {
+      showToast(`Abrindo janela do terminal para login no Hermes (${provider})...`, 'info');
+      try {
+        const res = await fetch('/api/v1/hermes/customs/repair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ launch_login_provider: provider, repair_configs: false, unpin_sessions: false })
+        });
+        const data = await res.json();
+        if (data.login_launched) {
+          showToast(`Terminal aberto! Conclua o login no navegador e clique em "Reparar Alfândega" se necessário.`, 'success');
+        } else {
+          showToast(`Execute no terminal: ${data.login_command || 'hermes login --provider nous'}`, 'warning');
+        }
+      } catch (e) {
+        showToast(`Execute no terminal: hermes login --provider ${provider}`, 'warning');
+      }
+    }
+
+    async function repairHermesCustoms(repairConfigs = true, unpinSessions = true, moaEnabled = null) {
+      showToast('Executando reparo da Alfândega Hermes ↔ Souls...', 'warning');
+      try {
+        const res = await fetch('/api/v1/hermes/customs/repair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            repair_configs: repairConfigs,
+            unpin_sessions: unpinSessions,
+            moa_enabled: moaEnabled
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          const msgs = [];
+          if ((data.repaired_configs || []).length > 0) msgs.push(`${data.repaired_configs.length} config(s) normalizados`);
+          if (data.unpinned_sessions > 0) msgs.push(`${data.unpinned_sessions} sessão(ões) destravadas`);
+          if ((data.moa_updated_profiles || []).length > 0) msgs.push(`MoA atualizado`);
+          showToast(`Alfândega concluída: ${msgs.join(' • ') || 'Tudo verificado e alinhado!'}`, 'success');
+          if (data.customs) applyCustomsBannerData(data.customs);
+          else await fetchHermesCustoms();
+          await fetchTelemetry();
+        } else {
+          showToast(data.message || 'Falha no reparo da Alfândega.', 'error');
+        }
+      } catch (e) {
+        showToast(`Erro no reparo: ${e.message}`, 'error');
+      }
+    }
+
+    async function toggleHermesMoa() {
+      const currentlyEnabled = Boolean(window.cachedHermesCustoms?.moa_enabled_anywhere);
+      await repairHermesCustoms(false, false, !currentlyEnabled);
+    }
+
+    function renderDynamicActiveGatewayPills(customs) {
+      const slot = document.getElementById('cloud-dynamic-gateways-pills');
+      if (!slot || !customs || !Array.isArray(customs.active_gateway_ids)) return;
+      const extras = customs.active_gateway_ids.filter(g => g !== 'nous' && g !== 'openrouter' && g !== 'custom');
+      slot.innerHTML = extras.map(gwId => {
+        const gwMeta = (customs.gateways || []).find(g => g.id === gwId);
+        const label = gwMeta ? gwMeta.label : humanizeProviderName(gwId);
+        const activeCls = currentCloudProviderFilter === gwId ? 'active' : '';
+        return `<button class="filter-provider-btn ${activeCls}" id="btn-cloud-prov-${gwId}" onclick="setCloudProviderFilter('${gwId}')">${uiIcon('plug', 'icon-xs')} ${escapeHtml(label)}</button>`;
+      }).join('');
+      if (typeof updateCloudProviderPillCounts === 'function') {
+        updateCloudProviderPillCounts();
+      }
+    }
+
+    function applyCustomsBannerData(report) {
+      if (!report) return;
+      window.cachedHermesCustoms = report;
+      const banner = document.getElementById('active-hermes-brain-banner');
+      const badgeEl = document.getElementById('active-hermes-customs-badge');
+      const alertEl = document.getElementById('active-hermes-customs-alert');
+      const btnRepair = document.getElementById('btn-hermes-repair-customs');
+      const btnMoa = document.getElementById('btn-hermes-moa-toggle');
+      const lblMoa = document.getElementById('btn-hermes-moa-label');
+      const moaBadge = document.getElementById('active-hermes-moa-badge');
+      const stuckBadge = document.getElementById('active-hermes-stuck-badge');
+      const btnReauth = document.getElementById('btn-hermes-reconnect-nous');
+      const auditGrid = document.getElementById('customs-profiles-audit-grid');
+      const provEl = document.getElementById('active-hermes-provider-tag');
+
+      if (report.active_profile_model) {
+        window.currentHermesMasterModel = report.active_profile_model;
+        window.currentHermesMasterProvider = report.active_profile_provider || 'nous';
+        const nameEl = document.getElementById('active-hermes-model-name');
+        const quickModelEl = document.getElementById('cloud-quick-active-model');
+        if (nameEl) nameEl.innerText = report.active_profile_model;
+        if (quickModelEl) quickModelEl.innerText = report.active_profile_model;
+      }
+
+      if (provEl) {
+        const p = report.active_profile_provider || 'nous';
+        const gw = (report.gateways || []).find(g => g.id === p);
+        const label = gw ? gw.label : humanizeProviderName(p);
+        const authTxt = p === 'custom' ? 'Local' : (report.active_provider_authenticated ? 'Conectado' : 'Sem Credencial');
+        provEl.innerHTML = `${uiIcon(p === 'nous' ? 'brain' : 'git-branch', 'icon-xs')} ${escapeHtml(label)} (${authTxt})`;
+      }
+
+      if (banner) {
+        banner.classList.remove('customs-warn', 'customs-crit');
+        if (report.health === 'critical') banner.classList.add('customs-crit');
+        else if (report.health === 'warning') banner.classList.add('customs-warn');
+      }
+
+      if (badgeEl) {
+        badgeEl.className = 'customs-status-pill ' + (report.health === 'critical' ? 'customs-pill-crit' : (report.health === 'warning' ? 'customs-pill-warn' : 'customs-pill-ok'));
+        badgeEl.innerText = report.health === 'critical'
+          ? 'Alfândega: Ação Necessária'
+          : (report.health === 'warning' ? 'Alfândega: Atenção' : 'Alfândega: Liberada');
+      }
+
+      if (moaBadge) {
+        moaBadge.classList.toggle('is-hidden', !report.moa_enabled_anywhere);
+        if (report.moa_enabled_anywhere) {
+          moaBadge.innerText = report.nous_needs_reauth ? 'MoA Ativo (Usando Nous expirado)' : 'MoA Paralelo Ativo';
+        }
+      }
+      if (btnMoa && lblMoa) {
+        btnMoa.classList.remove('is-hidden');
+        lblMoa.innerText = report.moa_enabled_anywhere ? 'Desligar MoA' : 'Ligar MoA';
+      }
+
+      const stuckCount = Number(report.total_stuck_fallback_sessions || 0);
+      if (stuckBadge) {
+        stuckBadge.classList.toggle('is-hidden', stuckCount === 0);
+        if (stuckCount > 0) {
+          stuckBadge.innerText = `${stuckCount} conversa(s) presas no modelo local`;
+        }
+      }
+
+      if (btnRepair) {
+        const showRepair = Boolean(report.needs_config_repair || stuckCount > 0);
+        btnRepair.classList.toggle('is-hidden', !showRepair);
+      }
+
+      if (btnReauth) {
+        btnReauth.classList.remove('is-hidden');
+        btnReauth.innerHTML = report.nous_needs_reauth
+          ? `${uiIcon('key', 'icon-xs')} Reconectar Nous / Chaves`
+          : `${uiIcon('key', 'icon-xs')} Chaves & Gateways`;
+      }
+
+      if (alertEl) {
+        const issues = report.issues || [];
+        if (issues.length > 0) {
+          alertEl.classList.remove('is-hidden');
+          alertEl.innerHTML = issues.map(msg => `<div>${uiIcon('alert-triangle', 'icon-xs')} ${escapeHtml(msg)}</div>`).join('');
+        } else {
+          alertEl.classList.add('is-hidden');
+          alertEl.innerHTML = '';
+        }
+      }
+
+      if (auditGrid && Array.isArray(report.profiles)) {
+        auditGrid.innerHTML = report.profiles.map(p => {
+          const pillCls = p.issues && p.issues.length > 0 ? 'customs-pill-warn' : 'customs-pill-ok';
+          const pillTxt = p.issues && p.issues.length > 0 ? `${p.issues.length} alerta(s)` : 'OK';
+          return `
+            <div class="customs-profile-chip">
+              <div class="u-d-flex u-justify-between u-items-center u-mb-1">
+                <strong class="u-text-white">${escapeHtml(p.profile_id)}</strong>
+                <span class="customs-status-pill ${pillCls}">${pillTxt}</span>
+              </div>
+              <div class="u-text-cyan u-mono u-s-6262d0">${escapeHtml(p.default_model || '--')}</div>
+              <div class="u-text-muted u-mt-1">Gateway: <code>${escapeHtml(p.raw_provider)}</code> • MoA: ${p.moa_enabled ? 'Ativo' : 'Desligado'} • Sessões presas: ${p.stuck_fallback_sessions || 0}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      renderDynamicActiveGatewayPills(report);
+    }
+
+    async function fetchHermesCustoms() {
+      try {
+        const res = await fetch('/api/v1/hermes/customs');
+        if (res.ok) {
+          const data = await res.json();
+          applyCustomsBannerData(data);
+        }
+      } catch (e) {}
+    }
+
+    function renderCloudFinopsData(fin) {
+      if (!fin || !fin.periods) return;
+      window.cachedHermesFinops = fin;
+      const p = fin.periods;
+      const fmtUsd = (v) => {
+        const n = Number(v || 0);
+        return n > 0 && n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
+      };
+      const setTxt = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+      };
+
+      const td = p.today || {};
+      const w7 = p.last_7d || {};
+      const m30 = p.last_30d || {};
+      const all = p.all_time || {};
+      const proj = Number(p.projected_monthly_run_rate_usd || 0);
+
+      setTxt('hermes-finops-sync-meta', `${fin.synced_rows || 0} registros auditados do state.db`);
+      setTxt('hfin-today-spend', fmtUsd(td.spend_usd));
+      setTxt('hfin-today-tokens', `${formatContextTokens(td.total_tokens || 0)} tokens (${td.sessions || 0} sessões)`);
+      setTxt('hfin-7d-spend', fmtUsd(w7.spend_usd));
+      setTxt('hfin-7d-sessions', `${w7.sessions || 0} sessões • ${formatContextTokens(w7.total_tokens || 0)} tokens`);
+      setTxt('hfin-30d-spend', fmtUsd(m30.spend_usd));
+      setTxt('hfin-30d-tokens', `${formatContextTokens(m30.total_tokens || 0)} tokens`);
+      setTxt('hfin-projected-month', `$${proj.toFixed(2)} / mês`);
+      setTxt('hfin-alltime-spend', `Acumulado total: ${fmtUsd(all.spend_usd)}`);
+      setTxt('hfin-cache-saved', fmtUsd(all.cache_saved_usd));
+      setTxt('hfin-cache-hit', `${Number(all.cache_hit_pct || 0).toFixed(1)}% cache hit • ${formatContextTokens(all.zero_cost_tokens || 0)} tokens $0`);
+
+      const gwBox = document.getElementById('hfin-by-gateway');
+      if (gwBox) {
+        const rows = fin.by_gateway || [];
+        gwBox.innerHTML = '<div class="u-fw-700 u-text-white u-mb-1">Por Gateway</div>' + (rows.length > 0
+          ? rows.map(r => `<div class="finops-mini-row"><span>${escapeHtml(humanizeProviderName(r.gateway))} (${r.sessions} sess.)</span><strong class="u-text-cyan u-mono">${fmtUsd(r.spend_usd)}</strong></div>`).join('')
+          : '<div class="u-text-muted">Sem registros ainda.</div>');
+      }
+
+      const modBox = document.getElementById('hfin-by-model');
+      if (modBox) {
+        const rows = (fin.by_model || []).slice(0, 6);
+        modBox.innerHTML = '<div class="u-fw-700 u-text-white u-mb-1">Top Modelos Usados</div>' + (rows.length > 0
+          ? rows.map(r => `<div class="finops-mini-row"><span title="${escapeHtml(r.model_id)}">${escapeHtml(humanizeModelName(r.model_id))}</span><strong class="u-mono">${fmtUsd(r.spend_usd)}</strong></div>`).join('')
+          : '<div class="u-text-muted">Sem registros ainda.</div>');
+      }
+
+      const sessBox = document.getElementById('hfin-recent-sessions');
+      if (sessBox) {
+        const rows = (fin.recent_sessions || []).slice(0, 6);
+        sessBox.innerHTML = '<div class="u-fw-700 u-text-white u-mb-1">Sessões Recentes</div>' + (rows.length > 0
+          ? rows.map(r => `<div class="finops-mini-row"><span>[${escapeHtml(r.profile_name)}] ${escapeHtml(humanizeModelName(r.model_id))}</span><strong class="u-mono">${fmtUsd(r.cost_usd)}</strong></div>`).join('')
+          : '<div class="u-text-muted">Sem sessões registradas.</div>');
+      }
+    }
+
+    async function fetchCloudFinops(notify = false) {
+      try {
+        const res = await fetch('/api/v1/cloud/finops');
+        if (res.ok) {
+          const data = await res.json();
+          renderCloudFinopsData(data);
+          if (notify) showToast('Ledger FinOps sincronizado com histórico do Hermes!', 'success');
+        }
+      } catch (e) {}
+    }
 
     async function updateActiveHermesBanner() {
       try {
         const res = await fetch('/api/v1/telemetry');
         if (res.ok) {
           const data = await res.json();
+          if (data.hermes_customs) applyCustomsBannerData(data.hermes_customs);
+          if (data.hermes_finops) renderCloudFinopsData(data.hermes_finops);
           const mb = data.master_brain;
           if (mb) {
             window.currentHermesMasterModel = mb.model || 'deepseek/deepseek-chat';
+            window.currentHermesMasterProvider = canonicalizeGatewaySlug(mb.provider || 'nous');
             const nameEl = document.getElementById('active-hermes-model-name');
             const presetEl = document.getElementById('active-hermes-preset-tag');
-            const provEl = document.getElementById('active-hermes-provider-tag');
             const metaEl = document.getElementById('active-hermes-meta-line');
             if (nameEl) nameEl.innerText = mb.model || 'deepseek/deepseek-chat';
             const quickModelEl = document.getElementById('cloud-quick-active-model');
             if (quickModelEl) quickModelEl.innerText = mb.model || 'deepseek/deepseek-chat';
             if (presetEl) presetEl.innerText = `Preset: ${mb.active_profile_name || 'Frontier Balanced'}`;
-            if (provEl) {
-              const p = (mb.provider || 'nous').toLowerCase();
-              provEl.innerHTML = p.includes('nous') ? uiIcon('brain', 'icon-xs') + ' Nous Portal (Crédito Ativo)' : uiIcon('git-branch', 'icon-xs') + ' OpenRouter';
-            }
             if (metaEl) {
-              const ctx = mb.context_window ? formatContextTokens(mb.context_window) : '64k tokens';
-              metaEl.innerText = `Status: ${mb.status || 'Online'} • Contexto: ${ctx} • Alvo: ${mb.target_type || 'Cloud API'}`;
+              const ctx = mb.context_window ? formatContextTokens(mb.context_window) : '64k';
+              const authTxt = mb.is_local ? 'Local Soberano' : (mb.provider_authenticated === false ? 'Autenticação Pendente' : 'Credencial OK');
+              metaEl.innerText = `Gateway: ${humanizeProviderName(mb.provider)} (${authTxt}) • Contexto: ${ctx} tokens • Alvo: ${mb.target_type || 'Cloud API'}`;
             }
           }
+        } else {
+          await fetchHermesCustoms();
+          await fetchCloudFinops();
         }
       } catch(e) {}
     }
@@ -5112,9 +5700,17 @@
     function humanizeProviderName(p) {
       if (!p) return 'Cloud';
       const low = p.toLowerCase();
-      if (low.includes('nous')) return 'Nous Portal';
-      if (low.includes('openrouter')) return 'OpenRouter';
-      if (low.includes('local')) return 'Silício Local';
+      if (low === 'nous' || low.includes('nous')) return 'Nous Portal';
+      if (low === 'openrouter' || low.includes('openrouter')) return 'OpenRouter';
+      if (low === 'copilot') return 'GitHub Copilot';
+      if (low === 'anthropic') return 'Anthropic Direct';
+      if (low === 'openai-api' || low === 'openai') return 'OpenAI Direct';
+      if (low === 'deepseek') return 'DeepSeek Direct';
+      if (low === 'gemini' || low === 'google') return 'Google AI Studio';
+      if (low === 'zai') return 'Z.AI / GLM';
+      if (low === 'xai') return 'xAI / Grok';
+      if (low === 'alibaba') return 'Qwen Cloud';
+      if (low === 'custom' || low === 'llamacpp' || low.includes('local')) return 'Silício Local';
       return p;
     }
 
@@ -5133,6 +5729,27 @@
 
     function handleCloudSearch(val) {
       cloudSearchQuery = (val || '').trim().toLowerCase();
+      renderCloudTable();
+      renderCloudRankedTable();
+    }
+
+    function resetCloudFilters() {
+      currentCloudProviderFilter = 'nous';
+      currentCloudModalityFilter = 'all';
+      selectedManufacturers.clear();
+      cloudSearchQuery = '';
+      const searchEl = document.getElementById('cloud-search-input');
+      if (searchEl) searchEl.value = '';
+      document.querySelectorAll('#cloud-provider-filter-pills .filter-provider-btn').forEach(btn => btn.classList.remove('active'));
+      const nousBtn = document.getElementById('btn-cloud-prov-nous');
+      if (nousBtn) nousBtn.classList.add('active');
+      document.querySelectorAll('#cloud-modality-filter-pills .filter-provider-btn').forEach(btn => btn.classList.remove('active'));
+      const modalAll = document.getElementById('btn-cloud-modal-all');
+      if (modalAll) modalAll.classList.add('active');
+      document.querySelectorAll('#mfg-checkboxes-container input[type="checkbox"]').forEach(c => c.checked = false);
+      updateMfgLabel();
+      updateCloudProviderPillCounts();
+      renderCloudTable();
       renderCloudRankedTable();
     }
 
@@ -5347,10 +5964,27 @@
     });
 
     const defaultColumnKeys = [
-      'status', 'score', 'roi', 'nous', 'or', 'intel', 'coding', 'bfcl', 
+      'status', 'action', 'score', 'roi', 'nous', 'or', 'intel', 'coding', 'bfcl',
       'reasoning', 'design', 'vision', 'ifeval', 'ttft', 'tps', 'ctx', 'prov'
     ];
     let activeColumnOrder = [...defaultColumnKeys];
+    try {
+      const savedOrder = localStorage.getItem('souls_cloud_cols_order_v1');
+      if (savedOrder) {
+        const parsedOrder = JSON.parse(savedOrder);
+        if (Array.isArray(parsedOrder) && parsedOrder.length > 0) {
+          activeColumnOrder = parsedOrder.filter(k => defaultColumnKeys.includes(k));
+          defaultColumnKeys.forEach(k => {
+            if (!activeColumnOrder.includes(k)) activeColumnOrder.push(k);
+          });
+          if (activeColumnOrder.indexOf('action') !== activeColumnOrder.indexOf('status') + 1) {
+            activeColumnOrder = activeColumnOrder.filter(k => k !== 'action');
+            const stIdx = activeColumnOrder.indexOf('status');
+            activeColumnOrder.splice(stIdx >= 0 ? stIdx + 1 : 0, 0, 'action');
+          }
+        }
+      }
+    } catch (e) {}
     let draggedColKey = null;
 
     // Badges exclusivas de fabricante por laboratório com paletas proprietárias
@@ -5431,24 +6065,37 @@
         label: 'Status',
         width: '135px',
         sortKey: 'status',
-        title: 'Status de Otimização na Fronteira de Pareto.&#10;Líder Qualidade: Ponto ótimo não-dominado.&#10;Melhor ROI: Maior razão inteligência por dólar.&#10;Ultra Econômico: Menor tarifa com alta velocidade.&#10;Homologado: Modelo homologado complementar.',
+        title: 'Status de Otimização na Fronteira de Pareto (recalculado sobre o filtro ativo).&#10;Líder Qualidade: Ponto ótimo de máxima capacidade.&#10;Melhor ROI: Maior razão inteligência por dólar.&#10;Ultra Econômico: Menor tarifa competitiva.',
         renderCell: (m, idx, isActive, h) => `<td class="td-col-status text-center u-nowrap">${h.statusBadge}</td>`
+      },
+      action: {
+        plainName: 'Ação (Usar)',
+        label: 'Ação',
+        width: '92px',
+        sortKey: null,
+        title: 'Selecionar Gateway e aplicar modelo no Hermes Desktop ou Domínio/Perfil.',
+        renderCell: (m, idx, isActive, h) => `
+          <td class="td-col-action text-center u-nowrap cloud-td-action-sticky">
+            <button class="btn-apply-model" onclick="openQuickApplyModal('${escapeJsSingleQuote(m.canonical_id)}', '${h.effProvider}', false)" title="Aplicar ${escapeHtml(m.canonical_id)} no Hermes (${humanizeProviderName(h.effProvider)})">
+              ${uiIcon('zap', 'icon-sm')} Usar
+            </button>
+          </td>`
       },
       score: {
         plainName: 'Score Geral',
         label: 'Score Geral',
         width: '105px',
         sortKey: 'score',
-        title: 'Score Multiobjetivo Geral Ponderado (0 a 100).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Cálculo: Combinação de benchmarks ponderados pelas prioridades do perfil cognitivo ativo.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-score mono text-center u-text-cyan u-nowrap u-s-5fc6fa">${(m.composite_score || 0).toFixed(1)}</td>`
+        title: 'Score Multiobjetivo Geral Ponderado (0 a 100) para o perfil cognitivo selecionado.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-score mono text-center u-text-cyan u-nowrap u-s-5fc6fa">${h.effScore.toFixed(1)}</td>`
       },
       roi: {
         plainName: 'ROI Index',
         label: 'ROI Index',
         width: '105px',
         sortKey: 'roi',
-        title: 'Índice de Retorno sobre Investimento (Score ÷ Blended Cost).&#10;Como Interpretar: Quanto MAIOR, melhor.&#10;Cálculo: Mede o volume de capacidade cognitiva entregue por cada dólar investido.',
-        renderCell: (m, idx, isActive, h) => `<td class="td-col-roi mono text-center u-text-green u-fw-700 u-nowrap">${(m.roi_index || 0).toFixed(1)}x</td>`
+        title: 'Índice de Retorno sobre Investimento calculado com a tarifa real do Gateway selecionado.',
+        renderCell: (m, idx, isActive, h) => `<td class="td-col-roi mono text-center u-text-green u-fw-700 u-nowrap">${h.effRoi.toFixed(1)}x</td>`
       },
       nous: {
         plainName: 'Tarifa Nous ($/1M)',
@@ -5617,27 +6264,38 @@
       let thCols = activeColumnOrder.map(key => {
         const colDef = cloudColumnDefs[key];
         if (!colDef) return '';
-        const isHidden = cloudColVisibility[key] === false;
+        const isAction = key === 'action' || !colDef.sortKey;
+        const isHidden = !isAction && cloudColVisibility[key] === false;
+        const hiddenClass = isHidden ? 'col-hidden' : '';
+
+        if (isAction) {
+          return `
+            <th class="text-center th-col-${key} ${hiddenClass} u-nowrap u-s-d275b3"
+                data-col-key="${key}"
+                title="${colDef.title}">
+              ${colDef.label}
+            </th>
+          `;
+        }
+
         const isSorted = (currentSortCol === colDef.sortKey);
         const sortIcon = isSorted ? (currentSortAsc ? '▲' : '▼') : '↕';
         const activeSortClass = isSorted ? 'active-sort' : '';
-        const hiddenClass = isHidden ? 'col-hidden' : '';
 
         return `
-          <th class="text-center sortable-th th-col-${key} th-guide ${activeSortClass} ${hiddenClass} u-nowrap u-s-afa7d1" 
+          <th class="text-center sortable-th th-col-${key} th-guide ${activeSortClass} ${hiddenClass} u-nowrap u-s-afa7d1"
               data-col-key="${key}"
-              style="width: ${colDef.width}; min-width: ${colDef.width};" 
-              draggable="true" 
-              ondragstart="handleColDragStart(event, '${key}')" 
-              ondragover="handleColDragOver(event)" 
-              ondragenter="handleColDragEnter(event, this)" 
-              ondragleave="handleColDragLeave(event, this)" 
-              ondragend="handleColDragEnd(event)" 
-              ondrop="handleColDrop(event, '${key}')" 
-              onclick="setTableSort('${colDef.sortKey}')" 
+              draggable="true"
+              ondragstart="handleColDragStart(event, '${key}')"
+              ondragover="handleColDragOver(event)"
+              ondragenter="handleColDragEnter(event, this)"
+              ondragleave="handleColDragLeave(event, this)"
+              ondragend="handleColDragEnd(event)"
+              ondrop="handleColDrop(event, '${key}')"
+              onclick="setTableSort('${colDef.sortKey}')"
               title="${colDef.title}&#10;↔ Dica: Arraste para reposicionar esta coluna na tabela.">
             <span class="u-s-c63fe2" title="Arraste para mover">⋮⋮</span>
-            ${colDef.label} 
+            ${colDef.label}
             <span class="sort-icon" id="sort-icon-${colDef.sortKey}">${sortIcon}</span>
           </th>
         `;
@@ -5645,27 +6303,45 @@
 
       thead.innerHTML = `
         <tr>
-          <!-- COLUNA 1: POSIÇÃO (CONGELADA / STICKY) -->
-          <th class="text-center sortable-th sticky-col-1 th-guide u-s-da4d32" onclick="setTableSort('rank')" title="Posição no ranking canônico pelo perfil ativo.&#10;Como Interpretar: Quanto MENOR o número, melhor (#1 é o topo).">
+          <th class="text-center sortable-th sticky-col-1 th-guide u-s-da4d32" onclick="setTableSort('rank')" title="Posição no ranking filtrado pelo perfil ativo.">
             # <span class="sort-icon" id="sort-icon-rank">↕</span>
           </th>
-
-          <!-- COLUNA 2: MODELO / IDENTIFICADOR (CONGELADA / STICKY) -->
-          <th class="sortable-th sticky-col-2 th-guide u-s-5f5daf" onclick="setTableSort('name')" title="Identificador do modelo, fabricante e capacidades multimodais.&#10;Clique no botão de prancheta para copiar o ID canônico.">
+          <th class="sortable-th sticky-col-2 th-guide u-s-5f5daf" onclick="setTableSort('name')" title="Identificador do modelo, fabricante e capacidades multimodais.">
             Modelo / Identificador <span class="sort-icon" id="sort-icon-name">↕</span>
           </th>
-
           ${thCols}
-
-          <!-- COLUNA FINAL: AÇÃO -->
-          <th class="text-center u-s-d275b3">Ação</th>
         </tr>
       `;
+    }
+
+    function syncSortSelectFromTable() {
+      const sel = document.getElementById('cloud-sort-select');
+      if (!sel) return;
+      const map = {
+        'score:false': 'score_desc',
+        'status:true': 'status_asc',
+        'roi:false': 'roi_desc',
+        'nous_cost:true': 'nous_asc',
+        'or_cost:true': 'or_asc',
+        'intel:false': 'intel_desc',
+        'coding:false': 'coding_desc',
+        'bfcl:false': 'bfcl_desc',
+        'reasoning:false': 'reasoning_desc',
+        'design:false': 'design_desc',
+        'vision:false': 'vision_desc',
+        'ifeval:false': 'ifeval_desc',
+        'ttft:true': 'ttft_asc',
+        'tps:false': 'tps_desc',
+        'ctx:false': 'ctx_desc'
+      };
+      const candidate = map[`${currentSortCol}:${currentSortAsc}`];
+      if (candidate) sel.value = candidate;
     }
 
     function handleCloudSort(val) {
       cloudSortOrder = val || 'score_desc';
       if (val === 'score_desc') { currentSortCol = 'score'; currentSortAsc = false; }
+      else if (val === 'status_asc') { currentSortCol = 'status'; currentSortAsc = true; }
       else if (val === 'roi_desc') { currentSortCol = 'roi'; currentSortAsc = false; }
       else if (val === 'nous_asc') { currentSortCol = 'nous_cost'; currentSortAsc = true; }
       else if (val === 'or_asc') { currentSortCol = 'or_cost'; currentSortAsc = true; }
@@ -5684,18 +6360,20 @@
     }
 
     function setTableSort(col) {
+      if (!col) return;
       if (currentSortCol === col) {
         currentSortAsc = !currentSortAsc;
       } else {
         currentSortCol = col;
-        currentSortAsc = (col === 'nous_cost' || col === 'or_cost' || col === 'name' || col === 'rank' || col === 'ttft');
+        currentSortAsc = (col === 'nous_cost' || col === 'or_cost' || col === 'name' || col === 'rank' || col === 'ttft' || col === 'status');
       }
       updateHeaderSortIcons();
+      syncSortSelectFromTable();
       renderCloudRankedTable();
     }
 
     function updateHeaderSortIcons() {
-      const cols = ['rank', 'name', 'score', 'roi', 'nous_cost', 'or_cost', 'intel', 'coding', 'bfcl', 'reasoning', 'design', 'vision', 'ifeval', 'ttft', 'tps', 'ctx'];
+      const cols = ['rank', 'name', 'status', 'score', 'roi', 'nous_cost', 'or_cost', 'intel', 'coding', 'bfcl', 'reasoning', 'design', 'vision', 'ifeval', 'ttft', 'tps', 'ctx', 'prov'];
       cols.forEach(c => {
         const icon = document.getElementById(`sort-icon-${c}`);
         const th = icon ? icon.closest('th') : null;
@@ -5725,9 +6403,8 @@
           const data = await res.json();
           cloudChampionsData = data.champions || [];
           renderCloudTableHeader();
-          renderCloudTable();
           initCloudColumnVisibility();
-          fetchCloudRankedModels(currentProfile);
+          await fetchCloudRankedModels(currentProfile);
         }
       } catch (e) {
         if (container) {
@@ -5744,11 +6421,7 @@
 
       document.querySelectorAll('#profile-pill-container .profile-pill').forEach(btn => {
         const dp = (btn.getAttribute('data-profile') || '').toLowerCase();
-        if (dp === currentProfile) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-        }
+        btn.classList.toggle('active', dp === currentProfile);
       });
 
       const descBar = document.getElementById('cloud-profile-description-bar');
@@ -5767,12 +6440,11 @@
         descBar.innerHTML = descMap[currentProfile] || `Perfil cognitivo selecionado: <strong>${currentProfile}</strong>`;
       }
 
-      renderCloudTable();
       fetchCloudRankedModels(currentProfile);
     }
 
     function setCloudProviderFilter(provider) {
-      currentCloudProviderFilter = (provider || 'all').toLowerCase();
+      currentCloudProviderFilter = (provider || 'nous').toLowerCase();
       document.querySelectorAll('#cloud-provider-filter-pills .filter-provider-btn').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.getElementById(`btn-cloud-prov-${currentCloudProviderFilter}`);
       if (activeBtn) activeBtn.classList.add('active');
@@ -5781,22 +6453,187 @@
       renderCloudRankedTable();
     }
 
-    function getFilteredCloudModelsList() {
+    function modelMatchesProviderFilter(m, provFilter) {
+      if (!provFilter || provFilter === 'all') return true;
+      if (provFilter === 'nous') return Boolean(m.has_nous);
+      if (provFilter === 'openrouter') return Boolean(m.has_openrouter);
+      if (provFilter === 'free') {
+        const cid = (m.canonical_id || '').toLowerCase();
+        return Boolean(m.is_free || cid.endsWith(':free') || m.nous_blended === 0 || m.or_blended === 0 || m.blended_cost === 0);
+      }
+      if (Array.isArray(m.available_gateways)) {
+        return m.available_gateways.includes(provFilter);
+      }
+      return canonicalizeGatewaySlug(m.provider) === provFilter;
+    }
+
+    function updateCloudProviderPillCounts() {
+      const list = cachedCloudRankedModels || [];
+      const setCount = (btnId, iconName, label, count) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const iconCls = btnId === 'btn-cloud-prov-free' ? 'icon-xs u-text-emerald' : 'icon-xs';
+        btn.innerHTML = `${uiIcon(iconName, iconCls)} ${label} <span class="u-mono u-text-muted">(${count})</span>`;
+      };
+      setCount('btn-cloud-prov-nous', 'brain', 'Nous Portal', list.filter(m => modelMatchesProviderFilter(m, 'nous')).length);
+      setCount('btn-cloud-prov-openrouter', 'git-branch', 'OpenRouter', list.filter(m => modelMatchesProviderFilter(m, 'openrouter')).length);
+      setCount('btn-cloud-prov-free', 'sparkles', 'Gratuitos ($0)', list.filter(m => modelMatchesProviderFilter(m, 'free')).length);
+      setCount('btn-cloud-prov-all', 'globe', 'Todos', list.length);
+
+      const customs = window.cachedHermesCustoms;
+      if (customs && Array.isArray(customs.active_gateway_ids)) {
+        customs.active_gateway_ids
+          .filter(g => g !== 'nous' && g !== 'openrouter' && g !== 'custom')
+          .forEach(gwId => {
+            const gwMeta = (customs.gateways || []).find(g => g.id === gwId);
+            const lbl = gwMeta ? gwMeta.label : humanizeProviderName(gwId);
+            setCount(`btn-cloud-prov-${gwId}`, 'plug', escapeHtml(lbl), list.filter(m => modelMatchesProviderFilter(m, gwId)).length);
+          });
+      }
+    }
+
+    function getEffectiveCloudModelMetrics(m, provFilter = currentCloudProviderFilter) {
+      const cidLower = (m.canonical_id || '').toLowerCase();
+      const nousVal = (m.nous_blended !== null && m.nous_blended !== undefined)
+        ? Number(m.nous_blended)
+        : ((m.nous_prompt_price !== null && m.nous_prompt_price !== undefined)
+            ? (cidLower.endsWith(':free') ? 0.0 : (0.25 * (m.nous_prompt_price || 0) + 0.75 * (m.nous_completion_price || 0)))
+            : null);
+      const orVal = (m.or_blended !== null && m.or_blended !== undefined)
+        ? Number(m.or_blended)
+        : ((m.or_prompt_price !== null && m.or_prompt_price !== undefined)
+            ? (cidLower.endsWith(':free') ? 0.0 : (0.25 * (m.or_prompt_price || 0) + 0.75 * (m.or_completion_price || 0)))
+            : null);
+
+      const effScore = Number(m.composite_score || 0);
+      const isFree = Boolean(
+        m.is_free || cidLower.endsWith(':free')
+        || (provFilter === 'nous' && nousVal === 0)
+        || (provFilter === 'openrouter' && orVal === 0)
+        || m.blended_cost === 0
+      );
+
+      let effCost = Number(m.blended_cost ?? nousVal ?? orVal ?? 0);
+      if (isFree || provFilter === 'free') {
+        effCost = 0.0;
+      } else if (provFilter === 'nous' && nousVal !== null) {
+        effCost = nousVal;
+      } else if (provFilter === 'openrouter' && orVal !== null) {
+        effCost = orVal;
+      }
+
+      const effRoi = isFree
+        ? Number(effScore.toFixed(1))
+        : ((provFilter === 'nous' || provFilter === 'openrouter')
+            ? (effScore / (1.0 + Math.log(1.0 + Math.max(effCost, 0.001))))
+            : Number(m.roi_index || 0));
+
+      let effProvider = m.has_nous ? 'nous' : canonicalizeGatewaySlug(m.provider || 'openrouter');
+      if (provFilter === 'nous' && m.has_nous) effProvider = 'nous';
+      else if (provFilter === 'openrouter' && m.has_openrouter) effProvider = 'openrouter';
+      else if (provFilter && provFilter !== 'all' && provFilter !== 'free'
+          && Array.isArray(m.available_gateways) && m.available_gateways.includes(provFilter)) {
+        effProvider = provFilter;
+      } else if (provFilter === 'free') {
+        effProvider = m.has_nous ? 'nous' : (m.has_openrouter ? 'openrouter' : effProvider);
+      }
+
+      const intelVal = Number(m.general_elo || m.eval_executive || m.hard_prompts_elo || effScore);
+      const codingVal = Number(m.coding_elo || m.eval_coding || (effScore * 0.96));
+      const bfclVal = Number(m.bfcl_score || m.eval_agentic || (effScore * 0.92));
+      const reasoningVal = Number(m.gpqa_score || m.hard_prompts_elo || m.eval_reasoning || (effScore * 0.95));
+      const designVal = Number(m.eval_design || (effScore * 0.94));
+      const visionVal = Number(m.vqa_multimodal_score || (m.is_multimodal ? effScore * 0.93 : 0));
+      const ifevalVal = Number(m.ifeval_score || (Math.round(((bfclVal * 0.5) + (codingVal * 0.5)) * 10) / 10));
+      const ttftVal = (m.ttft_ms && m.ttft_ms > 0) ? Number(m.ttft_ms) : null;
+      const tpsVal = (m.throughput_tps && m.throughput_tps > 0) ? Number(m.throughput_tps) : null;
+      const ctxVal = Number(m.context_window || 0);
+      const isActive = Boolean(
+        window.currentHermesMasterModel
+        && (m.canonical_id === window.currentHermesMasterModel || window.currentHermesMasterModel.includes(m.canonical_id))
+      );
+
+      return {
+        isFree,
+        nousBlendedVal: nousVal,
+        orBlendedVal: orVal,
+        effScore,
+        effCost,
+        effRoi,
+        effProvider,
+        intelVal,
+        codingVal,
+        bfclVal,
+        reasoningVal,
+        designVal,
+        visionVal,
+        ifevalVal,
+        ttftVal,
+        tpsVal,
+        ctxVal,
+        isActive,
+        provLabel: humanizeProviderName(effProvider)
+      };
+    }
+
+    function computeDynamicParetoTags(rawList, targetProf, provFilter = currentCloudProviderFilter) {
+      const decorated = (rawList || []).map(m => {
+        const eff = getEffectiveCloudModelMetrics(m, provFilter);
+        return { ...m, _eff: eff, _dynamicTag: m.pareto_tag || 'Dominated', _statusRank: 4 };
+      });
+
+      const verified = decorated.filter(d => d.pareto_tag !== 'Estimated' && d.is_verified !== false);
+      let leader = null;
+      let bestRoi = null;
+      let lowestCost = null;
+
+      if (verified.length > 0) {
+        const sortedQuality = [...verified].sort((a, b) => (b._eff.effScore - a._eff.effScore) || (a._eff.effCost - b._eff.effCost));
+        leader = (targetProf === 'executive' ? sortedQuality.find(d => d._eff.effScore >= 85.0) : null) || sortedQuality[0];
+
+        const distinctFromLeader = verified.filter(d => d.canonical_id !== leader.canonical_id);
+        const roiPool = distinctFromLeader
+          .filter(d => d._eff.effScore >= 78.0)
+          .sort((a, b) => (b._eff.effRoi - a._eff.effRoi) || (b._eff.effScore - a._eff.effScore));
+        bestRoi = roiPool[0] || null;
+
+        const remaining = distinctFromLeader.filter(d => !bestRoi || d.canonical_id !== bestRoi.canonical_id);
+        const lowCostPool = remaining
+          .filter(d => d._eff.effScore >= 72.0)
+          .sort((a, b) => (a._eff.effCost - b._eff.effCost) || (b._eff.effRoi - a._eff.effRoi));
+        lowestCost = lowCostPool[0] || remaining[0] || null;
+      }
+
+      decorated.forEach(d => {
+        if (d.pareto_tag === 'Estimated' || d.is_verified === false) {
+          d._dynamicTag = 'Estimated';
+          d._statusRank = d._eff.isActive ? 0 : 5;
+        } else if (leader && d.canonical_id === leader.canonical_id) {
+          d._dynamicTag = 'Leader';
+          d._statusRank = d._eff.isActive ? 0 : 1;
+        } else if (bestRoi && d.canonical_id === bestRoi.canonical_id) {
+          d._dynamicTag = 'BestValue';
+          d._statusRank = d._eff.isActive ? 0 : 2;
+        } else if (lowestCost && d.canonical_id === lowestCost.canonical_id) {
+          d._dynamicTag = 'UltraLowCost';
+          d._statusRank = d._eff.isActive ? 0 : 3;
+        } else {
+          d._dynamicTag = 'Dominated';
+          d._statusRank = d._eff.isActive ? 0 : 4;
+        }
+      });
+
+      return { decoratedList: decorated, podium: { leader, bestRoi, lowestCost } };
+    }
+
+    function getFilteredCloudModelsList(includeSearch = true) {
       let list = cachedCloudRankedModels || [];
       if (list.length === 0) return [];
 
-      // 1. Filtrar por Provedor
-      if (currentCloudProviderFilter && currentCloudProviderFilter !== 'all') {
-        if (currentCloudProviderFilter === 'nous') {
-          list = list.filter(m => m.has_nous || (m.provider || '').toLowerCase().includes('nous'));
-        } else if (currentCloudProviderFilter === 'openrouter') {
-          list = list.filter(m => m.has_openrouter || (m.provider || '').toLowerCase().includes('openrouter'));
-        } else {
-          list = list.filter(m => (m.provider || '').toLowerCase().includes(currentCloudProviderFilter));
-        }
-      }
+      // 1. Filtrar por Gateway
+      list = list.filter(m => modelMatchesProviderFilter(m, currentCloudProviderFilter));
 
-      // 2. Filtrar por Modalidade Expandida (Visão, Imagem, Áudio, Vídeo, World Models, Decisão, Texto)
+      // 2. Filtrar por Modalidade Expandida
       if (currentCloudModalityFilter && currentCloudModalityFilter !== 'all') {
         list = list.filter(m => {
           const cidLower = (m.canonical_id || '').toLowerCase();
@@ -5808,21 +6645,13 @@
           const isWorld = Boolean(modLower.includes('world') || cidLower.includes('world') || cidLower.includes('genie') || cidLower.includes('cosmos') || cidLower.includes('oasis') || cidLower.includes('marble'));
           const isDecision = Boolean(modLower.includes('decision') || cidLower.includes('jev') || cidLower.includes('routing'));
 
-          if (currentCloudModalityFilter === 'vision' || currentCloudModalityFilter === 'multimodal') {
-            return isVision;
-          } else if (currentCloudModalityFilter === 'image_gen') {
-            return isImgGen;
-          } else if (currentCloudModalityFilter === 'audio') {
-            return isAudio;
-          } else if (currentCloudModalityFilter === 'video') {
-            return isVideo;
-          } else if (currentCloudModalityFilter === 'world') {
-            return isWorld;
-          } else if (currentCloudModalityFilter === 'decision') {
-            return isDecision;
-          } else if (currentCloudModalityFilter === 'text') {
-            return !isVision && !isImgGen && !isAudio && !isVideo && !isWorld;
-          }
+          if (currentCloudModalityFilter === 'vision' || currentCloudModalityFilter === 'multimodal') return isVision;
+          if (currentCloudModalityFilter === 'image_gen') return isImgGen;
+          if (currentCloudModalityFilter === 'audio') return isAudio;
+          if (currentCloudModalityFilter === 'video') return isVideo;
+          if (currentCloudModalityFilter === 'world') return isWorld;
+          if (currentCloudModalityFilter === 'decision') return isDecision;
+          if (currentCloudModalityFilter === 'text') return !isVision && !isImgGen && !isAudio && !isVideo && !isWorld;
           return true;
         });
       }
@@ -5840,6 +6669,18 @@
         });
       }
 
+      // 4. Filtrar por Termo de Busca
+      if (includeSearch && cloudSearchQuery) {
+        list = list.filter(m => {
+          const idMatch = (m.canonical_id || '').toLowerCase().includes(cloudSearchQuery);
+          const nameMatch = (m.display_name || '').toLowerCase().includes(cloudSearchQuery);
+          const humanMatch = humanizeModelName(m.canonical_id, m.display_name).toLowerCase().includes(cloudSearchQuery);
+          const provMatch = (m.provider || '').toLowerCase().includes(cloudSearchQuery);
+          const devMatch = (m.developer || '').toLowerCase().includes(cloudSearchQuery);
+          return idMatch || nameMatch || humanMatch || provMatch || devMatch;
+        });
+      }
+
       return list;
     }
 
@@ -5848,160 +6689,73 @@
       if (!container) return;
       const targetProf = (currentProfile === 'orchestrator') ? 'executive' : currentProfile;
       const profileReport = cloudChampionsData.find(c => c.profile.toLowerCase() === targetProf);
-      const filteredList = getFilteredCloudModelsList();
-      const hasActiveFilters = (currentCloudProviderFilter !== 'all') || 
-                               (currentCloudModalityFilter !== 'all') || 
-                               (selectedManufacturers && selectedManufacturers.size > 0);
+      const filteredList = getFilteredCloudModelsList(true);
 
-      // Atualiza o sublabel do pódio com o resumo dos filtros ativos
       const sublabel = document.getElementById('cloud-triad-sublabel');
       if (sublabel) {
         let filterParts = [];
         if (currentCloudProviderFilter !== 'all') {
-          filterParts.push(currentCloudProviderFilter === 'nous' ? uiIcon('brain', 'icon-xs') + ' Nous Portal' : uiIcon('git-branch', 'icon-xs') + ' OpenRouter');
+          filterParts.push(currentCloudProviderFilter === 'free'
+            ? `${uiIcon('sparkles', 'icon-xs')} Gratuitos ($0)`
+            : `${uiIcon('plug', 'icon-xs')} ${humanizeProviderName(currentCloudProviderFilter)}`);
         }
         if (currentCloudModalityFilter !== 'all') {
-          filterParts.push(currentCloudModalityFilter === 'multimodal' ? uiIcon('eye', 'icon-xs') + ' Multimodal' : uiIcon('file-text', 'icon-xs') + ' Texto Puro');
+          filterParts.push(`${uiIcon('eye', 'icon-xs')} ${currentCloudModalityFilter}`);
         }
         if (selectedManufacturers && selectedManufacturers.size > 0) {
-          filterParts.push(uiIcon('layers', 'icon-xs') + ` ${selectedManufacturers.size} Fabricante(s)`);
+          filterParts.push(`${uiIcon('layers', 'icon-xs')} ${selectedManufacturers.size} Fabricante(s)`);
         }
-        const filterStr = filterParts.length > 0 ? ` • Filtros Ativos: ${filterParts.join(' | ')}` : '';
-        sublabel.innerHTML = `Recomendações canônicas de qualidade máxima, melhor ROI e menor custo${filterStr}`;
-      }
-
-      if (!profileReport && filteredList.length === 0) {
-        container.innerHTML = `<div class="u-text-center u-text-muted u-s-8d8b30">Nenhum dado encontrado para o perfil ${targetProf}.</div>`;
-        return;
+        const filterStr = filterParts.length > 0 ? ` • Escopo: ${filterParts.join(' | ')}` : '';
+        sublabel.innerHTML = `Líderes recalculados dinamicamente para qualidade, melhor ROI e menor custo${filterStr}`;
       }
 
       let cards = [];
-
-      if (!hasActiveFilters && profileReport) {
-        if (profileReport.quality_leader) {
+      if (filteredList.length > 0) {
+        const { podium } = computeDynamicParetoTags(filteredList, targetProf, currentCloudProviderFilter);
+        if (podium.leader) {
           cards.push({
             roleType: 'quality',
             badgeText: 'Máxima Inteligência',
             badgeIcon: 'trophy',
-            roleSubtitle: targetProf === 'executive' ? 'Maestro Supremo' : 'Líder Absoluto',
-            data: profileReport.quality_leader,
-            defaultDesc: targetProf === 'executive' 
-              ? 'Melhor capacidade de orquestração geral e discernimento executivo sem limites de orçamento.'
-              : 'Melhor pontuação absoluta no perfil selecionado. Recomendado para tarefas críticas e sem limite financeiro.'
+            roleSubtitle: targetProf === 'executive' ? 'Líder Maestro' : 'Líder Filtrado',
+            data: podium.leader,
+            eff: podium.leader._eff,
+            defaultDesc: 'Maior pontuação técnica verificada dentro do gateway e filtros selecionados.'
           });
         }
-        if (profileReport.best_value) {
+        if (podium.bestRoi) {
           cards.push({
             roleType: 'value',
             badgeText: 'Melhor Custo-Benefício',
             badgeIcon: 'sparkles',
-            roleSubtitle: 'Ponto Ótimo de ROI',
-            data: profileReport.best_value,
-            defaultDesc: targetProf === 'executive'
-              ? 'Equilíbrio ideal entre inteligência de ponta e economia contínua de créditos no Nous Portal.'
-              : 'Máximo retorno de inteligência por cada dólar investido. Ideal para fluxos operacionais contínuos.'
+            roleSubtitle: 'Maior ROI Filtrado',
+            data: podium.bestRoi,
+            eff: podium.bestRoi._eff,
+            defaultDesc: 'Melhor equilíbrio de capacidade cognitiva e economia real por dólar no gateway.'
           });
         }
-        if (profileReport.ultra_low_cost) {
+        if (podium.lowestCost) {
           cards.push({
             roleType: 'lowcost',
             badgeText: 'Ultra Econômico',
             badgeIcon: 'zap',
-            roleSubtitle: 'Velocidade & Volume',
-            data: profileReport.ultra_low_cost,
-            defaultDesc: 'Tarifa mínima com alta taxa de geração (TPS). Perfeito para subagentes em lote, resumos e triagem.'
+            roleSubtitle: 'Menor Tarifa Filtrada',
+            data: podium.lowestCost,
+            eff: podium.lowestCost._eff,
+            defaultDesc: 'Opção verificada mais econômica ou gratuita (:free) dentro dos critérios ativos.'
           });
         }
-      } else if (filteredList.length > 0) {
-        // Filtros ativos: recalcula os 3 campeões apenas com modelos verificados (exclui Estimated)
-        const verifiedPool = filteredList.filter(m => m.pareto_tag !== 'Estimated' && m.is_verified !== false);
-
-        const getEffCost = (m) => {
-          if (currentCloudProviderFilter === 'nous' && m.nous_blended > 0) return m.nous_blended;
-          if (currentCloudProviderFilter === 'openrouter' && m.or_blended > 0) return m.or_blended;
-          return m.blended_cost || m.nous_blended || m.or_blended || 0;
-        };
-        const getEffRoi = (m, cost) => {
-          if (currentCloudProviderFilter === 'nous' || currentCloudProviderFilter === 'openrouter') {
-            return (m.composite_score || 0) / (1.0 + Math.log(1.0 + Math.max(cost, 0.001)));
-          }
-          return m.roi_index || 0;
-        };
-        const withProviderContext = (m) => {
-          const effCost = getEffCost(m);
-          const effRoi = getEffRoi(m, effCost);
-          const effProvider = currentCloudProviderFilter === 'nous'
-            ? 'nous_portal'
-            : (currentCloudProviderFilter === 'openrouter' ? 'openrouter_market' : m.provider);
-          return { ...m, blended_cost: effCost, roi_index: effRoi, provider: effProvider };
-        };
-
-        const enrichedPool = verifiedPool.map(withProviderContext);
-        if (enrichedPool.length > 0) {
-          const sortedByQuality = [...enrichedPool].sort((a, b) => (b.composite_score || 0) - (a.composite_score || 0));
-          const leader = (targetProf === 'executive'
-            ? sortedByQuality.find(m => (m.composite_score || 0) >= 85.0)
-            : null) || sortedByQuality[0];
-
-          cards.push({
-            roleType: 'quality',
-            badgeText: 'Máxima Inteligência',
-            badgeIcon: 'trophy',
-            roleSubtitle: 'Líder dos Filtros',
-            data: leader,
-            defaultDesc: 'Modelo verificado de mais alto desempenho técnico dentro dos critérios selecionados.'
-          });
-
-          const leaderScore = leader.composite_score || 0;
-          const leaderCost = leader.blended_cost || 0;
-          const distinctPool = enrichedPool.filter(m => m.canonical_id !== leader.canonical_id);
-
-          const highCapRoiPool = distinctPool
-            .filter(m => (m.composite_score || 0) >= 82.0 && (m.composite_score || 0) >= (leaderScore - 12.0) && (m.blended_cost || 0) < leaderCost)
-            .sort((a, b) => (b.roi_index || 0) - (a.roi_index || 0));
-
-          const bestRoi = highCapRoiPool[0] || distinctPool
-            .filter(m => (m.composite_score || 0) >= 78.0)
-            .sort((a, b) => ((b.composite_score * 0.6 + b.roi_index * 0.4) - (a.composite_score * 0.6 + a.roi_index * 0.4)))[0];
-
-          if (bestRoi) {
-            cards.push({
-              roleType: 'value',
-              badgeText: 'Melhor Custo-Benefício',
-              badgeIcon: 'sparkles',
-              roleSubtitle: 'Maior ROI Filtrado',
-              data: bestRoi,
-              defaultDesc: 'Melhor equilíbrio de alta capacidade e economia dentro dos critérios selecionados.'
-            });
-          }
-
-          const remainingPool = distinctPool.filter(m => !bestRoi || m.canonical_id !== bestRoi.canonical_id);
-          const lowCostPool = remainingPool
-            .filter(m => (m.composite_score || 0) >= 72.0 && (m.blended_cost || 0) > 0 && (m.blended_cost || 0) <= 0.60)
-            .sort((a, b) => (a.blended_cost - b.blended_cost) || (b.roi_index - a.roi_index));
-
-          const lowestCost = lowCostPool[0] || remainingPool
-            .filter(m => (m.composite_score || 0) >= 72.0 && (m.blended_cost || 0) > 0)
-            .sort((a, b) => (a.blended_cost - b.blended_cost) || (b.roi_index - a.roi_index))[0];
-
-          if (lowestCost) {
-            cards.push({
-              roleType: 'lowcost',
-              badgeText: 'Ultra Econômico',
-              badgeIcon: 'zap',
-              roleSubtitle: 'Menor Tarifa Filtrada',
-              data: lowestCost,
-              defaultDesc: 'Opção verificada mais econômica e veloz dentro dos critérios selecionados.'
-            });
-          }
-        }
+      } else if ((cachedCloudRankedModels || []).length === 0 && profileReport) {
+        if (profileReport.quality_leader) cards.push({ roleType: 'quality', badgeText: 'Máxima Inteligência', badgeIcon: 'trophy', roleSubtitle: 'Líder Absoluto', data: profileReport.quality_leader, eff: null, defaultDesc: 'Líder global no perfil.' });
+        if (profileReport.best_value) cards.push({ roleType: 'value', badgeText: 'Melhor Custo-Benefício', badgeIcon: 'sparkles', roleSubtitle: 'Melhor ROI', data: profileReport.best_value, eff: null, defaultDesc: 'Melhor equilíbrio custo/inteligência.' });
+        if (profileReport.ultra_low_cost) cards.push({ roleType: 'lowcost', badgeText: 'Ultra Econômico', badgeIcon: 'zap', roleSubtitle: 'Menor Tarifa', data: profileReport.ultra_low_cost, eff: null, defaultDesc: 'Menor custo operacional.' });
       }
 
       if (cards.length === 0) {
         container.innerHTML = `
           <div class="u-text-center u-text-muted u-s-1e3b82">
-            Nenhum campeão encontrado para a combinação de filtros selecionada.<br>
-            <span class="u-text-dark u-s-dbc8d1">Dica: Experimente selecionar "Todas as Modalidades" ou marcar mais fabricantes no filtro.</span>
+            Nenhum campeão verificado encontrado para esta combinação de filtros.<br>
+            <button type="button" class="btn btn-sm u-mt-2" onclick="resetCloudFilters()">Restaurar Filtros Padrão</button>
           </div>
         `;
         return;
@@ -6009,18 +6763,18 @@
 
       container.innerHTML = cards.map(c => {
         const m = c.data;
+        const eff = c.eff || getEffectiveCloudModelMetrics(m, currentCloudProviderFilter);
         const cid = m.canonical_id || m.display_name || '--';
-        const friendlyName = humanizeModelName(cid);
-        const provClean = humanizeProviderName(m.provider);
-        const score = m.composite_score || 0;
-        const cost = m.blended_cost || m.nous_blended || m.or_blended || 0;
+        const friendlyName = humanizeModelName(cid, m.display_name);
+        const provClean = eff.provLabel || humanizeProviderName(m.provider);
+        const score = eff.effScore;
+        const cost = eff.effCost;
         const costStr = cost === 0 ? '0.00' : (cost < 0.01 ? cost.toFixed(4) : cost.toFixed(2));
-        const costHint = cost === 0 ? 'Grátis / Local' : (cost < 0.10 ? 'Ultra Baixo Custo' : (cost < 1.00 ? 'Econômico' : (cost < 5.00 ? 'Equilibrado' : 'Fronteira Premium')));
-        const roi = m.roi_index || 0;
-        const tpsStr = m.throughput_tps ? m.throughput_tps.toFixed(0) + ' TPS' : '-- TPS';
-        const ctxStr = formatContextTokens(m.context_window);
-
-        const isActive = (window.currentHermesMasterModel && (cid === window.currentHermesMasterModel || window.currentHermesMasterModel.includes(cid)));
+        const costHint = eff.isFree || cost === 0 ? 'Grátis (:free)' : (cost < 0.10 ? 'Ultra Baixo Custo' : (cost < 1.00 ? 'Econômico' : (cost < 5.00 ? 'Equilibrado' : 'Fronteira Premium')));
+        const roi = eff.effRoi;
+        const tpsStr = eff.tpsVal ? eff.tpsVal.toFixed(0) + ' TPS' : '-- TPS';
+        const ctxStr = formatContextTokens(eff.ctxVal);
+        const isActive = eff.isActive;
 
         return `
           <div class="cloud-champion-card ${c.roleType} ${isActive ? 'active-hermes-card' : ''}">
@@ -6036,12 +6790,12 @@
               <div class="champion-card-model">
                 <div class="champion-model-brand-row">
                   ${getDevBrandBadge(m.developer, cid)}
-                  <span class="champion-provider-pill">${provClean}</span>
+                  <span class="champion-provider-pill">${escapeHtml(provClean)}</span>
                 </div>
-                <div class="champion-model-name" title="${cid}">${friendlyName}</div>
+                <div class="champion-model-name" title="${escapeHtml(cid)}">${escapeHtml(friendlyName)}</div>
                 <div class="champion-model-id-row">
-                  <code class="mono u-s-7ef263">${cid}</code>
-                  <button class="btn u-text-muted u-pointer u-s-7932db" onclick="copyCloudModelId('${cid}')" title="Copiar ID do Modelo">
+                  <code class="mono u-s-7ef263">${escapeHtml(cid)}</code>
+                  <button class="btn u-text-muted u-pointer u-s-7932db" onclick="copyCloudModelId('${escapeJsSingleQuote(cid)}')" title="Copiar ID do Modelo">
                     ${uiIcon("list", "icon-xs")}
                   </button>
                 </div>
@@ -6052,11 +6806,8 @@
               <div class="champion-metrics-grid">
                 <div class="champion-metric-box">
                   <div class="metric-label">Pontuação (Score)</div>
-                  <div class="metric-value" style="color: ${c.roleType === 'quality' ? '#fbbf24' : (c.roleType === 'value' ? 'var(--cyan)' : 'var(--green)')};">
+                  <div class="metric-value">
                     ${score.toFixed(1)} <span class="metric-sub">/100</span>
-                  </div>
-                  <div class="metric-progress-bg">
-                    <div class="metric-progress-bar" style="width: ${Math.min(score, 100)}%;"></div>
                   </div>
                 </div>
                 <div class="champion-metric-box">
@@ -6067,7 +6818,7 @@
                 <div class="champion-metric-box">
                   <div class="metric-label">Custo-Benefício (ROI)</div>
                   <div class="metric-value u-text-green">${roi.toFixed(1)}x</div>
-                  <div class="metric-hint">Retorno Multiobjetivo</div>
+                  <div class="metric-hint">Retorno no Gateway</div>
                 </div>
                 <div class="champion-metric-box">
                   <div class="metric-label">Velocidade & Janela</div>
@@ -6078,7 +6829,7 @@
             </div>
 
             <div class="champion-card-footer">
-              <button class="btn-apply-champion" onclick="openQuickApplyModal('${cid}', '${m.provider}', false)">
+              <button class="btn-apply-champion" onclick="openQuickApplyModal('${escapeJsSingleQuote(cid)}', '${eff.effProvider}', false)">
                 ${uiIcon('zap', 'icon-sm')} ${isActive ? 'Reconfigurar no Hermes' : 'Usar este Modelo no Hermes'}
               </button>
             </div>
@@ -6087,28 +6838,50 @@
       }).join('');
     }
 
-    // 4.1 FETCH RANKING EXPANDIDO DA CLOUD ARENA (TOP 200)
+    // 4.1 FETCH RANKING EXPANDIDO DA CLOUD ARENA (ATE 500 MODELOS)
     async function fetchCloudRankedModels(profile) {
       const tbody = document.getElementById('cloud-ranked-tbody');
       if (!tbody) return;
 
-      tbody.innerHTML = '<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="19">Consultando até 200 modelos da arena com benchmarks, latências e tarifas no SQLite...</td></tr>';
+      tbody.innerHTML = '<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="19">Consultando catálogo da Cloud Arena com benchmarks, latências e tarifas comparadas...</td></tr>';
 
       try {
-        const res = await fetch(`/api/v1/cloud/models?profile=${profile || currentProfile}&limit=200`);
+        const res = await fetch(`/api/v1/cloud/models?profile=${profile || currentProfile}&limit=500`);
         if (res.ok) {
           const data = await res.json();
           cachedCloudRankedModels = data.models || [];
           initMfgCheckboxes();
+          updateCloudProviderPillCounts();
           renderCloudTableHeader();
-          renderCloudRankedTable(cachedCloudRankedModels);
           renderCloudTable();
+          renderCloudRankedTable(cachedCloudRankedModels);
         } else {
           tbody.innerHTML = '<tr><td class="u-text-center u-text-red u-s-f8d354" colspan="19">Falha ao carregar ranking da Cloud Arena.</td></tr>';
         }
       } catch (e) {
         tbody.innerHTML = `<tr><td class="u-text-center u-text-red u-s-f8d354" colspan="19">Erro de rede: ${e.message}</td></tr>`;
       }
+    }
+
+    function getCloudSortValue(d, col) {
+      const e = d._eff;
+      if (col === 'rank') return d.rank || 0;
+      if (col === 'status') return d._statusRank;
+      if (col === 'score') return e.effScore;
+      if (col === 'roi') return e.effRoi;
+      if (col === 'intel') return e.intelVal;
+      if (col === 'coding') return e.codingVal;
+      if (col === 'bfcl') return e.bfclVal;
+      if (col === 'reasoning') return e.reasoningVal;
+      if (col === 'design') return e.designVal;
+      if (col === 'vision') return e.visionVal;
+      if (col === 'ifeval') return e.ifevalVal;
+      if (col === 'tps') return e.tpsVal !== null ? e.tpsVal : -1;
+      if (col === 'ctx') return e.ctxVal;
+      if (col === 'nous_cost') return e.nousBlendedVal;
+      if (col === 'or_cost') return e.orBlendedVal;
+      if (col === 'ttft') return e.ttftVal;
+      return e.effScore;
     }
 
     function renderCloudRankedTable(models) {
@@ -6118,240 +6891,133 @@
       if (models) {
         cachedCloudRankedModels = models;
       }
-      let list = getFilteredCloudModelsList();
+      const targetProf = (currentProfile === 'orchestrator') ? 'executive' : currentProfile;
+      const filteredRaw = getFilteredCloudModelsList(true);
+      const { decoratedList } = computeDynamicParetoTags(filteredRaw, targetProf, currentCloudProviderFilter);
 
-      // 4. Filtrar por Termo de Busca
-      if (cloudSearchQuery) {
-        list = list.filter(m => {
-          const idMatch = (m.canonical_id || '').toLowerCase().includes(cloudSearchQuery);
-          const nameMatch = (m.display_name || '').toLowerCase().includes(cloudSearchQuery);
-          const provMatch = (m.provider || '').toLowerCase().includes(cloudSearchQuery);
-          const devMatch = (m.developer || '').toLowerCase().includes(cloudSearchQuery);
-          return idMatch || nameMatch || provMatch || devMatch;
-        });
-      }
-
-      // 5. Ordenar dinamicamente por coluna clicada
-      list = [...list].sort((a, b) => {
-        let valA, valB;
-        if (currentSortCol === 'rank') {
-          valA = a.rank || 0; valB = b.rank || 0;
-        } else if (currentSortCol === 'name') {
-          valA = (a.canonical_id || '').toLowerCase();
-          valB = (b.canonical_id || '').toLowerCase();
-          return currentSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        } else if (currentSortCol === 'nous_cost') {
-          valA = (a.nous_blended !== null && a.nous_blended !== undefined && a.nous_blended > 0) ? a.nous_blended : 999999;
-          valB = (b.nous_blended !== null && b.nous_blended !== undefined && b.nous_blended > 0) ? b.nous_blended : 999999;
-        } else if (currentSortCol === 'or_cost') {
-          valA = (a.or_blended !== null && a.or_blended !== undefined && a.or_blended > 0) ? a.or_blended : 999999;
-          valB = (b.or_blended !== null && b.or_blended !== undefined && b.or_blended > 0) ? b.or_blended : 999999;
-        } else if (currentSortCol === 'score') {
-          valA = a.composite_score || 0; valB = b.composite_score || 0;
-        } else if (currentSortCol === 'roi') {
-          valA = a.roi_index || 0; valB = b.roi_index || 0;
-        } else if (currentSortCol === 'intel') {
-          valA = a.eval_reasoning || a.hard_prompts_elo || a.composite_score || 0;
-          valB = b.eval_reasoning || b.hard_prompts_elo || b.composite_score || 0;
-        } else if (currentSortCol === 'coding') {
-          valA = a.coding_elo || a.eval_coding || 0; valB = b.coding_elo || b.eval_coding || 0;
-        } else if (currentSortCol === 'bfcl') {
-          valA = a.bfcl_score || a.eval_agentic || 0; valB = b.bfcl_score || b.eval_agentic || 0;
-        } else if (currentSortCol === 'reasoning') {
-          valA = a.gpqa_score || a.hard_prompts_elo || a.eval_reasoning || 0;
-          valB = b.gpqa_score || b.hard_prompts_elo || b.eval_reasoning || 0;
-        } else if (currentSortCol === 'design') {
-          valA = a.eval_design || 0; valB = b.eval_design || 0;
-        } else if (currentSortCol === 'vision') {
-          valA = a.vqa_multimodal_score || (a.is_multimodal ? 85 : 0);
-          valB = b.vqa_multimodal_score || (b.is_multimodal ? 85 : 0);
-        } else if (currentSortCol === 'ifeval') {
-          valA = a.ifeval_score || 0; valB = b.ifeval_score || 0;
-        } else if (currentSortCol === 'ttft') {
-          valA = (a.ttft_ms && a.ttft_ms > 0) ? a.ttft_ms : 99999;
-          valB = (b.ttft_ms && b.ttft_ms > 0) ? b.ttft_ms : 99999;
-        } else if (currentSortCol === 'tps') {
-          valA = a.throughput_tps || 0; valB = b.throughput_tps || 0;
-        } else if (currentSortCol === 'ctx') {
-          valA = a.context_window || 0; valB = b.context_window || 0;
-        } else {
-          valA = a.composite_score || 0; valB = b.composite_score || 0;
+      // Ordenação monotônica 100% consistente com os valores exibidos em cada célula
+      const list = [...decoratedList].sort((a, b) => {
+        if (currentSortCol === 'name') {
+          const nA = humanizeModelName(a.canonical_id, a.display_name).toLowerCase();
+          const nB = humanizeModelName(b.canonical_id, b.display_name).toLowerCase();
+          return currentSortAsc ? nA.localeCompare(nB) : nB.localeCompare(nA);
+        }
+        if (currentSortCol === 'prov') {
+          return currentSortAsc
+            ? a._eff.provLabel.localeCompare(b._eff.provLabel)
+            : b._eff.provLabel.localeCompare(a._eff.provLabel);
         }
 
-        return currentSortAsc ? (valA - valB) : (valB - valA);
+        const valA = getCloudSortValue(a, currentSortCol);
+        const valB = getCloudSortValue(b, currentSortCol);
+
+        // Valores ausentes (null) sempre ficam ao final em custos/latência
+        if (valA === null && valB === null) return b._eff.effScore - a._eff.effScore;
+        if (valA === null) return 1;
+        if (valB === null) return -1;
+
+        const diff = currentSortAsc ? (valA - valB) : (valB - valA);
+        if (Math.abs(diff) > 1e-6) return diff;
+        return b._eff.effScore - a._eff.effScore;
       });
 
       const countEl = document.getElementById('cloud-ranked-count');
       if (countEl) {
-        const provName = currentCloudProviderFilter === 'nous' ? 'Nous Portal (Foco Hermes)' : currentCloudProviderFilter === 'openrouter' ? 'OpenRouter (API)' : 'Todos os Provedores';
+        const provLabel = currentCloudProviderFilter === 'all'
+          ? 'Mercado Global'
+          : (currentCloudProviderFilter === 'free' ? 'Gratuitos ($0)' : humanizeProviderName(currentCloudProviderFilter));
         const totalCount = (cachedCloudRankedModels || []).length;
-        countEl.innerText = `Exibindo ${list.length} de ${totalCount} modelos homologados (${provName})`;
+        countEl.innerText = `Exibindo ${list.length} de ${totalCount} modelos homologados (${provLabel})`;
       }
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="19">Nenhum modelo avaliado encontrado correspondente aos filtros.</td></tr>`;
+        tbody.innerHTML = `<tr><td class="u-text-center u-text-muted u-s-0acd09" colspan="19">Nenhum modelo encontrado para o filtro selecionado. <button class="btn btn-sm u-ml-2" onclick="resetCloudFilters()">Limpar Filtros</button></td></tr>`;
         return;
       }
 
       tbody.innerHTML = list.map((m, idx) => {
+        const eff = m._eff;
         const isTop3 = idx < 3;
-        const isActive = (window.currentHermesMasterModel && (m.canonical_id === window.currentHermesMasterModel || window.currentHermesMasterModel.includes(m.canonical_id)));
+        const isActive = eff.isActive;
+        const dTag = m._dynamicTag;
 
         let statusBadge = '';
         if (isActive) {
           statusBadge = '<span class="badge badge-active-hermes">' + uiIcon('check-circle', 'icon-xs') + ' Ativo no Hermes</span>';
-        } else if (m.pareto_tag === 'Leader') {
-          statusBadge = '<span class="badge badge-champion" title="Líder Qualidade: Ponto ótimo não-dominado na Fronteira de Pareto">' + uiIcon('crown', 'icon-xs') + ' Líder Qualidade</span>';
-        } else if (m.pareto_tag === 'BestValue') {
-          statusBadge = '<span class="badge badge-value" title="Ponto Ótimo de ROI: Maior razão inteligência por dólar">' + uiIcon('sparkles', 'icon-xs') + ' Melhor ROI</span>';
-        } else if (m.pareto_tag === 'UltraLowCost') {
-          statusBadge = '<span class="badge u-text-emerald u-s-a7da15" title="Ultra Econômico: Menor tarifa com alta taxa de geração">' + uiIcon('zap', 'icon-xs') + ' Ultra Econômico</span>';
-        } else if (m.pareto_tag === 'Estimated') {
-          statusBadge = '<span class="badge badge-alternative" style="opacity: 0.78; border-style: dashed;" title="Estimado por heurística: este modelo ainda não possui benchmark empírico auditado e não concorre ao Pódio">' + uiIcon('clock', 'icon-xs') + ' Estimado</span>';
+        } else if (dTag === 'Leader') {
+          statusBadge = '<span class="badge badge-champion" title="Líder de Qualidade no conjunto filtrado">' + uiIcon('crown', 'icon-xs') + ' Líder Qualidade</span>';
+        } else if (dTag === 'BestValue') {
+          statusBadge = '<span class="badge badge-value" title="Melhor Custo-Benefício (ROI) no conjunto filtrado">' + uiIcon('sparkles', 'icon-xs') + ' Melhor ROI</span>';
+        } else if (dTag === 'UltraLowCost') {
+          statusBadge = '<span class="badge u-text-emerald u-s-a7da15" title="Ultra Econômico no conjunto filtrado">' + uiIcon('zap', 'icon-xs') + ' Ultra Econômico</span>';
+        } else if (dTag === 'Estimated') {
+          statusBadge = '<span class="badge badge-alternative" title="Estimado por heurística até publicação de benchmarks auditados">' + uiIcon('clock', 'icon-xs') + ' Estimado</span>';
         } else {
-          statusBadge = '<span class="badge badge-alternative" title="Modelo homologado disponível no catálogo">' + uiIcon('sparkles', 'icon-xs') + ' Homologado</span>';
+          statusBadge = '<span class="badge badge-alternative" title="Modelo homologado disponível">' + uiIcon('sparkles', 'icon-xs') + ' Homologado</span>';
         }
 
-        const ctxNum = m.context_window || 0;
+        const ctxNum = eff.ctxVal;
         let retentionPct = 99.8;
         if (ctxNum >= 1000000) retentionPct = 98.9;
         else if (ctxNum >= 200000) retentionPct = 99.4;
         else if (ctxNum >= 128000) retentionPct = 99.7;
-        const ctxFormatted = formatContextTokens(ctxNum);
-        const ctxStr = `<span class="u-nowrap u-fw-600">${ctxFormatted}</span> <span class="u-text-emerald u-fw-600 u-nowrap u-s-923ef2" title="Taxa de Retenção de Contexto Needle-in-a-Haystack / RULER">(${retentionPct.toFixed(1)}%)</span>`;
+        const ctxStr = `<span class="u-nowrap u-fw-600">${formatContextTokens(ctxNum)}</span> <span class="u-text-emerald u-fw-600 u-nowrap u-s-923ef2">(${retentionPct.toFixed(1)}%)</span>`;
 
-        // Sub-scores enriquecidos e contínuos
-        const baseScore = m.composite_score || 80.0;
-        
-        // Inteligência
-        const intelVal = m.general_elo || m.eval_executive || m.hard_prompts_elo || baseScore;
-        const intelScoreStr = `<span class="u-fw-600 u-nowrap u-s-aba882" title="Inteligência Geral (Artificial Analysis / LMSYS Arena ELO): ${intelVal.toFixed(1)}">${intelVal.toFixed(1)}</span>`;
+        const intelScoreStr = `<span class="u-fw-600 u-nowrap u-s-aba882" title="Inteligência Geral: ${eff.intelVal.toFixed(1)}">${eff.intelVal.toFixed(1)}</span>`;
+        const codingScoreStr = `<span class="u-text-cyan u-fw-600 u-nowrap" title="Coding (SWE): ${eff.codingVal.toFixed(1)}">${eff.codingVal.toFixed(1)}</span>`;
+        const bfclScoreStr = `<span class="u-fw-600 u-nowrap u-s-2dc335" title="Tools (BFCL): ${eff.bfclVal.toFixed(1)}">${eff.bfclVal.toFixed(1)}</span>`;
+        const reasoningScoreStr = `<span class="u-fw-600 u-nowrap u-s-23cce7" title="Reasoning (GPQA): ${eff.reasoningVal.toFixed(1)}">${eff.reasoningVal.toFixed(1)}</span>`;
+        const designScoreStr = `<span class="u-fw-600 u-nowrap u-s-1d1159" title="Design UI/UX: ${eff.designVal.toFixed(1)}">${eff.designVal.toFixed(1)}</span>`;
+        const visionScoreStr = eff.visionVal > 0
+          ? `<span class="u-fw-600 u-nowrap u-s-358e52" title="Visão (VQA): ${eff.visionVal.toFixed(1)}">${eff.visionVal.toFixed(1)}</span>`
+          : '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
+        const ifevalScoreStr = `<span class="u-text-emerald u-fw-600 u-nowrap" title="Instrução (IFEval): ${eff.ifevalVal.toFixed(1)}">${eff.ifevalVal.toFixed(1)}</span>`;
 
-        // Coding
-        const codingVal = m.coding_elo || m.eval_coding || (baseScore * 0.96);
-        const codingScoreStr = `<span class="u-text-cyan u-fw-600 u-nowrap" title="SWE-bench / Code ELO: ${codingVal.toFixed(1)}">${codingVal.toFixed(1)}</span>`;
-
-        // Tools
-        const bfclVal = m.bfcl_score || m.eval_agentic || (baseScore * 0.92);
-        const bfclScoreStr = `<span class="u-fw-600 u-nowrap u-s-2dc335" title="Berkeley Function Calling: ${bfclVal.toFixed(1)}">${bfclVal.toFixed(1)}</span>`;
-
-        // Reasoning
-        const reasoningVal = m.gpqa_score || m.hard_prompts_elo || m.eval_reasoning || (baseScore * 0.95);
-        const reasoningScoreStr = `<span class="u-fw-600 u-nowrap u-s-23cce7" title="GPQA Diamond / Hard Prompts: ${reasoningVal.toFixed(1)}">${reasoningVal.toFixed(1)}</span>`;
-
-        // Design UI/UX
-        const designVal = m.eval_design || (baseScore * 0.94);
-        const designScoreStr = `<span class="u-fw-600 u-nowrap u-s-1d1159" title="Design UI/UX / Frontend Score: ${designVal.toFixed(1)}">${designVal.toFixed(1)}</span>`;
-
-        // Visão / VQA
-        let visionScoreStr = '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
-        if (m.vqa_multimodal_score) {
-          visionScoreStr = `<span class="u-fw-600 u-nowrap u-s-358e52" title="MMMU / ChartQA / Visão Multimodal: ${m.vqa_multimodal_score.toFixed(1)}">${m.vqa_multimodal_score.toFixed(1)}</span>`;
-        } else if (m.is_multimodal) {
-          const vVal = baseScore * 0.93;
-          visionScoreStr = `<span class="u-fw-600 u-nowrap u-s-358e52" title="MMMU / Visão Multimodal: ${vVal.toFixed(1)}">${vVal.toFixed(1)}</span>`;
-        }
-
-        // Instrução (IFEval)
-        const ifevalVal = m.ifeval_score || Math.round(((bfclVal * 0.5) + (codingVal * 0.5)) * 10) / 10;
-        const ifevalScoreStr = `<span class="u-text-emerald u-fw-600 u-nowrap" title="Instruction Following (IFEval): ${ifevalVal.toFixed(1)}">${ifevalVal.toFixed(1)}</span>`;
-
-        // TTFT (lado a lado com ms)
         let ttftStr = '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
-        if (m.ttft_ms && m.ttft_ms > 0) {
-          const ttftColor = m.ttft_ms < 400 ? '#34d399' : (m.ttft_ms < 800 ? '#38bdf8' : (m.ttft_ms < 1500 ? '#fbbf24' : '#f87171'));
-          ttftStr = `<span class="u-fw-600 u-nowrap" style="color: ${ttftColor};" title="Time To First Token: ${m.ttft_ms.toFixed(0)} ms">${m.ttft_ms.toFixed(0)} ms</span>`;
+        if (eff.ttftVal !== null) {
+          const ttftCls = eff.ttftVal < 400 ? 'u-text-emerald' : (eff.ttftVal < 1000 ? 'u-text-cyan' : 'u-text-amber');
+          ttftStr = `<span class="u-fw-600 u-nowrap ${ttftCls}">${eff.ttftVal.toFixed(0)} ms</span>`;
         }
+        const tpsStr = eff.tpsVal !== null
+          ? `<span class="u-text-main u-fw-600 u-nowrap">${eff.tpsVal.toFixed(0)} TPS</span>`
+          : '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
 
-        // TPS (lado a lado com TPS)
-        const tpsStr = m.throughput_tps ? `<span class="u-text-main u-fw-600 u-nowrap">${m.throughput_tps.toFixed(0)} TPS</span>` : '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
+        const nousVal = eff.nousBlendedVal;
+        const orVal = eff.orBlendedVal;
+        const bothValid = (nousVal !== null && orVal !== null && nousVal > 0 && orVal > 0);
+        const formatCost = (v, isFreeFlag, isCheaper, cls, titlePrefix) => {
+          if (v === null) return '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
+          if (v === 0 || isFreeFlag) return '<span class="badge-free-tier">Grátis ($0)</span>';
+          const s = v < 0.01 ? '$' + v.toFixed(4) : '$' + v.toFixed(2);
+          const star = isCheaper ? '<span class="badge-cheaper" title="Menor tarifa entre gateways">*</span>' : '';
+          return `<span class="u-fw-700 u-nowrap ${cls}" title="${titlePrefix}: ${s} / 1M blended">${s}</span>${star}`;
+        };
+        const nousCostStr = formatCost(nousVal, eff.isFree, bothValid && nousVal < orVal, 'u-s-59b283', 'Nous Portal');
+        const orCostStr = formatCost(orVal, eff.isFree, bothValid && orVal < nousVal, 'u-s-dd4993', 'OpenRouter');
 
-        // Tarifa Nous Portal com cor exclusiva #e879f9
-        let nousCostStr = '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
-        let nousBlendedVal = null;
-        if (m.nous_blended !== null && m.nous_blended !== undefined && m.nous_blended > 0) {
-          nousBlendedVal = m.nous_blended;
-        } else if ((m.nous_prompt_price && m.nous_prompt_price > 0) || (m.nous_completion_price && m.nous_completion_price > 0)) {
-          const p = m.nous_prompt_price || 0;
-          const c = m.nous_completion_price || 0;
-          nousBlendedVal = (0.25 * p + 0.75 * c);
-        }
-
-        // Tarifa OpenRouter com cor exclusiva #818cf8
-        let orCostStr = '<span class="u-text-muted u-nowrap u-s-dbc8d1">--</span>';
-        let orBlendedVal = null;
-        if (m.or_blended !== null && m.or_blended !== undefined && m.or_blended > 0) {
-          orBlendedVal = m.or_blended;
-        } else if ((m.or_prompt_price && m.or_prompt_price > 0) || (m.or_completion_price && m.or_completion_price > 0)) {
-          const p = m.or_prompt_price || 0;
-          const c = m.or_completion_price || 0;
-          orBlendedVal = (0.25 * p + 0.75 * c);
-        }
-
-        const bothPricesValid = (nousBlendedVal !== null && nousBlendedVal > 0 && orBlendedVal !== null && orBlendedVal > 0);
-        const nousCheaper = bothPricesValid && (nousBlendedVal < orBlendedVal);
-        const orCheaper = bothPricesValid && (orBlendedVal < nousBlendedVal);
-
-        if (nousBlendedVal !== null && nousBlendedVal > 0) {
-          const bStr = nousBlendedVal < 0.01 ? '$' + nousBlendedVal.toFixed(4) : '$' + nousBlendedVal.toFixed(2);
-          const star = nousCheaper ? `<span class="badge-cheaper" title="Menor tarifa entre provedores homologados ($${nousBlendedVal.toFixed(2)} vs $${orBlendedVal.toFixed(2)})">*</span>` : '';
-          nousCostStr = `<span class="u-fw-700 u-nowrap u-s-59b283" title="Nous Portal: $${(m.nous_prompt_price || 0).toFixed(2)} prompt / $${(m.nous_completion_price || 0).toFixed(2)} completion por 1M">${bStr}</span>${star}`;
-        }
-
-        if (orBlendedVal !== null && orBlendedVal > 0) {
-          const bStr = orBlendedVal < 0.01 ? '$' + orBlendedVal.toFixed(4) : '$' + orBlendedVal.toFixed(2);
-          const star = orCheaper ? `<span class="badge-cheaper" title="Menor tarifa entre provedores homologados ($${orBlendedVal.toFixed(2)} vs $${nousBlendedVal.toFixed(2)})">*</span>` : '';
-          orCostStr = `<span class="u-fw-700 u-nowrap u-s-dd4993" title="OpenRouter: $${(m.or_prompt_price || 0).toFixed(2)} prompt / $${(m.or_completion_price || 0).toFixed(2)} completion por 1M">${bStr}</span>${star}`;
-        }
-
-        // Badges de disponibilidade de provedores
         let provBadges = [];
-        if (m.has_nous) {
-          provBadges.push('<span class="badge badge-nous" title="Disponível na API do Nous Portal (Crédito Ativo Hermes)">' + uiIcon('brain', 'icon-xs') + ' Nous</span>');
-        }
-        if (m.has_openrouter) {
-          provBadges.push('<span class="badge badge-openrouter" title="Disponível via API do OpenRouter">' + uiIcon('git-branch', 'icon-xs') + ' OR</span>');
-        }
-        if (provBadges.length === 0) {
-          provBadges.push(`<span class="badge u-s-99cb54">${humanizeProviderName(m.provider)}</span>`);
+        if (m.has_nous) provBadges.push('<span class="badge badge-nous">' + uiIcon('brain', 'icon-xs') + ' Nous</span>');
+        if (m.has_openrouter) provBadges.push('<span class="badge badge-openrouter">' + uiIcon('git-branch', 'icon-xs') + ' OR</span>');
+        if (Array.isArray(m.available_gateways)) {
+          m.available_gateways.filter(g => g !== 'nous' && g !== 'openrouter').slice(0, 1).forEach(g => {
+            provBadges.push(`<span class="badge u-s-99cb54">${escapeHtml(humanizeProviderName(g))}</span>`);
+          });
         }
         const provBadgesStr = `<div class="u-d-flex u-gap-1 u-justify-center u-flex-wrap">${provBadges.join('')}</div>`;
 
-        // Tags de capacidade ao lado do nome do modelo
         let capTags = [];
         const cidLower = (m.canonical_id || '').toLowerCase();
-        const modLower = (m.modality || '').toLowerCase();
-        
-        if (m.is_multimodal || modLower.includes('vision') || modLower.includes('image')) {
-          capTags.push('<span class="cap-tag cap-vision" title="Visão: Processa imagens, diagramas e OCR">' + uiIcon('eye', 'icon-xs') + ' Visão</span>');
-        }
-        if (modLower.includes('image_gen') || cidLower.includes('flux') || cidLower.includes('dall-e') || cidLower.includes('midjourney') || cidLower.includes('imagen') || cidLower.includes('janus')) {
-          capTags.push('<span class="cap-tag u-s-489a40" title="Geração de Imagens: Criação visual nativa a partir de prompt">' + uiIcon('palette', 'icon-xs') + ' Imagem</span>');
-        }
-        if (modLower.includes('audio') || modLower.includes('speech') || modLower.includes('voice') || cidLower.includes('audio') || cidLower.includes('realtime')) {
-          capTags.push('<span class="cap-tag u-text-cyan u-s-6a9e5c" title="Áudio & Voz: Compreensão e fala conversacional nativa">' + uiIcon('mic', 'icon-xs') + ' Áudio</span>');
-        }
-        if (modLower.includes('video') || cidLower.includes('video') || cidLower.includes('sora') || cidLower.includes('wan') || cidLower.includes('kling')) {
-          capTags.push('<span class="cap-tag u-s-63b8dd" title="Vídeo: Compreensão temporal e dinâmica de frames">' + uiIcon('play', 'icon-xs') + ' Vídeo</span>');
-        }
-        if (modLower.includes('world') || cidLower.includes('world') || cidLower.includes('genie') || cidLower.includes('cosmos') || cidLower.includes('oasis') || cidLower.includes('marble')) {
-          capTags.push('<span class="cap-tag u-s-384b69" title="World Model: Simulação física e ambientes espaciais">' + uiIcon('globe', 'icon-xs') + ' Mundo</span>');
-        }
-        if (modLower.includes('decision') || cidLower.includes('jev') || cidLower.includes('routing')) {
-          capTags.push('<span class="cap-tag u-s-b9bacf" title="Decisão Tipada: Motor não-autorregressivo (estilo Jev)">' + uiIcon('zap', 'icon-xs') + ' Decisão</span>');
-        }
-        if (m.supports_caching) {
-          capTags.push('<span class="cap-tag cap-caching" title="Prompt Caching: Economia de até 80% em contexto repetido">' + uiIcon('zap', 'icon-xs') + ' Cache</span>');
-        }
-        if (m.supports_tools) {
-          capTags.push('<span class="cap-tag cap-tools" title="Function Calling: Suporte nativo a chamadas de ferramentas e MCP">' + uiIcon('bot', 'icon-xs') + ' Tools</span>');
-        }
-        if (m.supports_structured_outputs) {
-          capTags.push('<span class="cap-tag cap-schema" title="Structured Outputs: Garante aderência estrita a schemas JSON">' + uiIcon('file-text', 'icon-xs') + ' JSON</span>');
-        }
+        if (eff.isFree) capTags.push('<span class="badge-free-tier">Grátis (:free)</span>');
+        if (m.is_multimodal) capTags.push('<span class="cap-tag cap-vision">' + uiIcon('eye', 'icon-xs') + ' Visão</span>');
+        if (m.supports_caching) capTags.push('<span class="cap-tag cap-caching">' + uiIcon('zap', 'icon-xs') + ' Cache</span>');
+        if (m.supports_tools) capTags.push('<span class="cap-tag cap-tools">' + uiIcon('bot', 'icon-xs') + ' Tools</span>');
+        if (m.supports_structured_outputs) capTags.push('<span class="cap-tag cap-schema">' + uiIcon('file-text', 'icon-xs') + ' JSON</span>');
 
         const helpers = {
           isTop3,
+          effScore: eff.effScore,
+          effRoi: eff.effRoi,
+          effProvider: eff.effProvider,
           statusBadge,
           ctxStr,
           intelScoreStr,
@@ -6368,51 +7034,36 @@
           provBadgesStr
         };
 
-        const friendlyName = humanizeModelName(m.canonical_id);
+        const friendlyName = humanizeModelName(m.canonical_id, m.display_name);
         const brandBadge = getDevBrandBadge(m.developer, m.canonical_id);
-
-        let dynamicTds = activeColumnOrder.map(colKey => {
+        const dynamicTds = activeColumnOrder.map(colKey => {
           const colDef = cloudColumnDefs[colKey];
-          if (!colDef) return '';
-          return colDef.renderCell(m, idx, isActive, helpers);
+          return colDef ? colDef.renderCell(m, idx, isActive, helpers) : '';
         }).join('');
 
         return `
           <tr class="${isActive ? 'active-hermes-row' : ''}">
-            <!-- 1. RANKING (CONGELADO) -->
-            <td class="sticky-col-1 rank-cell ${isTop3 ? 'top3' : ''} text-center" style="${idx === 0 ? 'color: #fbbf24; font-weight: 800;' : (idx === 1 ? 'color: #E4E4E7; font-weight: 800;' : (idx === 2 ? 'color: #f59e0b; font-weight: 800;' : ''))};">#${idx + 1}</td>
-
-            <!-- 2. MODELO / IDENTIFICADOR (CONGELADO ANTES DO STATUS) -->
+            <td class="sticky-col-1 rank-cell ${isTop3 ? 'top3' : ''} text-center ${isTop3 ? 'u-text-amber u-fw-700' : ''}">#${idx + 1}</td>
             <td class="sticky-col-2">
               <div class="u-d-flex u-items-start u-justify-between u-gap-2 u-w-full u-min-w-0">
                 <div class="u-min-w-0 u-flex-1 u-overflow-hidden">
-                  <!-- Linha 1: Apenas Capacidades e Recursos -->
                   <div class="u-d-flex u-items-center u-flex-wrap u-mb-1 u-s-0880e8">
                     ${capTags.join('')}
                   </div>
-                  <!-- Linha 2: Badge do Fabricante posicionado imediatamente antes do Nome do Modelo -->
-                  <div class="model-name-title u-d-flex u-items-center u-gap-6p u-fw-600 u-text-white u-overflow-hidden u-s-505f7e" title="${m.canonical_id}">
+                  <div class="model-name-title u-d-flex u-items-center u-gap-6p u-fw-600 u-text-white u-overflow-hidden u-s-505f7e" title="${escapeHtml(m.canonical_id)}">
                     ${brandBadge}
-                    <span class="u-overflow-hidden u-nowrap u-s-9f3798">${friendlyName}</span>
+                    <span class="u-overflow-hidden u-nowrap u-s-9f3798">${escapeHtml(friendlyName)}</span>
                   </div>
-                  <div class="mono u-text-muted u-overflow-hidden u-nowrap u-s-154d96" title="${m.canonical_id}">
-                    ${m.canonical_id}
+                  <div class="mono u-text-muted u-overflow-hidden u-nowrap u-s-154d96" title="${escapeHtml(m.canonical_id)}">
+                    ${escapeHtml(m.canonical_id)}
                   </div>
                 </div>
-                <button class="btn u-text-muted u-pointer u-shrink-0 u-mt-2p u-s-0385fb" onclick="copyCloudModelId('${m.canonical_id}')" title="Copiar ID do Modelo">
+                <button class="btn u-text-muted u-pointer u-shrink-0 u-mt-2p u-s-0385fb" onclick="copyCloudModelId('${escapeJsSingleQuote(m.canonical_id)}')" title="Copiar ID do Modelo">
                   ${uiIcon("list", "icon-xs")}
                 </button>
               </div>
             </td>
-
             ${dynamicTds}
-
-            <!-- COLUNA FINAL: AÇÃO -->
-            <td class="text-center u-nowrap">
-              <button class="btn-apply-model" onclick="openQuickApplyModal('${m.canonical_id}', '${m.has_nous ? 'nous' : 'openrouter'}', false)" title="Aplicar este modelo no Hermes Agent">
-                ${uiIcon('zap', 'icon-sm')} Usar
-              </button>
-            </td>
           </tr>
         `;
       }).join('');
@@ -7743,8 +8394,9 @@
       await setHermesMasterModel(modelId, provider, activePreset);
     }
 
-    async function setHermesMasterModel(modelId, provider, presetId) {
-      showToast(`Ativando ${modelId} como Master Brain no Hermes config.yaml...`, "warning");
+    async function setHermesMasterModel(modelId, provider, presetId, options = {}) {
+      const canonicalProv = canonicalizeGatewaySlug(provider || 'nous');
+      showToast(`Ativando ${modelId} (${humanizeProviderName(canonicalProv)}) no Hermes Desktop...`, "warning");
       try {
         const res = await fetch('/api/v1/settings/hermes-preset', {
           method: 'POST',
@@ -7752,26 +8404,46 @@
           body: JSON.stringify({
             preset_id: presetId,
             model_override: modelId,
-            provider: provider
+            provider: canonicalProv,
+            apply_all_profiles: Boolean(options.applyAllProfiles),
+            unpin_fallback_sessions: options.unpinFallbackSessions !== undefined ? Boolean(options.unpinFallbackSessions) : true,
+            strict_auth: Boolean(options.strictAuth),
+            force_unauthenticated: Boolean(options.forceUnauthenticated)
           })
         });
         const data = await res.json();
+        if (data.status === "auth_required") {
+          showToast(data.message || `Autentique o gateway '${canonicalProv}' acima antes de aplicar.`, "warning");
+          if (typeof fetchHermesCustoms === 'function') await fetchHermesCustoms();
+          return false;
+        }
         if (res.ok && (data.status === "ok" || data.status === "success")) {
           const applied = data.applied_model || data.active_model || modelId;
-          const prov = data.provider || data.active_provider || provider;
-          showToast(`Master Brain atualizado para ${applied} (${prov})! Backup criado em config.yaml.bak.`, "success");
+          const prov = data.provider || data.active_provider || canonicalProv;
+          const extras = [];
+          if ((data.profiles_updated || []).length > 1) extras.push(`${data.profiles_updated.length} perfis`);
+          if (data.unpinned_sessions > 0) extras.push(`${data.unpinned_sessions} sessão(ões) destravadas`);
+          if (data.favorites_synced) extras.push(`favoritos sincronizados`);
+          const extraStr = extras.length > 0 ? ` (${extras.join(', ')})` : '';
+          showToast(`Master Brain atualizado para ${applied} via ${humanizeProviderName(prov)}${extraStr}!`, "success");
           const ind = document.getElementById('active-model-indicator');
           if (ind) ind.innerText = `Modelo Ativo no Hermes: ${applied}`;
           window.currentHermesMasterModel = applied;
+          window.currentHermesMasterProvider = prov;
           window.dispatchEvent(new CustomEvent('souls-state-changed', {
             detail: { scope: 'master_brain', model: applied, provider: prov }
           }));
-          fetchTelemetry();
+          await fetchTelemetry();
+          renderCloudTable();
+          renderCloudRankedTable();
+          return true;
         } else {
           showToast(`Erro ao ativar modelo no Hermes: ${data.message || data.error || 'Falha de comunicação'}`, "error");
+          return false;
         }
       } catch (e) {
         showToast(`Erro de rede ao salvar Hermes config: ${e.message}`, "error");
+        return false;
       }
     }
 

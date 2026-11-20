@@ -4,6 +4,8 @@
 //! integration, and atomic synchronization with Hermes Agent `config.yaml`.
 
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::info;
@@ -96,6 +98,18 @@ pub struct ProfileApplyResult {
     pub backup_created: bool,
     pub backup_path: Option<String>,
     pub config_path: String,
+    #[serde(default)]
+    pub base_url: Option<String>,
+    #[serde(default)]
+    pub api_mode: String,
+    #[serde(default)]
+    pub profiles_updated: Vec<String>,
+    #[serde(default)]
+    pub unpinned_sessions: usize,
+    #[serde(default)]
+    pub favorites_synced: bool,
+    #[serde(default)]
+    pub warnings: Vec<String>,
 }
 
 /// Resolves the canonical path to Hermes Agent `config.yaml`.
@@ -793,8 +807,541 @@ pub fn delete_profile(profile_id: &str, cfg_path_override: Option<&Path>) -> Res
     Ok(found)
 }
 
-/// Applies a target model and provider to the Hermes Agent `config.yaml` file atomically.
-/// Creates a `.bak` safety backup and preserves all other sections and YAML comments.
+/// Canonical Hermes Agent provider identity and transport route (`hermes_cli/providers.py`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CanonicalHermesRoute {
+    pub provider: String,
+    pub base_url: Option<String>,
+    pub api_mode: String,
+}
+
+/// Official provider slugs accepted natively by Hermes Agent (`hermes_cli/providers.py` + `auth.py`).
+pub const OFFICIAL_HERMES_PROVIDERS: &[&str] = &[
+    "nous",
+    "openrouter",
+    "copilot",
+    "custom",
+    "deepseek",
+    "anthropic",
+    "openai-api",
+    "openai-codex",
+    "gemini",
+    "zai",
+    "xai",
+    "xai-oauth",
+    "alibaba",
+    "alibaba-coding-plan",
+    "kimi-for-coding",
+    "xiaomi",
+    "minimax",
+    "minimax-oauth",
+    "minimax-cn",
+    "stepfun",
+    "fireworks",
+    "huggingface",
+    "novita",
+    "nvidia",
+    "upstage",
+    "arcee",
+    "gmi",
+    "actual",
+    "nebius-token-factory",
+    "ollama-cloud",
+    "lmstudio",
+    "azure-foundry",
+    "bedrock",
+    "vertex",
+    "opencode",
+    "opencode-go",
+    "kilo",
+    "vercel",
+    "tencent-tokenhub",
+    "tencent-tokenplan",
+    "commandcode",
+    "moa",
+];
+
+/// Normalizes any internal Souls Engine / Cloud Arena provider alias into an official Hermes Agent
+/// provider slug, canonical inference `base_url`, and expected `api_mode`.
+pub fn normalize_hermes_provider_and_route(
+    raw_provider: &str,
+    target_model: &str,
+) -> CanonicalHermesRoute {
+    let trimmed = raw_provider.trim().to_ascii_lowercase();
+    let effective = if trimmed.is_empty() || trimmed == "auto" {
+        let ml = target_model.to_ascii_lowercase();
+        if ml.ends_with(".gguf") || ml.contains("q4_k_") || (!target_model.contains('/') && ml.contains("qwen")) {
+            "custom"
+        } else {
+            "nous"
+        }
+    } else {
+        trimmed.as_str()
+    };
+
+    let (provider, base_url, api_mode) = match effective {
+        "nous_portal" | "nous_portal_batch" | "nous" => (
+            "nous",
+            Some("https://inference-api.nousresearch.com/v1"),
+            "chat_completions",
+        ),
+        "openrouter_market" | "openrouter" => (
+            "openrouter",
+            Some("https://openrouter.ai/api/v1"),
+            "chat_completions",
+        ),
+        "local_silicon" | "llamacpp" | "llama.cpp" | "llama-cpp" | "ollama" | "vllm"
+        | "local" | "custom" => (
+            "custom",
+            Some("http://127.0.0.1:18434/v1"),
+            "chat_completions",
+        ),
+        "lmstudio" | "lm-studio" | "lm_studio" => (
+            "lmstudio",
+            Some("http://127.0.0.1:1234/v1"),
+            "chat_completions",
+        ),
+        "google" | "gemini" | "google-gemini" | "google-ai-studio" => (
+            "gemini",
+            Some("https://generativelanguage.googleapis.com/v1beta"),
+            "chat_completions",
+        ),
+        "openai" | "openai-api" => (
+            "openai-api",
+            Some("https://api.openai.com/v1"),
+            "codex_responses",
+        ),
+        "codex" | "openai-codex" | "chatgpt" => (
+            "openai-codex",
+            Some("https://chatgpt.com/backend-api/codex"),
+            "codex_responses",
+        ),
+        "anthropic" | "claude" => (
+            "anthropic",
+            Some("https://api.anthropic.com"),
+            "anthropic_messages",
+        ),
+        "deepseek" | "deep-seek" => (
+            "deepseek",
+            Some("https://api.deepseek.com/v1"),
+            "chat_completions",
+        ),
+        "zai" | "z-ai" | "z.ai" | "glm" | "zhipu" => (
+            "zai",
+            Some("https://api.z.ai/api/paas/v4"),
+            "chat_completions",
+        ),
+        "xai" | "x-ai" | "x.ai" | "grok" => (
+            "xai",
+            Some("https://api.x.ai/v1"),
+            "codex_responses",
+        ),
+        "alibaba" | "qwen" | "dashscope" => (
+            "alibaba",
+            Some("https://dashscope-intl.aliyuncs.com/compatible-mode/v1"),
+            "chat_completions",
+        ),
+        "kimi-for-coding" | "moonshot" | "kimi" | "kimi-coding" => (
+            "kimi-for-coding",
+            None,
+            "chat_completions",
+        ),
+        "xiaomi" | "mimo" => (
+            "xiaomi",
+            Some("https://api.xiaomimimo.com/v1"),
+            "chat_completions",
+        ),
+        "minimax" => (
+            "minimax",
+            Some("https://api.minimax.io/anthropic"),
+            "anthropic_messages",
+        ),
+        "stepfun" | "step" => (
+            "stepfun",
+            Some("https://api.stepfun.ai/step_plan/v1"),
+            "chat_completions",
+        ),
+        "fireworks" | "fireworks-ai" => (
+            "fireworks",
+            Some("https://api.fireworks.ai/inference/v1"),
+            "chat_completions",
+        ),
+        "huggingface" | "hf" => (
+            "huggingface",
+            Some("https://router.huggingface.co/v1"),
+            "chat_completions",
+        ),
+        "novita" | "novita-ai" => ("novita", None, "chat_completions"),
+        "nvidia" | "nim" => (
+            "nvidia",
+            Some("https://integrate.api.nvidia.com/v1"),
+            "chat_completions",
+        ),
+        "upstage" | "solar" => (
+            "upstage",
+            Some("https://api.upstage.ai/v1"),
+            "chat_completions",
+        ),
+        "copilot" => ("copilot", None, "chat_completions"),
+        other => (other, None, "chat_completions"),
+    };
+
+    CanonicalHermesRoute {
+        provider: provider.to_string(),
+        base_url: base_url.map(|u| u.to_string()),
+        api_mode: api_mode.to_string(),
+    }
+}
+
+/// Resolves the root directory of the Hermes installation associated with `cfg_path`.
+pub fn resolve_hermes_root_dir(cfg_path_override: Option<&Path>) -> PathBuf {
+    match cfg_path_override {
+        Some(p) => p.parent().unwrap_or_else(|| Path::new(".")).to_path_buf(),
+        None => resolve_hermes_config_path()
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf(),
+    }
+}
+
+/// Discovers Hermes root `config.yaml` plus any sub-profile configs (`profiles/<name>/config.yaml`).
+pub fn discover_hermes_profile_configs(hermes_root: &Path) -> Vec<(String, PathBuf)> {
+    let mut out = Vec::new();
+    let root_cfg = hermes_root.join("config.yaml");
+    if root_cfg.exists() {
+        out.push(("default".to_string(), root_cfg));
+    }
+    let profiles_dir = hermes_root.join("profiles");
+    if let Ok(entries) = fs::read_dir(&profiles_dir) {
+        let mut sub: Vec<(String, PathBuf)> = entries
+            .filter_map(|e| e.ok())
+            .filter_map(|e| {
+                let p = e.path();
+                if p.is_dir() {
+                    let cfg = p.join("config.yaml");
+                    if cfg.exists() {
+                        let name = p.file_name()?.to_string_lossy().to_string();
+                        return Some((name, cfg));
+                    }
+                }
+                None
+            })
+            .collect();
+        sub.sort_by(|a, b| a.0.cmp(&b.0));
+        out.extend(sub);
+    }
+    out
+}
+
+/// Inspects whether `value` inside a YAML line represents an active setting (strips quotes/comments).
+fn parse_yaml_scalar(raw: &str) -> String {
+    let stripped = raw.split('#').next().unwrap_or("").trim();
+    stripped
+        .trim_matches('"')
+        .trim_matches('\'')
+        .trim()
+        .to_string()
+}
+
+/// Reads full top-level `model:` fields + `moa:` + `fallback_providers:` metadata from a `config.yaml`.
+#[derive(Debug, Clone, Default)]
+pub struct ParsedHermesConfigAudit {
+    pub default_model: String,
+    pub provider: String,
+    pub base_url: Option<String>,
+    pub api_mode: Option<String>,
+    pub moa_enabled: bool,
+    pub moa_reference_count: usize,
+    pub moa_uses_nous: bool,
+    pub fallback_providers: Vec<Value>,
+}
+
+pub fn parse_hermes_config_audit(cfg_path: &Path) -> ParsedHermesConfigAudit {
+    let mut audit = ParsedHermesConfigAudit::default();
+    let Ok(content) = fs::read_to_string(cfg_path) else {
+        return audit;
+    };
+
+    #[derive(Copy, Clone, PartialEq)]
+    enum Section {
+        Other,
+        Model,
+        Moa,
+        Fallback,
+    }
+    let mut section = Section::Other;
+    let mut in_moa_ref_item = false;
+    let mut current_fb: Option<serde_json::Map<String, Value>> = None;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let indent = line.len() - line.trim_start().len();
+        if indent == 0 {
+            if let Some(fb) = current_fb.take() {
+                audit.fallback_providers.push(Value::Object(fb));
+            }
+            in_moa_ref_item = false;
+            if trimmed.starts_with("model:") {
+                section = Section::Model;
+            } else if trimmed.starts_with("moa:") {
+                section = Section::Moa;
+            } else if trimmed.starts_with("fallback_providers:") {
+                section = Section::Fallback;
+            } else {
+                section = Section::Other;
+            }
+            continue;
+        }
+
+        match section {
+            Section::Model => {
+                if indent == 2 {
+                    if let Some((k, v)) = trimmed.split_once(':') {
+                        let val = parse_yaml_scalar(v);
+                        match k.trim() {
+                            "default" if !val.is_empty() => audit.default_model = val,
+                            "provider" if !val.is_empty() => audit.provider = val,
+                            "base_url" if !val.is_empty() => audit.base_url = Some(val),
+                            "api_mode" if !val.is_empty() => audit.api_mode = Some(val),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            Section::Moa => {
+                if indent == 2 {
+                    in_moa_ref_item = false;
+                    if let Some((k, v)) = trimmed.split_once(':') {
+                        if k.trim() == "enabled" {
+                            audit.moa_enabled = parse_yaml_scalar(v).eq_ignore_ascii_case("true");
+                        }
+                    }
+                } else if trimmed.starts_with("- provider:") || trimmed.starts_with("provider:") {
+                    let val = parse_yaml_scalar(trimmed.split_once(':').map(|(_, v)| v).unwrap_or(""));
+                    if val.eq_ignore_ascii_case("nous") || val.eq_ignore_ascii_case("nous_portal") {
+                        audit.moa_uses_nous = true;
+                    }
+                    if trimmed.starts_with("- ") {
+                        in_moa_ref_item = true;
+                    }
+                } else if trimmed.starts_with("model:") && in_moa_ref_item {
+                    audit.moa_reference_count += 1;
+                }
+            }
+            Section::Fallback => {
+                if trimmed.starts_with("- ") {
+                    if let Some(fb) = current_fb.take() {
+                        audit.fallback_providers.push(Value::Object(fb));
+                    }
+                    let mut map = serde_json::Map::new();
+                    if let Some((k, v)) = trimmed.trim_start_matches("- ").split_once(':') {
+                        map.insert(k.trim().to_string(), json!(parse_yaml_scalar(v)));
+                    }
+                    current_fb = Some(map);
+                } else if let Some(ref mut map) = current_fb {
+                    if let Some((k, v)) = trimmed.split_once(':') {
+                        map.insert(k.trim().to_string(), json!(parse_yaml_scalar(v)));
+                    }
+                }
+            }
+            Section::Other => {}
+        }
+    }
+    if let Some(fb) = current_fb.take() {
+        audit.fallback_providers.push(Value::Object(fb));
+    }
+    audit
+}
+
+/// Mutates the top-level `model:` YAML block atomically while preserving comments and other keys.
+fn rewrite_model_block_yaml(
+    content: &str,
+    target_model: &str,
+    route: &CanonicalHermesRoute,
+    clear_stale_context: bool,
+) -> Result<String, String> {
+    let mut inside_top_model = false;
+    let mut default_replaced = false;
+    let mut provider_replaced = false;
+    let mut base_url_handled = false;
+    let mut api_mode_handled = false;
+    let mut new_lines = Vec::new();
+
+    let emit_missing_fields = |lines: &mut Vec<String>,
+                               provider_done: &mut bool,
+                               base_done: &mut bool,
+                               mode_done: &mut bool| {
+        if !*provider_done {
+            lines.push(format!("  provider: \"{}\"", route.provider));
+            *provider_done = true;
+        }
+        if !*base_done {
+            if let Some(ref url) = route.base_url {
+                lines.push(format!("  base_url: '{}'", url));
+            }
+            *base_done = true;
+        }
+        if !*mode_done {
+            lines.push(format!("  api_mode: {}", route.api_mode));
+            *mode_done = true;
+        }
+    };
+
+    for line in content.lines() {
+        if line.starts_with("model:") {
+            inside_top_model = true;
+            new_lines.push(line.to_string());
+            continue;
+        }
+
+        if inside_top_model {
+            let trimmed = line.trim();
+            if line.starts_with("  default:") {
+                new_lines.push(format!("  default: \"{}\"", target_model));
+                default_replaced = true;
+                continue;
+            } else if line.starts_with("  provider:") {
+                new_lines.push(format!("  provider: \"{}\"", route.provider));
+                provider_replaced = true;
+                continue;
+            } else if line.starts_with("  base_url:") {
+                if let Some(ref url) = route.base_url {
+                    new_lines.push(format!("  base_url: '{}'", url));
+                }
+                base_url_handled = true;
+                continue;
+            } else if line.starts_with("  api_mode:") {
+                new_lines.push(format!("  api_mode: {}", route.api_mode));
+                api_mode_handled = true;
+                continue;
+            } else if clear_stale_context
+                && (line.starts_with("  context_length:") || line.starts_with("  key_env:"))
+            {
+                // Drop stale per-provider overrides carried from prior gateways
+                continue;
+            } else if !line.starts_with(' ') && !trimmed.is_empty() {
+                emit_missing_fields(
+                    &mut new_lines,
+                    &mut provider_replaced,
+                    &mut base_url_handled,
+                    &mut api_mode_handled,
+                );
+                inside_top_model = false;
+            }
+        }
+
+        new_lines.push(line.to_string());
+    }
+
+    if inside_top_model {
+        emit_missing_fields(
+            &mut new_lines,
+            &mut provider_replaced,
+            &mut base_url_handled,
+            &mut api_mode_handled,
+        );
+    }
+
+    if !default_replaced {
+        return Err("Top-level model.default key was not found in hermes config.yaml".to_string());
+    }
+
+    Ok(format!("{}\n", new_lines.join("\n")))
+}
+
+/// Applies a canonical model + route to a single Hermes `config.yaml` file atomically.
+fn write_single_hermes_config(
+    cfg_path: &Path,
+    target_model: &str,
+    route: &CanonicalHermesRoute,
+) -> Result<(String, String, bool, Option<String>), String> {
+    let (prev_model, prev_provider) = read_active_hermes_model(cfg_path);
+    let backup_path = cfg_path.with_extension("yaml.bak");
+    let backup_created = fs::copy(cfg_path, &backup_path).is_ok();
+
+    let content = fs::read_to_string(cfg_path)
+        .map_err(|e| format!("Failed to read hermes config: {e}"))?;
+    let prev_canon = normalize_hermes_provider_and_route(&prev_provider, &prev_model);
+    let route_changed = prev_canon.provider != route.provider || prev_canon.base_url != route.base_url;
+    let updated = rewrite_model_block_yaml(&content, target_model, route, route_changed)?;
+
+    fs::write(cfg_path, updated.as_bytes())
+        .map_err(|e| format!("Failed to write updated config.yaml: {e}"))?;
+
+    Ok((
+        prev_model,
+        prev_provider,
+        backup_created,
+        backup_created.then(|| backup_path.to_string_lossy().to_string()),
+    ))
+}
+
+/// Non-destructively adds `<provider>::<model_id>` entries into Hermes Desktop `ui-preferences.json`.
+pub fn sync_hermes_desktop_favorites(
+    hermes_root: &Path,
+    entries: &[(String, String)],
+) -> Result<bool, String> {
+    let prefs_path = hermes_root.join("ui-preferences.json");
+    if !prefs_path.exists() || entries.is_empty() {
+        return Ok(false);
+    }
+    let raw = fs::read_to_string(&prefs_path)
+        .map_err(|e| format!("Falha ao ler ui-preferences.json: {e}"))?;
+    let mut root: Value = serde_json::from_str(&raw)
+        .map_err(|e| format!("ui-preferences.json inválido: {e}"))?;
+
+    let values_obj = root
+        .as_object_mut()
+        .and_then(|o| o.get_mut("values"))
+        .and_then(|v| v.as_object_mut())
+        .ok_or_else(|| "Campo 'values' ausente em ui-preferences.json".to_string())?;
+
+    let mut favs: Vec<String> = match values_obj.get("hermes.desktop.favorite-models") {
+        Some(Value::String(s)) => serde_json::from_str::<Vec<String>>(s).unwrap_or_default(),
+        Some(Value::Array(arr)) => arr
+            .iter()
+            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+            .collect(),
+        _ => Vec::new(),
+    };
+
+    let mut seen: HashSet<String> = favs.iter().cloned().collect();
+    let mut prepend = Vec::new();
+    let mut changed = false;
+    for (prov, model_id) in entries {
+        let canon = normalize_hermes_provider_and_route(prov, model_id);
+        let key = format!("{}::{}", canon.provider, model_id);
+        if seen.insert(key.clone()) {
+            prepend.push(key);
+            changed = true;
+        }
+    }
+
+    if !changed {
+        return Ok(false);
+    }
+
+    prepend.extend(favs.drain(..));
+    let serialized = serde_json::to_string(&prepend)
+        .map_err(|e| format!("Falha ao serializar favoritos: {e}"))?;
+    values_obj.insert("hermes.desktop.favorite-models".to_string(), Value::String(serialized));
+
+    if let Some(root_obj) = root.as_object_mut() {
+        let rev = root_obj.get("revision").and_then(|r| r.as_i64()).unwrap_or(0);
+        root_obj.insert("revision".to_string(), json!(rev + 1));
+    }
+
+    let formatted = serde_json::to_string_pretty(&root)
+        .map_err(|e| format!("Falha ao formatar ui-preferences.json: {e}"))?;
+    fs::write(&prefs_path, format!("{formatted}\n").as_bytes())
+        .map_err(|e| format!("Falha ao gravar ui-preferences.json: {e}"))?;
+    Ok(true)
+}
+
+/// Applies a target model and normalized canonical provider to the Hermes Agent `config.yaml` file atomically.
 pub fn apply_profile_to_hermes(
     profile_id: Option<&str>,
     target_model: &str,
@@ -813,69 +1360,26 @@ pub fn apply_profile_to_hermes(
         ));
     }
 
-    let (prev_model, prev_provider) = read_active_hermes_model(&cfg_path);
-    let new_provider = provider.unwrap_or(&prev_provider);
+    let (_prev_m, prev_p) = read_active_hermes_model(&cfg_path);
+    let requested_provider = provider.unwrap_or(&prev_p);
+    let route = normalize_hermes_provider_and_route(requested_provider, target_model);
 
-    // Create safety backup (.bak)
-    let backup_path = cfg_path.with_extension("yaml.bak");
-    let mut backup_created = false;
-    if fs::copy(&cfg_path, &backup_path).is_ok() {
-        backup_created = true;
-    }
+    let (prev_model, _old_prov, backup_created, backup_path) =
+        write_single_hermes_config(&cfg_path, target_model, &route)?;
 
-    let content =
-        fs::read_to_string(&cfg_path).map_err(|e| format!("Failed to read hermes config: {e}"))?;
-
-    let mut inside_top_model = false;
-    let mut default_replaced = false;
-    let mut provider_replaced = false;
-    let mut new_lines = Vec::new();
-
-    for line in content.lines() {
-        if line.starts_with("model:") {
-            inside_top_model = true;
-            new_lines.push(line.to_string());
-            continue;
-        }
-
-        if inside_top_model {
-            if line.starts_with("  default:") {
-                new_lines.push(format!("  default: \"{}\"", target_model));
-                default_replaced = true;
-                continue;
-            } else if line.starts_with("  provider:") {
-                new_lines.push(format!("  provider: \"{}\"", new_provider));
-                provider_replaced = true;
-                continue;
-            } else if !line.starts_with(' ') && !line.is_empty() {
-                // Leaving model block: if provider wasn't in the original block, inject it
-                if !provider_replaced && provider.is_some() {
-                    new_lines.push(format!("  provider: \"{}\"", new_provider));
-                    provider_replaced = true;
-                }
-                inside_top_model = false;
-            }
-        }
-
-        new_lines.push(line.to_string());
-    }
-
-    // In case model: block was at the very end of file
-    if inside_top_model && !provider_replaced && provider.is_some() {
-        new_lines.push(format!("  provider: \"{}\"", new_provider));
-    }
-
-    if !default_replaced {
-        return Err("Top-level model.default key was not found in hermes config.yaml".to_string());
-    }
-
-    fs::write(&cfg_path, new_lines.join("\n"))
-        .map_err(|e| format!("Failed to write updated config.yaml: {e}"))?;
+    let hermes_root = resolve_hermes_root_dir(cfg_path_override);
+    let favorites_synced = sync_hermes_desktop_favorites(
+        &hermes_root,
+        &[(route.provider.clone(), target_model.to_string())],
+    )
+    .unwrap_or(false);
 
     info!(
         previous_model = %prev_model,
         applied_model = %target_model,
-        provider = %new_provider,
+        provider = %route.provider,
+        base_url = ?route.base_url,
+        api_mode = %route.api_mode,
         config_path = %cfg_path.display(),
         "Hermes Master Brain profile applied atomically"
     );
@@ -885,15 +1389,771 @@ pub fn apply_profile_to_hermes(
         profile_id: profile_id.map(|s| s.to_string()),
         previous_model: prev_model,
         applied_model: target_model.to_string(),
-        provider: new_provider.to_string(),
+        provider: route.provider,
         backup_created,
-        backup_path: if backup_created {
-            Some(backup_path.to_string_lossy().to_string())
+        backup_path,
+        config_path: cfg_path.to_string_lossy().to_string(),
+        base_url: route.base_url,
+        api_mode: route.api_mode,
+        profiles_updated: vec!["default".to_string()],
+        unpinned_sessions: 0,
+        favorites_synced,
+        warnings: Vec::new(),
+    })
+}
+
+/// Applies model & canonical route with optional multi-profile sync and fallback-session unpinning.
+pub async fn apply_profile_to_hermes_extended(
+    profile_id: Option<&str>,
+    target_model: &str,
+    provider: Option<&str>,
+    cfg_path_override: Option<&Path>,
+    apply_all_profiles: bool,
+    unpin_fallback_sessions: bool,
+) -> Result<ProfileApplyResult, String> {
+    let mut res = apply_profile_to_hermes(profile_id, target_model, provider, cfg_path_override)?;
+    let hermes_root = resolve_hermes_root_dir(cfg_path_override);
+    let route = normalize_hermes_provider_and_route(&res.provider, target_model);
+
+    if apply_all_profiles {
+        for (prof_name, prof_cfg) in discover_hermes_profile_configs(&hermes_root) {
+            if prof_name == "default" {
+                continue;
+            }
+            if write_single_hermes_config(&prof_cfg, target_model, &route).is_ok() {
+                res.profiles_updated.push(prof_name);
+            }
+        }
+    }
+
+    if unpin_fallback_sessions {
+        match unpin_hermes_fallback_sessions(&hermes_root, &route, target_model).await {
+            Ok(count) => res.unpinned_sessions = count,
+            Err(e) => res.warnings.push(e),
+        }
+    }
+
+    Ok(res)
+}
+
+/// Unpins open Hermes Desktop sessions trapped on `llamacpp` fallback inside `state.db` files.
+pub async fn unpin_hermes_fallback_sessions(
+    hermes_root: &Path,
+    route: &CanonicalHermesRoute,
+    target_model: &str,
+) -> Result<usize, String> {
+    let mut db_paths = Vec::new();
+    let root_db = hermes_root.join("state.db");
+    if root_db.exists() {
+        db_paths.push(root_db);
+    }
+    let profiles_dir = hermes_root.join("profiles");
+    if let Ok(entries) = fs::read_dir(profiles_dir) {
+        for entry in entries.flatten() {
+            let candidate = entry.path().join("state.db");
+            if candidate.exists() {
+                db_paths.push(candidate);
+            }
+        }
+    }
+
+    let mut total_unpinned = 0usize;
+    for db_path in db_paths {
+        let opts = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&db_path)
+            .read_only(false)
+            .create_if_missing(false)
+            .busy_timeout(std::time::Duration::from_millis(3000));
+        let Ok(pool) = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(opts)
+            .await
+        else {
+            continue;
+        };
+
+        let Ok(rows) = sqlx::query(
+            "SELECT id, model, model_config FROM sessions WHERE COALESCE(archived, 0) = 0",
+        )
+        .fetch_all(&pool)
+        .await
+        else {
+            continue;
+        };
+
+        for row in rows {
+            use sqlx::Row;
+            let id: String = row.try_get("id").unwrap_or_default();
+            let raw_cfg: Option<String> = row.try_get("model_config").ok();
+            let mut cfg_val: Value = raw_cfg
+                .as_deref()
+                .and_then(|s| serde_json::from_str(s).ok())
+                .unwrap_or_else(|| json!({}));
+
+            let is_trapped_fallback = {
+                let gr = cfg_val.get("gateway_runtime");
+                let gr_prov = gr
+                    .and_then(|g| g.get("provider"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let gr_fb = gr
+                    .and_then(|g| g.get("fallback_active"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let top_follow = cfg_val
+                    .get("follow_profile_config")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                gr_prov.eq_ignore_ascii_case("llamacpp")
+                    || gr_fb
+                    || (gr.is_some() && !top_follow)
+            };
+
+            if !is_trapped_fallback {
+                continue;
+            }
+
+            if let Some(obj) = cfg_val.as_object_mut() {
+                obj.insert("follow_profile_config".to_string(), json!(true));
+                let mut runtime_obj = serde_json::Map::new();
+                runtime_obj.insert("provider".to_string(), json!(route.provider));
+                if let Some(ref bu) = route.base_url {
+                    runtime_obj.insert("base_url".to_string(), json!(bu));
+                }
+                runtime_obj.insert("api_mode".to_string(), json!(route.api_mode));
+                runtime_obj.insert("model".to_string(), json!(target_model));
+                runtime_obj.insert("fallback_active".to_string(), json!(false));
+                obj.insert("gateway_runtime".to_string(), Value::Object(runtime_obj));
+            }
+
+            if let Ok(updated_json) = serde_json::to_string(&cfg_val) {
+                let res = sqlx::query(
+                    "UPDATE sessions SET model = ?, model_config = ?, billing_provider = ? WHERE id = ?",
+                )
+                .bind(target_model)
+                .bind(updated_json)
+                .bind(&route.provider)
+                .bind(&id)
+                .execute(&pool)
+                .await;
+                if res.is_ok() {
+                    total_unpinned += 1;
+                }
+            }
+        }
+        pool.close().await;
+    }
+
+    Ok(total_unpinned)
+}
+
+/// Toggles top-level `moa.enabled` inside `config.yaml` without disturbing `reference_models`.
+pub fn set_hermes_moa_enabled(
+    hermes_root: &Path,
+    enabled: bool,
+    all_profiles: bool,
+) -> Result<Vec<String>, String> {
+    let targets = discover_hermes_profile_configs(hermes_root);
+    let mut updated = Vec::new();
+    for (name, cfg_path) in targets {
+        if !all_profiles && name != "default" {
+            continue;
+        }
+        let content = fs::read_to_string(&cfg_path)
+            .map_err(|e| format!("Falha ao ler {}: {e}", cfg_path.display()))?;
+        let mut inside_moa = false;
+        let mut moa_found = false;
+        let mut enabled_written = false;
+        let mut out_lines = Vec::new();
+        for line in content.lines() {
+            if line.starts_with("moa:") {
+                inside_moa = true;
+                moa_found = true;
+                out_lines.push(line.to_string());
+                continue;
+            }
+            if inside_moa {
+                let trimmed = line.trim();
+                let indent = line.len() - line.trim_start().len();
+                if indent == 0 && !trimmed.is_empty() && !trimmed.starts_with('#') {
+                    if !enabled_written {
+                        out_lines.push(format!("  enabled: {enabled}"));
+                        enabled_written = true;
+                    }
+                    inside_moa = false;
+                } else if indent == 2 && trimmed.starts_with("enabled:") {
+                    out_lines.push(format!("  enabled: {enabled}"));
+                    enabled_written = true;
+                    continue;
+                }
+            }
+            out_lines.push(line.to_string());
+        }
+        if inside_moa && !enabled_written {
+            out_lines.push(format!("  enabled: {enabled}"));
+        }
+        if moa_found {
+            let _ = fs::copy(&cfg_path, cfg_path.with_extension("yaml.bak"));
+            fs::write(&cfg_path, format!("{}\n", out_lines.join("\n")).as_bytes())
+                .map_err(|e| format!("Falha ao atualizar {}: {e}", cfg_path.display()))?;
+            updated.push(name);
+        }
+    }
+    Ok(updated)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GatewayAuthStatus {
+    pub id: String,
+    pub label: String,
+    pub auth_mode: String,
+    pub authenticated: bool,
+    pub status: String,
+    pub env_key: Option<String>,
+    pub key_url: Option<String>,
+    pub masked_hint: Option<String>,
+    pub detail: String,
+    pub active_profile_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileConfigAudit {
+    pub profile_id: String,
+    pub config_path: String,
+    pub default_model: String,
+    pub raw_provider: String,
+    pub canonical_provider: String,
+    pub provider_valid: bool,
+    pub base_url: Option<String>,
+    pub expected_base_url: Option<String>,
+    pub base_url_aligned: bool,
+    pub api_mode: Option<String>,
+    pub moa_enabled: bool,
+    pub moa_reference_count: usize,
+    pub moa_uses_expired_nous: bool,
+    pub fallback_providers: Vec<Value>,
+    pub stuck_fallback_sessions: usize,
+    pub issues: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HermesCustomsReport {
+    pub health: String,
+    pub hermes_root: String,
+    pub active_profile_model: String,
+    pub active_profile_provider: String,
+    pub active_provider_authenticated: bool,
+    pub gateways: Vec<GatewayAuthStatus>,
+    pub active_gateway_ids: Vec<String>,
+    pub profiles: Vec<ProfileConfigAudit>,
+    pub total_stuck_fallback_sessions: usize,
+    pub moa_enabled_anywhere: bool,
+    pub issues: Vec<String>,
+    pub needs_config_repair: bool,
+    pub needs_session_unpin: bool,
+    pub nous_needs_reauth: bool,
+    pub favorites_count: usize,
+}
+
+fn load_env_vars_from_file(path: &Path, out: &mut HashMap<String, String>) {
+    let Ok(content) = fs::read_to_string(path) else {
+        return;
+    };
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let cleaned = trimmed.strip_prefix("export ").unwrap_or(trimmed);
+        if let Some((k, v)) = cleaned.split_once('=') {
+            let key = k.trim();
+            let val = v.trim().trim_matches('"').trim_matches('\'').trim();
+            if !key.is_empty() && !val.is_empty() {
+                out.insert(key.to_string(), val.to_string());
+            }
+        }
+    }
+}
+
+fn mask_secret_hint(secret: &str) -> String {
+    let chars: Vec<char> = secret.chars().collect();
+    if chars.len() <= 6 {
+        "***".to_string()
+    } else {
+        let prefix: String = chars.iter().take(4).collect();
+        let suffix: String = chars.iter().rev().take(3).collect::<Vec<_>>().into_iter().rev().collect();
+        format!("{prefix}••••{suffix}")
+    }
+}
+
+async fn count_stuck_fallback_sessions_by_profile(hermes_root: &Path) -> HashMap<String, usize> {
+    let mut counts = HashMap::new();
+    let mut candidates = vec![("default".to_string(), hermes_root.join("state.db"))];
+    if let Ok(entries) = fs::read_dir(hermes_root.join("profiles")) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                let db = p.join("state.db");
+                if db.exists() {
+                    if let Some(name) = p.file_name() {
+                        candidates.push((name.to_string_lossy().to_string(), db));
+                    }
+                }
+            }
+        }
+    }
+
+    for (prof_name, db_path) in candidates {
+        if !db_path.exists() {
+            continue;
+        }
+        let opts = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&db_path)
+            .read_only(true)
+            .create_if_missing(false)
+            .busy_timeout(std::time::Duration::from_millis(1500));
+        let Ok(pool) = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(opts)
+            .await
+        else {
+            continue;
+        };
+        let mut trapped = 0usize;
+        if let Ok(rows) = sqlx::query(
+            "SELECT model_config FROM sessions WHERE COALESCE(archived, 0) = 0",
+        )
+        .fetch_all(&pool)
+        .await
+        {
+            for row in rows {
+                use sqlx::Row;
+                let raw_cfg: Option<String> = row.try_get("model_config").ok();
+                if let Some(v) = raw_cfg.as_deref().and_then(|s| serde_json::from_str::<Value>(s).ok()) {
+                    let gr = v.get("gateway_runtime");
+                    let gr_prov = gr.and_then(|g| g.get("provider")).and_then(|x| x.as_str()).unwrap_or("");
+                    let gr_fb = gr.and_then(|g| g.get("fallback_active")).and_then(|x| x.as_bool()).unwrap_or(false);
+                    let follow = v.get("follow_profile_config").and_then(|x| x.as_bool()).unwrap_or(false);
+                    if gr_prov.eq_ignore_ascii_case("llamacpp") || gr_fb || (gr.is_some() && !follow) {
+                        trapped += 1;
+                    }
+                }
+            }
+        }
+        pool.close().await;
+        counts.insert(prof_name, trapped);
+    }
+    counts
+}
+
+/// Inspects Hermes Desktop auth (`auth.json` + `.env`), `config.yaml` routing across profiles,
+/// `moa.enabled`, favorites sync, and open fallback-trapped sessions.
+pub async fn inspect_hermes_customs_with_options(
+    hermes_root: &Path,
+    include_host_env: bool,
+) -> HermesCustomsReport {
+    let mut env_map: HashMap<String, String> = HashMap::new();
+    if include_host_env {
+        for (k, v) in std::env::vars() {
+            if !v.trim().is_empty() {
+                env_map.insert(k, v);
+            }
+        }
+        let souls_data = crate::resolve_data_dir();
+        for fname in ["credentials.env", ".env"] {
+            let p = souls_data.join(fname);
+            if p.exists() {
+                load_env_vars_from_file(&p, &mut env_map);
+            }
+        }
+    }
+    load_env_vars_from_file(&hermes_root.join(".env"), &mut env_map);
+    load_env_vars_from_file(&hermes_root.join("credentials.env"), &mut env_map);
+
+    let auth_json: Option<Value> = fs::read_to_string(hermes_root.join("auth.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok());
+
+    let nous_pool_count = auth_json
+        .as_ref()
+        .and_then(|v| v.get("credential_pool"))
+        .and_then(|c| c.get("nous"))
+        .and_then(|n| n.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+    let nous_relogin_req = auth_json
+        .as_ref()
+        .and_then(|v| v.get("providers"))
+        .and_then(|p| p.get("nous"))
+        .and_then(|n| n.get("last_auth_error"))
+        .and_then(|e| e.get("relogin_required"))
+        .and_then(|b| b.as_bool())
+        .unwrap_or(false);
+    let nous_err_code = auth_json
+        .as_ref()
+        .and_then(|v| v.get("providers"))
+        .and_then(|p| p.get("nous"))
+        .and_then(|n| n.get("last_auth_error"))
+        .and_then(|e| e.get("code"))
+        .and_then(|s| s.as_str())
+        .unwrap_or("");
+    let nous_authenticated = nous_pool_count > 0 && !nous_relogin_req;
+
+    let copilot_pool_count = auth_json
+        .as_ref()
+        .and_then(|v| v.get("credential_pool"))
+        .and_then(|c| c.get("copilot"))
+        .and_then(|n| n.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+    let copilot_token = env_map.get("GITHUB_TOKEN").or_else(|| env_map.get("COPILOT_GITHUB_TOKEN"));
+    let copilot_ok = copilot_pool_count > 0 || copilot_token.is_some();
+
+    let mut gateways = Vec::new();
+    gateways.push(GatewayAuthStatus {
+        id: "nous".to_string(),
+        label: "Nous Portal".to_string(),
+        auth_mode: "oauth_device".to_string(),
+        authenticated: nous_authenticated,
+        status: if nous_authenticated {
+            "ok".to_string()
+        } else if nous_relogin_req {
+            "expired".to_string()
+        } else {
+            "missing".to_string()
+        },
+        env_key: None,
+        key_url: Some("https://portal.nousresearch.com".to_string()),
+        masked_hint: if nous_authenticated {
+            Some(format!("{nous_pool_count} sessão OAuth"))
         } else {
             None
         },
-        config_path: cfg_path.to_string_lossy().to_string(),
-    })
+        detail: if nous_authenticated {
+            "Sessão OAuth Nous Portal ativa.".to_string()
+        } else if nous_relogin_req {
+            format!(
+                "Sessão expirada no Hermes ({}) — reconecte com `hermes login` para evitar queda para modelo local.",
+                if nous_err_code.is_empty() { "token expirado" } else { nous_err_code }
+            )
+        } else {
+            "Nenhuma sessão OAuth Nous conectada — autentique via `hermes login`.".to_string()
+        },
+        active_profile_count: 0,
+    });
+
+    struct KeyGatewaySpec {
+        id: &'static str,
+        label: &'static str,
+        envs: &'static [&'static str],
+        url: &'static str,
+    }
+    let key_specs: &[KeyGatewaySpec] = &[
+        KeyGatewaySpec {
+            id: "openrouter",
+            label: "OpenRouter",
+            envs: &["OPENROUTER_API_KEY"],
+            url: "https://openrouter.ai/settings/keys",
+        },
+        KeyGatewaySpec {
+            id: "deepseek",
+            label: "DeepSeek Direct",
+            envs: &["DEEPSEEK_API_KEY"],
+            url: "https://platform.deepseek.com/api_keys",
+        },
+        KeyGatewaySpec {
+            id: "anthropic",
+            label: "Anthropic Direct",
+            envs: &["ANTHROPIC_API_KEY", "ANTHROPIC_TOKEN"],
+            url: "https://console.anthropic.com/settings/keys",
+        },
+        KeyGatewaySpec {
+            id: "openai-api",
+            label: "OpenAI Direct",
+            envs: &["OPENAI_API_KEY"],
+            url: "https://platform.openai.com/api-keys",
+        },
+        KeyGatewaySpec {
+            id: "gemini",
+            label: "Google AI Studio",
+            envs: &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+            url: "https://aistudio.google.com/apikey",
+        },
+        KeyGatewaySpec {
+            id: "zai",
+            label: "Z.AI / GLM",
+            envs: &["ZAI_API_KEY", "GLM_API_KEY", "Z_AI_API_KEY"],
+            url: "https://z.ai/manage-apikey/apikey-list",
+        },
+        KeyGatewaySpec {
+            id: "xai",
+            label: "xAI / Grok",
+            envs: &["XAI_API_KEY"],
+            url: "https://console.x.ai/",
+        },
+        KeyGatewaySpec {
+            id: "nvidia",
+            label: "NVIDIA NIM",
+            envs: &["NVIDIA_API_KEY"],
+            url: "https://build.nvidia.com/settings/api-keys",
+        },
+    ];
+
+    for spec in key_specs {
+        let found = spec
+            .envs
+            .iter()
+            .find_map(|k| env_map.get(*k).map(|v| (*k, v)));
+        gateways.push(GatewayAuthStatus {
+            id: spec.id.to_string(),
+            label: spec.label.to_string(),
+            auth_mode: "api_key".to_string(),
+            authenticated: found.is_some(),
+            status: if found.is_some() { "ok" } else { "missing" }.to_string(),
+            env_key: Some(spec.envs[0].to_string()),
+            key_url: Some(spec.url.to_string()),
+            masked_hint: found.map(|(_, v)| mask_secret_hint(v)),
+            detail: if let Some((k, _)) = found {
+                format!("Chave configurada em {k}.")
+            } else {
+                format!("Chave {} ainda não configurada.", spec.envs[0])
+            },
+            active_profile_count: 0,
+        });
+    }
+
+    gateways.push(GatewayAuthStatus {
+        id: "copilot".to_string(),
+        label: "GitHub Copilot".to_string(),
+        auth_mode: "oauth_external".to_string(),
+        authenticated: copilot_ok,
+        status: if copilot_ok { "ok" } else { "missing" }.to_string(),
+        env_key: Some("GITHUB_TOKEN".to_string()),
+        key_url: Some("https://github.com/settings/tokens".to_string()),
+        masked_hint: copilot_token.map(|v| mask_secret_hint(v)),
+        detail: if copilot_ok {
+            "Token/Copilot ativo no Hermes.".to_string()
+        } else {
+            "GitHub Copilot não autenticado.".to_string()
+        },
+        active_profile_count: 0,
+    });
+
+    gateways.push(GatewayAuthStatus {
+        id: "custom".to_string(),
+        label: "Silício Local (llama.cpp)".to_string(),
+        auth_mode: "local".to_string(),
+        authenticated: true,
+        status: "local".to_string(),
+        env_key: None,
+        key_url: None,
+        masked_hint: Some("127.0.0.1:18434".to_string()),
+        detail: "Inferência local soberana na GPU/CPU.".to_string(),
+        active_profile_count: 0,
+    });
+
+    let stuck_by_profile = count_stuck_fallback_sessions_by_profile(hermes_root).await;
+    let cfgs = discover_hermes_profile_configs(hermes_root);
+    let mut profiles = Vec::new();
+    let mut global_issues = Vec::new();
+    let mut needs_config_repair = false;
+    let mut needs_session_unpin = false;
+    let mut moa_enabled_anywhere = false;
+
+    for (prof_id, cfg_path) in cfgs {
+        let parsed = parse_hermes_config_audit(&cfg_path);
+        let expected = normalize_hermes_provider_and_route(&parsed.provider, &parsed.default_model);
+        let provider_valid = OFFICIAL_HERMES_PROVIDERS.contains(&parsed.provider.trim());
+        let base_url_aligned = match (&parsed.base_url, &expected.base_url) {
+            (Some(actual), Some(exp)) => actual.trim_end_matches('/') == exp.trim_end_matches('/'),
+            (None, None) => true,
+            (Some(_), None) => true,
+            (None, Some(_)) => expected.provider != "nous" && expected.provider != "openrouter" && expected.provider != "custom",
+        };
+        let stuck = *stuck_by_profile.get(&prof_id).unwrap_or(&0);
+        if stuck > 0 {
+            needs_session_unpin = true;
+        }
+        if parsed.moa_enabled {
+            moa_enabled_anywhere = true;
+        }
+
+        let mut p_issues = Vec::new();
+        if !provider_valid {
+            needs_config_repair = true;
+            p_issues.push(format!(
+                "Provedor '{}' inválido para o Hermes Desktop (corrigir para '{}').",
+                parsed.provider, expected.provider
+            ));
+        }
+        if !base_url_aligned {
+            needs_config_repair = true;
+            p_issues.push(format!(
+                "URL base divergente para '{}' (esperado: {}).",
+                expected.provider,
+                expected.base_url.as_deref().unwrap_or("padrão")
+            ));
+        }
+        if parsed.moa_enabled && parsed.moa_uses_nous && !nous_authenticated {
+            p_issues.push(format!(
+                "Modo paralelo (MoA) está ativo com {} modelos Nous mesmo sem sessão Nous válida.",
+                parsed.moa_reference_count
+            ));
+        }
+        if stuck > 0 {
+            p_issues.push(format!(
+                "{} sessão(ões) presa(s) em fallback local neste perfil.",
+                stuck
+            ));
+        }
+
+        if let Some(gw) = gateways.iter_mut().find(|g| g.id == expected.provider) {
+            gw.active_profile_count += 1;
+        }
+
+        profiles.push(ProfileConfigAudit {
+            profile_id: prof_id,
+            config_path: cfg_path.to_string_lossy().to_string(),
+            default_model: parsed.default_model,
+            raw_provider: parsed.provider,
+            canonical_provider: expected.provider,
+            provider_valid,
+            base_url: parsed.base_url,
+            expected_base_url: expected.base_url,
+            base_url_aligned,
+            api_mode: parsed.api_mode,
+            moa_enabled: parsed.moa_enabled,
+            moa_reference_count: parsed.moa_reference_count,
+            moa_uses_expired_nous: parsed.moa_uses_nous && !nous_authenticated,
+            fallback_providers: parsed.fallback_providers,
+            stuck_fallback_sessions: stuck,
+            issues: p_issues,
+        });
+    }
+
+    let (active_profile_model, active_profile_provider, active_provider_authenticated) = profiles
+        .iter()
+        .find(|p| p.profile_id == "default")
+        .or_else(|| profiles.first())
+        .map(|p| {
+            let auth_ok = gateways
+                .iter()
+                .find(|g| g.id == p.canonical_provider)
+                .map(|g| g.authenticated)
+                .unwrap_or(false);
+            (p.default_model.clone(), p.canonical_provider.clone(), auth_ok)
+        })
+        .unwrap_or_else(|| ("deepseek/deepseek-chat".to_string(), "nous".to_string(), nous_authenticated));
+
+    if !active_provider_authenticated {
+        global_issues.push(format!(
+            "O provedor ativo '{}' não possui credencial válida no Hermes Desktop; novas conversas cairão no fallback local.",
+            active_profile_provider
+        ));
+    }
+    if needs_config_repair {
+        global_issues.push("Foram detectados identificadores ou URLs incompatíveis em config.yaml do Hermes.".to_string());
+    }
+    let total_stuck_fallback_sessions: usize = profiles.iter().map(|p| p.stuck_fallback_sessions).sum();
+    if total_stuck_fallback_sessions > 0 {
+        global_issues.push(format!(
+            "{} conversa(s) aberta(s) no Hermes estão presas em modo local de emergência.",
+            total_stuck_fallback_sessions
+        ));
+    }
+
+    let favorites_count = fs::read_to_string(hermes_root.join("ui-preferences.json"))
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
+        .and_then(|v| {
+            v.get("values")
+                .and_then(|vals| vals.get("hermes.desktop.favorite-models"))
+                .and_then(|f| f.as_str())
+                .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
+                .map(|arr| arr.len())
+        })
+        .unwrap_or(0);
+
+    let active_gateway_ids: Vec<String> = gateways
+        .iter()
+        .filter(|g| g.authenticated && g.id != "custom")
+        .map(|g| g.id.clone())
+        .collect();
+
+    let health = if !active_provider_authenticated || needs_config_repair {
+        "critical"
+    } else if total_stuck_fallback_sessions > 0 || (moa_enabled_anywhere && !nous_authenticated) {
+        "warning"
+    } else {
+        "healthy"
+    }
+    .to_string();
+
+    HermesCustomsReport {
+        health,
+        hermes_root: hermes_root.to_string_lossy().to_string(),
+        active_profile_model,
+        active_profile_provider,
+        active_provider_authenticated,
+        gateways,
+        active_gateway_ids,
+        profiles,
+        total_stuck_fallback_sessions,
+        moa_enabled_anywhere,
+        issues: global_issues,
+        needs_config_repair,
+        needs_session_unpin,
+        nous_needs_reauth: !nous_authenticated,
+        favorites_count,
+    }
+}
+
+/// Repairs Hermes `config.yaml` files (canonical slugs + base URLs), optional `moa.enabled`,
+/// fallback-pinned sessions in `state.db`, and favorites sync.
+pub async fn repair_hermes_customs(
+    hermes_root: &Path,
+    repair_configs: bool,
+    unpin_sessions: bool,
+    moa_enabled: Option<bool>,
+) -> Result<Value, String> {
+    let mut repaired_configs = Vec::new();
+    let mut moa_updated = Vec::new();
+    let mut fav_entries = Vec::new();
+    let mut unpinned_sessions = 0usize;
+
+    if repair_configs {
+        for (prof_name, cfg_path) in discover_hermes_profile_configs(hermes_root) {
+            let parsed = parse_hermes_config_audit(&cfg_path);
+            if parsed.default_model.is_empty() {
+                continue;
+            }
+            let route = normalize_hermes_provider_and_route(&parsed.provider, &parsed.default_model);
+            let _ = write_single_hermes_config(&cfg_path, &parsed.default_model, &route)?;
+            fav_entries.push((route.provider.clone(), parsed.default_model.clone()));
+            repaired_configs.push(prof_name);
+        }
+    }
+
+    if let Some(target_moa) = moa_enabled {
+        moa_updated = set_hermes_moa_enabled(hermes_root, target_moa, true)?;
+    }
+
+    if unpin_sessions {
+        let root_cfg = hermes_root.join("config.yaml");
+        let (m, p) = read_active_hermes_model(&root_cfg);
+        let route = normalize_hermes_provider_and_route(&p, &m);
+        unpinned_sessions = unpin_hermes_fallback_sessions(hermes_root, &route, &m).await?;
+    }
+
+    let favorites_synced = sync_hermes_desktop_favorites(hermes_root, &fav_entries).unwrap_or(false);
+
+    Ok(json!({
+        "status": "success",
+        "repaired_configs": repaired_configs,
+        "moa_updated_profiles": moa_updated,
+        "unpinned_sessions": unpinned_sessions,
+        "favorites_synced": favorites_synced
+    }))
 }
 
 #[cfg(test)]
@@ -1038,5 +2298,142 @@ terminal:
         // Verify dynamic hardware string: must not contain static RTX 2060m
         let desc = &triad_local.quality_leader.as_ref().unwrap().desc;
         assert!(!desc.contains("RTX 2060m"), "Hardware string should be dynamic, but was: {}", desc);
+    }
+
+    #[test]
+    fn test_normalize_hermes_provider_and_route_canonicals() {
+        let r_nous = normalize_hermes_provider_and_route("nous_portal", "openai/gpt-6.1-sol-pro");
+        assert_eq!(r_nous.provider, "nous");
+        assert_eq!(
+            r_nous.base_url.as_deref(),
+            Some("https://inference-api.nousresearch.com/v1")
+        );
+        assert_eq!(r_nous.api_mode, "chat_completions");
+
+        let r_or = normalize_hermes_provider_and_route("openrouter_market", "meituan/longcat-2.5-preview:free");
+        assert_eq!(r_or.provider, "openrouter");
+        assert_eq!(r_or.base_url.as_deref(), Some("https://openrouter.ai/api/v1"));
+
+        let r_local = normalize_hermes_provider_and_route("local_silicon", "Qwen3.5-4B.Q4_K_M.gguf");
+        assert_eq!(r_local.provider, "custom");
+        assert_eq!(r_local.base_url.as_deref(), Some("http://127.0.0.1:18434/v1"));
+
+        let r_ant = normalize_hermes_provider_and_route("anthropic", "anthropic/claude-opus-5.5");
+        assert_eq!(r_ant.provider, "anthropic");
+        assert_eq!(r_ant.api_mode, "anthropic_messages");
+    }
+
+    #[tokio::test]
+    async fn test_customs_inspect_repair_favorites_and_session_unpin() {
+        let dir = std::env::temp_dir().join(format!(
+            "souls_customs_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let prof_dir = dir.join("profiles").join("financas");
+        fs::create_dir_all(&prof_dir).unwrap();
+
+        let bad_cfg = r#"model:
+  default: "openai/gpt-6.1-sol-pro"
+  provider: "nous_portal"
+  base_url: 'https://stale.example/v1'
+  api_mode: chat_completions
+  context_length: 131072
+moa:
+  reference_models:
+    - provider: nous
+      model: stepfun/step-5-preview:free
+      enabled: true
+  enabled: true
+fallback_providers:
+  - provider: llamacpp
+    model: Qwen3.5-4B-Uncensored-Q4_K_M
+"#;
+        fs::write(dir.join("config.yaml"), bad_cfg).unwrap();
+        fs::write(prof_dir.join("config.yaml"), bad_cfg).unwrap();
+        fs::write(
+            dir.join("auth.json"),
+            r#"{"providers":{"nous":{"last_auth_error":{"relogin_required":true,"code":"invalid_grant"}}},"credential_pool":{"nous":[],"copilot":["tok"]}}"#,
+        )
+        .unwrap();
+        fs::write(dir.join(".env"), "OPENROUTER_API_KEY=sk-or-v1-test123456\n").unwrap();
+        fs::write(
+            dir.join("ui-preferences.json"),
+            r#"{"version":1,"generation":"abc","revision":4,"values":{"hermes.desktop.favorite-models":"[\"nous::deepseek/deepseek-chat\"]"}}"#,
+        )
+        .unwrap();
+
+        // Mock Hermes state.db with trapped llamacpp fallback session
+        let db_path = dir.join("state.db");
+        let opts = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&db_path)
+            .create_if_missing(true);
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(opts)
+            .await
+            .unwrap();
+        sqlx::query("CREATE TABLE sessions (id TEXT PRIMARY KEY, model TEXT, model_config TEXT, billing_provider TEXT, archived INTEGER DEFAULT 0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO sessions (id, model, model_config, billing_provider, archived) VALUES (?, ?, ?, ?, 0)")
+            .bind("local-stuck-1")
+            .bind("Qwen3.5-4B-Uncensored-Q4_K_M")
+            .bind(r#"{"gateway_runtime":{"provider":"llamacpp","model":"Qwen3.5-4B-Uncensored-Q4_K_M","fallback_active":true}}"#)
+            .bind("llamacpp")
+            .execute(&pool)
+            .await
+            .unwrap();
+        pool.close().await;
+
+        let report_before = inspect_hermes_customs_with_options(&dir, false).await;
+        assert_eq!(report_before.health, "critical");
+        assert!(report_before.needs_config_repair);
+        assert!(report_before.nous_needs_reauth);
+        assert_eq!(report_before.total_stuck_fallback_sessions, 1);
+        assert!(report_before.moa_enabled_anywhere);
+        assert!(report_before.active_gateway_ids.contains(&"openrouter".to_string()));
+        assert!(report_before.active_gateway_ids.contains(&"copilot".to_string()));
+
+        // Apply OpenRouter model across all profiles + unpin sessions
+        let apply_res = apply_profile_to_hermes_extended(
+            Some("custom"),
+            "openai/gpt-6.1-sol-pro",
+            Some("openrouter_market"),
+            Some(&dir.join("config.yaml")),
+            true,
+            true,
+        )
+        .await
+        .unwrap();
+        assert_eq!(apply_res.provider, "openrouter");
+        assert_eq!(apply_res.unpinned_sessions, 1);
+        assert!(apply_res.favorites_synced);
+        assert_eq!(apply_res.profiles_updated.len(), 2);
+
+        let updated_root = fs::read_to_string(dir.join("config.yaml")).unwrap();
+        assert!(updated_root.contains(r#"provider: "openrouter""#));
+        assert!(updated_root.contains("https://openrouter.ai/api/v1"));
+        assert!(!updated_root.contains("context_length:"));
+        assert!(!updated_root.contains('\r'));
+
+        let prefs_raw = fs::read_to_string(dir.join("ui-preferences.json")).unwrap();
+        assert!(prefs_raw.contains("openrouter::openai/gpt-6.1-sol-pro"));
+        assert!(prefs_raw.contains("nous::deepseek/deepseek-chat"));
+
+        // Disable MoA via repair_hermes_customs
+        let _ = repair_hermes_customs(&dir, false, false, Some(false))
+            .await
+            .unwrap();
+        let report_after = inspect_hermes_customs_with_options(&dir, false).await;
+        assert_eq!(report_after.health, "healthy");
+        assert!(!report_after.needs_config_repair);
+        assert_eq!(report_after.total_stuck_fallback_sessions, 0);
+        assert!(!report_after.moa_enabled_anywhere);
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
