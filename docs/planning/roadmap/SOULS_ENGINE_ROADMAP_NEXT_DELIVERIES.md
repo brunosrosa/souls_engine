@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)
-> **VERSÃO CONSOLIDADA:** v0.9.2.1 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
+> **VERSÃO CONSOLIDADA:** v0.9.2.2 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -93,6 +93,7 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestone v0.9.1** | **Precision Dark UI, Ícones Vetoriais SVG & Purga de Estilos Inline** | **100% CONCLUÍDO** | **v0.9.1-A..F (76/76 testes PASS em `souls_server`):** Topbar consolidada em 6 Pilares + subnavs contextuais + Settings em 4 categorias + Command Palette (`Ctrl+K`), sprite SVG Duotone (`80` símbolos em `components/icons.svg` + `uiIcon()` sem emojis residuais na UI), purga total de hardcodes de hardware (`RTX`/`9980HK`/`i9`) e caminhos absolutos (`Z:\souls_engine`/`rosas`) por vínculos reativos de telemetria/host, 6 Lab Drawers `<details class="lab-drawer">` colapsáveis, tokens `oklch` + purga dos estilos inline estáticos nos 27 parciais HTML e 5 scripts JS (`styles.css`), estabilização CLS = 0 (`min-height` + `contain: layout style;`), Auto-Save com debounce de 400ms em Settings visuais, alinhamento dos 9 perfis cognitivos ADR-009 e ranking multiobjetivo na Cloud Arena, Trio Recomendado evolutivo + catálogo HF híbrido/trending + estimativa física de TPS e Explorer unificado com autocomplete no Model Hub, auditoria cross-tab zero-mocks/zero-404 nas 8 abas e 6 sub-abas de Settings, e Cockpit Pulse auditável em 4 pilares. |
 | **Milestone v0.9.2** | **Google Personal & Life Hub, BMAD Agent Inbox & Multi-Conta OAuth2** | **100% CONCLUÍDO** | **v0.9.2 Oficial (ADR-030):** Cofre encriptado multi-conta **GV2** + OAuth2 PKCE (`RFC 7636 S256`) + importação `gws` + Google Doctor, **Híbrido Seguro** (Workspace REST oficial, **Routes API v2** com `X-Goog-FieldMask`, People/Contacts, YouTube Innertube + parser XML/SRV3, Tasks + Obsidian Quick Capture para `@gmail.com`, 22+ RPCs Wiz corrigidos + `nlm` CLI, Custom Gems via Gemini API oficial com bloqueio de `StreamGenerate` na conta primária), **Governança BMAD** (`BlastRadiusTier` em 3 níveis, 4 políticas multi-conta, `wrap_untrusted_content` com nonce anti-injection, `SessionTaintTracker` 30m e `AgentInboxStore` com Myers Diff + Gravity Lock + `audit_log.jsonl`), 17 novas ferramentas MCP (`14 google.*` + `3 inbox.*` = **80 tools canônicas**), 16ª skill `google-life-hub` no Switchboard, 39 rotas `/api/v1/google/*` + 5 rotas `/api/v1/inbox/*`, e abas SPA `Google Life Hub`, `Gemini Notebooks` (player HTTP Range) e `Agent Inbox` + badge global na Topbar (zero inline styles). |
 | **Milestone v0.9.2.1** | **Pulso Proativo Multi-Cadência, Apps Script 24/7, Forms, Chat & MinionS** | **100% CONCLUÍDO** | **v0.9.2.1 Oficial (ADR-031 / `version = "0.9.2+1"`):** Heartbeat multi-cadência (5m `oauth_health`/`commute` 90m, 10m `gmail_vip`, 15m `forms`/`drive_sync`) com backoff isolado por monitor, Quiet Hours configurável/desligável e entrega tripla (SSE `/api/v1/google/events/stream`, `prefetch()` efêmero no `hermes_memory_souls` sem tocar em `system_prompt_block()`, Webhook/Telegram opt-in); **Apps Script 24/7** via `script.googleapis.com/v1` + 5 templates curados + scanner estático (`appsscript.json`, segredos, Cartão de Permissões em Português Humano) + BMAD Myers Diff/Gravity Lock; **Google Forms API v1** (stats + Markdown) e **Google Chat API v1** (exclusivo Workspace corporativo + Webhook); **MinionS Google Deep Analyze** (Tier 0 BM25 + cache SHA-256 em `.souls_data/google/minions_cache/` + guarda GGUF/WDDM/AVX2 + exportação 1-clique Obsidian/NotebookLM); **Auto-Sync Drive ↔ NotebookLM** (`sync_links.json` + gancho pós-push Docs/Sheets); OAuth incremental (`include_granted_scopes=true` + `missing_recommended_scopes`); **5 novas tools MCP** totalizando **85 ferramentas canônicas** (`7` Level 0 + `78` progressivas) e **21 novas rotas REST**. |
+| **Milestone v0.9.2.2** | **Alfândega Hermes ↔ Souls, Cloud Arena 2.0 & Ledger FinOps Real** | **100% CONCLUÍDO** | **v0.9.2.2 Oficial (ADR-032 / `version = "0.9.2+2"`):** Normalização estrita de slugs e rotas canônicas do Hermes Desktop (`nous`, `openrouter`, `custom`, `deepseek`, `anthropic`, `openai-api`, `gemini`, `copilot`), limpeza de `context_length` órfão, sincronização multi-perfil (`profiles/*`), destravamento de sessões presas em fallback no `state.db`, toggle `moa.enabled` e sincronia não-destrutiva de `hermes.desktop.favorite-models` (`ui-preferences.json`); ingestão de modelos gratuitos `:free` ($0) + OpenRouter exclusivos sem colisão de variantes (`Pro`/`Flash`/`Flex`); rebalanceamento dinâmico de Pareto (Pódio/Tabela/`.sort()`), filtros **`Nous Portal` (padrão) → `OpenRouter` → Gateways Ativas → `Gratuitos ($0)` → `Todos`**, coluna `Usar` após `Status`, modal de aplicação com pré-voo OAuth/API Key inline 1-clique e simulador mensal; **Ledger FinOps Real (`hermes_usage_ledger`)** via `?mode=ro` sobre `state.db` + 3 novas rotas REST (`/api/v1/hermes/customs`, `/customs/repair`, `/api/v1/cloud/finops`). |
 
 ### 2.2 Inventário de Ativos Consolidados na v0.6.0
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
@@ -160,6 +161,8 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 │ v0.9.2        │ Google Personal & Life Hub       │ [CONCLUÍDO] BMAD Inbox+LifeHub│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.2.1      │ Pulso 24/7, AppsScript, MinionS  │ [CONCLUÍDO] 85 Tools+AutoSync │
+├───────────────┼──────────────────────────────────┼───────────────────────────────┤
+│ v0.9.2.2      │ Alfândega Hermes + Cloud Arena 2 │ [CONCLUÍDO] ADR-032 + FinOps  │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.3 (PRÓX) │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
@@ -490,6 +493,25 @@ Fechamento completo do Google Personal & Life Hub com proatividade contínua zer
 * **Auto-Sync Drive ↔ NotebookLM & OAuth Incremental:**
   - Vínculos vivos em `sync_links.json` com toggle 1-clique em `Gemini Notebooks`, gancho imediato pós-push Docs/Sheets e OAuth incremental (`include_granted_scopes=true` + `missing_recommended_scopes`).
 * **Exclusões Mantidas:** Google Jules definitivamente descontinuado (read-only 12/11/2026, desligamento 31/12/2026 ➔ `JulesMigrationRouter` para `agy`) e `chaser-oxide` mantido excluído.
+
+---
+
+### MILESTONE v0.9.2.2: ALFÂNDEGA HERMES ↔ SOULS, CLOUD ARENA 2.0 & LEDGER FINOPS REAL — **[100% CONCLUÍDO]**
+
+> **Documentos de Referência Arquiteturais SSOT:**  
+> 📄 [ADR-032: Cloud Arena 2.0, Alfândega Hermes ↔ Souls e Ledger FinOps Real do Hermes](file:///Z:/souls_engine/docs/decisions/adrs/ADR-032-Cloud-Arena-2-Alfandega-Hermes-e-Ledger-FinOps-Real.md)  
+> 📄 [Skill Canônica: `souls-cloud-arena-advisor`](file:///Z:/souls_engine/.agents/skills/souls-cloud-arena-advisor/SKILL.md)
+
+Saneamento completo da integração entre **Cloud Arena** e **Hermes Agent Desktop**, eliminando quebras de resolução (`model_resolution_failed`), colisões de variantes e cegueira financeira:
+
+* **Alfândega Hermes ↔ Souls & Auto-Reparo (`profiles.rs`, `/api/v1/hermes/customs`):**
+  - Normalização estrita de slugs/rotas oficiais (`nous`, `openrouter`, `custom`, `deepseek`, `anthropic`, `openai-api`, `gemini`, `copilot`, etc.) + remoção de `context_length` órfão e sincronização opcional em `profiles/*/config.yaml` e `ui-preferences.json` (`hermes.desktop.favorite-models`).
+  - Inspeção contínua de `auth.json`, `.env`, `moa.enabled`, `fallback_providers` e destravamento de sessões presas em fallback `llamacpp` no `state.db`, com bloqueio preventivo (`strict_auth`) e facilitadores inline 1-clique (`hermes login` ou salvamento instantâneo de API Key).
+* **Catálogo & Cloud Arena 2.0 (`souls_llm_cloud_arena`, `cloud.rs`, `local_models.html`, `dashboard.js`):**
+  - Preservação de tiers `:free` ($0) e ingestão de modelos generativos exclusivos do OpenRouter sem colapso de variantes (`Pro`/`Flash`/`Flex`/`High`).
+  - Gateways em ordem ergonômica (**`Nous Portal` padrão → `OpenRouter` → Gateways Ativas → `Gratuitos ($0)` → `Todos`**), botão **Limpar Filtros**, **`Usar` após `Status`**, rebalanceamento dinâmico de Pódio/Tabela e ordenação unificada sincronizada com `#cloud-sort-select` + Simulador Mensal FinOps no modal.
+* **Ledger FinOps Real do Hermes (`hermes_usage_ledger`, `/api/v1/cloud/finops`):**
+  - Sincronização somente leitura (`?mode=ro`) do `state.db` raiz e sub-perfis, calculando gastos reais (Hoje, 7d, 30d, Acumulado, Run-Rate Mensal) e economia de Prompt Cache na **Cloud Arena** e na **Visão Geral**.
 
 ---
 
@@ -911,6 +933,12 @@ flowchart TD
         MinionsAutoSync["MinionS Deep Analyze (Cache SHA-256) + Drive Auto-Sync + 85 MCP Tools"]
     end
 
+    subgraph M0922 ["Milestone v0.9.2.2 — CONCLUÍDO (Alfândega Hermes + Cloud Arena 2.0 + FinOps)"]
+        HermesCustoms["Alfândega Hermes (Slugs Canônicos + Sessões + MoA + Favoritos)"]
+        CloudArena2["Cloud Arena 2.0 (:free + Sem Colisão + Pareto Dinâmico)"]
+        HermesFinops["Ledger FinOps Real (state.db -> hermes_usage_ledger)"]
+    end
+
     subgraph M093 ["Milestone v0.9.3 — PRÓXIMA (Percepção Multimodal Híbrida)"]
         HybridVision["AXTree O(1) + On-Demand DXGI Snapshots"]
         SovereignAudio["Áudio Soberano Local (Silero + SenseVoice + Kokoro)"]
@@ -953,7 +981,10 @@ flowchart TD
     BmadInbox --> PulseProactive
     PulseProactive --> AppsScriptForms
     AppsScriptForms --> MinionsAutoSync
-    MinionsAutoSync --> HybridVision
+    MinionsAutoSync --> HermesCustoms
+    HermesCustoms --> CloudArena2
+    CloudArena2 --> HermesFinops
+    HermesFinops --> HybridVision
     HybridVision --> SovereignAudio
     SovereignAudio --> CordisKernel
     CordisKernel --> CatnapProtocol

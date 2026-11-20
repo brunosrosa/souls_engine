@@ -9,7 +9,13 @@ metadata:
 
 # Souls Cloud Arena Advisor — Playbook de Inteligência de Nuvem (v7)
 
-Este playbook rege a inspeção de modelos de nuvem (Nous Research Portal e OpenRouter) auditados diariamente pelo motor analítico da `souls_llm_cloud_arena` (ADR-009).
+Este playbook rege a inspeção de modelos de nuvem (Nous Research Portal, OpenRouter e gateways diretas autenticadas no Hermes) auditados pelo motor analítico da `souls_llm_cloud_arena` (ADR-009 / ADR-032 / v0.9.2.2).
+
+## 🛡️ REGRAS CANÔNICAS DA CLOUD ARENA 2.0 & ALFÂNDEGA HERMES (v0.9.2.2)
+1. **Slugs Canônicos do Hermes Desktop:** Nunca recomendar ou gravar `"nous_portal"`, `"openrouter_market"` ou `"local_silicon"` diretamente no `config.yaml` do Hermes. Use exclusivamente os slugs oficiais (`"nous"`, `"openrouter"`, `"copilot"`, `"deepseek"`, `"anthropic"`, `"openai-api"`, `"gemini"`, `"zai"`, `"xai"`, `"alibaba"`, `"custom"`).
+2. **Preservação de Variantes & Modelos `:free`:** Variantes (`-pro`, `-flash`, `-flex`, `-high`, `-max`) e tiers gratuitos (`:free`) são entidades distintas no catálogo e nunca devem ser colapsados.
+3. **Verificação Pré-Voo (Alfândega):** Antes de orientar a troca do Master Brain, inspecione `GET /api/v1/hermes/customs` para checar se o gateway alvo possui OAuth/API key válida (`auth.json`/`.env`), se `moa.enabled` está disparando chamadas extras no Nous e se há sessões presas em fallback `llamacpp`.
+4. **FinOps Real (`state.db` -> `hermes_usage_ledger`):** Use `GET /api/v1/cloud/finops` para reportar gastos reais (Hoje, 7d, 30d, Projeção Mensal) e economia de Prompt Cache calculados sobre a matriz de tarifas.
 
 ## 🏆 OS 9 PERFIS COGNITIVOS DA CLOUD ARENA
 A Cloud Arena classifica os modelos em 9 perfis especializados com base em benchmarks e custos ponderados:
