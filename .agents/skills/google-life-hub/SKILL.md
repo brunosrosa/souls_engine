@@ -1,13 +1,13 @@
 ---
 name: google-life-hub
-description: Playbook operacional do Google Personal & Life Hub no Souls Engine (v0.9.2). Cobre descoberta progressiva (google.* e inbox.*), 3 Tiers de Governanca BMAD + Taint Guard + 4 politicas multi-conta, blindagem contra Prompt Injection, Daily Briefing, Routes v2, Gmail, Calendar, Drive, Docs Scratchpad, Sheets, Slides, Tasks + Obsidian Quick Capture, Contacts, YouTube, NotebookLM e Custom Gems.
+description: Playbook operacional do Google Personal & Life Hub no Souls Engine (v0.9.2.1). Cobre descoberta progressiva (google.* e inbox.* — 85 tools), 3 Tiers de Governanca BMAD + Taint Guard + 4 politicas multi-conta, blindagem contra Prompt Injection, Pulso Proativo Multi-Cadencia, Apps Script 24/7, Forms, Chat Workspace, Leitura Economica MinionS, Daily Briefing, Routes v2, Gmail, Calendar, Drive, Docs Scratchpad, Sheets, Slides, Tasks + Obsidian Quick Capture, Contacts, YouTube, NotebookLM (com Auto-Sync) e Custom Gems.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   author: "Souls Engine Architecture"
   namespace: "google"
 ---
 
-# Google Personal & Life Hub — Playbook Operacional (v0.9.2)
+# Google Personal & Life Hub — Playbook Operacional (v0.9.2.1)
 
 Este playbook rege o uso seguro, deterministico e centrado no humano do ecossistema **Google Personal & Life Hub** via **Souls Engine** (`127.0.0.1:9123`) pelo Hermes Agent e pelo Antigravity.
 
@@ -15,15 +15,16 @@ Este playbook rege o uso seguro, deterministico e centrado no humano do ecossist
 
 ## 1. Descoberta Progressiva de Ferramentas (`tool_search`)
 
-O catalogo canonico do Souls Engine v0.9.2 possui **80 ferramentas MCP** (**7** visiveis no Boot Level 0 e **73** sob revelacao progressiva). Para evitar *Tool Blindness* e preservar o *Prefix Caching* do Master Chat (>95%), nunca injete esquemas manualmente: descubra sob demanda via `tool_search`.
+O catalogo canonico do Souls Engine v0.9.2.1 possui **85 ferramentas MCP** (**7** visiveis no Boot Level 0 e **78** sob revelacao progressiva). Para evitar *Tool Blindness* e preservar o *Prefix Caching* do Master Chat (>95%), nunca injete esquemas manualmente: descubra sob demanda via `tool_search`.
 
-- **Dominio Google (`namespace="google"` — 15 tools):**
+- **Dominio Google (`namespace="google"` — 20 tools):**
   - `notebooklm_rpc` (v0.8.2 — RPC `batchexecute` bruto)
   - `google_accounts`, `google_briefing`, `google_gmail`, `google_calendar`, `google_drive`, `google_docs_scratchpad`, `google_sheets`, `google_slides`, `google_tasks`, `google_contacts`, `google_commute`, `google_youtube`, `google_notebooklm`, `google_gems` (14 tools v0.9.2)
+  - `google_pulse`, `google_apps_script`, `google_forms`, `google_chat`, `google_deep_analyze` (5 tools v0.9.2.1)
 - **Dominio BMAD Agent Inbox (`namespace="inbox"` — 3 tools):**
   - `inbox_list`, `inbox_inspect_diff`, `inbox_propose`
 
-Total no ecossistema Google/Inbox: **18 ferramentas MCP** (15 `google.*` + 3 `inbox.*`).
+Total no ecossistema Google/Inbox: **23 ferramentas MCP** (20 `google.*` + 3 `inbox.*`).
 
 ```json
 { "name": "tool_search", "arguments": { "namespace": "google" } }
@@ -137,8 +138,41 @@ Corpos/snippets de e-mails do Gmail, arquivos do Drive e transcricoes do YouTube
 
 ---
 
-## 5. Diagnostico, OAuth2 PKCE e Saude (`google_accounts`)
+### 4.12 Pulso Proativo Multi-Cadencia & Auto-Sync Drive <-> NotebookLM (`google_pulse`)
+- **Heartbeat Multi-Cadencia:** Padrao de **5 min** (`oauth_health` + `commute` na janela de 90 min), **10 min** (`gmail_vip`), **15 min** (`forms` + `drive_sync`), com *backoff* isolado por monitor (2 ciclos em caso de erro/429) e **Quiet Hours** configuravel/desligavel (`quiet_hours_enabled`, padrao `22h–08h`).
+- **Acoes principais:**
+  - `action="status"` ou `"run_now"`: inspeciona o snapshot de saude dos monitores ou dispara ciclo sob demanda.
+  - `action="pending"` / `"ack"`: lista ou reconhece alertas pendentes (os mesmos drenados efemeramente pelo `prefetch()` do Hermes sem quebrar o *Prefix Caching*).
+  - `action="configure"`: ajusta multiplicadores, Quiet Hours, monitores ativos, `vip_senders`, `monitored_form_ids`, `commute_origin` e canais externos opcionais (Webhook/Telegram apenas para `High`/`Critical`).
+  - `action="sync_links_list"` / `"sync_links_add"` / `"sync_links_toggle"`: gerencia vinculos vivos Drive <-> NotebookLM (`sync_links.json`). Quando `auto_sync_enabled=true`, o pulso e o gancho pos-push de Docs/Sheets disparam `FLmJqe` automaticamente.
+
+### 4.13 Google Apps Script 24/7 (`google_apps_script`)
+- **Templates Curados (`action="templates"`):** 5 automacoes de menor privilegio prontas (`gmail_bills_organizer`, `drive_attachments_archiver`, `forms_instant_notifier`, `gmail_promo_cleaner`, `morning_digest_cloud`).
+- **Auditoria Estatica Obrigatoria (`action="scan_security"`):** Valida JSON de `appsscript.json`, detecta segredos/tokens colados no JS, sinaliza chamadas externas (`UrlFetchApp`) ou destrutivas e gera o **Cartao de Permissoes em Portugues Humano** (`human_permission_summary`).
+- **Mutacoes Governadas pelo BMAD Inbox:** `propose_push`, `propose_deploy` e `propose_run` (alem de `create`, `get_content`, `processes`) exigem obrigatoriamente **Myers Diff + Gravity Lock** na Agent Inbox antes de alterar ou executar scripts na conta do operador.
+
+### 4.14 Google Forms (`google_forms`) & Exportacao 1-Clique
+- **Suportado em `@gmail.com` e Workspace:** Use `action="get"` para ler o esquema do formulario, `action="responses"` para listar envios e `action="stats"` para gerar agregacao deterministica por pergunta mais `markdown_summary`.
+- **Criacao Governada:** `action="create"` passa obrigatoriamente pelo BMAD Agent Inbox (`Tier2`).
+- **Fluxo de Exportacao 1-Clique:** Envie o `markdown_summary` diretamente para o cofre Obsidian (`raw/inbox/` via `google_tasks(action="quick_capture")`) ou como fonte em um caderno NotebookLM (`google_notebooklm(action="add_source")`).
+
+### 4.15 Google Chat (`google_chat`) — Restricao Workspace
+- **Exclusivo Workspace Corporativo:** Use `action="check_eligibility"` antes de operar `list_spaces` / `list_messages`. Contas pessoais `@gmail.com` e `secondary_sandbox` sao bloqueadas deterministicamente em `check_chat_eligibility`.
+- **Envio Governado:** `propose_send` (Space corporativo) e `propose_webhook` (validando prefixo `https://chat.googleapis.com/v1/spaces/`) enfileiram proposta no **BMAD Agent Inbox** com Gravity Lock.
+
+### 4.16 Leitura Economica MinionS (`google_deep_analyze`)
+- **Quando usar:** Sempre que precisar extrair respostas, fatos, estatisticas ou citacoes de documentos longos (`drive_doc`), PDFs ate 25 MB (`drive_pdf`), threads extensas (`gmail_thread`), respostas (`google_form`) ou texto bruto (`raw_text`), evitando enviar o documento inteiro para a LLM principal.
+- **Cascata `mode`:**
+  - `"auto"` (padrao): prepara o corpus no Tier 0 (`pdf_extractor`, `html_cleaner`, `chunker`, `bm25` + `wrap_untrusted_content`), verifica o **cache SHA-256** em `.souls_data/google/minions_cache/` (respostas repetidas em sub-5ms) e escala para SLM local (`MinionBatchOrchestrator` com teto WDDM 4.8 GB / fallback CPU AVX2) apenas se houver modelo `.gguf` + `llama-completion` disponiveis.
+  - `"fast_deterministic"`: retorna apenas a sintese BM25 deterministica (0 VRAM, latencia minima).
+  - `"force_local_slm"`: exige execucao via SLM local (degradando graciosamente se indisponivel).
+- **Exportacao 1-Clique:** O campo `markdown_export` pode ser salvo imediatamente no Obsidian (`raw/inbox/` via `google_tasks(action="quick_capture")`) ou enviado ao NotebookLM (`google_notebooklm`).
+
+---
+
+## 5. Diagnostico, OAuth2 PKCE Incremental e Saude (`google_accounts`)
 
 1. Execute `google_accounts(action="doctor")` (ou `GET /api/v1/google/doctor`) para auditar CLIs (`gws`, `nlm`, `gemini`, `clasp`), contas no cofre **GV2**, chave `ROUTES_API_KEY`/`GOOGLE_MAPS_API_KEY` e status OAuth.
-2. Use `google_accounts(action="import_gws")` para importar credenciais de `~/.config/gws/` ou inicie fluxo OAuth2 PKCE (`S256`) pelo Dashboard (`Conexoes & CLIs` / `Google Life Hub`).
-3. **Orientacao OAuth Testing vs In Production:** Se `oauth_testing_mode_warning == true`, os *refresh tokens* no Google Cloud Console em modo **Testing** expiram a cada **7 dias**. Oriente o operador a alternar o consent screen para **In Production** (para uso pessoal com ate 100 contas, dispensa verificacao publica da Google).
+2. **OAuth2 PKCE Incremental (`include_granted_scopes=true`):** Ao inspecionar contas via `google_accounts(action="list")`, verifique o campo `missing_recommended_scopes`. Se houver escopos v0.9.2.1 pendentes (ex.: Apps Script ou Forms), acione a atualizacao incremental pelo Dashboard (**Conexoes & CLIs** ➔ *"Atualizar permissoes (Automacoes 24/7 e Formularios)"* ou banner contextual em *Automacoes 24/7* / *Formularios*) sem revogar permissoes anteriores.
+3. Use `google_accounts(action="import_gws")` para importar credenciais de `~/.config/gws/` ou inicie fluxo OAuth2 PKCE (`S256`) pelo Dashboard (`Conexoes & CLIs` / `Google Life Hub`).
+4. **Orientacao OAuth Testing vs In Production:** Se `oauth_testing_mode_warning == true`, os *refresh tokens* no Google Cloud Console em modo **Testing** expiram a cada **7 dias**. Oriente o operador a alternar o consent screen para **In Production** (para uso pessoal com ate 100 contas, dispensa verificacao publica da Google).

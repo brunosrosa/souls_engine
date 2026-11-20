@@ -122,28 +122,66 @@ class SoulsMemoryProvider(MemoryProvider):
         if session_id:
             self.current_session_id = session_id
 
+    def _fetch_google_pulse_block(self) -> str:
+        """Consulta efêmera (fail-open, timeout=1.0s) por alertas pendentes do Pulso Google."""
+        try:
+            res = self._http_json(
+                "GET",
+                "/api/v1/google/pulse/pending?limit=3&drain=true",
+                timeout=1.0,
+            )
+            if not isinstance(res, dict) or res.get("status") != "success":
+                return ""
+            events = res.get("events")
+            if not isinstance(events, list) or not events:
+                return ""
+
+            lines: List[str] = ["[PULSO GOOGLE — ALERTAS RECENTES]"]
+            for evt in events:
+                if not isinstance(evt, dict):
+                    continue
+                urgency = str(evt.get("urgency") or "medium").upper()
+                category = str(evt.get("category") or "system").upper()
+                title = str(evt.get("title") or "Alerta Google").strip()
+                summary = str(evt.get("summary") or "").strip()
+                if summary:
+                    lines.append(f"- [{urgency}/{category}] {title}: {summary}")
+                else:
+                    lines.append(f"- [{urgency}/{category}] {title}")
+            return "\n".join(lines) if len(lines) > 1 else ""
+        except Exception:
+            return ""
+
     def prefetch(self, query: str = "", *, session_id: str = "") -> str:
         effective_query = (query or self._queued_query or "").strip()
         self._queued_query = None
+
+        recall_block = ""
         if not effective_query:
             self._last_recall_count = 0
-            return ""
+        else:
+            sid = session_id or self.current_session_id or "default"
+            payload = {
+                "query": effective_query,
+                "session_id": sid,
+                "mode": self.recall_mode,
+                "redact_pii": self.redact_pii,
+            }
+            res = self._http_json("POST", "/api/v1/memory/recall", payload, timeout=2.5)
+            if isinstance(res, dict) and res.get("status") == "success":
+                try:
+                    self._last_recall_count = int(res.get("count") or 0)
+                except (TypeError, ValueError):
+                    self._last_recall_count = 0
+                self._last_mode_used = str(res.get("mode_used") or self.recall_mode)
+                recall_block = str(res.get("formatted_block") or "")
+            else:
+                self._last_recall_count = 0
 
-        sid = session_id or self.current_session_id or "default"
-        payload = {
-            "query": effective_query,
-            "session_id": sid,
-            "mode": self.recall_mode,
-            "redact_pii": self.redact_pii,
-        }
-        res = self._http_json("POST", "/api/v1/memory/recall", payload, timeout=2.5)
-        if res.get("status") != "success":
-            self._last_recall_count = 0
-            return ""
-
-        self._last_recall_count = int(res.get("count", 0))
-        self._last_mode_used = str(res.get("mode_used", self.recall_mode))
-        return str(res.get("formatted_block", ""))
+        pulse_block = self._fetch_google_pulse_block()
+        if pulse_block and recall_block:
+            return f"{pulse_block}\n\n{recall_block}"
+        return pulse_block or recall_block
 
     def recall_status(self) -> Optional[RecallStatus]:
         if self._last_recall_count <= 0:

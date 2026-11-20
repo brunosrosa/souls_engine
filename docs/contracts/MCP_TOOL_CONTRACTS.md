@@ -1002,3 +1002,149 @@ Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª ski
 - **Arquivo de Playbook:** `.agents/skills/google-life-hub/SKILL.md`
 - **Primary Tools:** `google_briefing`, `google_gmail`, `google_calendar`, `google_docs_scratchpad`, `google_notebooklm`, `inbox_propose`, `inbox_list`
 - **Keywords de Afinidade Semântica:** `gmail`, `email`, `calendar`, `agenda`, `drive`, `docs`, `sheets`, `slides`, `tasks`, `keep`, `contacts`, `maps`, `commute`, `youtube`, `transcript`, `notebooklm`, `podcast`, `audio`, `gems`, `inbox`, `bmad`, `diff`, `google`
+
+---
+
+## 8. EXPANSÃO CANÔNICA DA MILESTONE v0.9.2.1 — PULSO PROATIVO, APPS SCRIPT 24/7, FORMS, CHAT WORKSPACE E MINIONS DEEP ANALYZE
+
+> **CATÁLOGO TOTAL CONSOLIDADO (v0.9.2.1):** **85 Ferramentas Canônicas** (**7** Boot Level 0 + **78** Progressivas sob demanda) + **16 Skills Canônicas** no Two-Stage Semantic Switchboard (`souls_server::mcp::switchboard`).  
+> **REFERÊNCIA ARQUITETURAL:** [ADR-031](file:///Z:/souls_engine/docs/decisions/adrs/ADR-031-Google-Life-Hub-v0921-Proatividade-Apps-Script-Forms-MinionS.md) • Implementação: `crates/souls_server/src/mcp/tools_google.rs`, `crates/souls_server/src/mcp/registry.rs`.
+
+### 8.1 Distribuição Consolidada dos 11 Namespaces (85 Tools = `62 + 20 + 3`)
+
+| **Grupo / Namespace** | **Qtd** | **Observação de Evolução** |
+| :--- | :---: | :--- |
+| Demais namespaces (`core` 1, `code` 8, `context` 8, `memory` 14, `think` 6, `ops` 9, `sys` 10, `research` 4, `ui` 2) | **62** | **7** ferramentas em Boot Level 0 (`tool_search`, `outline`, `symbol`, `read`, `thinking`, `route_subtask`, e 1 adicional conforme `registry.rs`) |
+| `google` | **20** | `notebooklm_rpc` (v0.8.2) + 14 tools Life Hub (v0.9.2) + **5 novas tools v0.9.2.1** (`google_pulse`, `google_apps_script`, `google_forms`, `google_chat`, `google_deep_analyze`) |
+| `inbox` | **3** | `inbox_list`, `inbox_inspect_diff`, `inbox_propose` (v0.9.2) |
+| **TOTAL** | **85** | **7 Boot Level 0 + 78 Progressivas** |
+
+### 8.2 As 5 Novas Ferramentas do Namespace `google.*` (v0.9.2.1)
+
+Todas as 5 ferramentas abaixo possuem `is_level_0: false` e respeitam a governança BMAD (`BlastRadiusTier`, `SessionTaintTracker`, `wrap_untrusted_content`, `AgentInboxStore` com Myers Diff + Gravity Lock).
+
+#### 8.2.1 `google_pulse`
+- **Descrição:** Pulso Proativo Google 24/7: status multi-cadência, disparo sob demanda, eventos pendentes, reconhecimento, configuração de Quiet Hours e vínculos Drive <-> NotebookLM.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["status", "run_now", "pending", "ack", "configure", "sync_links_list", "sync_links_add", "sync_links_toggle"], "default": "status" },
+    "limit": { "type": "integer", "default": 3 },
+    "drain": { "type": "boolean", "default": true },
+    "event_ids": { "type": "array", "items": { "type": "string" } },
+    "config": { "type": "object" },
+    "webhook_url": { "type": "string" },
+    "telegram_bot_token": { "type": "string" },
+    "telegram_chat_id": { "type": "string" },
+    "id": { "type": "string" },
+    "notebook_id": { "type": "string" },
+    "notebook_title": { "type": "string" },
+    "source_id": { "type": "string" },
+    "drive_file_id": { "type": "string" },
+    "drive_file_name": { "type": "string" },
+    "auto_sync_enabled": { "type": "boolean" },
+    "enabled": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 8.2.2 `google_apps_script`
+- **Descrição:** Automações 24/7 no Google Apps Script: templates prontos, criação de projeto, inspeção estática de segredos/permissões em português e propostas push/deploy/run com Myers Diff no BMAD Agent Inbox.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["templates", "create", "get_content", "scan_security", "propose_push", "propose_deploy", "propose_run", "processes"], "default": "templates" },
+    "title": { "type": "string" },
+    "parent_id": { "type": "string" },
+    "template_id": { "type": "string" },
+    "script_id": { "type": "string" },
+    "files": { "type": "array" },
+    "previous_files": { "type": "array" },
+    "description": { "type": "string" },
+    "function_name": { "type": "string" },
+    "parameters": { "type": "array" },
+    "dev_mode": { "type": "boolean" },
+    "account_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 8.2.3 `google_forms`
+- **Descrição:** Google Forms API v1: leitura de esquema, criação governada via BMAD Agent Inbox, listagem de respostas e estatísticas determinísticas com resumo Markdown.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["get", "create", "responses", "stats"], "default": "get" },
+    "form_id": { "type": "string" },
+    "title": { "type": "string" },
+    "document_title": { "type": "string" },
+    "requests": {},
+    "account_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 8.2.4 `google_chat`
+- **Descrição:** Google Chat API v1 (exclusivo Workspace corporativo para Spaces/Messages) + propostas de envio via Webhook ou Espaço governadas pelo BMAD Agent Inbox.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["check_eligibility", "list_spaces", "list_messages", "propose_send", "propose_webhook"], "default": "check_eligibility" },
+    "space_name": { "type": "string" },
+    "webhook_url": { "type": "string" },
+    "text": { "type": "string" },
+    "page_size": { "type": "integer", "default": 20 },
+    "account_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" },
+    "allow_local_test_webhook": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### 8.2.5 `google_deep_analyze`
+- **Descrição:** Leitura econômica MinionS em documentos Google, PDFs (até 25MB), threads Gmail, Formulários e textos extensos usando Tier 0 BM25 + cache local e escalonamento opcional para SLM local.
+- **JSON Schema (`inputSchema`):**
+```json
+{
+  "type": "object",
+  "properties": {
+    "source_kind": { "type": "string", "enum": ["drive_doc", "drive_pdf", "gmail_thread", "google_form", "raw_text"], "default": "raw_text" },
+    "source_ref": { "type": "string" },
+    "query": { "type": "string" },
+    "text": { "type": "string" },
+    "mode": { "type": "string", "enum": ["auto", "fast_deterministic", "force_local_slm"], "default": "auto" },
+    "top_k": { "type": "integer", "default": 8 },
+    "account_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "api_base_override": { "type": "string" }
+  },
+  "required": ["query"],
+  "additionalProperties": false
+}
+```
+
+### 8.3 Atualização da Skill `google-life-hub` no Switchboard (`switchboard.rs`)
+
+Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª skill `google-life-hub` foi expandida na v0.9.2.1 para rotear também as 5 novas capacidades:
+- **Identificador:** `google-life-hub`
+- **Descrição:** `"Life Hub pessoal e profissional Google (Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, Contacts, Maps, YouTube, NotebookLM, Gems, Pulso 24/7, Apps Script, Forms, Chat Workspace e Leitura Econômica MinionS) com governança BMAD Agent Inbox e Myers Diff."`
+- **Primary Tools (12):** `google_briefing`, `google_pulse`, `google_gmail`, `google_calendar`, `google_docs_scratchpad`, `google_apps_script`, `google_forms`, `google_chat`, `google_deep_analyze`, `google_notebooklm`, `inbox_propose`, `inbox_list`
+- **Keywords de Afinidade Semântica:** `gmail`, `email`, `calendar`, `agenda`, `drive`, `docs`, `sheets`, `slides`, `tasks`, `keep`, `contacts`, `maps`, `commute`, `youtube`, `transcript`, `notebooklm`, `podcast`, `audio`, `gems`, `inbox`, `bmad`, `diff`, `google`, `pulse`, `proativo`, `heartbeat`, `apps script`, `automacao`, `clasp`, `forms`, `formulario`, `chat`, `minions`, `analise profunda`, `auto sync`, `drive notebook`
+
