@@ -8,7 +8,7 @@ use super::security::wrap_untrusted_content;
 use super::session::write_json_atomic_lf;
 use crate::error::CoreError;
 use crate::research::bm25::{rank_chunks, DEFAULT_BM25_B, DEFAULT_BM25_K1};
-use crate::research::chunker::{chunk_document, ChunkerOptions, TextChunk};
+use crate::research::chunker::{chunk_document, compute_text_hash, ChunkerOptions, TextChunk};
 use crate::research::html_cleaner::{clean_html_to_markdown, HtmlCleanOptions};
 use crate::research::pdf_extractor::{extract_pdf_bytes, PdfExtractOptions};
 use serde::{Deserialize, Serialize};
@@ -267,7 +267,7 @@ fn extract_and_cache(
     };
 
     let raw_chars = raw_bytes.len().max(normalized_text.chars().count());
-    let chunks = chunk_document(&normalized_text, &ChunkerOptions::default());
+    let chunks = chunk_google_corpus(&normalized_text);
 
     fs::create_dir_all(cache_dir).map_err(|e| {
         CoreError::SubprocessError(format!(
@@ -288,6 +288,56 @@ fn extract_and_cache(
     prune_cache_dir(cache_dir, MAX_CACHE_FILES);
 
     Ok((normalized_text, raw_chars, chunks, false))
+}
+
+fn chunk_google_corpus(text: &str) -> Vec<TextChunk> {
+    const MAX_PARAGRAPH_CHUNK_WORDS: usize = 350;
+    const SUB_WINDOW_WORDS: usize = 300;
+    const SUB_OVERLAP_WORDS: usize = 50;
+
+    let base_chunks = chunk_document(text, &ChunkerOptions::default());
+    let mut expanded = Vec::with_capacity(base_chunks.len());
+
+    for chunk in base_chunks {
+        if chunk.word_count <= MAX_PARAGRAPH_CHUNK_WORDS {
+            expanded.push(chunk);
+            continue;
+        }
+
+        let words: Vec<&str> = chunk.text.split_whitespace().collect();
+        let step = SUB_WINDOW_WORDS.saturating_sub(SUB_OVERLAP_WORDS).max(1);
+        let mut cursor_words = 0usize;
+        let mut char_offset = chunk.start_char;
+
+        while cursor_words < words.len() {
+            let end_words = (cursor_words + SUB_WINDOW_WORDS).min(words.len());
+            let sub_text = words[cursor_words..end_words].join(" ");
+            let sub_word_count = end_words - cursor_words;
+            let sub_len = sub_text.len();
+
+            expanded.push(TextChunk {
+                index: expanded.len(),
+                word_count: sub_word_count,
+                start_char: char_offset,
+                end_char: char_offset + sub_len,
+                content_hash: compute_text_hash(&sub_text),
+                text: sub_text,
+            });
+
+            if end_words >= words.len() {
+                break;
+            }
+            let consumed = words[cursor_words..cursor_words + step].join(" ");
+            char_offset = char_offset.saturating_add(consumed.len() + 1);
+            cursor_words += step;
+        }
+    }
+
+    for (idx, chunk) in expanded.iter_mut().enumerate() {
+        chunk.index = idx;
+    }
+
+    expanded
 }
 
 fn hash_corpus_bytes(kind: MinionGoogleSourceKind, raw_bytes: &[u8]) -> String {

@@ -2464,3 +2464,39 @@ fn build_test_pdf_bytes() -> Vec<u8> {
     doc.save_to(&mut buffer).unwrap();
     buffer
 }
+
+#[test]
+fn test_v0921_minions_dense_single_newline_subdivision_savings() {
+    let dir = tempfile::tempdir().unwrap();
+    let filler_a = "O Souls Engine executa processamento deterministico bare-metal sem gastar tokens desnecessarios em modelos de nuvem. "
+        .repeat(120);
+    let needle = "\nClausula critica: o prazo de entrega do projeto Alpha vence em 15 de dezembro de 2026 com multa de R$ 25.000.\n";
+    let filler_b = "Secao adicional sobre arquivamento local no cofre Obsidian e sincronizacao no Google Drive. "
+        .repeat(120);
+    let dense = format!("{filler_a}{needle}{filler_b}");
+
+    let prep = souls_core::google_bridge::prepare_google_corpus_tier0(
+        dir.path(),
+        souls_protocol::google::MinionGoogleSourceKind::RawText,
+        "dense_single_nl",
+        dense.as_bytes(),
+        "prazo entrega multa projeto Alpha",
+        2,
+    )
+    .expect("dense single-newline MinionS prep must succeed");
+
+    assert!(
+        prep.chunks_total >= 4,
+        "Expected >=4 subdivided chunks, got {}",
+        prep.chunks_total
+    );
+    assert!(
+        prep.estimated_token_savings_pct >= 50.0,
+        "Expected >=50% token savings, got {}%",
+        prep.estimated_token_savings_pct
+    );
+    assert!(prep
+        .top_passages
+        .iter()
+        .any(|p| p.excerpt.contains("projeto Alpha")));
+}
