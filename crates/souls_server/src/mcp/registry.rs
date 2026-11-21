@@ -47,6 +47,27 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 "additionalProperties": false
             }),
         },
+        ToolMeta {
+            name: "tool_dispatch",
+            namespace: "core",
+            description: "Despacha e executa qualquer uma das ferramentas canônicas do Souls Engine por nome e argumentos. Permite que clientes MCP estritos invoquem ferramentas de Level 1 sem restrição de schema estático no boot.",
+            is_level_0: true,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "tool": {
+                        "type": "string",
+                        "description": "Nome canônico da ferramenta a executar (ex: google_briefing, semantic_search, knowledge, google_gmail, etc)."
+                    },
+                    "arguments": {
+                        "type": "object",
+                        "description": "Argumentos JSON específicos da ferramenta alvo (consulte via tool_search)."
+                    }
+                },
+                "required": ["tool"],
+                "additionalProperties": false
+            }),
+        },
         // code.* namespace
         ToolMeta {
             name: "outline",

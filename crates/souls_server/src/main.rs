@@ -645,7 +645,7 @@ mod tests {
         let state = create_test_state().await;
         let app = build_router(state);
 
-        // 1. Level 0 default compact boot (7 tools)
+        // 1. Level 0 default compact boot (8 tools)
         let payload_compact = serde_json::json!({
             "jsonrpc": "2.0",
             "id": 2,
@@ -665,9 +665,9 @@ mod tests {
         let body_bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         let tools_compact = val["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_compact.len(), 7, "Level 0 must expose exactly 7 boot tools");
+        assert_eq!(tools_compact.len(), 8, "Level 0 must expose exactly 8 boot tools");
 
-        // 2. Full mode (52 tools)
+        // 2. Full mode (86 tools)
         let payload_full = serde_json::json!({
             "jsonrpc": "2.0",
             "id": 3,
@@ -689,7 +689,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 85, "Full mode must expose all 85 canonical tools (63 baseline + 19 google.* + 3 inbox.*)");
+        assert_eq!(tools_full.len(), 86, "Full mode must expose all 86 canonical tools (64 baseline + 19 google.* + 3 inbox.*)");
     }
 
     #[tokio::test]
@@ -2082,7 +2082,7 @@ model:
         let json_h: serde_json::Value = serde_json::from_slice(&bytes_h).unwrap();
         assert_eq!(json_h["status"], "healthy");
         assert_eq!(json_h["total_skills"], 16);
-        assert_eq!(json_h["total_tools"], 85);
+        assert_eq!(json_h["total_tools"], 86);
 
         // 2. GET /api/v1/switchboard/skills
         let req_skills = Request::builder()
@@ -5319,5 +5319,123 @@ fallback_providers:
         assert!(html_local.contains("cloud-hermes-finops-strip"));
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn test_v0923_mcp_tool_dispatch_and_recursion_guard() {
+        let state = create_test_state().await;
+        let app = build_router(state);
+
+        // 1. Dispatch sys_time via tool_dispatch
+        let payload_sys_time = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 101,
+            "method": "tools/call",
+            "params": {
+                "name": "tool_dispatch",
+                "arguments": {
+                    "tool": "sys_time"
+                }
+            }
+        });
+
+        let req_time = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload_sys_time).unwrap()))
+            .unwrap();
+
+        let resp_time = app.clone().oneshot(req_time).await.unwrap();
+        assert_eq!(resp_time.status(), StatusCode::OK);
+        let bytes_time = to_bytes(resp_time.into_body(), usize::MAX).await.unwrap();
+        let val_time: serde_json::Value = serde_json::from_slice(&bytes_time).unwrap();
+        assert_eq!(val_time["id"], 101);
+        assert!(val_time["result"]["content"].is_array());
+        assert!(!val_time["result"]["content"][0]["text"].as_str().unwrap().is_empty());
+
+        // 2. Dispatch via alias "dispatch" to a Level 1 tool (semantic_search)
+        let payload_dispatch_alias = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 102,
+            "method": "tools/call",
+            "params": {
+                "name": "dispatch",
+                "arguments": {
+                    "tool": "semantic_search",
+                    "arguments": {
+                        "query": "validation",
+                        "top_k": 2
+                    }
+                }
+            }
+        });
+
+        let req_alias = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload_dispatch_alias).unwrap()))
+            .unwrap();
+
+        let resp_alias = app.clone().oneshot(req_alias).await.unwrap();
+        assert_eq!(resp_alias.status(), StatusCode::OK);
+        let bytes_alias = to_bytes(resp_alias.into_body(), usize::MAX).await.unwrap();
+        let val_alias: serde_json::Value = serde_json::from_slice(&bytes_alias).unwrap();
+        assert_eq!(val_alias["id"], 102);
+        assert!(val_alias["result"]["content"].is_array());
+
+        // 3. Test recursion guard (tool_dispatch calling tool_dispatch directly or via dispatch alias)
+        let payload_recursive = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 103,
+            "method": "tools/call",
+            "params": {
+                "name": "tool_dispatch",
+                "arguments": {
+                    "tool": "dispatch"
+                }
+            }
+        });
+
+        let req_rec = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload_recursive).unwrap()))
+            .unwrap();
+
+        let resp_rec = app.clone().oneshot(req_rec).await.unwrap();
+        assert_eq!(resp_rec.status(), StatusCode::OK);
+        let bytes_rec = to_bytes(resp_rec.into_body(), usize::MAX).await.unwrap();
+        let val_rec: serde_json::Value = serde_json::from_slice(&bytes_rec).unwrap();
+        assert!(val_rec.get("error").is_some(), "Expected error block in recursive call");
+        assert_eq!(val_rec["error"]["code"], -32602);
+        assert!(val_rec["error"]["message"].as_str().unwrap().contains("Recursive dispatch"));
+
+        // 4. Missing required parameter "tool"
+        let payload_missing = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 104,
+            "method": "tools/call",
+            "params": {
+                "name": "tool_dispatch",
+                "arguments": {}
+            }
+        });
+
+        let req_missing = Request::builder()
+            .uri("/mcp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload_missing).unwrap()))
+            .unwrap();
+
+        let resp_missing = app.oneshot(req_missing).await.unwrap();
+        assert_eq!(resp_missing.status(), StatusCode::OK);
+        let bytes_missing = to_bytes(resp_missing.into_body(), usize::MAX).await.unwrap();
+        let val_missing: serde_json::Value = serde_json::from_slice(&bytes_missing).unwrap();
+        assert!(val_missing.get("error").is_some());
+        assert_eq!(val_missing["error"]["code"], -32602);
     }
 }

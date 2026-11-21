@@ -37,6 +37,7 @@ pub fn normalize_tool_name(mut name: &str) -> &str {
         "ast_slice" => "symbol",
         "myers_diff" => "delta_diff",
         "summon_tool" | "summon" => "tool_search",
+        "dispatch" => "tool_dispatch",
         other => other,
     }
 }
@@ -213,6 +214,44 @@ pub async fn dispatch_jsonrpc(
 
             // 2. Dispatch to matching tool handler
             let call_result = match norm_tool {
+                "tool_dispatch" => {
+                    let target_tool_raw = match args.get("tool").and_then(Value::as_str) {
+                        Some(t) => t,
+                        None => {
+                            return Some(serde_json::to_value(JsonRpcResponse::<()>::error(
+                                id,
+                                JsonRpcError::new(-32602, "Missing required 'tool' parameter for tool_dispatch"),
+                            )).unwrap_or_default());
+                        }
+                    };
+
+                    let target_norm = normalize_tool_name(target_tool_raw);
+                    if target_norm == "tool_dispatch" {
+                        return Some(serde_json::to_value(JsonRpcResponse::<()>::error(
+                            id,
+                            JsonRpcError::new(-32602, "Recursive dispatch of 'tool_dispatch' is forbidden"),
+                        )).unwrap_or_default());
+                    }
+
+                    let empty_map = serde_json::Map::new();
+                    let target_args = args.get("arguments").and_then(Value::as_object).unwrap_or(&empty_map);
+
+                    if let Err(domain_err) = validate_tool_arguments_paths(target_args) {
+                        return Some(serde_json::to_value(JsonRpcResponse::<()>::error(id, domain_err.into())).unwrap_or_default());
+                    }
+
+                    let forwarded_req = json!({
+                        "jsonrpc": "2.0",
+                        "id": id,
+                        "method": "tools/call",
+                        "params": {
+                            "name": target_norm,
+                            "arguments": target_args
+                        }
+                    });
+
+                    return Box::pin(dispatch_jsonrpc(state, forwarded_req, session_id)).await;
+                }
                 "route_subtask" => {
                     handlers::handle_route_subtask(state, args)
                         .await
