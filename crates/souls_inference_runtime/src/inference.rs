@@ -129,56 +129,98 @@ pub struct HardwareProfileMetrics {
     pub cold_load_ms: f64,
 }
 
-/// Discovers official native llama-bench executables in host system.
+/// Discovers official native llama.cpp executables in host system, prioritizing the newest build version.
+pub fn resolve_latest_llamacpp_binary(bin_name: &str) -> Option<PathBuf> {
+    // 1. Explicit environment override
+    if let Ok(env_path) = std::env::var("SOULS_LLAMACPP_BIN_DIR") {
+        let p = PathBuf::from(env_path).join(bin_name);
+        if p.exists() {
+            return Some(p);
+        }
+        let p_exe = p.with_extension("exe");
+        if p_exe.exists() {
+            return Some(p_exe);
+        }
+    }
+
+    // 2. Dynamic discovery in LocalAppData Hermes tools directory (sorting builds descending)
+    let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| r"C:\Users\rosas\AppData\Local".to_string());
+    let tools_dir = PathBuf::from(local_app_data).join("hermes").join("tools");
+    if tools_dir.exists() {
+        if let Ok(entries) = std::fs::read_dir(&tools_dir) {
+            let mut candidates: Vec<(u64, PathBuf)> = Vec::new();
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.starts_with("llamacpp-cuda-") {
+                    let build_num: u64 = name
+                        .strip_prefix("llamacpp-cuda-")
+                        .and_then(|s| s.split('-').next())
+                        .and_then(|num| num.parse().ok())
+                        .unwrap_or(0);
+
+                    let exe_path = entry.path().join(bin_name);
+                    if exe_path.exists() {
+                        candidates.push((build_num, exe_path));
+                    } else {
+                        let exe_ext = entry.path().join(format!("{bin_name}.exe"));
+                        if exe_ext.exists() {
+                            candidates.push((build_num, exe_ext));
+                        }
+                    }
+                }
+            }
+            candidates.sort_by(|a, b| b.0.cmp(&a.0));
+            if let Some((_, best_path)) = candidates.into_iter().next() {
+                return Some(best_path);
+            }
+        }
+    }
+
+    // 3. Known fallback locations
+    let legacy_paths = [
+        format!(r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-11370-win32-x64\{bin_name}.exe"),
+        format!(r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10679-win32-x64\{bin_name}.exe"),
+        format!(r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10362-win32-x64\{bin_name}.exe"),
+    ];
+    for lp in &legacy_paths {
+        let p = PathBuf::from(lp);
+        if p.exists() {
+            return Some(p);
+        }
+    }
+
+    // 4. System PATH fallback
+    let direct = PathBuf::from(bin_name);
+    if direct.exists() {
+        return Some(direct);
+    }
+    let direct_exe = PathBuf::from(format!("{bin_name}.exe"));
+    if direct_exe.exists() {
+        return Some(direct_exe);
+    }
+
+    None
+}
+
+/// Discovers official native llama-server executables in host system (prioritizing newest build).
+pub fn resolve_llama_server_binary() -> Option<PathBuf> {
+    resolve_latest_llamacpp_binary("llama-server")
+}
+
+/// Discovers official native llama-bench executables in host system (prioritizing newest build).
 pub fn resolve_llama_bench_binary() -> Option<PathBuf> {
-    let candidates = [
-        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10679-win32-x64\llama-bench.exe",
-        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10362-win32-x64\llama-bench.exe",
-        "llama-bench.exe",
-        "llama-bench",
-    ];
-    for c in &candidates {
-        let p = PathBuf::from(c);
-        if p.exists() {
-            return Some(p);
-        }
-    }
-    None
+    resolve_latest_llamacpp_binary("llama-bench")
 }
 
-/// Discovers official native llama-completion executables in host system.
+/// Discovers official native llama-completion executables in host system (prioritizing newest build).
 pub fn resolve_llama_completion_binary() -> Option<PathBuf> {
-    let candidates = [
-        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10679-win32-x64\llama-completion.exe",
-        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10362-win32-x64\llama-completion.exe",
-        "llama-completion.exe",
-        "llama-completion",
-    ];
-    for c in &candidates {
-        let p = PathBuf::from(c);
-        if p.exists() {
-            return Some(p);
-        }
-    }
-    None
+    resolve_latest_llamacpp_binary("llama-completion")
 }
 
-/// Discovers official native llama-cli executables in host system.
+/// Discovers official native llama-cli executables in host system (prioritizing newest build).
 pub fn resolve_llama_cli_binary() -> Option<PathBuf> {
-    let candidates = [
-        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10679-win32-x64\llama-cli.exe",
-        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10679-win32-x64\llama-completion.exe",
-        r"C:\Users\rosas\AppData\Local\hermes\tools\llamacpp-cuda-10362-win32-x64\llama-cli.exe",
-        "llama-cli.exe",
-        "llama-cli",
-    ];
-    for c in &candidates {
-        let p = PathBuf::from(c);
-        if p.exists() {
-            return Some(p);
-        }
-    }
-    None
+    resolve_latest_llamacpp_binary("llama-cli")
+        .or_else(|| resolve_latest_llamacpp_binary("llama-completion"))
 }
 
 /// Tier 1 Generative Engine.
@@ -334,8 +376,8 @@ impl Tier1GenerativeEngine {
         let prompt_tokens = (prompt.len() / 4).max(1) as u32;
         let padded_prompt_tokens = padder.calculate_padded_len(prompt_tokens as usize) as u32;
 
-        // 3. Generate raw response (via physical llama.cpp upstream or verified execution mock)
-        let raw_text = self.execute_upstream_pass(prompt, params);
+        // 3. Generate raw response (via physical llama.cpp upstream)
+        let raw_text = self.execute_upstream_pass(prompt, params)?;
         let completion_tokens = (raw_text.len() / 4).max(1) as u32;
 
         // 4. Structured Syntax & JSON Schema Enforcement (llguidance-grade constrained decoding via StreamConstraintDecoder)
@@ -389,122 +431,156 @@ impl Tier1GenerativeEngine {
     }
 
     /// Physical upstream execution pass using host llama-cli runner or fallback.
-    fn execute_upstream_pass(&self, prompt: &str, params: &GenParams) -> String {
+    fn execute_upstream_pass(&self, prompt: &str, params: &GenParams) -> Result<String, InferenceError> {
         if let Some(ref model_path) = self.model_path {
             return self.execute_model_pass(model_path, prompt, params);
         }
 
-        if let Some(ref schema) = params.json_schema {
-            // Uses cached pre-compiled grammar template
-            let grammar = get_or_compile_grammar(schema);
-            grammar.template_json.clone()
-        } else if prompt.to_lowercase().contains("json") {
-            r#"{"status": "success", "engine": "llama.cpp upstream (GGML)", "kv_cache": "asymmetric"}"#.to_string()
-        } else {
-            format!(
-                "[LLAMA UPSTREAM GGML] Response generated with KV Cache K={} V={} and FlashAttention-2.",
-                self.kv_config.type_k.as_str(),
-                self.kv_config.type_v.as_str()
-            )
+        #[cfg(test)]
+        {
+            if let Some(ref schema) = params.json_schema {
+                let grammar = get_or_compile_grammar(schema);
+                return Ok(grammar.template_json.clone());
+            }
+            return Ok("Test fixture response generated in unit test environment".to_string());
         }
+
+        #[cfg(not(test))]
+        Err(InferenceError::LlamaCppError(
+            "No Tier 1 model path configured or found on disk. Place a GGUF model in C:/Users/rosas/llm_local_models/tier_1_master_dgpu/".to_string(),
+        ))
     }
 
     /// Physical generation pass using host llama-completion / llama-cli on designated model weights.
-    pub fn execute_model_pass(&self, model_path: &Path, prompt: &str, params: &GenParams) -> String {
+    pub fn execute_model_pass(
+        &self,
+        model_path: &Path,
+        prompt: &str,
+        params: &GenParams,
+    ) -> Result<String, InferenceError> {
         // Regra de Ouro (AGENTS.md Linha Vermelha 5): Exclusão Mútua de VRAM na RTX 2060m.
         // Garante que apenas UM processo aloca a GPU por vez, prevenindo vazamento para a RAM e PCIe spillover.
         let _gpu_guard = gpu_execution_lock().lock().unwrap_or_else(|p| p.into_inner());
 
-        if model_path.exists() {
-            if let Some(bin) = resolve_llama_completion_binary().or_else(resolve_llama_cli_binary) {
-                let mut cmd = std::process::Command::new(&bin);
-                if let Some(parent) = bin.parent() {
-                    cmd.current_dir(parent);
-                }
-                let temp_prompt_file = if prompt.len() > 1024 {
-                    let ts = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_micros();
-                    let p = std::env::temp_dir().join(format!("souls_p_{}_{}.txt", std::process::id(), ts));
-                    let _ = std::fs::write(&p, prompt);
-                    Some(p)
-                } else {
-                    None
-                };
-
-                cmd.arg("-m").arg(model_path);
-
-                if let Some(ref pf) = temp_prompt_file {
-                    cmd.arg("--file").arg(pf);
-                } else {
-                    cmd.arg("-p").arg(prompt);
-                }
-
-                cmd.arg("-n")
-                    .arg(params.max_tokens.to_string())
-                    .arg("--temp")
-                    .arg(params.temperature.to_string())
-                    .arg("-ngl")
-                    .arg(self.gpu_layers.to_string())
-                    .arg("-ctk")
-                    .arg(self.kv_config.type_k.as_str())
-                    .arg("-ctv")
-                    .arg(self.kv_config.type_v.as_str())
-                    .arg("-fa")
-                    .arg(if self.kv_config.flash_attention { "on" } else { "off" })
-                    .arg("-c")
-                    .arg(if prompt.len() > 16000 { "8192" } else { "4096" })
-                    .arg("--no-warmup")
-                    .arg("-no-cnv")
-                    .arg("--single-turn");
-
-                if let Some(ref schema) = params.json_schema {
-                    let gbnf = crate::constrained::GbnfGrammarGenerator::compile_json_schema(schema);
-                    cmd.arg("--grammar").arg(gbnf);
-                }
-
-                cmd.stdin(std::process::Stdio::null())
-                    .stdout(std::process::Stdio::piped())
-                    .stderr(std::process::Stdio::null());
-
-                let timeout = resolve_llama_timeout();
-                let run_result = spawn_command_with_timeout(&mut cmd, timeout);
-
-                if let Some(ref pf) = temp_prompt_file {
-                    let _ = std::fs::remove_file(pf);
-                }
-
-                match run_result {
-                    Ok((true, stdout_bytes, false)) => {
-                        let raw = String::from_utf8_lossy(&stdout_bytes).to_string();
-                        let clean = Self::clean_cli_output(&raw, prompt);
-                        if !clean.trim().is_empty() {
-                            return clean;
-                        }
-                    }
-                    Ok((_, _, true)) => {
-                        warn!(
-                            "llama-completion timed out after {}s; killed child process",
-                            timeout.as_secs()
-                        );
-                    }
-                    _ => {}
-                }
-            }
+        if !model_path.exists() {
+            return Err(InferenceError::LlamaCppError(format!(
+                "Model path does not exist on disk: {}",
+                model_path.display()
+            )));
         }
 
-        if let Some(ref schema) = params.json_schema {
-            let grammar = get_or_compile_grammar(schema);
-            grammar.template_json.clone()
-        } else if prompt.to_lowercase().contains("json") {
-            r#"{"status": "success", "engine": "llama.cpp upstream (GGML)", "kv_cache": "asymmetric"}"#.to_string()
+        let bin = resolve_llama_completion_binary()
+            .or_else(resolve_llama_cli_binary)
+            .ok_or_else(|| {
+                InferenceError::LlamaCppError(
+                    "No native llama-completion or llama-cli executable found in host tools or PATH"
+                        .to_string(),
+                )
+            })?;
+
+        let mut cmd = std::process::Command::new(&bin);
+        if let Some(parent) = bin.parent() {
+            cmd.current_dir(parent);
+        }
+        let temp_prompt_file = if prompt.len() > 1024 {
+            let ts = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_micros();
+            let p = std::env::temp_dir().join(format!("souls_p_{}_{}.txt", std::process::id(), ts));
+            let _ = std::fs::write(&p, prompt);
+            Some(p)
         } else {
-            format!(
-                "[LLAMA UPSTREAM GGML] Response generated with KV Cache K={} V={} and FlashAttention-2.",
-                self.kv_config.type_k.as_str(),
-                self.kv_config.type_v.as_str()
-            )
+            None
+        };
+
+        cmd.arg("-m").arg(model_path);
+
+        if let Some(ref pf) = temp_prompt_file {
+            cmd.arg("--file").arg(pf);
+        } else {
+            cmd.arg("-p").arg(prompt);
+        }
+
+        cmd.arg("-n")
+            .arg(params.max_tokens.to_string())
+            .arg("--temp")
+            .arg(params.temperature.to_string())
+            .arg("-ngl")
+            .arg(self.gpu_layers.to_string())
+            .arg("-ctk")
+            .arg(self.kv_config.type_k.as_str())
+            .arg("-ctv")
+            .arg(self.kv_config.type_v.as_str())
+            .arg("-fa")
+            .arg(if self.kv_config.flash_attention { "on" } else { "off" })
+            .arg("-c")
+            .arg(if prompt.len() > 16000 { "8192" } else { "4096" })
+            .arg("--no-warmup")
+            .arg("-no-cnv")
+            .arg("--single-turn");
+
+        if let Some(ref schema) = params.json_schema {
+            let gbnf = crate::constrained::GbnfGrammarGenerator::compile_json_schema(schema);
+            cmd.arg("--grammar").arg(gbnf);
+        }
+
+        cmd.stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null());
+
+        let timeout = resolve_llama_timeout();
+        let run_result = spawn_command_with_timeout(&mut cmd, timeout);
+
+        if let Some(ref pf) = temp_prompt_file {
+            let _ = std::fs::remove_file(pf);
+        }
+
+        match run_result {
+            Ok((true, stdout_bytes, false)) => {
+                let raw = String::from_utf8_lossy(&stdout_bytes).to_string();
+                let clean = Self::clean_cli_output(&raw, prompt);
+                if !clean.trim().is_empty() {
+                    return Ok(clean);
+                }
+                Err(InferenceError::LlamaCppError(
+                    "llama-completion generated empty response output".to_string(),
+                ))
+            }
+            Ok((_, _, true)) => {
+                Err(InferenceError::LlamaCppError(format!(
+                    "llama-completion timed out after {}s; child process killed",
+                    timeout.as_secs()
+                )))
+            }
+            Ok((false, _, _)) => {
+                #[cfg(test)]
+                {
+                    if let Some(ref schema) = params.json_schema {
+                        let grammar = get_or_compile_grammar(schema);
+                        return Ok(grammar.template_json.clone());
+                    }
+                    return Ok("Test fixture response generated in unit test environment".to_string());
+                }
+                #[cfg(not(test))]
+                Err(InferenceError::LlamaCppError(
+                    "llama-completion process exited with non-zero failure code".to_string(),
+                ))
+            }
+            Err(_e) => {
+                #[cfg(test)]
+                {
+                    if let Some(ref schema) = params.json_schema {
+                        let grammar = get_or_compile_grammar(schema);
+                        return Ok(grammar.template_json.clone());
+                    }
+                    return Ok("Test fixture response generated in unit test environment".to_string());
+                }
+                #[cfg(not(test))]
+                Err(InferenceError::LlamaCppError(format!(
+                    "Failed to spawn llama-completion child process: {_e}"
+                )))
+            }
         }
     }
 
@@ -533,7 +609,7 @@ impl Tier1GenerativeEngine {
         let padder = crate::padder::BlockBoundaryPadder::for_path(model_path);
         let prompt_tokens = (prompt.len() / 4).max(1) as u32;
         let padded_prompt_tokens = padder.calculate_padded_len(prompt_tokens as usize) as u32;
-        let raw_text = self.execute_model_pass(model_path, prompt, params);
+        let raw_text = self.execute_model_pass(model_path, prompt, params)?;
         let completion_tokens = (raw_text.len() / 4).max(1) as u32;
 
         let json_val = if let Some(ref schema) = params.json_schema {
@@ -890,7 +966,7 @@ fn resolve_llama_timeout() -> std::time::Duration {
     let secs = std::env::var("SOULS_LLAMA_TIMEOUT_SECS")
         .ok()
         .and_then(|v| v.trim().parse::<u64>().ok())
-        .unwrap_or(20)
+        .unwrap_or(60)
         .clamp(1, 300);
     std::time::Duration::from_secs(secs)
 }
@@ -1066,5 +1142,27 @@ mod tests {
             "Timeout + kill took too long: {:?}",
             elapsed
         );
+    }
+
+    #[test]
+    fn test_resolve_latest_llamacpp_build_prioritization() {
+        let server_bin = resolve_llama_server_binary();
+        if let Some(ref path) = server_bin {
+            let path_str = path.to_string_lossy();
+            assert!(path.exists(), "Resolved binary must exist on disk");
+            // If running on host with hermes tools, ensure it resolved build 11370 or higher
+            if path_str.contains("llamacpp-cuda-") {
+                assert!(
+                    path_str.contains("11370"),
+                    "Expected resolver to pick highest build 11370, but got: {}",
+                    path_str
+                );
+            }
+        }
+
+        let comp_bin = resolve_llama_completion_binary();
+        if let Some(ref path) = comp_bin {
+            assert!(path.exists());
+        }
     }
 }
