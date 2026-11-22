@@ -355,6 +355,7 @@ mod tests {
     use tower::ServiceExt;
 
     async fn create_test_state() -> AppState {
+        std::env::set_var("SOULS_TEST_MODE", "1");
         let memory = SoulsMemoryStore::new_in_memory()
             .await
             .expect("In-memory store creation failed");

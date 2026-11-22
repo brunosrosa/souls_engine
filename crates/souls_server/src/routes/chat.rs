@@ -228,6 +228,81 @@ pub async fn chat_completions_handler(
     }
 }
 
+/// Resolves upstream native llama-server endpoint URL (default: http://127.0.0.1:8080).
+pub fn resolve_llama_server_endpoint() -> String {
+    if let Ok(endpoint) = std::env::var("SOULS_LLAMA_SERVER_URL") {
+        return endpoint.trim_end_matches('/').to_string();
+    }
+    let port = std::env::var("SOULS_LLAMA_SERVER_PORT")
+        .or_else(|_| std::env::var("LLAMA_ARG_PORT"))
+        .unwrap_or_else(|_| "8080".to_string());
+    format!("http://127.0.0.1:{port}")
+}
+
+/// Checks if an upstream native llama-server instance is responsive.
+pub async fn probe_upstream_llama_server(client: &reqwest::Client, endpoint: &str) -> bool {
+    let health_url = format!("{endpoint}/health");
+    match client.get(&health_url).timeout(std::time::Duration::from_millis(350)).send().await {
+        Ok(resp) => resp.status().is_success(),
+        Err(_) => false,
+    }
+}
+
+/// Executes generation: routes to live upstream native `llama-server` if available,
+/// or executes via `souls_inference_runtime` on silicon (using newest llamacpp build).
+pub async fn perform_generation(
+    state: &AppState,
+    model_name: &str,
+    prompt: &str,
+    params: &GenParams,
+) -> Result<String, souls_inference_runtime::InferenceError> {
+    let client = reqwest::Client::new();
+    let upstream_endpoint = resolve_llama_server_endpoint();
+
+    // 1. Check if upstream native llama-server is online (active model in VRAM)
+    if probe_upstream_llama_server(&client, &upstream_endpoint).await {
+        info!("Routing generation to active upstream llama-server at {upstream_endpoint}");
+        let req_body = serde_json::json!({
+            "model": model_name,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": params.temperature,
+            "max_tokens": params.max_tokens,
+            "stream": false
+        });
+
+        match client
+            .post(format!("{upstream_endpoint}/v1/chat/completions"))
+            .json(&req_body)
+            .timeout(std::time::Duration::from_secs(120))
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => {
+                if let Ok(json_resp) = resp.json::<serde_json::Value>().await {
+                    if let Some(content) = json_resp["choices"][0]["message"]["content"].as_str() {
+                        return Ok(content.to_string());
+                    }
+                }
+            }
+            Ok(resp) => {
+                warn!("Upstream llama-server returned HTTP {}: falling back to local runtime", resp.status());
+            }
+            Err(e) => {
+                warn!("Upstream llama-server request failed ({e}): falling back to local runtime");
+            }
+        }
+    }
+
+    // 2. Local execution on designated model or Tier 1 default
+    if let Some(model_path) = souls_llm_local_arena::LocalModelInventory::scan().resolve_model_path(model_name) {
+        state.runtime.infer_model_generate(&model_path, prompt, params).await.map(|out| out.text)
+    } else {
+        state.runtime.infer_tier1_generate(prompt, params).await
+    }
+}
+
 /// Handles non-streaming JSON response.
 #[allow(clippy::too_many_arguments)]
 async fn handle_sync_completion(
@@ -243,12 +318,8 @@ async fn handle_sync_completion(
 ) -> Response {
     let start = Instant::now();
 
-    // Execute generation via InferenceRuntime
-    let gen_res = if let Some(model_path) = souls_llm_local_arena::LocalModelInventory::scan().resolve_model_path(&model_name) {
-        state.runtime.infer_model_generate(&model_path, &prompt, &params).await.map(|out| out.text)
-    } else {
-        state.runtime.infer_tier1_generate(&prompt, &params).await
-    };
+    // Execute generation via perform_generation (llama-server first, then runtime on newest build)
+    let gen_res = perform_generation(&state, &model_name, &prompt, &params).await;
 
     let raw_text = match gen_res {
         Ok(t) => t,
@@ -381,12 +452,8 @@ async fn handle_streaming_completion(
             }
         }
 
-        // 2. Generate raw full text or simulated token stream
-        let gen_result = if let Some(model_path) = souls_llm_local_arena::LocalModelInventory::scan().resolve_model_path(&stream_model) {
-            state.runtime.infer_model_generate(&model_path, &prompt, &params).await.map(|out| out.text)
-        } else {
-            state.runtime.infer_tier1_generate(&prompt, &params).await
-        };
+        // 2. Generate raw text via perform_generation (llama-server first, then runtime on newest build)
+        let gen_result = perform_generation(&state, &stream_model, &prompt, &params).await;
         let generated_text = match gen_result {
             Ok(text) => text,
             Err(e) => {
@@ -521,4 +588,26 @@ fn uuid_like_id() -> String {
     let count = ID_COUNTER.fetch_add(1, Ordering::Relaxed);
     let now = current_timestamp_sec();
     format!("{now:x}-{count:06x}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_llama_server_endpoint_default_and_env() {
+        let endpoint = resolve_llama_server_endpoint();
+        assert!(endpoint.starts_with("http://127.0.0.1:"));
+
+        std::env::set_var("SOULS_LLAMA_SERVER_PORT", "9999");
+        assert_eq!(resolve_llama_server_endpoint(), "http://127.0.0.1:9999");
+        std::env::remove_var("SOULS_LLAMA_SERVER_PORT");
+    }
+
+    #[tokio::test]
+    async fn test_probe_upstream_llama_server_offline() {
+        let client = reqwest::Client::new();
+        let online = probe_upstream_llama_server(&client, "http://127.0.0.1:59999").await;
+        assert!(!online, "Offline endpoint must probe false gracefully without panicking");
+    }
 }
