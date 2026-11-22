@@ -24,21 +24,23 @@ A exposição estática simultânea de mais de 50 esquemas JSON consome entre 12
 Para resolver o inchaço de contexto **sem amputar o silício**, o Souls Engine v7 adota a **Revelação Progressiva de Ferramentas (Progressive Tool Disclosure)**:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                 NÍVEL 0: BOOT COMPACTO (Sempre Visível)                     │
-│  [outline] [symbol] [read] [edit] [thinking] [route_subtask] [tool_search]  │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │
-                    Invoca 'tool_search(namespace)'
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                 NÍVEL 1: CATÁLOGOS DINÂMICOS SOB DEMANDA                    │
-│   code.*     ──► AST Tree-sitter, Callers/Callees, Myers Diff               │
-│   context.*  ──► Compressão LEAN, CCR De/Rehydration, Multi-Read            │
-│   memory.*   ──► Grafo LadybugDB, Observações, SQLite STRICT, LanceDB       │
-│   think.*    ──► Raciocínio Socrático DAG, Sessões, Intent Probing          │
-│   ops.*      ──► Heatmap gitoxide, Impact/Blast Radius, Hardware & FinOps   │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────┐
+│                    NÍVEL 0: BOOT COMPACTO (Sempre Visível — 8 Tools)                      │
+│  [outline] [symbol] [read] [edit] [thinking] [route_subtask] [tool_search] [tool_dispatch]│
+└─────────────────────────────────────────────┬─────────────────────────────────────────────┘
+                                              │
+                    Invoca 'tool_search(namespace)' ou 'tool_dispatch(tool, args)'
+                                              ▼
+┌───────────────────────────────────────────────────────────────────────────────────────────┐
+│                    NÍVEL 1: CATÁLOGOS DINÂMICOS SOB DEMANDA                               │
+│   code.*     ──► AST Tree-sitter, Callers/Callees, Myers Diff                             │
+│   context.*  ──► Compressão LEAN, CCR De/Rehydration, Multi-Read                          │
+│   memory.*   ──► Grafo LadybugDB, Observações, SQLite STRICT, LanceDB                     │
+│   think.*    ──► Raciocínio Socrático DAG, Sessões, Intent Probing                        │
+│   ops.*      ──► Heatmap gitoxide, Impact/Blast Radius, Hardware & FinOps                 │
+│   google.*   ──► Google Personal & Life Hub (Gmail, Calendar, Drive, Docs, Sheets, etc.)  │
+│   inbox.*    ──► BMAD Agent Inbox com Myers Diff e Gravity Lock                           │
+└───────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 1. **Conjunto Base de Boot:** O agente recebe inicialmente apenas as ferramentas essenciais de cada namespace mais a meta-ferramenta canônica `tool_search`.
@@ -62,6 +64,7 @@ Abaixo consta a relação exaustiva de todas as ferramentas operacionais do Soul
 | **#** | **Garra (tool_name)**         | **Namespace** | **O Que Faz no Sistema**                                                                                | **Crate Executora**       | **Maturidade Clínica** | **Latência Típica** |
 | ----- | ----------------------------- | ------------- | ------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------- | ------------------- |
 | —     | **`tool_search`**             | `core`        | **Meta-Ferramenta:** Busca e retorna esquemas detalhados de ferramentas por namespace ou palavra-chave. | `souls_server`            | `LIVE_PRODUCTION`      | **< 1.0 ms**        |
+| —     | **`tool_dispatch`**           | `core`        | **Meta-Ferramenta:** Despacho universal para clientes MCP estritos (alias `dispatch`), permitindo invocar qualquer ferramenta Nível 1 sem injeção estática de schemas. | `souls_server` | `LIVE_PRODUCTION` | **< 1.0 ms** |
 | 1     | **`outline`**                 | `code`        | Gera esqueleto AST desidratando corpos de funções (redução de 70-85% de tokens).                        | `souls_ast`               | `LIVE_PRODUCTION`      | **9.64 ms**         |
 | 2     | **`symbol`**                  | `code`        | Resolve coordenadas (`file:line:col`) e escopo de símbolos via AST Tree-sitter.                         | `souls_ast`               | `LIVE_PRODUCTION`      | **258.32 ms**       |
 | 3     | **`callers`**                 | `code`        | Mapeia quem invoca um determinado símbolo em todo o workspace.                                          | `souls_ast`               | `LIVE_PRODUCTION`      | **0.32 ms**         |
@@ -141,6 +144,41 @@ Permite ao agente descobrir, pesquisar e inspecionar os esquemas JSON exatos das
   "additionalProperties": false
 }
 ```
+
+### 3.0.1 Meta-Ferramenta: `tool_dispatch` / `dispatch` (Despacho Universal em Clientes MCP Estritos)
+
+#### Descrição Operacional
+
+Criada na versão `v0.9.2+3` em resposta à necessidade de clientes MCP estritos (como o runtime Python do Hermes Agent, cujo validador de chamadas checa o nome da tool contra a lista estática recebida no handshake de boot).
+
+A meta-ferramenta `tool_dispatch` (com o alias canônico `dispatch`) reside permanentemente no **Nível 0 (Boot)**. Ela permite ao agente invocar qualquer uma das 78 ferramentas especializadas sob revelação progressiva (Nível 1) diretamente através do cliente MCP padrão, contornando a validação estática no host sem a necessidade de expor todos os esquemas JSON de uma só vez (economizando ~20k tokens de contexto e preservando o *prefix caching* de >95%).
+
+#### JSON Schema de Entrada (`inputSchema`)
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string",
+      "description": "Nome canônico da ferramenta MCP ou seu alias registrado a ser despachada (ex: 'google_gmail', 'semantic_search', 'repo_impact', 'outline')."
+    },
+    "arguments": {
+      "type": "object",
+      "description": "Objeto JSON contendo os argumentos requeridos pela ferramenta alvo conforme seu inputSchema descoberto via tool_search."
+    }
+  },
+  "required": ["tool"],
+  "additionalProperties": false
+}
+```
+
+#### Guardrails & Propriedades de Execução
+
+1. **Trava Anti-Recursão Mandatória:** Se a ferramenta alvo for `tool_dispatch` ou `dispatch`, a chamada é abortada imediatamente com erro JSON-RPC código `-32602` (*Invalid params*): `"Recursion detected: cannot dispatch tool_dispatch recursively"`.
+2. **Normalização de Alias:** A string informada em `tool` é normalizada através do mapa de aliases do Souls Engine (ex: `dispatch` $\rightarrow$ `tool_dispatch`, `google_gmail` $\rightarrow$ `google_gmail`, `outline` $\rightarrow$ `outline`), garantindo resolução determinística.
+3. **Contenção no Dev Drive ReFS:** Qualquer argumento com caminhos de arquivo passa pela validação de fronteira, impedindo travessia para fora de `Z:\souls_engine\`.
+4. **Despacho Direto ao Registro Interno:** A chamada é encaminhada em memória para o dispatcher axum/mcp nativo do Rust, executando com a mesma latência ultrabaixa (<1ms de overhead de roteamento) de uma invocação direta.
 
 ### 3.1 Namespace `code.*` (AST Tree-Sitter & Code Surgery)
 

@@ -1,21 +1,24 @@
 ---
 name: google-life-hub
-description: Playbook operacional do Google Personal & Life Hub no Souls Engine (v0.9.2.1). Cobre descoberta progressiva (google.* e inbox.* — 85 tools), 3 Tiers de Governanca BMAD + Taint Guard + 4 politicas multi-conta, blindagem contra Prompt Injection, Pulso Proativo Multi-Cadencia, Apps Script 24/7, Forms, Chat Workspace, Leitura Economica MinionS, Daily Briefing, Routes v2, Gmail, Calendar, Drive, Docs Scratchpad, Sheets, Slides, Tasks + Obsidian Quick Capture, Contacts, YouTube, NotebookLM (com Auto-Sync) e Custom Gems.
+description: Playbook operacional do Google Personal & Life Hub no Souls Engine (v0.9.2+3). Cobre descoberta progressiva (google.* e inbox.* — 86 tools canônicas, 8 de boot Nível 0 com tool_dispatch), 3 Tiers de Governanca BMAD + Taint Guard + 4 politicas multi-conta, blindagem contra Prompt Injection, Pulso Proativo Multi-Cadencia, Apps Script 24/7, Forms, Chat Workspace, Leitura Economica MinionS, Daily Briefing, Routes v2, Gmail, Calendar, Drive, Docs Scratchpad, Sheets, Slides, Tasks + Obsidian Quick Capture, Contacts, YouTube, NotebookLM (com Auto-Sync) e Custom Gems.
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   author: "Souls Engine Architecture"
   namespace: "google"
 ---
 
-# Google Personal & Life Hub — Playbook Operacional (v0.9.2.1)
+# Google Personal & Life Hub — Playbook Operacional (v0.9.2+3)
 
 Este playbook rege o uso seguro, deterministico e centrado no humano do ecossistema **Google Personal & Life Hub** via **Souls Engine** (`127.0.0.1:9123`) pelo Hermes Agent e pelo Antigravity.
 
 ---
 
-## 1. Descoberta Progressiva de Ferramentas (`tool_search`)
+## 1. Descoberta Progressiva de Ferramentas (`tool_search` & `tool_dispatch`)
 
-O catalogo canonico do Souls Engine v0.9.2.1 possui **85 ferramentas MCP** (**7** visiveis no Boot Level 0 e **78** sob revelacao progressiva). Para evitar *Tool Blindness* e preservar o *Prefix Caching* do Master Chat (>95%), nunca injete esquemas manualmente: descubra sob demanda via `tool_search`.
+O catalogo canonico do Souls Engine v0.9.2+3 possui **86 ferramentas MCP** (**8** visiveis no Boot Level 0 e **78** sob revelacao progressiva).
+Para evitar *Tool Blindness* e preservar o *Prefix Caching* do Master Chat (>95%), nunca injete esquemas manualmente:
+1. Descubra ferramentas e esquemas sob demanda via `tool_search`.
+2. Para clientes MCP estritos com validacao estatica (como o runtime Python do Hermes Agent), invoque qualquer ferramenta Nivel 1 atraves da meta-ferramenta de boot `tool_dispatch(tool="...", arguments={...})` (alias `dispatch`).
 
 - **Dominio Google (`namespace="google"` — 20 tools):**
   - `notebooklm_rpc` (v0.8.2 — RPC `batchexecute` bruto)
