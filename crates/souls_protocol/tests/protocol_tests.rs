@@ -194,6 +194,16 @@ fn test_mcp_domain_error_codes_mapping() {
         McpDomainError::from_code(-32005),
         Some(McpDomainError::StructuredFailure)
     );
+    assert_eq!(McpDomainError::TokenBudgetExceeded.jsonrpc_code(), -32012);
+    assert_eq!(McpDomainError::ResourceNotFound.jsonrpc_code(), -32013);
+    assert_eq!(
+        McpDomainError::from_code(-32012),
+        Some(McpDomainError::TokenBudgetExceeded)
+    );
+    assert_eq!(
+        McpDomainError::from_code(-32013),
+        Some(McpDomainError::ResourceNotFound)
+    );
     assert_eq!(McpDomainError::from_code(-99999), None);
 }
 
@@ -661,8 +671,14 @@ fn test_v094_harness_evolve_dtos_and_slots_roundtrip() {
         actual_sha256: "abc".to_string(),
         verified: true,
         fail_closed_triggered: false,
+        pin_mode: "fail_closed".to_string(),
         checked_at: 1795440000,
     };
+    let legacy_pin: ConstitutionalPinStatusDto = serde_json::from_str(
+        r#"{"file_path_posix":"AGENTS.md","expected_sha256":"a","actual_sha256":"a","verified":true,"fail_closed_triggered":false,"checked_at":1}"#,
+    )
+    .expect("Legacy pin JSON without pin_mode must deserialize");
+    assert_eq!(legacy_pin.pin_mode, "fail_closed");
     let rollback = CordisRollbackReportDto {
         fiber_id: "fib_01".to_string(),
         reverted_operations: vec!["op2".to_string(), "op1".to_string()],

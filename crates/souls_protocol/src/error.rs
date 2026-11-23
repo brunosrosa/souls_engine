@@ -61,6 +61,14 @@ pub enum McpDomainError {
     /// Ferramenta solicitada não existe ou não pertence ao namespace (Código -32011).
     #[error("ToolNotFoundInNamespace: Ferramenta solicitada não encontrada no namespace ativo")]
     ToolNotFoundInNamespace,
+
+    /// Orçamento de tokens/janela de contexto excede o teto dos modelos ativos (Código -32012).
+    #[error("TokenBudgetExceeded: Volume de tokens excede a janela ativa; faça chunking/map-reduce abaixo do teto")]
+    TokenBudgetExceeded,
+
+    /// Recurso, sessão ou registro solicitado não foi encontrado (Código -32013).
+    #[error("ResourceNotFound: Sessão, subagente ou recurso solicitado não encontrado")]
+    ResourceNotFound,
 }
 
 impl McpDomainError {
@@ -80,6 +88,8 @@ impl McpDomainError {
             Self::GitoxideRepositoryError => -32009,
             Self::SqlStrictViolation => -32010,
             Self::ToolNotFoundInNamespace => -32011,
+            Self::TokenBudgetExceeded => -32012,
+            Self::ResourceNotFound => -32013,
         }
     }
 
@@ -99,6 +109,8 @@ impl McpDomainError {
             -32009 => Some(Self::GitoxideRepositoryError),
             -32010 => Some(Self::SqlStrictViolation),
             -32011 => Some(Self::ToolNotFoundInNamespace),
+            -32012 => Some(Self::TokenBudgetExceeded),
+            -32013 => Some(Self::ResourceNotFound),
             _ => None,
         }
     }

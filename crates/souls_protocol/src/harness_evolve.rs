@@ -99,6 +99,10 @@ impl HarnessComponentSlot {
     }
 }
 
+fn default_pin_mode() -> String {
+    "fail_closed".to_string()
+}
+
 /// Cryptographic SHA-256 pin verification record for a constitutional (`c1`) file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConstitutionalPinStatusDto {
@@ -107,6 +111,8 @@ pub struct ConstitutionalPinStatusDto {
     pub actual_sha256: String,
     pub verified: bool,
     pub fail_closed_triggered: bool,
+    #[serde(default = "default_pin_mode")]
+    pub pin_mode: String,
     pub checked_at: i64,
 }
 
