@@ -13,9 +13,11 @@ pub mod error;
 pub mod google;
 pub mod lean;
 pub mod mcp;
+pub mod multimodal;
 
 pub use dto::*;
 pub use error::*;
 pub use google::*;
 pub use lean::*;
 pub use mcp::*;
+pub use multimodal::*;

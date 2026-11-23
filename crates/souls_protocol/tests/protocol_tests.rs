@@ -237,3 +237,377 @@ fn test_mcp_error_jsonrpc_conversion_and_serialization() {
         serde_json::from_str(&req_serialized).expect("Deserialization failed");
     assert_eq!(request, req_de);
 }
+
+#[test]
+fn test_multimodal_enums_snake_case_and_defaults() {
+    use souls_protocol::multimodal::{
+        AudioEngineTier, CognitiveVoiceMode, DetectedEmotionTag, TurnTakingVerdict,
+        VisionEscalationReason, VisualAnalysisMode,
+    };
+
+    assert_eq!(CognitiveVoiceMode::default(), CognitiveVoiceMode::Auto);
+    assert_eq!(DetectedEmotionTag::default(), DetectedEmotionTag::Neutral);
+    assert_eq!(
+        TurnTakingVerdict::default(),
+        TurnTakingVerdict::TakeTurnImmediate
+    );
+    assert_eq!(
+        AudioEngineTier::default(),
+        AudioEngineTier::WindowsNativeFallback
+    );
+    assert_eq!(
+        VisionEscalationReason::default(),
+        VisionEscalationReason::NoneAxSufficient
+    );
+    assert_eq!(VisualAnalysisMode::default(), VisualAnalysisMode::Auto);
+
+    let enum_cases = [
+        (
+            serde_json::to_string(&CognitiveVoiceMode::CrisisParalysis).unwrap(),
+            "\"crisis_paralysis\"",
+        ),
+        (
+            serde_json::to_string(&CognitiveVoiceMode::HandsOn).unwrap(),
+            "\"hands_on\"",
+        ),
+        (
+            serde_json::to_string(&DetectedEmotionTag::Hesitant).unwrap(),
+            "\"hesitant\"",
+        ),
+        (
+            serde_json::to_string(&TurnTakingVerdict::ContemplativeWait).unwrap(),
+            "\"contemplative_wait\"",
+        ),
+        (
+            serde_json::to_string(&AudioEngineTier::OnnxPrimary).unwrap(),
+            "\"onnx_primary\"",
+        ),
+        (
+            serde_json::to_string(&VisionEscalationReason::CanvasOrWebGlDetected).unwrap(),
+            "\"canvas_or_web_gl_detected\"",
+        ),
+        (
+            serde_json::to_string(&VisualAnalysisMode::DeterministicSomOnly).unwrap(),
+            "\"deterministic_som_only\"",
+        ),
+    ];
+
+    for (actual, expected) in enum_cases {
+        assert_eq!(actual, expected);
+    }
+
+    assert_eq!(
+        DetectedEmotionTag::from_str_lossy("risada"),
+        DetectedEmotionTag::Laughter
+    );
+    assert_eq!(
+        DetectedEmotionTag::from_str_lossy("unknown_tag"),
+        DetectedEmotionTag::Neutral
+    );
+}
+
+#[test]
+fn test_multimodal_dtos_serde_roundtrip() {
+    use souls_protocol::multimodal::{
+        AXTreeDiffSummary, AudioEngineTier, BlindSpotAssessment, CognitiveVoiceMode,
+        DetectedEmotionTag, HermesVoiceCustomsReportDto, OpenAiSpeechRequest,
+        OpenAiTranscriptionResponse, PcompTurnEvaluationDto, SomOverlayMark, TurnTakingVerdict,
+        UserRapportProfileDto, VisionEscalationReason, VisualSnapshotResultDto,
+        VoiceSynthesisRequestDto, VoiceSynthesisResultDto, VoiceTranscriptionResultDto,
+    };
+
+    let som_mark = SomOverlayMark {
+        index: 1,
+        node_id: "btn_save".to_string(),
+        role: "button".to_string(),
+        label: "Salvar".to_string(),
+        bounds: [10.0, 20.0, 120.0, 48.0],
+        click_point: (65.0, 34.0),
+    };
+    let som_de: SomOverlayMark =
+        serde_json::from_str(&serde_json::to_string(&som_mark).unwrap()).unwrap();
+    assert_eq!(som_mark, som_de);
+
+    let blind_spot = BlindSpotAssessment {
+        requires_pixel_snapshot: true,
+        reason: VisionEscalationReason::CanvasOrWebGlDetected,
+        actionable_node_count: 2,
+        canvas_node_count: 1,
+        coverage_ratio: 0.18,
+        recommendation_pt: "Canvas detectado; captura visual recomendada.".to_string(),
+    };
+    let blind_de: BlindSpotAssessment =
+        serde_json::from_str(&serde_json::to_string(&blind_spot).unwrap()).unwrap();
+    assert_eq!(blind_spot, blind_de);
+
+    let ax_diff = AXTreeDiffSummary {
+        added_nodes: vec!["btn_confirm".to_string()],
+        removed_nodes: vec!["spinner_loading".to_string()],
+        changed_states: vec!["input_email:focused".to_string()],
+        compact_lean_diff: "+btn_confirm -spinner_loading ~input_email".to_string(),
+        full_lean_bytes: 2048,
+        diff_lean_bytes: 128,
+        token_savings_pct: 93.75,
+    };
+    let ax_de: AXTreeDiffSummary =
+        serde_json::from_str(&serde_json::to_string(&ax_diff).unwrap()).unwrap();
+    assert_eq!(ax_diff, ax_de);
+
+    let visual_snapshot = VisualSnapshotResultDto {
+        snapshot_id: "snap_001".to_string(),
+        window_title: "Editor".to_string(),
+        app_name: "code.exe".to_string(),
+        width: 1920,
+        height: 1080,
+        sha256_hash: "abc123".to_string(),
+        screen_unchanged: false,
+        som_marks: vec![som_mark],
+        blind_spot,
+        image_path: Some("Z:\\souls_engine\\.souls_data\\snap.png".to_string()),
+        image_base64_png: None,
+        visual_analysis: Some("Botao Salvar visivel no topo.".to_string()),
+        analysis_engine_used: "deterministic_som".to_string(),
+        vram_consumed_mb: 0,
+        latency_ms: 14.2,
+    };
+    let visual_de: VisualSnapshotResultDto =
+        serde_json::from_str(&serde_json::to_string(&visual_snapshot).unwrap()).unwrap();
+    assert_eq!(visual_snapshot, visual_de);
+
+    let turn_eval = PcompTurnEvaluationDto {
+        transcript_tail: "entao eu acho que...".to_string(),
+        silence_duration_ms: 340,
+        ends_with_open_connective: true,
+        syntactic_closure_score: 0.28,
+        acoustic_stress_score: 0.41,
+        recommended_wait_ms: 520,
+        verdict: TurnTakingVerdict::ContemplativeWait,
+        suggested_backchannel: Some("uhum".to_string()),
+    };
+    let turn_de: PcompTurnEvaluationDto =
+        serde_json::from_str(&serde_json::to_string(&turn_eval).unwrap()).unwrap();
+    assert_eq!(turn_eval, turn_de);
+
+    let rapport = UserRapportProfileDto {
+        user_id: "rafael".to_string(),
+        formality_score: 2.5,
+        avg_sentence_length: 10,
+        preferred_pacing: "short_direct".to_string(),
+        slang_lexicon: vec!["bora".to_string(), "massa".to_string()],
+        mirroring_ratio: 0.3,
+        active_cognitive_mode: CognitiveVoiceMode::HandsOn,
+        contemplative_base_ms: 280,
+        backchannel_enabled: true,
+        last_emotion: DetectedEmotionTag::Focused,
+        turn_count: 14,
+        updated_at: 1763856481,
+    };
+    let rapport_de: UserRapportProfileDto =
+        serde_json::from_str(&serde_json::to_string(&rapport).unwrap()).unwrap();
+    assert_eq!(rapport, rapport_de);
+
+    let stt = VoiceTranscriptionResultDto {
+        text: "Entao bora testar isso".to_string(),
+        clean_text: "Entao bora testar isso".to_string(),
+        emotion_tag: DetectedEmotionTag::Focused,
+        emotion_confidence: 0.87,
+        is_silence_hallucination_filtered: false,
+        turn_evaluation: turn_eval,
+        engine_tier: AudioEngineTier::OnnxPrimary,
+        engine_name: "sherpa-onnx-whisper".to_string(),
+        language: "pt-BR".to_string(),
+        vram_consumed_mb: 0,
+        latency_ms: 68.5,
+    };
+    let stt_de: VoiceTranscriptionResultDto =
+        serde_json::from_str(&serde_json::to_string(&stt).unwrap()).unwrap();
+    assert_eq!(stt, stt_de);
+
+    let tts_req = VoiceSynthesisRequestDto {
+        input: "Fechado — vamos direto para o proximo passo.".to_string(),
+        voice: Some("pt_BR-faber-medium".to_string()),
+        model: Some("piper-pt-br".to_string()),
+        response_format: Some("wav".to_string()),
+        speed: Some(1.05),
+        apply_prosody_shaping: Some(true),
+        cognitive_mode: Some(CognitiveVoiceMode::HandsOn),
+    };
+    let tts_req_de: VoiceSynthesisRequestDto =
+        serde_json::from_str(&serde_json::to_string(&tts_req).unwrap()).unwrap();
+    assert_eq!(tts_req, tts_req_de);
+
+    let tts_res = VoiceSynthesisResultDto {
+        shaped_text: "Fechado — vamos direto para o proximo passo.".to_string(),
+        sentences_chunks: vec!["Fechado — vamos direto para o proximo passo.".to_string()],
+        audio_format: "wav".to_string(),
+        audio_bytes_len: 1024,
+        audio_base64: "UklGRg==".to_string(),
+        output_path: None,
+        contemplative_delay_ms: 250,
+        engine_tier: AudioEngineTier::LocalSecondary,
+        engine_name: "piper-tts".to_string(),
+        vram_consumed_mb: 0,
+        latency_ms: 42.0,
+    };
+    let tts_res_de: VoiceSynthesisResultDto =
+        serde_json::from_str(&serde_json::to_string(&tts_res).unwrap()).unwrap();
+    assert_eq!(tts_res, tts_res_de);
+
+    let report = HermesVoiceCustomsReportDto {
+        config_path: "C:\\Users\\user\\.hermes\\config.yaml".to_string(),
+        stt_enabled: true,
+        current_stt_language: "pt".to_string(),
+        current_stt_provider: "local".to_string(),
+        current_tts_provider: "piper".to_string(),
+        current_voice_mode: "hands_on".to_string(),
+        is_synced_with_souls_pt_br: true,
+        issues_found: vec![],
+        human_summary_pt: "Voz configurada em portugues local.".to_string(),
+    };
+    let report_de: HermesVoiceCustomsReportDto =
+        serde_json::from_str(&serde_json::to_string(&report).unwrap()).unwrap();
+    assert_eq!(report, report_de);
+
+    let speech_req = OpenAiSpeechRequest {
+        model: Some("tts-1".to_string()),
+        input: "Ola mundo".to_string(),
+        voice: Some("alloy".to_string()),
+        response_format: Some("mp3".to_string()),
+        speed: Some(1.0),
+    };
+    let speech_req_de: OpenAiSpeechRequest =
+        serde_json::from_str(&serde_json::to_string(&speech_req).unwrap()).unwrap();
+    assert_eq!(speech_req, speech_req_de);
+
+    let trans_res = OpenAiTranscriptionResponse {
+        text: "Tudo certo".to_string(),
+        emotion: Some(DetectedEmotionTag::Happy),
+        language: Some("pt".to_string()),
+    };
+    let trans_res_de: OpenAiTranscriptionResponse =
+        serde_json::from_str(&serde_json::to_string(&trans_res).unwrap()).unwrap();
+    assert_eq!(trans_res, trans_res_de);
+}
+
+#[test]
+fn test_cognitive_voice_mode_helpers_and_ephemeral_notes() {
+    use souls_protocol::multimodal::{CognitiveVoiceMode, UserRapportProfileDto};
+
+    assert_eq!(
+        CognitiveVoiceMode::from_str_lossy("hands_on"),
+        CognitiveVoiceMode::HandsOn
+    );
+    assert_eq!(
+        CognitiveVoiceMode::from_str_lossy("hands-on"),
+        CognitiveVoiceMode::HandsOn
+    );
+    assert_eq!(
+        CognitiveVoiceMode::from_str_lossy("mão na massa"),
+        CognitiveVoiceMode::HandsOn
+    );
+    assert_eq!(
+        CognitiveVoiceMode::from_str_lossy("sparring"),
+        CognitiveVoiceMode::Sparring
+    );
+    assert_eq!(
+        CognitiveVoiceMode::from_str_lossy("descompressao"),
+        CognitiveVoiceMode::Decompression
+    );
+    assert_eq!(
+        CognitiveVoiceMode::from_str_lossy("crise"),
+        CognitiveVoiceMode::CrisisParalysis
+    );
+    assert_eq!(
+        CognitiveVoiceMode::from_str_lossy("filosofico"),
+        CognitiveVoiceMode::Philosophical
+    );
+    assert_eq!(
+        CognitiveVoiceMode::from_str_lossy("desconhecido"),
+        CognitiveVoiceMode::Auto
+    );
+
+    let modes = [
+        CognitiveVoiceMode::Auto,
+        CognitiveVoiceMode::HandsOn,
+        CognitiveVoiceMode::Sparring,
+        CognitiveVoiceMode::Decompression,
+        CognitiveVoiceMode::CrisisParalysis,
+        CognitiveVoiceMode::Philosophical,
+    ];
+
+    let casual_profile = UserRapportProfileDto {
+        formality_score: 2.0,
+        mirroring_ratio: 0.90, // exceeds 0.35, must be clamped inside ephemeral_turn_note_pt
+        slang_lexicon: vec!["show".to_string(), "massa".to_string()],
+        ..UserRapportProfileDto::default()
+    };
+
+    for mode in modes {
+        assert!(!mode.as_str().is_empty());
+        assert!(!mode.human_label_pt().is_empty());
+        assert!(!mode.human_description_pt().is_empty());
+
+        let note = mode.ephemeral_turn_note_pt(&casual_profile);
+        assert!(note.contains("35%"));
+        assert!(note.contains("show, massa"));
+        assert!(note.contains("..."));
+        assert!(note.contains("—"));
+        assert!(note.contains(','));
+    }
+
+    let formal_profile = UserRapportProfileDto {
+        formality_score: 8.5,
+        mirroring_ratio: 0.20,
+        slang_lexicon: vec!["mano".to_string()],
+        ..UserRapportProfileDto::default()
+    };
+    let formal_note = CognitiveVoiceMode::Sparring.ephemeral_turn_note_pt(&formal_profile);
+    assert!(formal_note.contains("evite gírias"));
+    assert!(!formal_note.contains("mano"));
+}
+
+#[test]
+fn test_user_rapport_profile_default_and_sanitize() {
+    use souls_protocol::multimodal::{
+        clamp_mirroring_ratio, CognitiveVoiceMode, DetectedEmotionTag, UserRapportProfileDto,
+    };
+
+    let default_profile = UserRapportProfileDto::default();
+    assert_eq!(default_profile.user_id, "default");
+    assert_eq!(default_profile.formality_score, 3.5);
+    assert_eq!(default_profile.avg_sentence_length, 12);
+    assert_eq!(default_profile.preferred_pacing, "short_direct");
+    assert_eq!(default_profile.mirroring_ratio, 0.25);
+    assert_eq!(
+        default_profile.active_cognitive_mode,
+        CognitiveVoiceMode::Auto
+    );
+    assert_eq!(default_profile.contemplative_base_ms, 250);
+    assert!(default_profile.backchannel_enabled);
+    assert_eq!(default_profile.last_emotion, DetectedEmotionTag::Neutral);
+
+    assert_eq!(clamp_mirroring_ratio(-0.5), 0.0);
+    assert_eq!(clamp_mirroring_ratio(0.22), 0.22);
+    assert_eq!(clamp_mirroring_ratio(0.85), 0.35);
+
+    let mut dirty = UserRapportProfileDto {
+        formality_score: 25.0,
+        avg_sentence_length: 0,
+        mirroring_ratio: 0.99,
+        contemplative_base_ms: 40,
+        ..UserRapportProfileDto::default()
+    };
+    dirty.sanitize();
+    assert_eq!(dirty.formality_score, 10.0);
+    assert_eq!(dirty.avg_sentence_length, 1);
+    assert_eq!(dirty.mirroring_ratio, 0.35);
+    assert_eq!(dirty.contemplative_base_ms, 100);
+
+    dirty.formality_score = -3.0;
+    dirty.mirroring_ratio = -1.0;
+    dirty.contemplative_base_ms = 5000;
+    dirty.sanitize();
+    assert_eq!(dirty.formality_score, 0.0);
+    assert_eq!(dirty.mirroring_ratio, 0.0);
+    assert_eq!(dirty.contemplative_base_ms, 1000);
+}
