@@ -383,10 +383,29 @@ mod tests {
 
         assert!(result.is_err());
         match result.err().unwrap() {
-            RouterError::NoActiveCandidates(msg) => {
-                assert!(msg.contains("All model arms blocked") || msg.contains("zero active models"));
+            RouterError::ContextWindowExceeded(msg) => {
+                assert!(msg.contains("70000") && msg.contains("chunking"));
             }
             other => panic!("Unexpected error variant: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_nominal_gpu_30k_local_only_reports_context_window_exceeded() {
+        let router = setup_test_router(50.0, 1549).await;
+        sqlx::query("UPDATE model_registry SET is_active = 0 WHERE provider_type = 'CLOUD'")
+            .execute(router.pool())
+            .await
+            .unwrap();
+
+        let task_30k = TaskContext::new("batch_30k", "session_1", "code", 15000, 15000);
+        let result = router.route_task(&task_30k).await;
+        match result {
+            Err(RouterError::ContextWindowExceeded(msg)) => {
+                assert!(msg.contains("16000"), "Expected real 16000 ceiling in: {msg}");
+                assert!(msg.contains("30000"));
+            }
+            other => panic!("Expected ContextWindowExceeded on Nominal GPU, got {:?}", other),
         }
     }
 

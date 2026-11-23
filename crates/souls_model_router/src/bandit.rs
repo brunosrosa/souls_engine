@@ -317,6 +317,9 @@ impl ParetoBanditRouter {
         let mut best_decision: Option<RoutingDecision> = None;
         let mut highest_utility = f64::NEG_INFINITY;
         let mut rng = rand::thread_rng();
+        let mut excluded_by_context: usize = 0;
+        let mut excluded_by_thermal: usize = 0;
+        let mut max_active_context_window: u32 = 0;
 
         // 1.5 Compute dynamic reasoning effort recommendation
         let entropy = task.entropy_score.unwrap_or(0.5);
@@ -335,8 +338,16 @@ impl ParetoBanditRouter {
                 continue;
             }
 
+            let effective_ctx = if model.is_gpu_accelerated() {
+                model.max_context_window.min(LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS)
+            } else {
+                model.max_context_window
+            };
+            max_active_context_window = max_active_context_window.max(effective_ctx);
+
             // Check max context window of model
             if task.is_context_exceeded(model.max_context_window) {
+                excluded_by_context += 1;
                 debug!(
                     model_id = %model.model_id,
                     max_ctx = model.max_context_window,
@@ -350,6 +361,7 @@ impl ParetoBanditRouter {
             let barrier_phi: f32 = if model.is_gpu_accelerated() {
                 // Rule 1: Preemption due to context overflow on RTX 2060m (> 16k tokens)
                 if total_tokens > LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS {
+                    excluded_by_context += 1;
                     warn!(
                         total_tokens,
                         limit = LOCAL_ACCELERATED_MAX_CONTEXT_TOKENS,
@@ -361,6 +373,7 @@ impl ParetoBanditRouter {
                     || vram_free_mb <= VRAM_FREE_CRITICAL_MB
                     || gpu_temp_c >= THERMAL_CRITICAL_C
                 {
+                    excluded_by_thermal += 1;
                     warn!(
                         gpu_temp_c,
                         vram_free_mb,
@@ -466,6 +479,11 @@ impl ParetoBanditRouter {
                     "Routing decision selected successfully"
                 );
                 Ok(decision)
+            }
+            _ if excluded_by_context > 0 && excluded_by_thermal == 0 => {
+                Err(RouterError::ContextWindowExceeded(format!(
+                    "estimated_tokens={total_tokens} excede o teto ativo de {max_active_context_window} tokens. Faça chunking/map-reduce abaixo de {max_active_context_window} tokens."
+                )))
             }
             _ => Err(RouterError::NoActiveCandidates(
                 "All model arms blocked by thermodynamic barrier or context limits".to_string(),
