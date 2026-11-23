@@ -1186,3 +1186,144 @@ Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª ski
 - **Primary Tools (12):** `google_briefing`, `google_pulse`, `google_gmail`, `google_calendar`, `google_docs_scratchpad`, `google_apps_script`, `google_forms`, `google_chat`, `google_deep_analyze`, `google_notebooklm`, `inbox_propose`, `inbox_list`
 - **Keywords de Afinidade Semântica:** `gmail`, `email`, `calendar`, `agenda`, `drive`, `docs`, `sheets`, `slides`, `tasks`, `keep`, `contacts`, `maps`, `commute`, `youtube`, `transcript`, `notebooklm`, `podcast`, `audio`, `gems`, `inbox`, `bmad`, `diff`, `google`, `pulse`, `proativo`, `heartbeat`, `apps script`, `automacao`, `clasp`, `forms`, `formulario`, `chat`, `minions`, `analise profunda`, `auto sync`, `drive notebook`
 
+---
+
+## 9. MILESTONE v0.9.3 — PERCEPÇÃO MULTIMODAL HÍBRIDA, ÁUDIO SOBERANO PT-BR & RAPPORT POLIVAGAL (`91 Tools & 17 Skills`)
+
+> **Versão:** `v0.9.3` (ADR-033)
+> **Total de Ferramentas Canônicas:** **91 ferramentas** (**8** visíveis no Boot Nível 0 com `tool_dispatch` + **83** sob revelação progressiva via `tool_search`)
+> **Total de Skills no Switchboard:** **17 skills canônicas** (incluindo `souls-multimodal-perception`)
+
+### 9.1 Resumo do Namespace `ui.*` Expandido (`7 Tools`)
+
+| Ferramenta | Modo / Novidade v0.9.3 | Descrição Canônica |
+| :--- | :--- | :--- |
+| `ui_inspect` | **Atualizada** (`window_filter`, `intent_filter`, captura live) | Extrai e serializa a árvore de acessibilidade (CDP ou Windows ao vivo) em LEAN dot-notation com diagnóstico de blind-spot e `0 MB VRAM`. |
+| `ui_interact` | **Atualizada** (resolução ao vivo) | Calcula coordenadas centrais determinísticas e resolve o nó tátil sob o cursor `(x, y)`. |
+| `ui_snapshot` | **Nova** | Captura snapshot visual sob demanda com marcas Set-of-Mark (SoM), detecção de blind-spot, deduplicação SHA-256 e escalonamento opcional. |
+| `ui_diff` | **Nova** | Computa diff estrutural LEAN entre `previous_tree` e `after_tree` (ou captura ao vivo se omitida) poupando tokens. |
+| `voice_transcribe` | **Nova** | Transcreve áudio Base64 ou avalia `sample_text` com detecção de emoção SenseVoice, filtro de alucinação e veredito PCOMP (`0 MB VRAM`). |
+| `voice_synthesize` | **Nova** | Sintetiza fala em português brasileiro na CPU (`0 MB VRAM`) com modelagem prosódica Camada 3 e adaptação ao modo cognitivo. |
+| `voice_rapport` | **Nova** | Consulta ou atualiza o perfil de rapport linguístico, formalidade, cadência e modo cognitivo de voz (`UserRapportProfileDto`). |
+
+### 9.2 Contratos JSON Schema das Ferramentas `ui.*` (`crates/souls_server/src/mcp/registry.rs`)
+
+#### `ui_inspect`
+```json
+{
+  "type": "object",
+  "properties": {
+    "window_filter": { "type": "string", "description": "Filtro opcional de título da janela" },
+    "intent_filter": { "type": "string", "description": "Filtro de intenção: all, actionable, inputs, buttons" },
+    "include_click_coords": { "type": "boolean", "default": true, "description": "Incluir coordenadas geométricas de clique" },
+    "max_depth": { "type": "integer", "description": "Profundidade máxima de serialização da árvore" },
+    "cursor_x": { "type": "number", "description": "Coordenada X opcional do cursor" },
+    "cursor_y": { "type": "number", "description": "Coordenada Y opcional do cursor" }
+  },
+  "additionalProperties": true
+}
+```
+
+#### `ui_interact`
+```json
+{
+  "type": "object",
+  "properties": {
+    "x": { "type": "number", "description": "Coordenada X na tela" },
+    "y": { "type": "number", "description": "Coordenada Y na tela" }
+  },
+  "required": ["x", "y"],
+  "additionalProperties": true
+}
+```
+
+#### `ui_snapshot`
+```json
+{
+  "type": "object",
+  "properties": {
+    "window_filter": { "type": "string", "description": "Filtro opcional da janela alvo" },
+    "region": { "type": "array", "items": { "type": "integer" }, "description": "Região [x, y, width, height]" },
+    "mode": { "type": "string", "enum": ["auto", "deterministic_som_only", "local_ephemeral_vlm", "cloud_frontier"], "default": "auto" },
+    "session_id": { "type": "string", "description": "ID de sessão para deduplicação SHA-256" },
+    "include_base64": { "type": "boolean", "default": false, "description": "Incluir PNG em Base64 quando a tela mudar" },
+    "prompt": { "type": "string", "description": "Pergunta visual opcional sobre o snapshot" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### `ui_diff`
+```json
+{
+  "type": "object",
+  "properties": {
+    "previous_tree": { "type": "object", "description": "Árvore AXNode de referência anterior" },
+    "after_tree": { "type": "object", "description": "Árvore AXNode posterior opcional (captura ao vivo se omitida)" },
+    "window_filter": { "type": "string", "description": "Filtro opcional de janela para captura ao vivo" },
+    "intent_filter": { "type": "string", "description": "Filtro de intenção opcional" }
+  },
+  "required": ["previous_tree"],
+  "additionalProperties": false
+}
+```
+
+#### `voice_transcribe`
+```json
+{
+  "type": "object",
+  "properties": {
+    "audio_base64": { "type": "string", "description": "Áudio codificado em Base64" },
+    "filename": { "type": "string", "description": "Nome ou extensão do arquivo (ex: audio.wav)" },
+    "language": { "type": "string", "default": "pt", "description": "Idioma alvo (padrão: pt)" },
+    "sample_text": { "type": "string", "description": "Texto de amostra opcional para avaliação PCOMP/SenseVoice sem áudio" },
+    "silence_duration_ms": { "type": "integer", "default": 450, "description": "Duração do silêncio final em ms" },
+    "user_id": { "type": "string", "default": "default", "description": "Identificador do usuário para EMA de rapport" }
+  },
+  "additionalProperties": false
+}
+```
+
+#### `voice_synthesize`
+```json
+{
+  "type": "object",
+  "properties": {
+    "input": { "type": "string", "description": "Texto em português para sintetizar" },
+    "cognitive_mode": { "type": "string", "enum": ["auto", "hands_on", "sparring", "decompression", "crisis_paralysis", "philosophical"] },
+    "apply_prosody_shaping": { "type": "boolean", "default": true },
+    "voice": { "type": "string" },
+    "user_id": { "type": "string", "default": "default" }
+  },
+  "required": ["input"],
+  "additionalProperties": false
+}
+```
+
+#### `voice_rapport`
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["get", "set"], "default": "get" },
+    "user_id": { "type": "string", "default": "default" },
+    "active_cognitive_mode": { "type": "string", "enum": ["auto", "hands_on", "sparring", "decompression", "crisis_paralysis", "philosophical"] },
+    "formality_score": { "type": "number" },
+    "preferred_pacing": { "type": "string" },
+    "contemplative_base_ms": { "type": "integer" },
+    "mirroring_ratio": { "type": "number" },
+    "backchannel_enabled": { "type": "boolean" },
+    "slang_lexicon": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}
+```
+
+### 9.3 17ª Skill Canônica no Switchboard (`switchboard.rs`)
+
+- **Identificador:** `souls-multimodal-perception`
+- **Descrição:** `"Percepção multimodal 0 MB VRAM: Visão Cognitiva AXTree LEAN, SoM & Snapshot sob demanda e Voz Soberana PT-BR (PCOMP, SenseVoice, prosódia e rapport)."`
+- **Primary Tools (7):** `ui_inspect`, `ui_interact`, `ui_snapshot`, `ui_diff`, `voice_transcribe`, `voice_synthesize`, `voice_rapport`
+- **Keywords de Afinidade Semântica:** `vision`, `screen`, `axtree`, `snapshot`, `canvas`, `voice`, `audio`, `tts`, `stt`, `speech`, `voz`, `fala`, `tela`, `pt-br`, `rapport`, `tdah`, `2e`
+
+

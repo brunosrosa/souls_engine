@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)
-> **VERSÃO CONSOLIDADA:** v0.9.2.2 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
+> **VERSÃO CONSOLIDADA:** v0.9.3 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -94,13 +94,14 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestone v0.9.2** | **Google Personal & Life Hub, BMAD Agent Inbox & Multi-Conta OAuth2** | **100% CONCLUÍDO** | **v0.9.2 Oficial (ADR-030):** Cofre encriptado multi-conta **GV2** + OAuth2 PKCE (`RFC 7636 S256`) + importação `gws` + Google Doctor, **Híbrido Seguro** (Workspace REST oficial, **Routes API v2** com `X-Goog-FieldMask`, People/Contacts, YouTube Innertube + parser XML/SRV3, Tasks + Obsidian Quick Capture para `@gmail.com`, 22+ RPCs Wiz corrigidos + `nlm` CLI, Custom Gems via Gemini API oficial com bloqueio de `StreamGenerate` na conta primária), **Governança BMAD** (`BlastRadiusTier` em 3 níveis, 4 políticas multi-conta, `wrap_untrusted_content` com nonce anti-injection, `SessionTaintTracker` 30m e `AgentInboxStore` com Myers Diff + Gravity Lock + `audit_log.jsonl`), 17 novas ferramentas MCP (`14 google.*` + `3 inbox.*` = **80 tools canônicas**), 16ª skill `google-life-hub` no Switchboard, 39 rotas `/api/v1/google/*` + 5 rotas `/api/v1/inbox/*`, e abas SPA `Google Life Hub`, `Gemini Notebooks` (player HTTP Range) e `Agent Inbox` + badge global na Topbar (zero inline styles). |
 | **Milestone v0.9.2.1** | **Pulso Proativo Multi-Cadência, Apps Script 24/7, Forms, Chat & MinionS** | **100% CONCLUÍDO** | **v0.9.2.1 Oficial (ADR-031 / `version = "0.9.2+1"`):** Heartbeat multi-cadência (5m `oauth_health`/`commute` 90m, 10m `gmail_vip`, 15m `forms`/`drive_sync`) com backoff isolado por monitor, Quiet Hours configurável/desligável e entrega tripla (SSE `/api/v1/google/events/stream`, `prefetch()` efêmero no `hermes_memory_souls` sem tocar em `system_prompt_block()`, Webhook/Telegram opt-in); **Apps Script 24/7** via `script.googleapis.com/v1` + 5 templates curados + scanner estático (`appsscript.json`, segredos, Cartão de Permissões em Português Humano) + BMAD Myers Diff/Gravity Lock; **Google Forms API v1** (stats + Markdown) e **Google Chat API v1** (exclusivo Workspace corporativo + Webhook); **MinionS Google Deep Analyze** (Tier 0 BM25 + cache SHA-256 em `.souls_data/google/minions_cache/` + guarda GGUF/WDDM/AVX2 + exportação 1-clique Obsidian/NotebookLM); **Auto-Sync Drive ↔ NotebookLM** (`sync_links.json` + gancho pós-push Docs/Sheets); OAuth incremental (`include_granted_scopes=true` + `missing_recommended_scopes`); **5 novas tools MCP** totalizando **85 ferramentas canônicas** (`7` Level 0 + `78` progressivas) e **21 novas rotas REST**. |
 | **Milestone v0.9.2.2** | **Alfândega Hermes ↔ Souls, Cloud Arena 2.0 & Ledger FinOps Real** | **100% CONCLUÍDO** | **v0.9.2.2 Oficial (ADR-032 / `version = "0.9.2+2"`):** Normalização estrita de slugs e rotas canônicas do Hermes Desktop (`nous`, `openrouter`, `custom`, `deepseek`, `anthropic`, `openai-api`, `gemini`, `copilot`), limpeza de `context_length` órfão, sincronização multi-perfil (`profiles/*`), destravamento de sessões presas em fallback no `state.db`, toggle `moa.enabled` e sincronia não-destrutiva de `hermes.desktop.favorite-models` (`ui-preferences.json`); ingestão de modelos gratuitos `:free` ($0) + OpenRouter exclusivos sem colisão de variantes (`Pro`/`Flash`/`Flex`); rebalanceamento dinâmico de Pareto (Pódio/Tabela/`.sort()`), filtros **`Nous Portal` (padrão) → `OpenRouter` → Gateways Ativas → `Gratuitos ($0)` → `Todos`**, coluna `Usar` após `Status`, modal de aplicação com pré-voo OAuth/API Key inline 1-clique e simulador mensal; **Ledger FinOps Real (`hermes_usage_ledger`)** via `?mode=ro` sobre `state.db` + 3 novas rotas REST (`/api/v1/hermes/customs`, `/customs/repair`, `/api/v1/cloud/finops`). |
+| **Milestone v0.9.2+3** | **Despacho Universal `tool_dispatch`, Inferência Física & Scanner `llama.cpp`** | **100% CONCLUÍDO** | **v0.9.2+3 (`version = "0.9.2+3"`):** Meta-ferramenta `tool_dispatch`/`dispatch` promovida ao Boot Level 0 (**8** tools visíveis no handshake estático de clientes como Hermes + trava `-32602` de recursão, elevando o catálogo para **86** ferramentas canônicas); extirpação total de mocks em `/v1/chat/completions`; scanner numérico dinâmico de builds CUDA `llama.cpp` (`resolve_latest_llamacpp_binary`). |
+| **Milestone v0.9.3** | **Percepção Multimodal Híbrida, Áudio Soberano PT-BR & Rapport Polivagal** | **100% CONCLUÍDO** | **v0.9.3 Oficial (ADR-033 / `version = "0.9.3"` — Alfândega Grau S+):** Visão AXTree LEAN Windows UIA (`-STA`) + Diff estrutural + Snapshot On-Demand Set-of-Mark (`vision_snapshot_ledger` SHA-256) + `EphemeralVisionRunner` (`Qwen2.5-VL-3B` priorizando `mmproj` irmão e `Auto` sem prompt a `0 MB VRAM`); Áudio Soberano PT-BR em CPU (`ZERO_AUDIO_VRAM_CONSUMPTION_MB = 0`, Silero VAD + PCOMP, SenseVoice + filtro de alucinação, Camada 3 prosódia), cascatas reais TTS (`Kokoro -> Piper -> Edge Neural PT-BR -> Windows SAPI Maria`) e STT (`SenseVoice -> whisper.cpp -> faster-whisper CPU int8 Systran/faster-whisper-base 1-clique -> Windows Speech estrito sem fallback cross-language`), gateway OpenAI (`/v1/audio/speech`, `/v1/audio/transcriptions` c/ `response_format="text"`), Rapport Polivagal EMA (`user_rapport_profile` + `_fetch_voice_rapport_block` `prefix-cache-safe`), Alfândega de Voz multi-perfil (`config.yaml` + `profiles/*` + `.yaml.bak`), **91** ferramentas MCP / **17** skills Switchboard (`souls-multimodal-perception`), sub-aba **Voz & Visão Híbrida** no Cockpit e homologação E2E ao vivo em PT-BR (`88` core / `61` inference / `92` server PASS). |
 
-### 2.2 Inventário de Ativos Consolidados na v0.6.0
+### 2.2 Inventário de Ativos Consolidados na v0.9.3
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
-* **Catálogo MCP:** 55 Ferramentas de revelação progressiva divididas em 6 namespaces (`code.*`, `context.*`, `memory.*`, `think.*`, `ops.*`, `sys.*`).
-* **Governança de Skills & Personas:** Catálogo unificado multi-superfície + Explorador de 101.000+ skills em RAM (<5ms) + Gestão completa de Personas Hermes (`default` e `profiles/*`) com soberania Read-Only sobre `MEMORY.md`/`USER.md`.
-* **Desempenho de Compilação:** `cargo check -p souls_server` acelerado de ~8.7s para **2.06s** (~4.2x mais rápido).
-* **Binário de Produção:** `souls_engine.exe` compilado em release MSVC (`lto = "thin"`, `codegen-units = 1`, `panic = "abort"`), pesando menos de 45 MB com zero dependências de DLLs externas.
+* **Catálogo MCP:** **91** Ferramentas canônicas (**8** Boot Nível 0 com `tool_dispatch` + **83** sob revelação progressiva) divididas nos namespaces (`code.*`, `context.*`, `memory.*`, `think.*`, `ops.*`, `sys.*`, `research.*`, `google.*`, `inbox.*`, `ui.*`).
+* **Persistência & Skills:** **16** tabelas SQLite `STRICT` (WAL), **17** skills canônicas no Switchboard (`18` playbooks operacionais em `.agents/skills/` espelhados para o Hermes) e sub-perfis Hermes sincronizados em PT-BR (`default`, `financas`, `hiperfocos`, `saude`).
+* **Binários de Produção:** `souls_server.exe` / `souls_engine.exe` compilados em release MSVC (`161,94 MB` na v0.9.3), com gateway OpenAI `/v1/*` + `/mcp` operando em `127.0.0.1:9123` (`Nominal`, `0 MB VRAM` para visão/áudio cotidianos).
 
 ---
 
@@ -118,7 +119,7 @@ Cruzamento do draft [`docs/reference/lembretes.txt`](file:///Z:/souls_engine/doc
 | **#6 Gateway Cloud Multi-Provedor** | Universalizar despacho de subagentes para além de OpenAI/Claude/Gemini | **GAP IDENTIFICADO** | **Milestone v0.7.0** (DeepSeek API, Groq, Together, Bedrock). |
 | **#13 Precision Dark UI & SVG Icons** | Purga de 3.070 inline styles, ícones SVG, gavetas de simuladores e eliminação de hardware fixo na UI | **CONCLUÍDO (v0.9.1)** | **Milestone v0.9.1** (Maturidade Visual, Design System Canônico, Auto-Save 400ms & Zero Layout Shift). |
 | **#12 Google Personal & Life Hub** | Workspace (Gmail/Agenda/Docs/Sheets), Gemini Notebooks UI no Dashboard, Tasks/Quick Capture, Contacts, Routes v2 e Gems | **CONCLUÍDO (v0.9.2)** | **Milestone v0.9.2** ➔ Concluído (ADR-030, 80 MCP tools, BMAD Agent Inbox com Myers Diff & Gravity Lock, Google Life Hub & Gemini Notebooks UI). |
-| **#11 Percepção Multimodal Híbrida** | AXTree O(1) + On-Demand Snapshots (Canvas/Figma) + Áudio Soberano Local na CPU i9 (0 MB VRAM) | **GAP IDENTIFICADO** | **Milestone v0.9.3** ➔ Ref.: Arquitetura Híbrida de Grounding & FinOps. |
+| **#11 Percepção Multimodal Híbrida** | AXTree O(1) + On-Demand Snapshots (Canvas/Figma) + Áudio Soberano Local na CPU i9 (0 MB VRAM) | **CONCLUÍDO (v0.9.3)** | **Milestone v0.9.3** ➔ Concluído (ADR-033, 91 MCP tools, 17ª skill `souls-multimodal-perception`, `ui_inspect`/`ui_interact`/`ui_diff`/`ui_snapshot` com SoM + SHA-256 + `EphemeralVisionRunner` sob Watchdog NVML, Áudio CPU `0 MB VRAM` PCOMP/SenseVoice/Prosódia/Kokoro->Piper->SAPI, Gateway OpenAI `/v1/audio/*`, Rapport Polivagal EMA $\alpha=0.15$ em `prefetch()`, Hermes Voice Customs e sub-aba Cockpit **Voz & Visão Híbrida**). |
 | **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **GAP IDENTIFICADO** | **Milestone v0.9.4** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
 | **#8 Souls Anthropophagy** | Ingestão mecânica de repositórios ➔ Essências ➔ Janela de Vidro (85+ colunas Google Sheets) ➔ Deep Analysis & Backlog de Implementação | **GAP IDENTIFICADO** | **Milestone v0.9.5** ➔ Ref.: `_donor/souls_mc_anthropophagy` e `Ideação Curadoria de Contexto Souls MC.md`. |
 | **#14 Revisões & Refinamentos** | Baterias de testes integrados, correções de feedback real, refinamentos de UX e novas funcionalidades pré-v1 | **BACKLOG ATIVO** | **Milestones v0.9.6 a v0.9.9** (Ciclo de Estabilização & Hardening Contínuo). |
@@ -164,9 +165,9 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.2.2      │ Alfândega Hermes + Cloud Arena 2 │ [CONCLUÍDO] ADR-032 + FinOps  │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.3 (PRÓX) │ Percepção Multimodal Híbrida     │ AXTree + On-Demand Snap + VAD │
+│ v0.9.3        │ Percepção Multimodal Híbrida     │ [CONCLUÍDO] ADR-033 + 91Tools │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.4        │ Souls Evolutive Harness (Harness)│ Cordis Kernel, Catnap Protocol│
+│ v0.9.4 (PRÓX) │ Souls Evolutive Harness (Harness)│ Cordis Kernel, Catnap Protocol│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.5        │ Souls Anthropophagy (Repo Miner) │ 85+ Colunas Google Sheets SSOT│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
@@ -515,11 +516,13 @@ Saneamento completo da integração entre **Cloud Arena** e **Hermes Agent Deskt
 
 ---
 
-### MILESTONE v0.9.3: PERCEPÇÃO MULTIMODAL HÍBRIDA & GROUNDING DE INTERFACE
+### MILESTONE v0.9.3: PERCEPÇÃO MULTIMODAL HÍBRIDA & GROUNDING DE INTERFACE — **[100% CONCLUÍDO]**
 
 > **Documentos de Referência Arquiteturais SSOT:**  
-> 📄 [Arquitetura Agente Rust Bare-Metal (Navegação e Parsing O(1)).md](file:///Z:/souls_engine/docs/reference/%5BUPDATE%5D%20%5BDEPENDENCIES%5D%20Arquitetura%20Agente%20Rust%20Bare-Metal%20(Navega%C3%A7%C3%A3o%20e%20Parsing%20O(1)).md)  
-> 📄 [ADR-029: Visão Cognitiva O(1) via Árvore de Acessibilidade (AXTree)](file:///Z:/souls_engine/docs/decisions/adrs/ADR-029-axtree-accessibility-vision.md)
+> 📄 [ADR-033: Percepção Multimodal Híbrida, Áudio Soberano PT-BR e Rapport Polivagal](file:///Z:/souls_engine/docs/decisions/adrs/ADR-033-Percepcao-Multimodal-Hibrida-Audio-Soberano-e-Rapport-Polivagal.md)  
+> 📄 [ADR-029: Visão Cognitiva O(1), Banimento Estrito de VLMs na dGPU e Serialização AXTree no Formato LEAN](file:///Z:/souls_engine/docs/decisions/adrs/ADR-029-Cognitive-Vision-O1-e-AXTree-LEAN.md)  
+> 📄 [Skill Canônica: `souls-multimodal-perception`](file:///Z:/souls_engine/.agents/skills/souls-multimodal-perception/SKILL.md)  
+> 📄 [Arquitetura Agente Rust Bare-Metal (Navegação e Parsing O(1)).md](file:///Z:/souls_engine/docs/reference/%5BUPDATE%5D%20%5BDEPENDENCIES%5D%20Arquitetura%20Agente%20Rust%20Bare-Metal%20(Navega%C3%A7%C3%A3o%20e%20Parsing%20O(1)).md)
 
 Desmistificação técnica definitiva dos domínios de **Visão de Tela** e **Processamento de Áudio**, equilibrando soberania bare-metal, latência e custo financeiro (FinOps).
 
@@ -554,6 +557,12 @@ Desmistificação técnica definitiva dos domínios de **Visão de Tela** e **Pr
 | **Privacidade da Voz** | **100% Soberana** (Apenas o texto filtrado vai para a nuvem) | **Zero Soberania** (Áudio bruto de microfone transmitido continuamente) |
 | **Barge-in / Interrupção** | **Sub-30ms** (Silero VAD local no kernel) | Depende da latência de rede e WebRTC (150–400ms) |
 | **Aprisionamento (Lock-in)**| **Zero** (Troca de cérebro a qualquer momento sem mudar áudio) | **Total** (Preso à API e regras de conteúdo da Google) |
+
+#### 3. Entregas Realizadas & Homologadas na v0.9.3 (`ADR-033` + Alfândega Grau S+)
+- **Visão Híbrida (`souls_core::vision` + `souls_inference_runtime::vision_ephemeral`):** Captura UIA Windows 11 (`powershell -STA`) em notação LEAN (`ui_inspect`), delta estrutural (`ui_diff`), captura GDI Set-of-Mark sob demanda com deduplicação SHA-256 em `vision_snapshot_ledger` (`ui_snapshot`) e `EphemeralVisionRunner` (`Qwen2.5-VL-3B-Instruct-Q4_K_M`) com trava NVML (`<= 4.200 MB` VRAM, `< 78 °C`), seleção prioritária de diretórios com `mmproj*.gguf` irmão, arquivos transitórios confinados em `Z:\souls_engine\.souls_data\vision_snapshots` e degradação determinística `Auto` sem `prompt` para `DeterministicSomOnly` (`0 MB VRAM`).
+- **Áudio Soberano PT-BR (`0 MB VRAM`, `souls_core::audio`) & Gateway OpenAI:** Pipeline vocal completo em CPU (`SILERO_VAD_STANDBY_HYSTERESIS_MS = 8_000`, `BARGE_IN_MIN_SPEECH_MS = 300`, PCOMP para conectivos abertos PT-BR, filtro SenseVoice/Whisper, prosódia Camada 3, RIFF/WAVE 24 kHz mono); cascata TTS (`Kokoro ONNX -> Piper -> Edge Neural PT-BR -> Windows SAPI Maria Desktop -> fallback Rust`) e STT (`SenseVoice ONNX -> whisper.cpp -> faster-whisper CPU int8 Systran/faster-whisper-base -> Windows Speech` sem fallback *cross-language*); gateway OpenAI (`/v1/audio/speech` e `/v1/audio/transcriptions` com suporte a `response_format="text"`) e provisionamento automático (`POST /api/v1/audio/provision` + `tools/install_souls.ps1`).
+- **Rapport Polivagal `Prefix-Cache-Safe` & Multi-Perfil Hermes (`souls_memory::rapport`, `adapters/hermes_memory_souls`, `souls_server`):** Tabela `#15 user_rapport_profile` (`EMA alpha = 0.15`, `mirroring_ratio` travado em `0.35`, 5 modos cognitivos + `auto`), `_fetch_voice_rapport_block()` apenas em `prefetch()`, sincronização multi-perfil não-destrutiva da Alfândega de Voz (`config.yaml` raiz + `profiles/*` com `.yaml.bak` e `use_gateway: false`), sub-aba SPA **Voz & Visão Híbrida** sem estilos inline, **91** ferramentas MCP (`8` Boot Level 0) e **17** skills no Switchboard.
+- **Evidência Real Verificada:** Testes limpos (`souls_core`: `88 passed`, `souls_inference_runtime`: `61 passed`, `souls_server`: `92 passed`), build release MSVC (`161,94 MB`) ativo em `127.0.0.1:9123`, download real de `Systran/faster-whisper-base` (`141,04 MB`), round-trip PT-BR real na CPU e perfis Hermes (`default`, `financas`, `hiperfocos`, `saude`) sincronizados.
 
 ---
 
@@ -939,12 +948,12 @@ flowchart TD
         HermesFinops["Ledger FinOps Real (state.db -> hermes_usage_ledger)"]
     end
 
-    subgraph M093 ["Milestone v0.9.3 — PRÓXIMA (Percepção Multimodal Híbrida)"]
-        HybridVision["AXTree O(1) + On-Demand DXGI Snapshots"]
-        SovereignAudio["Áudio Soberano Local (Silero + SenseVoice + Kokoro)"]
+    subgraph M093 ["Milestone v0.9.3 — CONCLUÍDO (Percepção Multimodal Híbrida & Rapport Polivagal)"]
+        HybridVision["AXTree O(1) + On-Demand SoM/SHA-256 + Qwen2.5-VL Watchdog"]
+        SovereignAudio["Áudio Soberano CPU (0 MB VRAM) + /v1/audio/* + Rapport Polivagal"]
     end
 
-    subgraph M094 ["Milestone v0.9.4 (Souls Evolutive Harness)"]
+    subgraph M094 ["Milestone v0.9.4 — PRÓXIMA (Souls Evolutive Harness)"]
         CordisKernel["DeepSeek Cordis Reversible Microkernel"]
         CatnapProtocol["The Cognitive Catnap Protocol (0ms Preempt)"]
         ShadowProbing["Shadow Probing (Propose-Probe-Compose)"]

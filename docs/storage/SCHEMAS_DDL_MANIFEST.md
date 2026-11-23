@@ -577,3 +577,58 @@ pub struct TelemetryBatchRecord {
 2. **PROIBIÇÃO DE MODIFICAÇÃO DE PRAGMAS:** Sob nenhuma hipótese o agente de IA deve sugerir alterar `journal_mode` de `WAL` para `DELETE` ou desativar `foreign_keys`.
 3. **PROIBIÇÃO DE INSERÇÃO DIRETA FORA DO TOKIO RUNTIME:** Qualquer I/O no SQLite ou LanceDB deve ser despachado de forma assíncrona nas threads especializadas do Tokio em `souls_memory`.
 4. **INTEGRIDADE DE CHECKSUM:** A tabela `session_checkpoints` deve conter obrigatoriamente o hash SHA-256 do payload cru gerado no gancho `on_pre_compress` do Hermes Agent para fins de auditoria forense de integridade conversacional.
+
+## 7. TABELAS DE PERCEPÇÃO MULTIMODAL E RAPPORT POLIVAGAL (`v0.9.3` / `ADR-033`)
+
+Definidas em `crates/souls_memory/src/sqlite.rs` (`CANONICAL_DDL_MANIFEST`) e operadas por `crates/souls_memory/src/rapport.rs`:
+
+### 7.1 Tabela `#15 user_rapport_profile`
+
+Armazena a modelagem linguística adaptativa (EMA $\alpha = 0.15$) e os parâmetros polivagais de cadência vocal do usuário.
+
+```sql
+-- 15. User Rapport & Polivagal Cognitive Profile (v0.9.3 / ADR-033)
+CREATE TABLE IF NOT EXISTS user_rapport_profile (
+    user_id TEXT PRIMARY KEY NOT NULL,
+    formality_score REAL NOT NULL DEFAULT 3.5 CHECK(formality_score >= 0.0 AND formality_score <= 10.0),
+    avg_sentence_length INTEGER NOT NULL DEFAULT 12 CHECK(avg_sentence_length >= 1),
+    preferred_pacing TEXT NOT NULL DEFAULT 'short_direct' CHECK(preferred_pacing IN ('short_direct', 'elaborate', 'bulleted')),
+    slang_lexicon_json TEXT NOT NULL DEFAULT '[]',
+    mirroring_ratio REAL NOT NULL DEFAULT 0.25 CHECK(mirroring_ratio >= 0.0 AND mirroring_ratio <= 0.35),
+    active_cognitive_mode TEXT NOT NULL DEFAULT 'auto' CHECK(active_cognitive_mode IN ('auto', 'hands_on', 'sparring', 'decompression', 'crisis_paralysis', 'philosophical')),
+    contemplative_base_ms INTEGER NOT NULL DEFAULT 250 CHECK(contemplative_base_ms >= 100 AND contemplative_base_ms <= 1000),
+    backchannel_enabled INTEGER NOT NULL DEFAULT 1 CHECK(backchannel_enabled IN (0, 1)),
+    last_emotion TEXT NOT NULL DEFAULT 'neutral',
+    turn_count INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL
+) STRICT;
+```
+
+### 7.2 Tabela `#16 vision_snapshot_ledger`
+
+Registra snapshots sob demanda de tela para auditoria efêmera, marcas Set-of-Mark (SoM) e deduplicação SHA-256 por sessão e janela alvo (com teto de omissão `MAX_SNAPSHOT_OMISSION_STREAK = 5`).
+
+```sql
+-- 16. Vision Snapshot Dedup & Ephemeral Audit Ledger (v0.9.3 / ADR-033)
+CREATE TABLE IF NOT EXISTS vision_snapshot_ledger (
+    snapshot_id TEXT PRIMARY KEY NOT NULL,
+    session_id TEXT NOT NULL,
+    app_name TEXT NOT NULL,
+    window_title TEXT NOT NULL,
+    sha256_hash TEXT NOT NULL,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    som_marks_count INTEGER NOT NULL DEFAULT 0,
+    escalation_reason TEXT NOT NULL,
+    screen_unchanged INTEGER NOT NULL DEFAULT 0 CHECK(screen_unchanged IN (0, 1)),
+    created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_vision_snapshot_session_target
+    ON vision_snapshot_ledger (session_id, app_name, window_title, created_at DESC);
+```
+
+### 7.3 Correspondência em Rust (`crates/souls_protocol/src/multimodal.rs`)
+
+- **`UserRapportProfileDto`:** Mapeia 1:1 a tabela `user_rapport_profile`, aplicando `clamp_mirroring_ratio` (`[0.0, 0.35]`), `CognitiveVoiceMode` (`auto`, `hands_on`, `sparring`, `decompression`, `crisis_paralysis`, `philosophical`) e `DetectedEmotionTag`.
+- **`VisualSnapshotResultDto` / `VisionEscalationReason`:** Mapeiam a auditoria e o resultado da captura sob demanda de `vision_snapshot_ledger` acompanhados dos marcadores `SomOverlayMark` e do diagnóstico `BlindSpotAssessment`.

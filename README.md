@@ -4,7 +4,7 @@
 > *Exoesqueleto Cognitivo Bare-Metal e Prótese de Função Executiva de Baixo Nível.*
 
 [![Rust](https://img.shields.io/badge/Rust-2021_Edition-orange?logo=rust)](https://www.rust-lang.org/)
-[![Version](https://img.shields.io/badge/Version-v0.5.0--Canônica-blueviolet)](#-sumário-executivo)
+[![Version](https://img.shields.io/badge/Version-v0.9.3--Canônica-blueviolet)](#-sumário-executivo)
 [![Platform](https://img.shields.io/badge/Platform-Windows_11_NT_Bare--Metal-blue?logo=windows)](https://microsoft.com)
 [![Storage](https://img.shields.io/badge/FS-Dev_Drive_ReFS_CoW-darkgreen)](https://learn.microsoft.com/windows/dev-drive/)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel_i9_+_RTX_2060m-76b900?logo=nvidia)](https://nvidia.com)
@@ -21,7 +21,7 @@
 3. [Topologia Canônica das 11 Crates](#-topologia-canônica-das-11-crates)
 4. [Governança Físico-Computacional e Silício (RTX 2060m)](#-governança-físico-computacional-e-silício-rtx-2060m)
 5. [Matriz Simbiótica com o Hermes Agent](#-matriz-simbiótica-com-o-hermes-agent)
-6. [Catálogo MCP e Revelação Progressiva (55 Ferramentas)](#-catálogo-mcp-e-revelação-progressiva-55-ferramentas)
+6. [Catálogo MCP e Revelação Progressiva (91 Ferramentas)](#-catálogo-mcp-e-revelação-progressiva-91-ferramentas)
 7. [Dashboard Web Headless Modular (ADR-012)](#-dashboard-web-headless-modular-adr-012)
 8. [Como Ligar o Souls Engine Hoje](#-como-ligar-o-souls-engine-hoje)
 9. [Como Rodar as Tools via MCP Hoje (Hermes & IDEs)](#-como-rodar-as-tools-via-mcp-hoje-hermes--ides)
@@ -146,17 +146,17 @@ graph TD
 
 | Crate | Nível | Missão Canônica Única | Tecnologias Chave |
 |---|:---:|---|---|
-| [`souls_protocol`](file:///Z:/souls_engine/crates/souls_protocol) | **0** | Contratos agnósticos, DTOs universais, envelopes JSON-RPC 2.0, erros de domínio MCP (`-32000..=-32099`) e métricas $E^3$. Zero I/O. | `serde`, `thiserror`, `arrow` |
-| [`souls_core`](file:///Z:/souls_engine/crates/souls_core) | **1** | Infraestrutura bare-metal, Block Cloning ReFS CoW Win32, leitura inteligente LEAN com auto-shrink via `tiktoken`, filtros anti-ANSI e logging estruturado. | `tokio`, `tracing`, `windows-sys`, `tiktoken` |
+| [`souls_protocol`](file:///Z:/souls_engine/crates/souls_protocol) | **0** | Contratos agnósticos, DTOs universais (incluindo `multimodal.rs`), envelopes JSON-RPC 2.0, erros de domínio MCP (`-32000..=-32099`) e métricas $E^3$. Zero I/O. | `serde`, `thiserror`, `arrow` |
+| [`souls_core`](file:///Z:/souls_engine/crates/souls_core) | **1** | Infraestrutura bare-metal, Block Cloning ReFS CoW Win32, leitura LEAN via `tiktoken`, percepção visual O(1) (`vision/`), áudio soberano PT-BR em CPU (`audio/`, `0 MB VRAM`) e logging estruturado. | `tokio`, `tracing`, `windows-sys`, `tiktoken` |
 | [`souls_ast`](file:///Z:/souls_engine/crates/souls_ast) | **2** | Análise sintática estática em memória, esqueleto desidratado (*outlines*), Myers Diff estrutural (`similar`), Frecency de commits (`gitoxide`) e parsers Tree-sitter em sandbox Wasmtime. | `tree-sitter`, `similar`, `gix`, `wasmtime` |
-| [`souls_memory`](file:///Z:/souls_engine/crates/souls_memory) | **2** | Hipocampo L3 soberano: FrankenSQLite STRICT WAL, LanceDB vetorial (0 MB VRAM), Grafo Causal LadybugDB, fusão lexical/vetorial RRF e Chyros Daemon (Langevin Decay com imunidade `STABLE`). | `sqlx`, `lancedb`, `petgraph`, `arc-swap` |
-| [`souls_inference_runtime`](file:///Z:/souls_engine/crates/souls_inference_runtime) | **2** | Execução local em silício: ONNX Runtime CPU (Tier 0), logit probing CPU via llama.cpp (Tier 0.5), CUDA dGPU (Tier 1), parser GGUF $\mathcal{O}(1)$ via `memmap2`, NVML Watchdog e JSON Response Healing determinístico. | `ort`, `nvml-wrapper`, `memmap2` |
+| [`souls_memory`](file:///Z:/souls_engine/crates/souls_memory) | **2** | Hipocampo L3 soberano: FrankenSQLite STRICT WAL (`16` tabelas), LanceDB vetorial (0 MB VRAM), Grafo LadybugDB, RRF, Chyros Daemon e Rapport Polivagal EMA (`rapport.rs`). | `sqlx`, `lancedb`, `petgraph`, `arc-swap` |
+| [`souls_inference_runtime`](file:///Z:/souls_engine/crates/souls_inference_runtime) | **2** | Execução local em silício: ONNX CPU (Tier 0), llama.cpp CPU (Tier 0.5) e CUDA dGPU (Tier 1), parser GGUF $\mathcal{O}(1)$ via `memmap2`, NVML Watchdog, VLM efêmero (`vision_ephemeral.rs`) e JSON Healing. | `ort`, `nvml-wrapper`, `memmap2` |
 | [`souls_model_router`](file:///Z:/souls_engine/crates/souls_model_router) | **3** | Roteador FinOps ParetoBandit multiobjetivo com Thompson Sampling, barreira termodinâmica $\Phi$ e telemetria atômica $\mathcal{O}(1)$ para delegação de subagentes. | `rand`, `rand_distr`, `sqlx` |
 | [`souls_llm_local_arena`](file:///Z:/souls_engine/crates/souls_llm_local_arena) | **3** | Harness de benchmark empírico local, medição de tokens/s reais sob carga e testes de rigidez sintática contra gramáticas JSON com `llguidance`. | `llguidance`, `tokio`, `sqlx` |
 | [`souls_llm_cloud_arena`](file:///Z:/souls_engine/crates/souls_llm_cloud_arena) | **3** | Ingestão diária de tarifas de nuvem, cálculo de Fronteira de Pareto e leaderboard cognitivo de 9 perfis para subagentes. | `reqwest`, `chrono`, `sqlx`, `comfy-table` |
 | [`souls_llm_inventory`](file:///Z:/souls_engine/crates/souls_llm_inventory) | **3** | Catálogo curado de modelos físicos locais GGUF, download atômico HTTP Range, validação SHA-256 e profiling de viabilidade VRAM/RAM. | `reqwest`, `sha2`, `tokio` |
 | [`souls_anthropophagy`](file:///Z:/souls_engine/crates/souls_anthropophagy) | **3** | Esteira de engenharia reversa automatizada: dissecação estática de repositórios, firewall de licenças SPDX e catálogo "The Organ Vault". | `spdx-rs`, `petgraph`, `cargo_metadata` |
-| [`souls_server`](file:///Z:/souls_engine/crates/souls_server) | **4** | Daemon bare-metal headless na porta `127.0.0.1:9123`. Serve catálogo MCP via HTTP/SSE, endpoints OpenAI-compatíveis para subagentes, telemetria REST, Graceful Shutdown em 5 fases e Web Dashboard SPA modularizado em 25 componentes zero-copy (ADR-012). | `axum`, `tower-http`, `tokio` |
+| [`souls_server`](file:///Z:/souls_engine/crates/souls_server) | **4** | Daemon bare-metal headless em `127.0.0.1:9123`: catálogo MCP (**91** tools / **17** skills Switchboard), gateways OpenAI (`/v1/chat/*`, `/v1/audio/*`), Alfândega Hermes, Google Life Hub e Web Dashboard SPA modular. | `axum`, `tower-http`, `tokio` |
 
 ---
 
@@ -213,25 +213,29 @@ Para anular o paradoxo do inchaço de contexto (*Context Bloat* — onde esquema
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                 NÍVEL 0: BOOT COMPACTO (Sempre Visível)                     │
-│  [outline] [symbol] [read] [edit] [thinking] [route_subtask] [tool_search]  │
+│                 NÍVEL 0: BOOT COMPACTO (8 Tools Visíveis)                   │
+│  [outline][symbol][read][edit][thinking][route_subtask][tool_search][dispatch]│
 └──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ Invoca 'tool_search(namespace)'
+                                       │ Invoca 'tool_search(namespace)' + 'tool_dispatch'
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                 NÍVEL 1: CATÁLOGOS DINÂMICOS SOB DEMANDA                    │
+│            NÍVEL 1: CATÁLOGOS DINÂMICOS (83 Progressivas = 91 Total)        │
 │   code.*     ──► AST Tree-sitter, Callers/Callees, Myers Diff               │
 │   context.*  ──► Compressão LEAN, CCR De/Rehydration, Multi-Read            │
 │   memory.*   ──► Grafo LadybugDB, Observações, SQLite STRICT, LanceDB       │
 │   think.*    ──► Raciocínio Socrático DAG, Sessões, Intent Probing          │
 │   ops.*      ──► Heatmap gitoxide, Impact/Blast Radius, Hardware & FinOps   │
 │   sys.*      ──► Estrutura de Diretórios, Busca Textual, Scraper Web        │
+│   research.* ──► Missões STORM, Chunker BM25 & Extração Web                 │
+│   google.*   ──► Workspace, NotebookLM, Apps Script, Forms, MinionS         │
+│   inbox.*    ──► Governança BMAD & Aprovação Segura de Ações                │
+│   ui.*       ──► Visão AXTree LEAN, SoM Snapshot & Voz Soberana PT-BR       │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Relação Canônica das 52 Garras por Namespace
+### Relação Canônica das 91 Ferramentas por Namespace
 
-- **Meta-Ferramenta:** `tool_search` (Busca esquemas por namespace ou keyword em < 1.0 ms).
+- **Meta-Ferramentas (Boot Nível 0):** `tool_search` (busca semântica por namespace/keyword) e `tool_dispatch` (gateway universal para clientes MCP estritos como o Hermes Agent).
 - **`code.*` (Cirurgia de Código & AST):**
   - `outline`: Esqueleto sintático desidratando corpos de funções (70-85% economia de tokens).
   - `symbol`: Resolução de coordenadas exatas (`file:line:col`) e escopo via Tree-sitter.
@@ -269,13 +273,12 @@ Para anular o paradoxo do inchaço de contexto (*Context Bloat* — onde esquema
   - `fetch_web` / `web_search`: Scraper HTML limpo via `reqwest` e busca sem rastreamento.
   - `repo_meta` / `routes`: Metadados git via `gix` e inspeção de rotas ativas.
 
-### As 5 Skills Canônicas de Orquestração Procedural
-As **Skills** ensinam a IA a encadear as ferramentas MCP sem desperdício de tokens:
-1. `souls-code-surgeon`: Proíbe leitura de arquivos inteiros; impõe o fluxo `outline` $\rightarrow$ `symbol` / `callers` $\rightarrow$ `delta_diff` / `edit`.
-2. `souls-context-lean`: Mede tokens com `smart_read`; se volumoso, comprime com `compress` na RAM.
-3. `souls-memory-triad`: Busca híbrida RRF (`semantic_search`), sanitiza alucinações no LadybugDB (`mem_open_nodes`) e registra fatos (`knowledge`).
-4. `souls-socratic-thinking`: Ativa o freio cognitivo `thinking` em tarefas de alta entropia.
-5. `souls-ops-finops`: Antes de refatorar, calcula o *Blast Radius* com `repo_impact` e o calor com `repo_heatmap`.
+- **`ui.*` (Percepção Multimodal Híbrida & Voz Soberana PT-BR — `0 MB VRAM`):**
+  - `ui_inspect` / `ui_interact` / `ui_diff` / `ui_snapshot`: Captura AXTree LEAN, cálculo geométrico determinístico, diff estrutural e SoM on-demand.
+  - `voice_transcribe` / `voice_synthesize` / `voice_rapport`: Pipeline PCOMP, cascata CPU PT-BR (`edge-tts` / `faster-whisper-base` / SAPI) e Rapport Polivagal EMA.
+
+### Skills Canônicas no Switchboard (`17` Skills) & Playbooks (`.agents/skills/`)
+As **Skills** ensinam a IA a encadear as ferramentas MCP sem desperdício de tokens (destaque para `souls-code-surgeon`, `souls-context-lean`, `souls-memory-triad`, `souls-socratic-thinking`, `google-life-hub` e `souls-multimodal-perception` para visão O(1) e voz PT-BR).
 
 ---
 
@@ -285,13 +288,13 @@ O Souls Engine v7 oferece observabilidade visual e governança em tempo real atr
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                   SOULS ENGINE DASHBOARD v0.5.0 (HEADLESS)                  │
+│                   SOULS ENGINE DASHBOARD v0.9.3 (HEADLESS)                  │
 ├───────────────┬─────────────────────────────────────────────────────────────┤
-│ 🎯 Overview   │ Telemetria NVML em tempo real, status SQLite, Uptime, Saúde │
-│ 🤖 Subagents  │ Roteamento L3, sessões ativas e histórico de delegações     │
-│ ⚡ Local Hub  │ Model Hub GGUF, downloads com range, arena de silício local │
-│ 🌐 Cloud Hub  │ Tarifas de nuvem diárias, leaderboard de 9 perfis cognitivos│
-│ ⚙️ Settings   │ 9 Submódulos: Brain, Tools, Reasoning, FinOps, Memory, etc. │
+│ 🎯 Cockpit    │ Overview, Voz & Visão Híbrida (1-clique), Agent Inbox, Pulse│
+│ 🌍 Life Hub   │ Google Personal Hub, Gemini Notebooks, Auto-Sync & Pulso    │
+│ 🧠 Modelos    │ Local Model Hub GGUF, Cloud Arena 2.0 & Ledger FinOps Real  │
+│ 🛠️ Operações  │ Skills & Personas, Deep Research STORM & Alfândega Hermes   │
+│ ⚙️ Ajustes    │ Brain, Voz/Visão, Contas OAuth2, Chaves & Política BMAD     │
 └───────────────┴─────────────────────────────────────────────────────────────┘
 ```
 
@@ -671,11 +674,11 @@ cargo test -p souls_server
 Antes de propor novas implementações ou alterar contratos existentes, consulte a documentação canônica:
 
 - **Manifesto Canônico:** [`docs/SOULS_CANON_MANIFEST.md`](file:///Z:/souls_engine/docs/SOULS_CANON_MANIFEST.md)
-- **Especificação das 9 Crates:** [`docs/architecture/CRATES_SPECIFICATION.md`](file:///Z:/souls_engine/docs/architecture/CRATES_SPECIFICATION.md)
-- **Contratos das 52 Ferramentas MCP:** [`docs/contracts/MCP_TOOL_CONTRACTS.md`](file:///Z:/souls_engine/docs/contracts/MCP_TOOL_CONTRACTS.md)
-- **Esquemas DDL FrankenSQLite & Arrow:** [`docs/storage/SCHEMAS_DDL_MANIFEST.md`](file:///Z:/souls_engine/docs/storage/SCHEMAS_DDL_MANIFEST.md)
+- **Especificação das 11 Crates:** [`docs/architecture/CRATES_SPECIFICATION.md`](file:///Z:/souls_engine/docs/architecture/CRATES_SPECIFICATION.md)
+- **Contratos das 91 Ferramentas MCP:** [`docs/contracts/MCP_TOOL_CONTRACTS.md`](file:///Z:/souls_engine/docs/contracts/MCP_TOOL_CONTRACTS.md)
+- **Esquemas DDL FrankenSQLite & Arrow (`16` Tabelas `STRICT`):** [`docs/storage/SCHEMAS_DDL_MANIFEST.md`](file:///Z:/souls_engine/docs/storage/SCHEMAS_DDL_MANIFEST.md)
 - **Mapa Forense do Código Legado:** [`docs/migration/DONOR_EXTRACTION_MAP.md`](file:///Z:/souls_engine/docs/migration/DONOR_EXTRACTION_MAP.md)
-- **Registros de Decisões Arquiteturais (ADRs):** [`docs/decisions/adrs/`](file:///Z:/souls_engine/docs/decisions/adrs/) (ADR-001 a ADR-006)
+- **Registros de Decisões Arquiteturais (ADRs):** [`docs/decisions/adrs/`](file:///Z:/souls_engine/docs/decisions/adrs/) (ADR-001 a ADR-033)
 
 ---
 

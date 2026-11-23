@@ -289,6 +289,47 @@ foreach ($p in $plugins) {
     }
 }
 
+# Sincronia completa das skills canônicas (.agents/skills -> %LOCALAPPDATA%\hermes\skills\souls-engine)
+$workspaceSkillsDir = "Z:\souls_engine\.agents\skills"
+$hermesSkillsDir = "$env:LOCALAPPDATA\hermes\skills\souls-engine"
+if (Test-Path $workspaceSkillsDir) {
+    if (-not (Test-Path $hermesSkillsDir)) {
+        New-Item -ItemType Directory -Path $hermesSkillsDir -Force | Out-Null
+    }
+    $syncedSkillsCount = 0
+    foreach ($skillDir in (Get-ChildItem -Path $workspaceSkillsDir -Directory)) {
+        $dstSkill = Join-Path $hermesSkillsDir $skillDir.Name
+        if (Test-Path $dstSkill) {
+            Remove-Item -Path $dstSkill -Recurse -Force
+        }
+        Copy-Item -Path $skillDir.FullName -Destination $dstSkill -Recurse -Force
+        $syncedSkillsCount++
+    }
+    Write-Host "  ✓ $syncedSkillsCount skills canônicas sincronizadas em $hermesSkillsDir." -ForegroundColor Green
+}
+
+# Provisionamento opcional automático do modelo Whisper CPU PT-BR (0 MB VRAM)
+$whisperTargetDir = "Z:\souls_engine\.souls_data\models\audio\faster-whisper-base"
+$whisperModelBin = Join-Path $whisperTargetDir "model.bin"
+if (-not (Test-Path $whisperModelBin)) {
+    $hermesPyCandidates = Get-ChildItem "$env:LOCALAPPDATA\hermes\installs\*\environments\*\venv\Scripts\python.exe" -ErrorAction SilentlyContinue
+    if ($hermesPyCandidates) {
+        $hermesPy = $hermesPyCandidates[0].FullName
+        New-Item -ItemType Directory -Path $whisperTargetDir -Force | Out-Null
+        Write-Host "  -> Baixando pesos locais Whisper Base PT-BR (0 MB VRAM) em $whisperTargetDir..." -ForegroundColor Cyan
+        try {
+            & $hermesPy -c "import sys; from huggingface_hub import snapshot_download; snapshot_download(repo_id='Systran/faster-whisper-base', local_dir=sys.argv[1])" $whisperTargetDir
+            if ($LASTEXITCODE -eq 0 -and (Test-Path $whisperModelBin)) {
+                Write-Host "  ✓ Modelo Whisper Base (CPU int8) pronto em $whisperTargetDir." -ForegroundColor Green
+            } else {
+                Write-Warning "Download automático do Whisper não concluído agora (você pode clicar em 'Baixar & Ativar Voz Local' depois no Dashboard)."
+            }
+        } catch {
+            Write-Warning "Aviso ao baixar Whisper Base: $_ (pode ativar depois via Cockpit)."
+        }
+    }
+}
+
 Write-Host "`n==========================================================" -ForegroundColor Green
 Write-Host " 🎉 INSTALAÇÃO CONCLUÍDA COM SUCESSO!                      " -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green

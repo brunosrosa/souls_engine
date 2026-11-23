@@ -152,6 +152,25 @@ class SoulsMemoryProvider(MemoryProvider):
         except Exception:
             return ""
 
+    def _fetch_voice_rapport_block(self) -> str:
+        """Fetch ephemeral voice cadence and Polivagal rapport guidance (never mutating system prompt)."""
+        try:
+            res = self._http_json("GET", "/api/v1/audio/rapport", None, timeout=0.8)
+            if not isinstance(res, dict) or res.get("status") != "success":
+                return ""
+            profile = res.get("profile") if isinstance(res.get("profile"), dict) else {}
+            mode = str(profile.get("active_cognitive_mode") or "auto").strip().lower()
+            try:
+                turn_count = int(profile.get("turn_count") or 0)
+            except (TypeError, ValueError):
+                turn_count = 0
+            note = str(res.get("ephemeral_turn_note_pt") or "").strip()
+            if (mode != "auto" or turn_count > 0) and note:
+                return f"[MODO DE VOZ & RITMO ATIVO]\n{note}"
+            return ""
+        except Exception:
+            return ""
+
     def prefetch(self, query: str = "", *, session_id: str = "") -> str:
         effective_query = (query or self._queued_query or "").strip()
         self._queued_query = None
@@ -179,9 +198,9 @@ class SoulsMemoryProvider(MemoryProvider):
                 self._last_recall_count = 0
 
         pulse_block = self._fetch_google_pulse_block()
-        if pulse_block and recall_block:
-            return f"{pulse_block}\n\n{recall_block}"
-        return pulse_block or recall_block
+        voice_block = self._fetch_voice_rapport_block()
+        blocks = [b for b in (voice_block, pulse_block, recall_block) if b]
+        return "\n\n".join(blocks)
 
     def recall_status(self) -> Optional[RecallStatus]:
         if self._last_recall_count <= 0:

@@ -54,6 +54,7 @@ Centralizar os contratos de dados agnósticos, envelopes de comunicação JSON-R
 - `dto.rs`: Data Transfer Objects universais (telemetria, métrica $E^3$, status do hardware).
 - `mcp.rs`: Estruturas do protocolo Model Context Protocol (RPC request, response, error, tool definitions).
 - `lean.rs`: Tipos de dados compactados sob a notação LEAN (representação sintética sem ruído).
+- `multimodal.rs`: Contratos puros `v0.9.3` para visão híbrida, SoM, cascata TTS/STT, PCOMP, Gateway OpenAI Audio e `UserRapportProfileDto`.
 - `error.rs`: Enumeração canônica de códigos de erro JSON-RPC e erros de serialização.
 
 #### Superfície Pública Canônica
@@ -97,6 +98,8 @@ Prover serviços bare-metal de baixo nível, inicialização do Tokio Runtime, t
 - `panic.rs`: Envoltórios `catch_unwind` assíncronos para contenção de pânicos em tarefas do Tokio.
 - `mpsc_flusher.rs`: Canal produtor-consumidor MPSC para amortização de escritas em disco (Batch Flushing de 5s).
 - `fs.rs`: Primitivos de manipulação no Dev Drive ReFS com validação de caminho contra vazamento para `C:\`.
+- `vision/`: Percepção cognitiva híbrida O(1) (`ax_tree.rs` UIA `-STA`/LEAN, `diff.rs` estrutural, `snapshot.rs` SoM + Blind-Spot + GDI `0 MB VRAM`).
+- `audio/`: Pipeline vocal PT-BR soberano em CPU (`ZERO_AUDIO_VRAM_CONSUMPTION_MB = 0`, PCOMP, SenseVoice, Camada 3, cascatas TTS/STT e provisionamento `Systran/faster-whisper-base`).
 
 #### Superfície Pública Canônica
 
@@ -176,11 +179,12 @@ Operar como o Hipocampo L3 soberano, gerenciando com exclusividade o banco relac
 #### Estrutura Canônica de Módulos (`crates/souls_memory/src/`)
 
 - `lib.rs`: Coordenação do subsistema de memória e pooling de conexões.
-- `sqlite.rs`: Pool de conexões FrankenSQLite STRICT WAL, aplicação de PRAGMAs NT e migrations DDL.
+- `sqlite.rs`: Pool de conexões FrankenSQLite STRICT WAL (`16` tabelas canônicas), aplicação de PRAGMAs NT e migrations DDL.
 - `lancedb.rs`: Camada colunar vetorial com governança de arquivos `mmap` e proteção Win32.
 - `ladybug.rs`: Grafo ontológico de dependências em memória RAM com busca em largura (BFS).
 - `chyros.rs`: Daemon assíncrono noturno executando Langevin Decay e `VACUUM INTO`.
 - `rrf.rs`: Reciprocal Rank Fusion combinando resultados BM25 (SQLite FTS5) e cosseno (LanceDB).
+- `rapport.rs`: Motor de Rapport Polivagal EMA (`user_rapport_profile`, clamping `mirroring_ratio <= 0.35`) e ledger de deduplicação SHA-256 (`vision_snapshot_ledger`).
 
 #### Superfície Pública Canônica
 
@@ -221,9 +225,10 @@ Prover a camada bare-metal de execução de silício local, gerenciando o ONNX R
 
 - `lib.rs`: Interface unificada de despacho de inferência local e alocação de tensores.
 - `onnx.rs`: Driver de inferência rápida em CPU para ModernBERT / GLiClass (Tier 0).
-- `llamacpp.rs`: Interface nativa com o backend llama.cpp para CPU (Tier 0.5) e dGPU CUDA (Tier 1).
+- `llamacpp.rs`: Interface nativa com o backend llama.cpp para CPU (Tier 0.5) e dGPU CUDA (Tier 1), com resolução dinâmica da build mais recente.
 - `gguf_mmap.rs`: Parser de cabeçalhos binários GGUF em $\mathcal{O}(1)$ via visualizações de memória virtual.
 - `nvml.rs`: Watchdog termodinâmico com amostragem a cada 500 ms de VRAM e temperatura da RTX 2060m.
+- `vision_ephemeral.rs`: Executor visual efêmero `EphemeralVisionRunner` (`Qwen2.5-VL-3B-Instruct-Q4_K_M`, seleção prioritária com `mmproj` irmão, trava NVML `<= 4.200 MB` VRAM / `< 78.0 °C` e arquivos transitórios em `.souls_data/vision_snapshots`).
 - `healing.rs`: Algoritmo determinístico baseado em pilha para correção em voo de JSONs truncados ou defeituosos.
 
 #### Superfície Pública Canônica
@@ -461,14 +466,15 @@ Atuar como o daemon executável bare-metal **100% headless** (`souls_server.exe`
 #### Estrutura Canônica de Módulos (`crates/souls_server/src/`)
 
 - `main.rs`: Ponto de entrada Win32, inicialização do Tokio Runtime bare-metal e orquestração de shutdown.
-- `routes/`: Submódulos de rotas Axum (`mcp/`, `dashboard.rs`, `inventory.rs`, `models.rs`, `telemetry.rs`, `chat.rs`).
-- `templates/`: Motor de montagem zero-copy do Dashboard SPA via macro Rust `concat!(include_str!(...))` (ADR-012):
+- `mcp/`: Catálogo de **91** ferramentas (`8` Boot Level 0 + `83` progressivas), `registry.rs`, `dispatcher.rs`, `switchboard.rs` (**17** skills) e `tools_multimodal.rs` (`ui_*` / `voice_*`).
+- `routes/`: Submódulos de rotas Axum (`dashboard.rs`, `inventory.rs`, `models.rs`, `telemetry.rs`, `chat.rs`, `vision.rs`, `audio.rs` com gateway OpenAI `/v1/audio/*` e Alfândega de Voz multi-perfil `/api/v1/hermes/voice-customs*`, além de rotas `google/*` e `inbox/*`).
+- `templates/`: Motor de montagem zero-copy do Dashboard SPA via macro Rust `concat!(include_str!(...))` (ADR-012 / ADR-013):
   - `mod.rs`: Ponto de costura estática em tempo de compilação (zero I/O em runtime).
-  - `styles.css`: Estilização pura desacoplada do DOM (~3.000 linhas).
-  - `components/`: Componentes reutilizáveis (`topbar.html`, `navigation.html`, `modals.html`).
-  - `tabs/`: Visões de nível superior (`overview.html`, `subagents.html`, `local_models.html`, `cloud_arena.html`).
-  - `settings/`: 9 submódulos atômicos de governança e configuração (`subtab_brain.html` a `subtab_raw.html`).
-  - `scripts/`: Inteligência e reatividade client-side (`dashboard.js`).
+  - `styles.css`: Design System OKLCH desacoplado do DOM (zero `style="..."` inline).
+  - `components/`: Componentes reutilizáveis (`topbar.html`, `navigation.html`, `modals.html`, `icons.svg`).
+  - `tabs/`: Visões de nível superior (`overview.html`, `subagents.html`, `local_models.html`, `cloud_arena.html`, `multimodal_hub.html`, etc.).
+  - `settings/`: Submódulos atômicos de governança e configuração (`subtab_brain.html` a `subtab_raw.html`).
+  - `scripts/`: Inteligência e reatividade client-side (`dashboard.js`, `multimodal_hub.js`, etc.).
 - `profiles.rs`: Gestão de perfis dinâmicos de subagentes e tríades cognitivas.
 - `shutdown.rs`: Protocolo ordenado de encerramento em 5 fases (Axum -> MPSC -> SQLite WAL -> LanceDB mmap -> CUDA reset).
 - `state.rs`: `AppState` compartilhado com contenção de concorrência RAII.
