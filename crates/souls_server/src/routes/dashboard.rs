@@ -267,7 +267,7 @@ async fn query_vault_empirical_summary() -> VaultEmpiricalSummary {
 
 /// Instantaneous silicon telemetry endpoint.
 pub async fn telemetry_handler(State(state): State<AppState>) -> Json<Value> {
-    let _guard = state.acquire_connection();
+    let _guard = state.acquire_passive_connection();
     let limits = read_finops_config_limits();
 
     let (
@@ -4594,11 +4594,47 @@ pub async fn system_pulse_handler(
         "Nível 1 — Inicialização Bare-Metal"
     };
 
+    let harness_fibers_active = state
+        .evolutive_harness
+        .cordis
+        .list_fibers()
+        .into_iter()
+        .filter(|f| f.active && !f.paused_by_coeffect)
+        .count();
+    let harness_tombstones_superseded = souls_memory::list_memory_tombstones(&pool, 100)
+        .await
+        .map(|items| items.into_iter().filter(|t| t.status == "superseded").count())
+        .unwrap_or(0);
+    let harness_ralph_candidates = state
+        .evolutive_harness
+        .list_ralph_candidates()
+        .into_iter()
+        .filter(|c| c.status == "quarantined")
+        .count();
+    let harness_ratings = souls_memory::list_weevolve_ratings(&pool, 50)
+        .await
+        .unwrap_or_default();
+    let harness_avg_elo = if harness_ratings.is_empty() {
+        1200.0
+    } else {
+        (harness_ratings.iter().map(|r| r.elo_rating).sum::<f64>()
+            / (harness_ratings.len() as f64)
+            * 10.0)
+            .round()
+            / 10.0
+    };
+
     Json(json!({
         "status": "success",
         "pulse": {
             "evolution_level": evolution_level,
             "evolution_score": evolution_score,
+            "evolutive_harness": {
+                "active_fibers": harness_fibers_active,
+                "tombstones_superseded": harness_tombstones_superseded,
+                "ralph_candidates": harness_ralph_candidates,
+                "avg_elo": harness_avg_elo,
+            },
             "evolution_breakdown": {
                 "silicon_pts": silicon_pts,
                 "memory_graph_pts": memory_pts,

@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use dashmap::DashMap;
 use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::visit::EdgeRef;
 use petgraph::Direction;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Row, Sqlite};
@@ -222,6 +223,41 @@ impl LadybugOntologyGraph {
         // Add to petgraph RAM
         let mut g = self.graph.write().await;
         g.add_edge(src_idx, dst_idx, edge);
+
+        Ok(())
+    }
+
+    /// Removes directed edges matching `(source_id, target_id, relationship)` from both SQLite and RAM.
+    pub async fn remove_edge_by_rel(
+        &self,
+        pool: &Pool<Sqlite>,
+        source_id: &str,
+        target_id: &str,
+        relationship: &str,
+    ) -> Result<(), MemoryError> {
+        sqlx::query(
+            "DELETE FROM ladybug_edges WHERE source_id = ?1 AND target_id = ?2 AND relationship = ?3",
+        )
+        .bind(source_id)
+        .bind(target_id)
+        .bind(relationship)
+        .execute(pool)
+        .await?;
+
+        if let (Some(src_idx), Some(dst_idx)) = (
+            self.index_map.get(source_id).map(|r| *r),
+            self.index_map.get(target_id).map(|r| *r),
+        ) {
+            let mut g = self.graph.write().await;
+            let to_remove: Vec<_> = g
+                .edges_connecting(src_idx, dst_idx)
+                .filter(|e| e.weight().relationship == relationship)
+                .map(|e| e.id())
+                .collect();
+            for edge_id in to_remove {
+                g.remove_edge(edge_id);
+            }
+        }
 
         Ok(())
     }

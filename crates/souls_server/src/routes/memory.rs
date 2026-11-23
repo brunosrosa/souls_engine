@@ -533,17 +533,32 @@ pub async fn mirror_handler(
         .mirror_hermes_write(&req.action, &req.target, effective_content, session_id, now)
         .await
     {
-        Ok(record_id) => (
-            StatusCode::OK,
-            Json(serde_json::json!({
-                "status": "success",
-                "action": req.action,
-                "target": req.target,
-                "session_id": session_id,
-                "record_id": record_id,
-                "partition": "STABLE",
-            })),
-        ),
+        Ok(record_id) => {
+            let tombstones_applied: Vec<souls_protocol::MemoryTombstoneDto> =
+                if let Some(ref rid) = record_id {
+                    let pool = state.memory.pool();
+                    souls_memory::list_memory_tombstones(&pool, 50)
+                        .await
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter(|t| t.superseded_by_memory_id == *rid && t.status == "superseded")
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "status": "success",
+                    "action": req.action,
+                    "target": req.target,
+                    "session_id": session_id,
+                    "record_id": record_id,
+                    "partition": "STABLE",
+                    "tombstones_applied": tombstones_applied,
+                })),
+            )
+        }
         Err(err) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({
@@ -602,14 +617,15 @@ pub async fn turn_handler(
         updated_at: now,
     };
 
-    match state.memory.upsert_epistemic_memory(&record).await {
-        Ok(()) => (
+    match state.memory.upsert_epistemic_memory_jit(&record).await {
+        Ok(tombstones_applied) => (
             StatusCode::OK,
             Json(serde_json::json!({
                 "status": "success",
                 "id": record_id,
                 "category": category,
                 "partition": "EVOLVING",
+                "tombstones_applied": tombstones_applied,
             })),
         ),
         Err(err) => (

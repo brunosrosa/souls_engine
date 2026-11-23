@@ -11,6 +11,7 @@
 pub mod dto;
 pub mod error;
 pub mod google;
+pub mod harness_evolve;
 pub mod lean;
 pub mod mcp;
 pub mod multimodal;
@@ -18,6 +19,7 @@ pub mod multimodal;
 pub use dto::*;
 pub use error::*;
 pub use google::*;
+pub use harness_evolve::*;
 pub use lean::*;
 pub use mcp::*;
 pub use multimodal::*;

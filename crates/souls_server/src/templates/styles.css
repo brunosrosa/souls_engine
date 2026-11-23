@@ -8434,3 +8434,8 @@
         grid-template-columns: 1fr;
       }
     }
+    .harness-stack-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }

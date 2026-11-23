@@ -49,6 +49,7 @@ pub struct AppState {
     pub local_arena: Arc<tokio::sync::Mutex<souls_llm_local_arena::ArenaRunner>>,
     pub research: Arc<crate::research_hub::ResearchIndex>,
     pub google_hub: Arc<crate::google_hub::GoogleHubService>,
+    pub evolutive_harness: Arc<crate::routes::harness::EvolutiveHarnessService>,
     active_connections: Arc<AtomicUsize>,
     start_time: Instant,
 }
@@ -72,6 +73,7 @@ impl AppState {
             local_arena: Arc::new(tokio::sync::Mutex::new(souls_llm_local_arena::ArenaRunner::new())),
             research: Arc::new(crate::research_hub::ResearchIndex::new(crate::research_hub::ResearchRoots::from_system())),
             google_hub: Arc::new(crate::google_hub::GoogleHubService::from_system()),
+            evolutive_harness: Arc::new(crate::routes::harness::EvolutiveHarnessService::from_system()),
             active_connections: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),
         }
@@ -83,9 +85,27 @@ impl AppState {
         self
     }
 
-    /// Acquires an RAII connection guard incrementing the active connections count.
+    /// Overrides the `EvolutiveHarnessService` instance for isolated unit/integration tests.
+    pub fn with_evolutive_harness(
+        mut self,
+        evolutive_harness: Arc<crate::routes::harness::EvolutiveHarnessService>,
+    ) -> Self {
+        self.evolutive_harness = evolutive_harness;
+        self
+    }
+
+    /// Acquires an RAII connection guard incrementing active connections AND signaling
+    /// real user/agent work activity (`< 1 ms` Catnap preemption).
     #[inline]
     pub fn acquire_connection(&self) -> ConnectionGuard {
+        self.evolutive_harness.notify_activity();
+        ConnectionGuard::new(Arc::clone(&self.active_connections))
+    }
+
+    /// Acquires a passive observability connection guard (health/telemetry polling)
+    /// WITHOUT resetting Catnap idle time or causing false preemption.
+    #[inline]
+    pub fn acquire_passive_connection(&self) -> ConnectionGuard {
         ConnectionGuard::new(Arc::clone(&self.active_connections))
     }
 

@@ -53,8 +53,12 @@ pub use research::{
     HtmlCleanOptions, ResearchDedupRegistry, ScoredChunk, TextChunk,
 };
 pub use harness::{
-    detect_installed_clis, AgenticCliCommand, AgenticCliInfo, AgenticCliKind,
-    AgenticHarnessDispatcher, HarnessEvent, HarnessOutput,
+    compute_lf_sha256_hex, compute_runmark_fingerprint, detect_installed_clis,
+    fold_aci_observation, is_lightweight_zero_vram_slice, is_non_idempotent_tool,
+    is_within_quiet_hours, normalize_posix_rel_path, scrub_candidate_environment,
+    AgenticCliCommand, AgenticCliInfo, AgenticCliKind, AgenticHarnessDispatcher, CatnapMonitor,
+    ConstitutionalPinVerifier, CordisMicrokernel, EffectUndoOp, HarnessEvent, HarnessOutput,
+    CATNAP_HYSTERESIS_BAND_C, CATNAP_LIGHT_SLICE_MAX_TEMP_C, SCRUB_ENV_KEYS,
 };
 pub use google_bridge::{
     DualLayerWorkspace, GoogleSessionCredentials, GoogleSessionVault, JulesMigrationRouter,

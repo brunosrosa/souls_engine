@@ -279,6 +279,50 @@ CREATE TABLE IF NOT EXISTS vision_snapshot_ledger (
 
 CREATE INDEX IF NOT EXISTS idx_vision_snapshot_session_target
     ON vision_snapshot_ledger (session_id, app_name, window_title, created_at DESC);
+
+-- 17. Epistemic Memory JIT Tombstones (v0.9.4 / ADR-034 — TencentDB Tombstone Pattern)
+CREATE TABLE IF NOT EXISTS epistemic_memory_tombstones (
+    tombstone_id TEXT PRIMARY KEY NOT NULL,
+    superseded_memory_id TEXT NOT NULL UNIQUE,
+    superseded_by_memory_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    superseded_content_preview TEXT NOT NULL,
+    new_content_preview TEXT NOT NULL,
+    reason_pt TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'superseded' CHECK(status IN ('superseded', 'restored')),
+    created_at INTEGER NOT NULL,
+    restored_at INTEGER
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_tombstones_superseded_status
+    ON epistemic_memory_tombstones (superseded_memory_id, status);
+
+-- 18. WeEvolve Bradley-Terry ELO & EMA Ratings (v0.9.4 / ADR-034)
+CREATE TABLE IF NOT EXISTS weevolve_ratings (
+    target_id TEXT PRIMARY KEY NOT NULL,
+    target_kind TEXT NOT NULL CHECK(target_kind IN ('cordis_fiber', 'skill', 'tool_guidance', 'subagent_profile')),
+    elo_rating REAL NOT NULL DEFAULT 1200.0,
+    ema_score REAL NOT NULL DEFAULT 0.5 CHECK(ema_score >= 0.0 AND ema_score <= 1.0),
+    total_matches INTEGER NOT NULL DEFAULT 0,
+    last_signal TEXT NOT NULL DEFAULT 'init',
+    updated_at INTEGER NOT NULL
+) STRICT;
+
+-- 19. Cognitive Catnap & Shadow Probing Consolidation Ledger (v0.9.4 / ADR-034)
+CREATE TABLE IF NOT EXISTS catnap_consolidation_ledger (
+    slice_id TEXT PRIMARY KEY NOT NULL,
+    slice_kind TEXT NOT NULL CHECK(slice_kind IN ('shadow_probe_ppc', 'ladybug_reconcile', 'langevin_micro_batch', 'diary_distillation', 'ralph_crystallize')),
+    runmark_fingerprint TEXT NOT NULL,
+    cursor_checkpoint TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('completed', 'preempted', 'skipped', 'failed')),
+    duration_ms REAL NOT NULL DEFAULT 0.0,
+    cost_usd REAL NOT NULL DEFAULT 0.0,
+    summary_pt TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_catnap_ledger_created
+    ON catnap_consolidation_ledger (created_at DESC);
 "#;
 
 /// Configures and bootstraps an NT-safe FrankenSQLite connection pool with required PRAGMAs.
@@ -555,6 +599,7 @@ pub async fn search_epistemic_fts5(
         SELECT id, content, category
         FROM epistemic_memories_fts
         WHERE epistemic_memories_fts MATCH ?1
+          AND id NOT IN (SELECT superseded_memory_id FROM epistemic_memory_tombstones WHERE status = 'superseded')
         LIMIT ?2
         "#,
     )
@@ -681,6 +726,7 @@ pub async fn list_epistemic_memories(
             SELECT id, session_id, category, content, partition, salience, access_count, source_ref, created_at, last_accessed_at, updated_at
             FROM epistemic_memories
             WHERE partition = ?1
+              AND id NOT IN (SELECT superseded_memory_id FROM epistemic_memory_tombstones WHERE status = 'superseded')
             ORDER BY salience DESC, updated_at DESC
             LIMIT ?2
             "#,
@@ -694,6 +740,7 @@ pub async fn list_epistemic_memories(
             r#"
             SELECT id, session_id, category, content, partition, salience, access_count, source_ref, created_at, last_accessed_at, updated_at
             FROM epistemic_memories
+            WHERE id NOT IN (SELECT superseded_memory_id FROM epistemic_memory_tombstones WHERE status = 'superseded')
             ORDER BY salience DESC, updated_at DESC
             LIMIT ?1
             "#,

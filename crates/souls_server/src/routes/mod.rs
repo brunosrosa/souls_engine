@@ -7,6 +7,7 @@ pub mod cloud;
 pub mod connections;
 pub mod dashboard;
 pub mod google;
+pub mod harness;
 pub mod health;
 pub mod inbox;
 pub mod inventory;
@@ -242,6 +243,19 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/memory/turn", post(memory::turn_handler))
         .route("/api/v1/memory/checkpoint", post(memory::checkpoint_handler))
         .route("/api/v1/memory/overview", get(memory::overview_handler))
+        // Milestone v0.9.4: Souls Evolutive Harness (Cordis, Catnap, Tombstones, WeEvolve & Ralph Loop)
+        .route("/api/v1/harness/overview", get(harness::overview_handler))
+        .route("/api/v1/harness/cues", get(harness::cues_handler))
+        .route("/api/v1/harness/catnap/config", post(harness::update_catnap_config_handler))
+        .route("/api/v1/harness/catnap/trigger", post(harness::trigger_catnap_slice_handler))
+        .route("/api/v1/harness/cordis/mount", post(harness::mount_cordis_fiber_handler))
+        .route("/api/v1/harness/cordis/dispose", post(harness::dispose_cordis_fiber_handler))
+        .route("/api/v1/harness/cordis/reactivate", post(harness::reactivate_cordis_fiber_handler))
+        .route("/api/v1/harness/tombstones/resolve", post(harness::resolve_tombstone_handler))
+        .route("/api/v1/harness/tombstones/restore", post(harness::restore_tombstone_handler))
+        .route("/api/v1/harness/ralph/crystallize", post(harness::crystallize_ralph_skill_handler))
+        .route("/api/v1/harness/ralph/approve", post(harness::approve_ralph_skill_handler))
+        .route("/api/v1/harness/weevolve/signal", post(harness::record_weevolve_signal_handler))
         // Core API Endpoints
         .route("/health", get(health::health_handler))
         .route("/v1/models", get(models::models_handler))

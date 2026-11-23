@@ -151,7 +151,8 @@ pub async fn handle_route_subtask(
             "thermodynamic_barrier_phi": decision.thermodynamic_barrier_phi,
             "rationale": decision.rationale,
             "reasoning_recommendation": decision.reasoning_recommendation,
-            "fallback_chain": fallback_chain
+            "fallback_chain": fallback_chain,
+            "evolutive_harness_cues": state.evolutive_harness.active_cues_for_task_type(task_type)
         },
         "isError": false
     }))
@@ -388,6 +389,30 @@ pub async fn handle_sub_agent(
                 .await
                 .map_err(|_| McpDomainError::InternalEnginePanic)?;
 
+            if status == souls_memory::SubAgentStatus::Failed {
+                let pool = state.memory.pool();
+                let now = chrono::Utc::now().timestamp();
+                let _ = souls_memory::record_weevolve_signal(
+                    &pool,
+                    &record.agent_id,
+                    "subagent_profile",
+                    "subagent_failed",
+                    None,
+                    now,
+                )
+                .await;
+                if let Ok(failed_count) = sqlx::query_scalar::<_, i64>(
+                    "SELECT COUNT(*) FROM subagent_sessions WHERE status = 'FAILED'",
+                )
+                .fetch_one(&*pool)
+                .await
+                {
+                    state
+                        .evolutive_harness
+                        .refresh_pending_failures(failed_count.max(0) as usize);
+                }
+            }
+
             Ok(json!({
                 "content": [{
                     "type": "text",
@@ -426,6 +451,18 @@ pub async fn handle_sub_agent(
                 )
                 .await
                 .map_err(|_| McpDomainError::InternalEnginePanic)?;
+
+            let pool = state.memory.pool();
+            let now = chrono::Utc::now().timestamp();
+            let _ = souls_memory::record_weevolve_signal(
+                &pool,
+                &record.agent_id,
+                "subagent_profile",
+                "subagent_completed",
+                None,
+                now,
+            )
+            .await;
 
             Ok(json!({
                 "content": [{
@@ -702,14 +739,21 @@ pub async fn handle_knowledge(
         updated_at: now,
     };
 
-    state.memory.upsert_epistemic_memory(&record).await.map_err(|_| McpDomainError::InternalEnginePanic)?;
+    let tombstones_applied = state
+        .memory
+        .upsert_epistemic_memory_jit(&record)
+        .await
+        .map_err(|_| McpDomainError::InternalEnginePanic)?;
 
     Ok(json!({
         "content": [{
             "type": "text",
-            "text": format!("Epistemic fact '{}' persisted successfully in partition {:?}.", record.id, record.partition)
+            "text": format!("Epistemic fact '{}' persisted successfully in partition {:?} ({} contradiction(s) resolved).", record.id, record.partition, tombstones_applied.len())
         }],
-        "structuredContent": record,
+        "structuredContent": {
+            "record": record,
+            "tombstones_applied": tombstones_applied,
+        },
         "isError": false
     }))
 }

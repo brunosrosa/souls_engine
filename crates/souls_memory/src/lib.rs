@@ -7,6 +7,7 @@
 
 pub mod chyros;
 pub mod error;
+pub mod evolve;
 pub mod ladybug;
 pub mod lancedb;
 pub mod mpsc_bridge;
@@ -29,6 +30,13 @@ use tracing::info;
 
 pub use chyros::{ChyrosDaemon, ChyrosMetabolismReport};
 pub use error::MemoryError;
+pub use evolve::{
+    apply_memory_tombstone, calculate_bradley_terry_elo, detect_and_apply_jit_tombstones,
+    list_active_tombstoned_ids, list_catnap_slices, list_memory_tombstones, list_weevolve_ratings,
+    map_signal_to_reward, record_catnap_slice, record_weevolve_signal, restore_tombstoned_memory,
+    sigmoid_reward, update_ema, DomainExperienceLibrary, WEEVOLVE_BASELINE_ELO,
+    WEEVOLVE_EMA_ALPHA, WEEVOLVE_K_FACTOR,
+};
 pub use ladybug::{LadybugOntologyGraph, OntologicalEdge, OntologicalNode};
 pub use lancedb::{get_vector_table_schema, LanceDbVectorStore, VECTOR_DIMENSION};
 pub use mpsc_bridge::{MemoryBridgeOp, MemoryMpscBridge};
@@ -216,7 +224,8 @@ impl SoulsMemoryStore {
             .await
     }
 
-    /// Mirrors a built-in Hermes memory write (`on_memory_write`) into the `STABLE` partition.
+    /// Mirrors a built-in Hermes memory write (`on_memory_write`) into the `STABLE` partition
+    /// and automatically runs JIT Tombstone conflict invalidation on newly written facts.
     pub async fn mirror_hermes_write(
         &self,
         action: &str,
@@ -226,9 +235,20 @@ impl SoulsMemoryStore {
         now_epoch_sec: i64,
     ) -> Result<Option<String>, MemoryError> {
         let pool = self.pool();
-        self.snapshots
+        let res = self
+            .snapshots
             .mirror_hermes_write(&pool, action, target, content, session_id, now_epoch_sec)
-            .await
+            .await?;
+        if let Some(ref record_id) = res {
+            if !action.eq_ignore_ascii_case("remove") && !action.eq_ignore_ascii_case("delete") {
+                if let Ok(Some(stored)) = get_epistemic_memory(&pool, record_id).await {
+                    let _ =
+                        detect_and_apply_jit_tombstones(&pool, &self.ladybug, &stored, now_epoch_sec)
+                            .await;
+                }
+            }
+        }
+        Ok(res)
     }
 
     /// Executes Hybrid RRF recall and deduplicates candidates against the session's `FrozenMemorySnapshot`,
@@ -317,13 +337,27 @@ impl SoulsMemoryStore {
         execute_read_only_query(&pool, query).await
     }
 
-    /// Upserts an epistemic memory record into the active database pool.
+    /// Upserts an epistemic memory record into the active database pool and executes
+    /// JIT Tombstone conflict resolution against superseded facts.
     pub async fn upsert_epistemic_memory(
         &self,
         record: &souls_protocol::EpistemicMemoryRecord,
     ) -> Result<(), MemoryError> {
         let pool = self.pool();
-        upsert_epistemic_memory(&pool, record).await
+        upsert_epistemic_memory(&pool, record).await?;
+        let _ = detect_and_apply_jit_tombstones(&pool, &self.ladybug, record, record.updated_at)
+            .await?;
+        Ok(())
+    }
+
+    /// Upserts an epistemic memory record and returns any JIT tombstones created.
+    pub async fn upsert_epistemic_memory_jit(
+        &self,
+        record: &souls_protocol::EpistemicMemoryRecord,
+    ) -> Result<Vec<souls_protocol::MemoryTombstoneDto>, MemoryError> {
+        let pool = self.pool();
+        upsert_epistemic_memory(&pool, record).await?;
+        detect_and_apply_jit_tombstones(&pool, &self.ladybug, record, record.updated_at).await
     }
 
     /// Retrieves an epistemic memory record from the active database pool.
@@ -372,9 +406,15 @@ impl SoulsMemoryStore {
             Vec::new()
         };
 
-        // 3. Reciprocal Rank Fusion blending
-        let empty_tombstones = std::collections::HashSet::new();
-        let (mut fused, _) = self.rrf.fuse_with_query(query, &lexical_candidates, &vector_candidates, &empty_tombstones);
+        // 3. Reciprocal Rank Fusion blending with 0ms JIT Tombstone exclusion
+        let pool = self.pool();
+        let active_tombstones = list_active_tombstoned_ids(&pool).await.unwrap_or_default();
+        let (mut fused, _) = self.rrf.fuse_with_query(
+            query,
+            &lexical_candidates,
+            &vector_candidates,
+            &active_tombstones,
+        );
         fused.truncate(limit);
         Ok(fused)
     }

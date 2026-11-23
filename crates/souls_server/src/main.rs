@@ -323,6 +323,25 @@ async fn main() -> ExitCode {
         }
     });
 
+    // 12. Cooperative Cognitive Catnap Background Loop (45s heartbeat, round-robin slices)
+    let state_for_catnap = state.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(45));
+        interval.tick().await;
+        loop {
+            interval.tick().await;
+            let cfg = state_for_catnap.evolutive_harness.catnap.get_config();
+            if cfg.enabled
+                && state_for_catnap.evolutive_harness.catnap.idle_elapsed_secs() >= cfg.min_idle_secs
+            {
+                let _ = state_for_catnap
+                    .evolutive_harness
+                    .run_catnap_micro_slice(&state_for_catnap, None, false)
+                    .await;
+            }
+        }
+    });
+
     // Record PID file for process tracking and zombie cleanup
     let pid_file = data_dir.join("souls_server.pid");
     let _ = std::fs::write(&pid_file, std::process::id().to_string());
@@ -386,8 +405,18 @@ mod tests {
             seq
         ));
 
+        let test_harness_dir = std::env::temp_dir().join(format!(
+            "souls_test_harness_v094_{}_{}_{}",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0),
+            seq
+        ));
+
         AppState::new(Arc::new(memory), Arc::new(runtime), Arc::new(router), cloud_arena)
             .with_google_hub(Arc::new(crate::google_hub::GoogleHubService::new(test_google_dir)))
+            .with_evolutive_harness(Arc::new(
+                crate::routes::harness::EvolutiveHarnessService::new_isolated(test_harness_dir),
+            ))
     }
 
     #[tokio::test]
@@ -668,7 +697,7 @@ mod tests {
         let tools_compact = val["result"]["tools"].as_array().unwrap();
         assert_eq!(tools_compact.len(), 8, "Level 0 must expose exactly 8 boot tools");
 
-        // 2. Full mode (91 tools)
+        // 2. Full mode (96 tools)
         let payload_full = serde_json::json!({
             "jsonrpc": "2.0",
             "id": 3,
@@ -690,7 +719,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 91, "Full mode must expose all 91 canonical tools (64 baseline + 19 google.* + 3 inbox.* + 5 multimodal ui.*)");
+        assert_eq!(tools_full.len(), 96, "Full mode must expose all 96 canonical tools (64 baseline + 19 google.* + 3 inbox.* + 5 multimodal ui.* + 5 evolutive harness_*)");
     }
 
     #[tokio::test]
@@ -2082,8 +2111,8 @@ model:
         let bytes_h = to_bytes(resp_health.into_body(), usize::MAX).await.unwrap();
         let json_h: serde_json::Value = serde_json::from_slice(&bytes_h).unwrap();
         assert_eq!(json_h["status"], "healthy");
-        assert_eq!(json_h["total_skills"], 17);
-        assert_eq!(json_h["total_tools"], 91);
+        assert_eq!(json_h["total_skills"], 18);
+        assert_eq!(json_h["total_tools"], 96);
 
         // 2. GET /api/v1/switchboard/skills
         let req_skills = Request::builder()
@@ -2096,7 +2125,7 @@ model:
         let bytes_s = to_bytes(resp_skills.into_body(), usize::MAX).await.unwrap();
         let json_s: serde_json::Value = serde_json::from_slice(&bytes_s).unwrap();
         assert_eq!(json_s["status"], "success");
-        assert_eq!(json_s["total"], 17);
+        assert_eq!(json_s["total"], 18);
 
         // 3. POST /api/v1/switchboard/evaluate (Code refactor query -> souls-code-surgeon)
         let eval_payload = serde_json::json!({
@@ -3463,6 +3492,7 @@ model:
             "drawer-lab-reasoning",
             "drawer-lab-router",
             "drawer-lab-fallback",
+            "drawer-lab-evolutive-harness",
         ] {
             assert!(
                 html.contains(drawer_id),
@@ -6021,9 +6051,532 @@ telegram:
             let val: serde_json::Value =
                 serde_json::from_slice(&to_bytes(resp.into_body(), usize::MAX).await.unwrap())
                     .unwrap();
-            assert_eq!(val["result"]["isError"], false, "MCP call failed: {val}");
+        assert_eq!(val["result"]["isError"], false, "MCP call failed: {val}");
         }
 
         let _ = std::fs::remove_dir_all(&test_data_dir);
+    }
+
+    #[tokio::test]
+    async fn test_v094_evolutive_harness_cordis_catnap_tombstone_and_ralph_loop() {
+        let state = create_test_state().await;
+        let harness_root = state
+            .evolutive_harness
+            .data_dir
+            .parent()
+            .unwrap()
+            .to_path_buf();
+        let google_dir = state.google_hub.data_dir.clone();
+
+        // Seed sibling TOML section to verify surgical [evolutive_harness] preservation
+        std::fs::create_dir_all(&harness_root).unwrap();
+        std::fs::write(
+            &state.evolutive_harness.config_path,
+            "[server]\nport = 9123\nhost = \"127.0.0.1\"\n",
+        )
+        .unwrap();
+
+        let app = build_router(state.clone());
+
+        // 1. Overview & c1 pin verification
+        let resp_ov = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/overview")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_ov.status(), StatusCode::OK);
+        let ov_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_ov.into_body(), usize::MAX).await.unwrap())
+                .unwrap();
+        assert_eq!(ov_json["version"], "0.9.4");
+        assert_eq!(ov_json["summary"]["pins_verified"], true);
+        assert_eq!(ov_json["slots_catalog"].as_array().unwrap().len(), 8);
+        assert_eq!(ov_json["catnap"]["config"]["min_idle_secs"], 180);
+        assert_eq!(ov_json["catnap"]["config"]["max_gpu_temp_c"], 62.0);
+        assert_eq!(ov_json["catnap"]["config"]["max_daily_budget_usd"], 0.0);
+
+        // Passive observability (/health & /api/v1/telemetry) must NOT reset Catnap idle or preempt!
+        state.evolutive_harness.catnap.set_idle_elapsed_secs_for_test(210);
+        let _ = app
+            .clone()
+            .oneshot(Request::builder().uri("/health").method("GET").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let _ = app
+            .clone()
+            .oneshot(Request::builder().uri("/api/v1/telemetry").method("GET").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert!(!state.evolutive_harness.catnap.check_preempted());
+        assert!(state.evolutive_harness.catnap.idle_elapsed_secs() >= 200);
+
+        // Query-aware cues endpoint: casual personal query receives 0 code cues; coding query receives >= 1
+        let cues_casual: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/api/v1/harness/cues?query=Qual%20minha%20agenda%20de%20amanha")
+                            .method("GET")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(cues_casual["cues"].as_array().unwrap().len(), 0);
+
+        let cues_code: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/api/v1/harness/cues?query=corrigir%20bug%20rust%20cargo")
+                            .method("GET")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(!cues_code["cues"].as_array().unwrap().is_empty());
+
+        // 2. Fail-closed protection on c1_system_prompt
+        let resp_c1 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/cordis/mount")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "slot": "c1",
+                            "title_pt": "Tentativa inválida em c1",
+                            "ephemeral_cue_text": "Alterar identidade base"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_c1.status(), StatusCode::FORBIDDEN);
+
+        // 3. Mount Cordis tactical c5 fiber & trigger 3-strike WeEvolve drift auto-rollback
+        let resp_mount = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/cordis/mount")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "fiber_id": "fib_e2e_test",
+                            "slot": "c5",
+                            "title_pt": "Preferência tática E2E",
+                            "benefit_summary_pt": "Teste de reversão automática",
+                            "ephemeral_cue_text": "Use formato enxuto para tabelas."
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_mount.status(), StatusCode::OK);
+
+        let mut auto_reverted = false;
+        for _ in 0..3 {
+            let resp_sig = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri("/api/v1/harness/weevolve/signal")
+                        .method("POST")
+                        .header("content-type", "application/json")
+                        .body(Body::from(
+                            serde_json::json!({
+                                "target_id": "fib_e2e_test",
+                                "target_kind": "cordis_fiber",
+                                "signal": "compilation_failure"
+                            })
+                            .to_string(),
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(resp_sig.status(), StatusCode::OK);
+            let sig_json: serde_json::Value =
+                serde_json::from_slice(&to_bytes(resp_sig.into_body(), usize::MAX).await.unwrap())
+                    .unwrap();
+            if sig_json["auto_rollback"].is_object() {
+                assert_eq!(sig_json["auto_rollback"]["restored_cleanly"], true);
+                auto_reverted = true;
+            }
+        }
+        assert!(auto_reverted, "3 negative WeEvolve signals must auto-rollback Cordis fiber");
+
+        // 4. Surgical TOML config update + Quiet Hours toggle
+        let resp_cfg = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/catnap/config")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "min_idle_secs": 240,
+                            "max_gpu_temp_c": 49.0,
+                            "max_daily_budget_usd": 0.0,
+                            "quiet_hours_enabled": false
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_cfg.status(), StatusCode::OK);
+        let written_toml = std::fs::read_to_string(&state.evolutive_harness.config_path).unwrap();
+        assert!(written_toml.contains("[server]\nport = 9123"));
+        assert!(written_toml.contains("[evolutive_harness]"));
+        assert!(written_toml.contains("min_idle_secs = 240"));
+        assert!(!written_toml.contains("\r\n"), "TOML must stay pure LF");
+
+        // 5. Catnap cooperative micro-slice + < 1 ms preemption check
+        let resp_catnap = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/catnap/trigger")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "slice_kind": "shadow_probe_ppc",
+                            "force_manual": true
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_catnap.status(), StatusCode::OK);
+        let catnap_json: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_catnap.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(catnap_json["status"], "completed");
+        assert_eq!(catnap_json["slice"]["cost_usd"], 0.0);
+
+        state.evolutive_harness.notify_activity();
+        assert!(state.evolutive_harness.catnap.check_preempted());
+
+        // 6. Tombstone JIT on contradictory memory + 1-click restore
+        let mem1 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/memory/mirror")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "action": "add",
+                            "target": "memory",
+                            "content": "editor_preferido: neovim no terminal",
+                            "session_id": "sess_e2e_v094"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(mem1.status(), StatusCode::OK);
+
+        let mem2 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/memory/mirror")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "action": "add",
+                            "target": "memory",
+                            "content": "editor_preferido: vscode com extensoes rust",
+                            "session_id": "sess_e2e_v094"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(mem2.status(), StatusCode::OK);
+        let mem2_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(mem2.into_body(), usize::MAX).await.unwrap())
+                .unwrap();
+        let tombstones_applied = mem2_json["tombstones_applied"].as_array().unwrap();
+        assert!(!tombstones_applied.is_empty(), "Mirror write must apply JIT tombstone on key override");
+        let tomb_id = tombstones_applied[0]["tombstone_id"].as_str().unwrap();
+
+        let resp_restore = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/tombstones/restore")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "tombstone_id": tomb_id }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_restore.status(), StatusCode::OK);
+        let restore_json: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_restore.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(restore_json["tombstone"]["status"], "restored");
+
+        // 7. Ralph Loop crystallization -> Quarantine LF SKILL.md
+        let resp_ralph = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/ralph/crystallize")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "title_pt": "Limpeza preventiva antes de build release",
+                            "domain": "ops",
+                            "problem_pattern_pt": "Linkagem falha por pouco espaço temporário no disco.",
+                            "resolution_playbook": "1. Verifique espaço livre em Z:.\n2. Limpe incremental antigo.\n3. Execute cargo build --release."
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_ralph.status(), StatusCode::OK);
+        let ralph_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(resp_ralph.into_body(), usize::MAX).await.unwrap())
+                .unwrap();
+        let slug = ralph_json["candidate"]["slug"].as_str().unwrap();
+        let q_skill_path = harness_root
+            .join("skills_quarantine")
+            .join(slug)
+            .join("SKILL.md");
+        assert!(q_skill_path.is_file(), "Quarantined SKILL.md must exist");
+        assert!(!std::fs::read_to_string(&q_skill_path).unwrap().contains("\r\n"));
+
+        // 7b. 1-click Ralph approval promotes isolated skill cleanly & updates status
+        let resp_approve = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/ralph/approve")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "slug": slug }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_approve.status(), StatusCode::OK);
+        let approved_json: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_approve.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(approved_json["status"], "ok");
+        assert!(state
+            .evolutive_harness
+            .data_dir
+            .join("approved_skills")
+            .join(slug)
+            .join("SKILL.md")
+            .is_file());
+
+        // 7c. Reactivate disposed Cordis fiber & verify cordis_fibers.json persisted cleanly
+        let resp_reactivate = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/cordis/reactivate")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "fiber_id": "fib_e2e_test" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_reactivate.status(), StatusCode::OK);
+        let react_json: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_reactivate.into_body(), usize::MAX)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(react_json["fiber"]["active"], true);
+        assert!(state.evolutive_harness.data_dir.join("cordis_fibers.json").is_file());
+
+        // 8. MCP Switchboard (18 skills) & 5 harness_* tools via tool_dispatch
+        let sw_resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/switchboard/evaluate")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "query": "catnap tombstone cordis",
+                            "top_k": 5
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(sw_resp.status(), StatusCode::OK);
+        let sw_body = String::from_utf8(
+            to_bytes(sw_resp.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
+        .unwrap();
+        assert!(sw_body.contains("souls-evolutive-harness"));
+        assert_eq!(crate::mcp::switchboard::CANONICAL_SKILLS.len(), 18);
+
+        // Mount one fiber via API so harness_cordis_rollback has a target to dispose
+        let _ = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/cordis/mount")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "fiber_id": "fib_mcp_rollback_e2e",
+                            "slot": "c8",
+                            "title_pt": "Hook temporário MCP",
+                            "ephemeral_cue_text": "Prefira saídas estruturadas."
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let mcp_calls = [
+            serde_json::json!({
+                "jsonrpc": "2.0", "id": 941, "method": "tools/call",
+                "params": { "name": "tool_dispatch", "arguments": { "tool": "harness_status", "arguments": { "include_index": true } } }
+            }),
+            serde_json::json!({
+                "jsonrpc": "2.0", "id": 942, "method": "tools/call",
+                "params": { "name": "tool_dispatch", "arguments": { "tool": "harness_catnap_pulse", "arguments": { "slice_kind": "ladybug_reconcile", "force_manual": true } } }
+            }),
+            serde_json::json!({
+                "jsonrpc": "2.0", "id": 943, "method": "tools/call",
+                "params": { "name": "tool_dispatch", "arguments": { "tool": "harness_cordis_rollback", "arguments": { "fiber_id": "fib_mcp_rollback_e2e" } } }
+            }),
+            serde_json::json!({
+                "jsonrpc": "2.0", "id": 944, "method": "tools/call",
+                "params": { "name": "tool_dispatch", "arguments": { "tool": "harness_tombstone_resolve", "arguments": { "action": "list", "limit": 10 } } }
+            }),
+            serde_json::json!({
+                "jsonrpc": "2.0", "id": 945, "method": "tools/call",
+                "params": { "name": "tool_dispatch", "arguments": {
+                    "tool": "harness_ralph_crystallize",
+                    "arguments": {
+                        "title_pt": "Validação de caminhos relativos POSIX",
+                        "domain": "code",
+                        "problem_pattern_pt": "Separadores invertidos no Windows quebram chaves da árvore.",
+                        "resolution_playbook": "1. Normalize barras invertidas.\n2. Rejeite prefixos absolutos."
+                    }
+                } }
+            }),
+        ];
+
+        for payload in mcp_calls {
+            let resp = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri("/mcp")
+                        .method("POST")
+                        .header("content-type", "application/json")
+                        .body(Body::from(payload.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let val: serde_json::Value =
+                serde_json::from_slice(&to_bytes(resp.into_body(), usize::MAX).await.unwrap())
+                    .unwrap();
+            assert_eq!(val["result"]["isError"], false, "MCP call failed: {val}");
+        }
+
+        // 9. UI Hygiene Audit (zero inline styles, zero raw emojis, version v0.9.4)
+        let ev_html = include_str!("templates/tabs/evolutive_harness.html");
+        let ev_js = include_str!("templates/scripts/evolutive_harness.js");
+        assert!(!ev_html.contains("style=\""), "Zero inline style= permitted");
+        assert!(!ev_js.contains("style=\""), "Zero inline style= permitted in JS");
+        assert!(crate::templates::DASHBOARD_HTML.contains("(v0.9.4)"));
+        assert!(crate::templates::DASHBOARD_HTML.contains("tab-evolutive-harness"));
+        assert!(crate::templates::DASHBOARD_HTML.contains("drawer-lab-evolutive-harness"));
+        assert!(crate::templates::DASHBOARD_HTML.contains("96 Ferramentas MCP Nativas"));
+
+        for text in [ev_html, ev_js] {
+            for ch in text.chars() {
+                assert!(
+                    (ch as u32) < 0x1F300,
+                    "Raw Unicode emoji forbidden in UI: '{ch}'"
+                );
+            }
+        }
+
+        let _ = std::fs::remove_dir_all(&harness_root);
+        let _ = std::fs::remove_dir_all(&google_dir);
     }
 }

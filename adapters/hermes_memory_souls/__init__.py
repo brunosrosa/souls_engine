@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional
 
@@ -171,6 +172,27 @@ class SoulsMemoryProvider(MemoryProvider):
         except Exception:
             return ""
 
+    def _fetch_evolutive_harness_block(self, query: str = "") -> str:
+        """Fetch query-aware ephemeral Cordis tactical cues & c1 alert (never mutating system prompt)."""
+        q_clean = (query or "").strip()
+        if not q_clean:
+            return ""
+        try:
+            encoded_q = urllib.parse.quote(q_clean, safe="")
+            res = self._http_json("GET", f"/api/v1/harness/cues?query={encoded_q}", None, timeout=0.5)
+            if not isinstance(res, dict) or res.get("status") != "ok":
+                return ""
+            pins_ok = res.get("pins_verified", True)
+            raw_cues = res.get("cues") or []
+            cues = [str(c).strip() for c in raw_cues if str(c).strip()]
+            if not pins_ok:
+                cues.insert(0, "- [ALERTA CRÍTICO c1] Verificação SHA-256 constitucional falhou; suspenda mutações automatizadas.")
+            if not cues:
+                return ""
+            return "[SOULS EVOLUTIVE HARNESS — AJUSTES TÁTICOS ATIVOS]\n" + "\n".join(cues[:5])
+        except Exception:
+            return ""
+
     def prefetch(self, query: str = "", *, session_id: str = "") -> str:
         effective_query = (query or self._queued_query or "").strip()
         self._queued_query = None
@@ -199,7 +221,8 @@ class SoulsMemoryProvider(MemoryProvider):
 
         pulse_block = self._fetch_google_pulse_block()
         voice_block = self._fetch_voice_rapport_block()
-        blocks = [b for b in (voice_block, pulse_block, recall_block) if b]
+        harness_block = self._fetch_evolutive_harness_block(effective_query)
+        blocks = [b for b in (voice_block, harness_block, pulse_block, recall_block) if b]
         return "\n\n".join(blocks)
 
     def recall_status(self) -> Optional[RecallStatus]:

@@ -611,3 +611,138 @@ fn test_user_rapport_profile_default_and_sanitize() {
     assert_eq!(dirty.mirroring_ratio, 0.0);
     assert_eq!(dirty.contemplative_base_ms, 1000);
 }
+
+#[test]
+fn test_v094_harness_evolve_dtos_and_slots_roundtrip() {
+    use souls_protocol::harness_evolve::{
+        CatnapConfigDto, CatnapSliceRecordDto, CatnapStateDto, ConstitutionalPinStatusDto,
+        CordisFiberDto, CordisRollbackReportDto, DomainExperienceEntryDto, HarnessComponentSlot,
+        MemoryTombstoneDto, RalphSkillCandidateDto, WeEvolveRatingDto,
+    };
+
+    assert_eq!(HarnessComponentSlot::all().len(), 8);
+    assert!(HarnessComponentSlot::C1SystemPrompt.is_constitutionally_pinned());
+    assert!(!HarnessComponentSlot::C4Skills.is_constitutionally_pinned());
+    assert_eq!(
+        HarnessComponentSlot::from_str_lossy("c5"),
+        Some(HarnessComponentSlot::C5ToolGuidance)
+    );
+    assert_eq!(HarnessComponentSlot::C8PluginsHooks.as_code(), "c8");
+
+    let cfg = CatnapConfigDto::default();
+    assert!(cfg.enabled);
+    assert_eq!(cfg.min_idle_secs, 180);
+    assert_eq!(cfg.max_gpu_temp_c, 62.0);
+    assert_eq!(cfg.max_daily_budget_usd, 0.0);
+
+    let fiber = CordisFiberDto {
+        fiber_id: "fib_01".to_string(),
+        slot: HarnessComponentSlot::C5ToolGuidance,
+        title_pt: "Preferir esqueleto antes de editar".to_string(),
+        benefit_summary_pt: "Economiza 75% de tokens".to_string(),
+        ephemeral_cue_text: "Use outline antes de read_file".to_string(),
+        target_task_type: Some("coding".to_string()),
+        coeffect_dependencies: vec!["local_llamacpp".to_string()],
+        active: true,
+        paused_by_coeffect: false,
+        undo_operations_count: 2,
+        elo_rating: 1216.0,
+        ema_score: 0.56,
+        drift_streak: 0,
+        created_at: 1795440000,
+    };
+    let json_fiber = serde_json::to_string(&fiber).unwrap();
+    let de_fiber: CordisFiberDto = serde_json::from_str(&json_fiber).unwrap();
+    assert_eq!(fiber, de_fiber);
+
+    let pin = ConstitutionalPinStatusDto {
+        file_path_posix: "AGENTS.md".to_string(),
+        expected_sha256: "abc".to_string(),
+        actual_sha256: "abc".to_string(),
+        verified: true,
+        fail_closed_triggered: false,
+        checked_at: 1795440000,
+    };
+    let rollback = CordisRollbackReportDto {
+        fiber_id: "fib_01".to_string(),
+        reverted_operations: vec!["op2".to_string(), "op1".to_string()],
+        elapsed_us: 42,
+        restored_cleanly: true,
+    };
+    let state = CatnapStateDto {
+        state: "standby".to_string(),
+        idle_elapsed_secs: 10,
+        last_preemption_latency_ms: 0.2,
+        slices_completed_today: 1,
+        spent_today_usd: 0.0,
+        last_cursor_checkpoint: "cur_1".to_string(),
+        pending_failed_trajectories: 0,
+        config: cfg,
+    };
+    let slice = CatnapSliceRecordDto {
+        slice_id: "sl_1".to_string(),
+        slice_kind: "shadow_probe_ppc".to_string(),
+        runmark_fingerprint: "fp_1".to_string(),
+        cursor_checkpoint: "cur_1".to_string(),
+        status: "completed".to_string(),
+        duration_ms: 12.5,
+        cost_usd: 0.0,
+        summary_pt: "Sondagem sem regressões".to_string(),
+        created_at: 1795440000,
+    };
+    let tomb = MemoryTombstoneDto {
+        tombstone_id: "tmb_1".to_string(),
+        superseded_memory_id: "m_old".to_string(),
+        superseded_by_memory_id: "m_new".to_string(),
+        category: "architecture".to_string(),
+        superseded_content_preview: "Usar X".to_string(),
+        new_content_preview: "Substituir X por Y".to_string(),
+        reason_pt: "Decisão substituída em tempo real".to_string(),
+        status: "superseded".to_string(),
+        created_at: 1795440000,
+        restored_at: None,
+    };
+    let rating = WeEvolveRatingDto {
+        target_id: "fib_01".to_string(),
+        target_kind: "cordis_fiber".to_string(),
+        elo_rating: 1216.0,
+        ema_score: 0.56,
+        total_matches: 1,
+        last_signal: "test_success".to_string(),
+        updated_at: 1795440000,
+    };
+    let ralph = RalphSkillCandidateDto {
+        candidate_id: "ralph_1".to_string(),
+        slug: "fix-lock-win32".to_string(),
+        title_pt: "Correção de Lock Win32".to_string(),
+        source_session_id: "sess_1".to_string(),
+        problem_pattern_pt: "Erro 32 em SQLite".to_string(),
+        solution_summary_pt: "Aplicar WAL + busy_timeout".to_string(),
+        e3_score: 0.88,
+        elo_rating: 1220.0,
+        quarantine_path: ".souls_data/skills_hub/quarantine/fix-lock-win32/SKILL.md".to_string(),
+        diff_preview: "+ # Fix Lock".to_string(),
+        status: "quarantined".to_string(),
+        created_at: 1795440000,
+    };
+    let exp = DomainExperienceEntryDto {
+        episode_id: "ep_1".to_string(),
+        domain_tag: "rust-bare-metal".to_string(),
+        cue_pattern: "win32 file lock".to_string(),
+        always_on_chars: 420,
+        skills_count: 1,
+        subagents_count: 1,
+        scripts_count: 0,
+        hooks_count: 1,
+        runmark_fingerprint: "fp_1".to_string(),
+        experience_summary_pt: "Solução determinística validada".to_string(),
+        created_at: 1795440000,
+    };
+    assert!(pin.verified && rollback.restored_cleanly);
+    assert_eq!(state.state, "standby");
+    assert_eq!(slice.cost_usd, 0.0);
+    assert_eq!(tomb.status, "superseded");
+    assert_eq!(rating.elo_rating, 1216.0);
+    assert_eq!(ralph.status, "quarantined");
+    assert_eq!(exp.always_on_chars, 420);
+}

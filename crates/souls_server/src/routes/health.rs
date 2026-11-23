@@ -34,7 +34,7 @@ pub struct HealthResponse {
 
 /// GET /health handler.
 pub async fn health_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let _guard = state.acquire_connection();
+    let _guard = state.acquire_passive_connection();
 
     // 1. Query Hardware Watchdog snapshot
     let (vram_free_mb, vram_total_mb, gpu_temp_c, zone_str, barrier_phi) = {

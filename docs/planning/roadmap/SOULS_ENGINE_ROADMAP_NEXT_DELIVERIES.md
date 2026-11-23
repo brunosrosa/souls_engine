@@ -1,7 +1,7 @@
 # SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md — Roadmap Canônico de Entregas & Evolução Rumo à v1.0
 
 > **STATUS DO DOCUMENTO:** CANÔNICO & VINCULANTE (DOCS-AS-GUARDRAILS)
-> **VERSÃO CONSOLIDADA:** v0.9.3 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
+> **VERSÃO CONSOLIDADA:** v0.9.4 (Novembro/2026) ➔ Meta Final: v1.0.0 Real
 > **ARQUITETURA:** 11 Crates Canônicas Bare-Metal (Rust/Tokio) • Loopback HTTP/SSE `127.0.0.1:9123`  
 > **SIMBIOSE:** Hermes Agent Desktop (Python 3.11) + Antigravity CLI + Web Dashboard SPA  
 > **SSOT DE DADOS:** `Z:\souls_engine\.souls_data\db\souls_heuristic_vault.db` (FrankenSQLite STRICT WAL)
@@ -96,12 +96,13 @@ Até a consolidação da **Milestone v0.6.0**, todo o ciclo fundacional de infra
 | **Milestone v0.9.2.2** | **Alfândega Hermes ↔ Souls, Cloud Arena 2.0 & Ledger FinOps Real** | **100% CONCLUÍDO** | **v0.9.2.2 Oficial (ADR-032 / `version = "0.9.2+2"`):** Normalização estrita de slugs e rotas canônicas do Hermes Desktop (`nous`, `openrouter`, `custom`, `deepseek`, `anthropic`, `openai-api`, `gemini`, `copilot`), limpeza de `context_length` órfão, sincronização multi-perfil (`profiles/*`), destravamento de sessões presas em fallback no `state.db`, toggle `moa.enabled` e sincronia não-destrutiva de `hermes.desktop.favorite-models` (`ui-preferences.json`); ingestão de modelos gratuitos `:free` ($0) + OpenRouter exclusivos sem colisão de variantes (`Pro`/`Flash`/`Flex`); rebalanceamento dinâmico de Pareto (Pódio/Tabela/`.sort()`), filtros **`Nous Portal` (padrão) → `OpenRouter` → Gateways Ativas → `Gratuitos ($0)` → `Todos`**, coluna `Usar` após `Status`, modal de aplicação com pré-voo OAuth/API Key inline 1-clique e simulador mensal; **Ledger FinOps Real (`hermes_usage_ledger`)** via `?mode=ro` sobre `state.db` + 3 novas rotas REST (`/api/v1/hermes/customs`, `/customs/repair`, `/api/v1/cloud/finops`). |
 | **Milestone v0.9.2+3** | **Despacho Universal `tool_dispatch`, Inferência Física & Scanner `llama.cpp`** | **100% CONCLUÍDO** | **v0.9.2+3 (`version = "0.9.2+3"`):** Meta-ferramenta `tool_dispatch`/`dispatch` promovida ao Boot Level 0 (**8** tools visíveis no handshake estático de clientes como Hermes + trava `-32602` de recursão, elevando o catálogo para **86** ferramentas canônicas); extirpação total de mocks em `/v1/chat/completions`; scanner numérico dinâmico de builds CUDA `llama.cpp` (`resolve_latest_llamacpp_binary`). |
 | **Milestone v0.9.3** | **Percepção Multimodal Híbrida, Áudio Soberano PT-BR & Rapport Polivagal** | **100% CONCLUÍDO** | **v0.9.3 Oficial (ADR-033 / `version = "0.9.3"` — Alfândega Grau S+):** Visão AXTree LEAN Windows UIA (`-STA`) + Diff estrutural + Snapshot On-Demand Set-of-Mark (`vision_snapshot_ledger` SHA-256) + `EphemeralVisionRunner` (`Qwen2.5-VL-3B` priorizando `mmproj` irmão e `Auto` sem prompt a `0 MB VRAM`); Áudio Soberano PT-BR em CPU (`ZERO_AUDIO_VRAM_CONSUMPTION_MB = 0`, Silero VAD + PCOMP, SenseVoice + filtro de alucinação, Camada 3 prosódia), cascatas reais TTS (`Kokoro -> Piper -> Edge Neural PT-BR -> Windows SAPI Maria`) e STT (`SenseVoice -> whisper.cpp -> faster-whisper CPU int8 Systran/faster-whisper-base 1-clique -> Windows Speech estrito sem fallback cross-language`), gateway OpenAI (`/v1/audio/speech`, `/v1/audio/transcriptions` c/ `response_format="text"`), Rapport Polivagal EMA (`user_rapport_profile` + `_fetch_voice_rapport_block` `prefix-cache-safe`), Alfândega de Voz multi-perfil (`config.yaml` + `profiles/*` + `.yaml.bak`), **91** ferramentas MCP / **17** skills Switchboard (`souls-multimodal-perception`), sub-aba **Voz & Visão Híbrida** no Cockpit e homologação E2E ao vivo em PT-BR (`88` core / `61` inference / `92` server PASS). |
+| **Milestone v0.9.4** | **Souls Evolutive Harness (Cordis, Catnap, Tombstones & The Ralph Loop)** | **100% CONCLUÍDO** | **v0.9.4 Oficial (ADR-034 / `version = "0.9.4"` — Grau S+):** Pinagem SHA-256 LF (*fail-closed*, cache 30s) sobre regras constitucionais `c1` (`AGENTS.md`, `SOUL.md`), normalização estrita POSIX `/` e higienização `SCRUB_ENV`; **Microkernel Reversível DeepSeek Cordis** (`c2`/`c5`/`c7`/`c8` em pilha LIFO `< 1 ms`, reativação 1-clique, persistência `cordis_fibers.json`, coefeitos reativos e guarda Split-Brain em `drift_streak >= 3 || ema < 0.40`) com injeção *prefix-cache-safe* **contextual à intenção** via `/api/v1/harness/cues` em `prefetch()` e `route_subtask`; **Cognitive Catnap Protocol** (loop cooperativo `45s` round-robin, idle `>= 180s` isolado de polling passivo, GPU `<= 62.0°C` com histerese `+5.0°C` e `<= 68.0°C` em fatias `0 MB VRAM`, `0` requisições, preempção `< 1 ms`, `$0.00` padrão, *Quiet Hours* configurável, backoff isolado e `runmark.fingerprint`); **Tombstones Lógicos JIT** (`epistemic_memory_tombstones` com guarda anti-falso-positivo `>= 2` tokens + aresta `conflicts_with` no `LadybugDB` removida ao restaurar sem apagar `STABLE`), ranking **WeEvolve Bradley-Terry ELO/EMA** (`weevolve_ratings`), **Domain Experience Library** (`EXPERIENCE.md` dedup + `INDEX.md`) e **The Ralph Loop -> Quarentena & Aprovação 1-Clique** (Zero-Trust + Myers Diff); **96** ferramentas MCP (`5` novas `harness_*`) / **18** skills Switchboard (`souls-evolutive-harness`), **19** tabelas SQLite `STRICT`, **12** rotas `/api/v1/harness/*` e sub-aba **Auto-Evolução & Aprendizado** sob Pilar Agentes (0 estilos inline, 0 emojis crus). |
 
-### 2.2 Inventário de Ativos Consolidados na v0.9.3
+### 2.2 Inventário de Ativos Consolidados na v0.9.4
 * **Topologia de Crates:** 11 Crates canônicas estritamente sincronizadas via `[workspace.dependencies]`.
-* **Catálogo MCP:** **91** Ferramentas canônicas (**8** Boot Nível 0 com `tool_dispatch` + **83** sob revelação progressiva) divididas nos namespaces (`code.*`, `context.*`, `memory.*`, `think.*`, `ops.*`, `sys.*`, `research.*`, `google.*`, `inbox.*`, `ui.*`).
-* **Persistência & Skills:** **16** tabelas SQLite `STRICT` (WAL), **17** skills canônicas no Switchboard (`18` playbooks operacionais em `.agents/skills/` espelhados para o Hermes) e sub-perfis Hermes sincronizados em PT-BR (`default`, `financas`, `hiperfocos`, `saude`).
-* **Binários de Produção:** `souls_server.exe` / `souls_engine.exe` compilados em release MSVC (`161,94 MB` na v0.9.3), com gateway OpenAI `/v1/*` + `/mcp` operando em `127.0.0.1:9123` (`Nominal`, `0 MB VRAM` para visão/áudio cotidianos).
+* **Catálogo MCP:** **96** Ferramentas canônicas (**8** Boot Nível 0 com `tool_dispatch` + **88** sob revelação progressiva) divididas nos namespaces (`code.*`, `context.*`, `memory.*`, `think.*`, `ops.*`, `sys.*`, `research.*`, `google.*`, `inbox.*`, `ui.*`, `harness_*`).
+* **Persistência & Skills:** **19** tabelas SQLite `STRICT` (WAL), **18** skills canônicas no Switchboard (`19` playbooks operacionais em `.agents/skills/` espelhados para o Hermes) e sub-perfis Hermes sincronizados em PT-BR (`default`, `financas`, `hiperfocos`, `saude`).
+* **Binários de Produção:** `souls_server.exe` / `souls_engine.exe` compilados em release MSVC, com gateway OpenAI `/v1/*` + `/mcp` + `/api/v1/harness/*` operando em `127.0.0.1:9123` (`Nominal`).
 
 ---
 
@@ -120,7 +121,7 @@ Cruzamento do draft [`docs/reference/lembretes.txt`](file:///Z:/souls_engine/doc
 | **#13 Precision Dark UI & SVG Icons** | Purga de 3.070 inline styles, ícones SVG, gavetas de simuladores e eliminação de hardware fixo na UI | **CONCLUÍDO (v0.9.1)** | **Milestone v0.9.1** (Maturidade Visual, Design System Canônico, Auto-Save 400ms & Zero Layout Shift). |
 | **#12 Google Personal & Life Hub** | Workspace (Gmail/Agenda/Docs/Sheets), Gemini Notebooks UI no Dashboard, Tasks/Quick Capture, Contacts, Routes v2 e Gems | **CONCLUÍDO (v0.9.2)** | **Milestone v0.9.2** ➔ Concluído (ADR-030, 80 MCP tools, BMAD Agent Inbox com Myers Diff & Gravity Lock, Google Life Hub & Gemini Notebooks UI). |
 | **#11 Percepção Multimodal Híbrida** | AXTree O(1) + On-Demand Snapshots (Canvas/Figma) + Áudio Soberano Local na CPU i9 (0 MB VRAM) | **CONCLUÍDO (v0.9.3)** | **Milestone v0.9.3** ➔ Concluído (ADR-033, 91 MCP tools, 17ª skill `souls-multimodal-perception`, `ui_inspect`/`ui_interact`/`ui_diff`/`ui_snapshot` com SoM + SHA-256 + `EphemeralVisionRunner` sob Watchdog NVML, Áudio CPU `0 MB VRAM` PCOMP/SenseVoice/Prosódia/Kokoro->Piper->SAPI, Gateway OpenAI `/v1/audio/*`, Rapport Polivagal EMA $\alpha=0.15$ em `prefetch()`, Hermes Voice Customs e sub-aba Cockpit **Voz & Visão Híbrida**). |
-| **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **GAP IDENTIFICADO** | **Milestone v0.9.4** ➔ Ref.: [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md). |
+| **#10 Souls Evolutive Harness** | Auto-evolução contínua, Cordis Microkernel, 8 componentes (`c1`–`c8`) e Catnap Protocol | **CONCLUÍDO (v0.9.4)** | **Milestone v0.9.4** ➔ Concluído ([ADR-034](file:///Z:/souls_engine/docs/decisions/adrs/ADR-034-Souls-Evolutive-Harness-Cordis-Catnap-Tombstone-e-Ralph-Loop.md), **96** MCP tools, **18** Switchboard skills, **19** tabelas STRICT, sub-aba **Auto-Evolução & Aprendizado**). |
 | **#8 Souls Anthropophagy** | Ingestão mecânica de repositórios ➔ Essências ➔ Janela de Vidro (85+ colunas Google Sheets) ➔ Deep Analysis & Backlog de Implementação | **GAP IDENTIFICADO** | **Milestone v0.9.5** ➔ Ref.: `_donor/souls_mc_anthropophagy` e `Ideação Curadoria de Contexto Souls MC.md`. |
 | **#14 Revisões & Refinamentos** | Baterias de testes integrados, correções de feedback real, refinamentos de UX e novas funcionalidades pré-v1 | **BACKLOG ATIVO** | **Milestones v0.9.6 a v0.9.9** (Ciclo de Estabilização & Hardening Contínuo). |
 | **#9 Universal Installer & Hardware Adaptability** | Instalador zero-atrito, piso mínimo na 2060m adaptável a qualquer hardware | **GAP IDENTIFICADO** | **Milestone v1.0.0** (Universal Installer & Release Oficial). |
@@ -167,9 +168,9 @@ A jornada da versão 0.5.0 até a 1.0.0 é dividida em **5 Milestones Sequenciai
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.3        │ Percepção Multimodal Híbrida     │ [CONCLUÍDO] ADR-033 + 91Tools │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.4 (PRÓX) │ Souls Evolutive Harness (Harness)│ Cordis Kernel, Catnap Protocol│
+│ v0.9.4        │ Souls Evolutive Harness (Harness)│ [CONCLUÍDO] ADR-034 + 96Tools │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
-│ v0.9.5        │ Souls Anthropophagy (Repo Miner) │ 85+ Colunas Google Sheets SSOT│
+│ v0.9.5 (PRÓX) │ Souls Anthropophagy (Repo Miner) │ 85+ Colunas Google Sheets SSOT│
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
 │ v0.9.6–v0.9.9 │ Revisões, Refinos & Hardening    │ Correções, Backlog & Feedback │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────┤
@@ -566,9 +567,11 @@ Desmistificação técnica definitiva dos domínios de **Visão de Tela** e **Pr
 
 ---
 
-### MILESTONE v0.9.4: SOULS EVOLUTIVE HARNESS (AUTO-EVOLUÇÃO CONTÍNUA & CORDIS KERNEL)
+### MILESTONE v0.9.4: SOULS EVOLUTIVE HARNESS (AUTO-EVOLUÇÃO CONTÍNUA & CORDIS KERNEL) — **[100% CONCLUÍDO]**
 
-> **Documento de Referência Arquitetural SSOT:**  
+> **Documentos de Referência Arquiteturais SSOT:**  
+> 📄 [ADR-034: Souls Evolutive Harness — Cordis, Catnap, Tombstones e Ralph Loop](file:///Z:/souls_engine/docs/decisions/adrs/ADR-034-Souls-Evolutive-Harness-Cordis-Catnap-Tombstone-e-Ralph-Loop.md)  
+> 📄 [Skill Canônica: `souls-evolutive-harness`](file:///Z:/souls_engine/.agents/skills/souls-evolutive-harness/SKILL.md)  
 > 📄 [Estudo de Fetures para Harnesses Open-Source.md](file:///Z:/souls_engine/docs/reference/Estudo%20de%20Fetures%20para%20Harnesses%20Open-Source.md)
 
 O **Souls Evolutive Harness** é o framework de **auto-avaliação e benchmarking interno** do ecossistema, inspirado no Google Harness² e no microkernel reversível Cordis do DeepSeek. Ele atua sobre os componentes operacionais do próprio Souls Engine e do Hermes Agent.
@@ -953,13 +956,13 @@ flowchart TD
         SovereignAudio["Áudio Soberano CPU (0 MB VRAM) + /v1/audio/* + Rapport Polivagal"]
     end
 
-    subgraph M094 ["Milestone v0.9.4 — PRÓXIMA (Souls Evolutive Harness)"]
+    subgraph M094 ["Milestone v0.9.4 — CONCLUÍDO (Souls Evolutive Harness)"]
         CordisKernel["DeepSeek Cordis Reversible Microkernel"]
         CatnapProtocol["The Cognitive Catnap Protocol (0ms Preempt)"]
-        ShadowProbing["Shadow Probing (Propose-Probe-Compose)"]
+        ShadowProbing["Tombstones JIT + WeEvolve ELO + Ralph Loop"]
     end
 
-    subgraph M095 ["Milestone v0.9.5 (Souls Anthropophagy)"]
+    subgraph M095 ["Milestone v0.9.5 — PRÓXIMA (Souls Anthropophagy)"]
         Anthropophagy["Souls Anthropophagy (Ingestão de Repos & AST)"]
         GlassWindow["Janela de Vidro (Google Sheets 85+ Colunas SSOT)"]
         DeepAnalysis["Fila de Deep Analysis & Backlog de PRs"]

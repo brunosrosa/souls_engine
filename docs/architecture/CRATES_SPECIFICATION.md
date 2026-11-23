@@ -55,6 +55,7 @@ Centralizar os contratos de dados agnósticos, envelopes de comunicação JSON-R
 - `mcp.rs`: Estruturas do protocolo Model Context Protocol (RPC request, response, error, tool definitions).
 - `lean.rs`: Tipos de dados compactados sob a notação LEAN (representação sintética sem ruído).
 - `multimodal.rs`: Contratos puros `v0.9.3` para visão híbrida, SoM, cascata TTS/STT, PCOMP, Gateway OpenAI Audio e `UserRapportProfileDto`.
+- `harness_evolve.rs`: Contratos puros `v0.9.4` (`ADR-034`) para slots `c1`–`c8`, pinagem SHA-256, fibras Cordis, configuração/ledger Catnap, Tombstones JIT, WeEvolve ELO/EMA, Ralph Loop e `DomainExperienceEntryDto`.
 - `error.rs`: Enumeração canônica de códigos de erro JSON-RPC e erros de serialização.
 
 #### Superfície Pública Canônica
@@ -100,6 +101,7 @@ Prover serviços bare-metal de baixo nível, inicialização do Tokio Runtime, t
 - `fs.rs`: Primitivos de manipulação no Dev Drive ReFS com validação de caminho contra vazamento para `C:\`.
 - `vision/`: Percepção cognitiva híbrida O(1) (`ax_tree.rs` UIA `-STA`/LEAN, `diff.rs` estrutural, `snapshot.rs` SoM + Blind-Spot + GDI `0 MB VRAM`).
 - `audio/`: Pipeline vocal PT-BR soberano em CPU (`ZERO_AUDIO_VRAM_CONSUMPTION_MB = 0`, PCOMP, SenseVoice, Camada 3, cascatas TTS/STT e provisionamento `Systran/faster-whisper-base`).
+- `harness/`: Evolutive Harness `v0.9.4` (`surface.rs` SHA-256 `c1` fail-closed + `SCRUB_ENV` + POSIX path normalization + ACI folding, `cordis.rs` microkernel LIFO + coeffects + drift guard, `catnap.rs` `< 1 ms` preemption + Quiet Hours + backoff isolado + `runmark.fingerprint`).
 
 #### Superfície Pública Canônica
 
@@ -179,12 +181,13 @@ Operar como o Hipocampo L3 soberano, gerenciando com exclusividade o banco relac
 #### Estrutura Canônica de Módulos (`crates/souls_memory/src/`)
 
 - `lib.rs`: Coordenação do subsistema de memória e pooling de conexões.
-- `sqlite.rs`: Pool de conexões FrankenSQLite STRICT WAL (`16` tabelas canônicas), aplicação de PRAGMAs NT e migrations DDL.
+- `sqlite.rs`: Pool de conexões FrankenSQLite STRICT WAL (`19` tabelas canônicas), aplicação de PRAGMAs NT e migrations DDL.
 - `lancedb.rs`: Camada colunar vetorial com governança de arquivos `mmap` e proteção Win32.
 - `ladybug.rs`: Grafo ontológico de dependências em memória RAM com busca em largura (BFS).
 - `chyros.rs`: Daemon assíncrono noturno executando Langevin Decay e `VACUUM INTO`.
 - `rrf.rs`: Reciprocal Rank Fusion combinando resultados BM25 (SQLite FTS5) e cosseno (LanceDB).
 - `rapport.rs`: Motor de Rapport Polivagal EMA (`user_rapport_profile`, clamping `mirroring_ratio <= 0.35`) e ledger de deduplicação SHA-256 (`vision_snapshot_ledger`).
+- `evolve.rs`: Persistência Evolutive Harness `v0.9.4` (`ADR-034`: Tombstones lógicos `epistemic_memory_tombstones` + aresta `conflicts_with` no `LadybugDB`, `WeEvolve` Bradley-Terry ELO/EMA em `weevolve_ratings`, ledger Catnap `catnap_consolidation_ledger` e `DomainExperienceLibrary` `EXPERIENCE.md`/`INDEX.md`).
 
 #### Superfície Pública Canônica
 
@@ -466,15 +469,15 @@ Atuar como o daemon executável bare-metal **100% headless** (`souls_server.exe`
 #### Estrutura Canônica de Módulos (`crates/souls_server/src/`)
 
 - `main.rs`: Ponto de entrada Win32, inicialização do Tokio Runtime bare-metal e orquestração de shutdown.
-- `mcp/`: Catálogo de **91** ferramentas (`8` Boot Level 0 + `83` progressivas), `registry.rs`, `dispatcher.rs`, `switchboard.rs` (**17** skills) e `tools_multimodal.rs` (`ui_*` / `voice_*`).
-- `routes/`: Submódulos de rotas Axum (`dashboard.rs`, `inventory.rs`, `models.rs`, `telemetry.rs`, `chat.rs`, `vision.rs`, `audio.rs` com gateway OpenAI `/v1/audio/*` e Alfândega de Voz multi-perfil `/api/v1/hermes/voice-customs*`, além de rotas `google/*` e `inbox/*`).
+- `mcp/`: Catálogo de **96** ferramentas (`8` Boot Level 0 + `88` progressivas), `registry.rs`, `dispatcher.rs`, `switchboard.rs` (**18** skills), `tools_multimodal.rs` (`ui_*` / `voice_*`) e `tools_harness.rs` (`harness_*`).
+- `routes/`: Submódulos de rotas Axum (`dashboard.rs`, `inventory.rs`, `models.rs`, `telemetry.rs`, `chat.rs`, `vision.rs`, `audio.rs` com gateway OpenAI `/v1/audio/*` e Alfândega de Voz multi-perfil `/api/v1/hermes/voice-customs*`, `harness.rs` com 9 endpoints `/api/v1/harness/*`, além de rotas `google/*` e `inbox/*`).
 - `templates/`: Motor de montagem zero-copy do Dashboard SPA via macro Rust `concat!(include_str!(...))` (ADR-012 / ADR-013):
   - `mod.rs`: Ponto de costura estática em tempo de compilação (zero I/O em runtime).
   - `styles.css`: Design System OKLCH desacoplado do DOM (zero `style="..."` inline).
   - `components/`: Componentes reutilizáveis (`topbar.html`, `navigation.html`, `modals.html`, `icons.svg`).
-  - `tabs/`: Visões de nível superior (`overview.html`, `subagents.html`, `local_models.html`, `cloud_arena.html`, `multimodal_hub.html`, etc.).
+  - `tabs/`: Visões de nível superior (`overview.html`, `subagents.html`, `evolutive_harness.html`, `local_models.html`, `cloud_arena.html`, `multimodal_hub.html`, etc.).
   - `settings/`: Submódulos atômicos de governança e configuração (`subtab_brain.html` a `subtab_raw.html`).
-  - `scripts/`: Inteligência e reatividade client-side (`dashboard.js`, `multimodal_hub.js`, etc.).
+  - `scripts/`: Inteligência e reatividade client-side (`dashboard.js`, `multimodal_hub.js`, `evolutive_harness.js`, etc.).
 - `profiles.rs`: Gestão de perfis dinâmicos de subagentes e tríades cognitivas.
 - `shutdown.rs`: Protocolo ordenado de encerramento em 5 fases (Axum -> MPSC -> SQLite WAL -> LanceDB mmap -> CUDA reset).
 - `state.rs`: `AppState` compartilhado com contenção de concorrência RAII.

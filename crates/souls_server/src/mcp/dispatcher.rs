@@ -13,6 +13,7 @@ use crate::mcp::handlers;
 use crate::mcp::registry::{get_canonical_tools, list_tools};
 use crate::mcp::tools_extended;
 use crate::mcp::tools_google;
+use crate::mcp::tools_harness;
 use crate::mcp::tools_multimodal;
 use crate::state::AppState;
 
@@ -579,7 +580,11 @@ pub async fn dispatch_jsonrpc(
                 }
 
                 other => {
-                    if let Some(google_res) =
+                    if let Some(harness_res) =
+                        tools_harness::try_dispatch_harness_tool(state, other, args, session_id).await
+                    {
+                        harness_res.map_err(|e| e.to_jsonrpc_error())
+                    } else if let Some(google_res) =
                         tools_google::try_dispatch_google_tool(state, other, args, session_id).await
                     {
                         google_res.map_err(|e| e.to_jsonrpc_error())

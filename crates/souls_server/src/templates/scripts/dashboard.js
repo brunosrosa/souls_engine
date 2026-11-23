@@ -98,7 +98,7 @@
       let topBtnId = 'btn-' + tabId;
       if (tabId === 'tab-google-hub' || tabId === 'tab-agent-inbox' || tabId === 'tab-multimodal') topBtnId = 'btn-tab-overview';
       if (tabId === 'tab-gemini-notebooks') topBtnId = 'btn-tab-research';
-      if (tabId === 'tab-subagents') topBtnId = 'btn-tab-personas';
+      if (tabId === 'tab-subagents' || tabId === 'tab-evolutive-harness') topBtnId = 'btn-tab-personas';
       if (tabId === 'tab-connections') topBtnId = 'btn-tab-settings';
 
       const btn = document.querySelector(`.nav-item[data-tab="${tabId}"]`) || document.getElementById(topBtnId);
@@ -116,7 +116,7 @@
         researchSubnav.classList.toggle('is-hidden', tabId !== 'tab-research' && tabId !== 'tab-gemini-notebooks');
       }
       if (agentsSubnav) {
-        agentsSubnav.classList.toggle('is-hidden', tabId !== 'tab-personas' && tabId !== 'tab-subagents');
+        agentsSubnav.classList.toggle('is-hidden', tabId !== 'tab-personas' && tabId !== 'tab-subagents' && tabId !== 'tab-evolutive-harness');
       }
       if (systemSubnav) {
         systemSubnav.classList.toggle('is-hidden', tabId !== 'tab-connections' && tabId !== 'tab-settings');
@@ -129,6 +129,7 @@
       if (tabId === 'tab-gemini-notebooks') document.getElementById('btn-pillar-notebooks')?.classList.add('active');
       if (tabId === 'tab-personas') document.getElementById('btn-pillar-personas')?.classList.add('active');
       if (tabId === 'tab-subagents') document.getElementById('btn-pillar-subagents')?.classList.add('active');
+      if (tabId === 'tab-evolutive-harness') document.getElementById('btn-pillar-evolutive-harness')?.classList.add('active');
       if (tabId === 'tab-connections') document.getElementById('btn-pillar-connections')?.classList.add('active');
       if (tabId === 'tab-settings') document.getElementById('btn-pillar-settings')?.classList.add('active');
 
@@ -164,6 +165,10 @@
       } else if (tabId === 'tab-multimodal') {
         if (typeof loadMultimodalHubTab === 'function') {
           loadMultimodalHubTab();
+        }
+      } else if (tabId === 'tab-evolutive-harness') {
+        if (typeof loadEvolutiveHarnessTab === 'function') {
+          loadEvolutiveHarnessTab();
         }
       } else if (tabId === 'tab-gemini-notebooks') {
         if (typeof loadGeminiNotebooksTab === 'function') {
@@ -11211,6 +11216,9 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       { id: 'act-new-research', title: 'Iniciar Nova Pesquisa Profunda', desc: 'Abrir formulário de scoping STORM com preview FinOps', category: 'Ação Rápida', action: () => { switchTab('tab-research'); if (typeof switchResearchSubtab === 'function') switchResearchSubtab('new-mission'); } },
       { id: 'nav-gemini-notebooks', title: 'Ir para Gemini Notebooks', desc: 'Cadernos NotebookLM, Drive, perguntas com fontes citadas e player de áudio', category: 'Navegação', action: () => switchTab('tab-gemini-notebooks') },
       { id: 'nav-personas', title: 'Ir para Personas & Governança', desc: 'Gerenciar assistentes Hermes, SOUL.md e privacidade', category: 'Navegação', action: () => switchTab('tab-personas') },
+      { id: 'nav-evolutive-harness', title: 'Ir para Auto-Evolução & Aprendizado', desc: 'Otimizações reversíveis, memórias substituídas, habilidades aprendidas e tempo ocioso', category: 'Navegação', action: () => switchTab('tab-evolutive-harness') },
+      { id: 'act-catnap-pulse', title: 'Executar Ciclo de Aprendizado Agora', desc: 'Rodar micro-tarefa cooperativa (<1ms preempção) e registrar experiência', category: 'Ação Rápida', action: () => { switchTab('tab-evolutive-harness'); if (typeof triggerHarnessCatnapCycle === 'function') triggerHarnessCatnapCycle(); } },
+      { id: 'act-verify-c1-pins', title: 'Auditar Integridade de Regras Base (SHA-256)', desc: 'Abrir diagnósticos do Aprendizado Contínuo e conferir hashes c1', category: 'Diagnóstico', action: () => { switchTab('tab-evolutive-harness'); const dr = document.getElementById('drawer-lab-evolutive-harness'); if (dr) dr.open = true; if (typeof loadEvolutiveHarnessTab === 'function') loadEvolutiveHarnessTab(); } },
       { id: 'nav-subagents', title: 'Ir para Subagentes & Fila', desc: 'Monitorar sessões Pareto e handoffs L3', category: 'Navegação', action: () => switchTab('tab-subagents') },
       { id: 'nav-skills', title: 'Ir para Skills & MCP Tools', desc: 'Catálogo local, marketplace 101k+ e Forge', category: 'Navegação', action: () => switchTab('tab-skills') },
       { id: 'nav-local', title: 'Ir para Modelos & Arena', desc: 'Silício local, Cloud Arena, Model Hub e Provedores', category: 'Navegação', action: () => switchTab('tab-local') },
@@ -11224,7 +11232,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       { id: 'nav-set-obsidian', title: 'Configurar Cofre de Conhecimentos (Obsidian)', desc: 'Curadoria raw/ -> wiki/ e Privacy Shield', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-obsidian'); } },
       { id: 'nav-set-finops', title: 'Configurar Aceleração Local & FinOps', desc: 'Teto WDDM, proteção térmica NVML e CPU AVX2', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-finops'); } },
       { id: 'nav-set-sandbox', title: 'Configurar Segurança & Sandbox', desc: 'Confinamento de caminhos e guardrails', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-sandbox'); } },
-      { id: 'nav-set-tools', title: 'Inspecionar 55 Ferramentas MCP', desc: 'Permissões, schemas e catálogo switchboard', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-tools'); } },
+      { id: 'nav-set-tools', title: 'Inspecionar 96 Ferramentas MCP', desc: 'Permissões, schemas e catálogo switchboard', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-tools'); } },
       { id: 'nav-set-raw', title: 'Abrir Editor TOML (souls_config.toml)', desc: 'Edição direta da configuração persistida', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-raw'); } },
       { id: 'act-sync-pulse', title: 'Sincronizar Pulso do Ecossistema', desc: 'Atualizar KPIs de evolução, FinOps e telemetria', category: 'Ação Rápida', action: () => { if (typeof fetchEcosystemPulse === 'function') fetchEcosystemPulse(); if (typeof fetchTelemetry === 'function') fetchTelemetry(); showToast('Telemetria e pulso sincronizados!', 'success'); } },
       { id: 'act-ping-silicon', title: 'Testar Latência do Motor (Ping Loopback)', desc: 'Medir resposta HTTP em 127.0.0.1:9123/health', category: 'Ação Rápida', action: () => testSiliconPing() },

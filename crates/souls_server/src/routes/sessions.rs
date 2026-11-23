@@ -222,6 +222,30 @@ pub async fn update_status_handler(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "status": "error", "message": e.to_string() }))))?;
 
+    if status == souls_memory::SubAgentStatus::Failed {
+        let pool = state.memory.pool();
+        let now = chrono::Utc::now().timestamp();
+        let _ = souls_memory::record_weevolve_signal(
+            &pool,
+            &record.agent_id,
+            "subagent_profile",
+            "subagent_failed",
+            None,
+            now,
+        )
+        .await;
+        if let Ok(failed_count) = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM subagent_sessions WHERE status = 'FAILED'",
+        )
+        .fetch_one(&*pool)
+        .await
+        {
+            state
+                .evolutive_harness
+                .refresh_pending_failures(failed_count.max(0) as usize);
+        }
+    }
+
     Ok(Json(json!({
         "status": "success",
         "subagent": record
@@ -277,6 +301,18 @@ pub async fn complete_subagent_handler(
         )
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "status": "error", "message": e.to_string() }))))?;
+
+    let pool = state.memory.pool();
+    let now = chrono::Utc::now().timestamp();
+    let _ = souls_memory::record_weevolve_signal(
+        &pool,
+        &session.agent_id,
+        "subagent_profile",
+        "subagent_completed",
+        None,
+        now,
+    )
+    .await;
 
     Ok(Json(json!({
         "status": "success",

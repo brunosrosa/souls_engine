@@ -1326,4 +1326,100 @@ Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª ski
 - **Primary Tools (7):** `ui_inspect`, `ui_interact`, `ui_snapshot`, `ui_diff`, `voice_transcribe`, `voice_synthesize`, `voice_rapport`
 - **Keywords de Afinidade Semântica:** `vision`, `screen`, `axtree`, `snapshot`, `canvas`, `voice`, `audio`, `tts`, `stt`, `speech`, `voz`, `fala`, `tela`, `pt-br`, `rapport`, `tdah`, `2e`
 
+---
+
+## 10. MILESTONE v0.9.4 — SOULS EVOLUTIVE HARNESS (`96 Tools & 18 Skills`)
+
+> **Versão:** `v0.9.4` (ADR-034)
+> **Total de Ferramentas Canônicas:** **96 ferramentas** (**8** visíveis no Boot Nível 0 com `tool_dispatch` + **88** sob revelação progressiva via `tool_search`)
+> **Total de Skills no Switchboard:** **18 skills canônicas** (incluindo `souls-evolutive-harness`)
+
+### 10.1 Resumo das Novas Ferramentas `harness_*` (`5 Tools`)
+
+| Ferramenta | Namespace | Descrição Canônica |
+| :--- | :---: | :--- |
+| `harness_status` | `ops` | Retorna integridade SHA-256 de `c1`, fibras Cordis ativas/revertidas, estado e gates Catnap, Tombstones, ranking WeEvolve e habilidades em Quarentena. |
+| `harness_catnap_pulse` | `ops` | Avalia os gates de ociosidade/GPU/orçamento e executa uma micro-fatia cooperativa (`< 1 ms` preempção) registrando `runmark.fingerprint` e `INDEX.md`. |
+| `harness_cordis_rollback` | `ops` | Desmonta uma fibra tática Cordis (`c2`/`c5`/`c7`/`c8`) em ordem estritamente LIFO em `< 1 ms` e aplica penalidade no ranking WeEvolve. |
+| `harness_tombstone_resolve` | `memory` | Varre (`scan`), aplica (`apply`), lista (`list`) ou restaura em 1 clique (`restore`) Tombstones lógicos sobre memórias contraditórias sem deletar `STABLE`. |
+| `harness_ralph_crystallize` | `ops` | Cristaliza uma solução aprendida em `SKILL.md` normalizada em LF na Quarentena do Skills Hub após Scanner Zero-Trust e cálculo Myers Diff. |
+
+### 10.2 Contratos JSON Schema (`crates/souls_server/src/mcp/registry.rs`)
+
+#### `harness_status`
+```json
+{
+  "type": "object",
+  "properties": {
+    "include_index": { "type": "boolean", "default": false, "description": "Incluir a tabela completa INDEX.md da biblioteca de experiências." }
+  },
+  "additionalProperties": false
+}
+```
+
+#### `harness_catnap_pulse`
+```json
+{
+  "type": "object",
+  "properties": {
+    "slice_kind": { "type": "string", "enum": ["shadow_probe_ppc", "ladybug_reconcile", "langevin_micro_batch", "diary_distillation", "ralph_crystallize"] },
+    "force_manual": { "type": "boolean", "default": true }
+  },
+  "additionalProperties": false
+}
+```
+
+#### `harness_cordis_rollback`
+```json
+{
+  "type": "object",
+  "properties": {
+    "fiber_id": { "type": "string" }
+  },
+  "required": ["fiber_id"],
+  "additionalProperties": false
+}
+```
+
+#### `harness_tombstone_resolve`
+```json
+{
+  "type": "object",
+  "properties": {
+    "action": { "type": "string", "enum": ["scan", "apply", "restore", "list"], "default": "scan" },
+    "memory_id": { "type": "string" },
+    "superseded_memory_id": { "type": "string" },
+    "superseded_by_memory_id": { "type": "string" },
+    "tombstone_id": { "type": "string" },
+    "reason_pt": { "type": "string" },
+    "limit": { "type": "integer", "default": 30 }
+  },
+  "additionalProperties": false
+}
+```
+
+#### `harness_ralph_crystallize`
+```json
+{
+  "type": "object",
+  "properties": {
+    "title_pt": { "type": "string" },
+    "domain": { "type": "string", "default": "ops" },
+    "problem_pattern_pt": { "type": "string" },
+    "resolution_playbook": { "type": "string" },
+    "source_session_id": { "type": "string" }
+  },
+  "required": ["title_pt", "problem_pattern_pt", "resolution_playbook"],
+  "additionalProperties": false
+}
+```
+
+### 10.3 18ª Skill Canônica no Switchboard (`switchboard.rs`)
+
+- **Identificador:** `souls-evolutive-harness`
+- **Descrição:** `"Auto-evolução segura (ADR-034): pinagem SHA-256 de c1, microkernel Cordis reversível, cochilos Catnap (<1ms preempção), Tombstones lógicos e Ralph Loop."`
+- **Primary Tools (5):** `harness_status`, `harness_catnap_pulse`, `harness_cordis_rollback`, `harness_tombstone_resolve`, `harness_ralph_crystallize`
+- **Keywords de Afinidade Semântica:** `harness`, `evolve`, `evolucao`, `auto-evolucao`, `catnap`, `cordis`, `rollback`, `tombstone`, `ralph`, `skill`, `quarantine`, `weevolve`, `elo`, `c1`, `pin`, `idle`, `ocio`
+
+
 

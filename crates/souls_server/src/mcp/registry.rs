@@ -1,6 +1,6 @@
 //! # Canonical MCP Tool Registry (`souls_server::mcp::registry`)
 //!
-//! Exposes all 91 canonical MCP tools, input schemas, namespaces, and Progressive
+//! Exposes all 96 canonical MCP tools, input schemas, namespaces, and Progressive
 //! Tool Disclosure (Level 0 boot compact vs Level 1 dynamic discovery).
 
 use serde_json::{json, Value};
@@ -18,7 +18,7 @@ pub struct ToolMeta {
 
 static ALL_TOOLS: OnceLock<Vec<ToolMeta>> = OnceLock::new();
 
-/// Returns the static repository of all 91 tools.
+/// Returns the static repository of all 96 tools.
 pub fn get_canonical_tools() -> &'static [ToolMeta] {
     ALL_TOOLS.get_or_init(build_canonical_tools)
 }
@@ -1606,6 +1606,85 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                     "auto_restore": { "type": "boolean", "default": true, "description": "Reverter arquivos se o processo falhar" }
                 },
                 "required": ["cli", "prompt"],
+                "additionalProperties": false
+            }),
+        },
+        // ops.* & memory.* Evolutive Harness tools (v0.9.4 / ADR-034)
+        ToolMeta {
+            name: "harness_status",
+            namespace: "ops",
+            description: "Inspeciona pinagens SHA-256 de c1, otimizações ativas (Cordis), fila Catnap, tombstones e habilidades em quarentena.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "include_index": { "type": "boolean", "default": false, "description": "Incluir a tabela completa INDEX.md da biblioteca de experiências." }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "harness_catnap_pulse",
+            namespace: "ops",
+            description: "Avalia os gates de ociosidade/temperatura e executa uma micro-soneca cooperativa (< 1ms preempção) sem bloquear o usuário.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "slice_kind": { "type": "string", "enum": ["shadow_probe_ppc", "ladybug_reconcile", "langevin_micro_batch", "diary_distillation", "ralph_crystallize"], "description": "Tipo específico de micro-tarefa de manutenção." },
+                    "force_manual": { "type": "boolean", "default": true, "description": "Ignorar espera mínima de 180s quando acionado manualmente pelo operador." }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "harness_cordis_rollback",
+            namespace: "ops",
+            description: "Reverte uma otimização tática (c2/c5/c7/c8) em ordem LIFO em < 1 ms e registra penalidade WeEvolve.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "fiber_id": { "type": "string", "description": "Identificador da fibra/otimização Cordis a ser desfeita." }
+                },
+                "required": ["fiber_id"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "harness_tombstone_resolve",
+            namespace: "memory",
+            description: "Detecta contradições de memória via Tombstone JIT (sem apagar STABLE), aplica substituição ou restaura versão anterior em 1 clique.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["scan", "apply", "restore", "list"], "default": "scan", "description": "Ação sobre tombstones lógicos." },
+                    "memory_id": { "type": "string", "description": "ID da memória recém-salva para varredura pontual (action='scan')." },
+                    "superseded_memory_id": { "type": "string", "description": "ID da memória antiga a marcar como substituída (action='apply')." },
+                    "superseded_by_memory_id": { "type": "string", "description": "ID da nova memória prevalente (action='apply')." },
+                    "tombstone_id": { "type": "string", "description": "ID do tombstone ou da memória antiga para restaurar (action='restore')." },
+                    "reason_pt": { "type": "string", "description": "Motivo humano claro da substituição." },
+                    "limit": { "type": "integer", "default": 30, "description": "Limite de itens em action='list'." }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "harness_ralph_crystallize",
+            namespace: "ops",
+            description: "Cristaliza uma lição operacional em habilidade modular SKILL.md na Quarentena do Skills Hub (Zero-Trust + Myers Diff) sem tocar c1.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "title_pt": { "type": "string", "description": "Título humano claro da nova habilidade aprendida." },
+                    "domain": { "type": "string", "default": "ops", "description": "Domínio funcional (ex.: ops, code, google, memory)." },
+                    "problem_pattern_pt": { "type": "string", "description": "Descrição do problema recorrente resolvido." },
+                    "resolution_playbook": { "type": "string", "description": "Passos práticos estruturados para evitar o erro no futuro." },
+                    "source_session_id": { "type": "string", "description": "Sessão de origem do aprendizado." }
+                },
+                "required": ["title_pt", "problem_pattern_pt", "resolution_playbook"],
                 "additionalProperties": false
             }),
         },

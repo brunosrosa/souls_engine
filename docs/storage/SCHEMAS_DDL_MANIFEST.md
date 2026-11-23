@@ -632,3 +632,77 @@ CREATE INDEX IF NOT EXISTS idx_vision_snapshot_session_target
 
 - **`UserRapportProfileDto`:** Mapeia 1:1 a tabela `user_rapport_profile`, aplicando `clamp_mirroring_ratio` (`[0.0, 0.35]`), `CognitiveVoiceMode` (`auto`, `hands_on`, `sparring`, `decompression`, `crisis_paralysis`, `philosophical`) e `DetectedEmotionTag`.
 - **`VisualSnapshotResultDto` / `VisionEscalationReason`:** Mapeiam a auditoria e o resultado da captura sob demanda de `vision_snapshot_ledger` acompanhados dos marcadores `SomOverlayMark` e do diagnóstico `BlindSpotAssessment`.
+
+---
+
+## 8. TABELAS DO SOULS EVOLUTIVE HARNESS (`v0.9.4` / `ADR-034`)
+
+Definidas em `crates/souls_memory/src/sqlite.rs` (`CANONICAL_DDL_MANIFEST` — totalizando **19** tabelas `STRICT`) e operadas por `crates/souls_memory/src/evolve.rs`:
+
+### 8.1 Tabela `#17 epistemic_memory_tombstones`
+
+Implementa o padrão **TencentDB JIT Tombstone**: invalida memórias contraditórias de forma lógica (`status = 'superseded'`) sem nunca deletar fisicamente registros da partição `STABLE` (ADR-006), filtrando-os em 0 ms do RRF Recall / FTS5 com restauração humana em 1 clique (`status = 'restored'`).
+
+```sql
+-- 17. Epistemic Memory JIT Tombstones (v0.9.4 / ADR-034 — TencentDB Tombstone Pattern)
+CREATE TABLE IF NOT EXISTS epistemic_memory_tombstones (
+    tombstone_id TEXT PRIMARY KEY NOT NULL,
+    superseded_memory_id TEXT NOT NULL UNIQUE,
+    superseded_by_memory_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    superseded_content_preview TEXT NOT NULL,
+    new_content_preview TEXT NOT NULL,
+    reason_pt TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'superseded' CHECK(status IN ('superseded', 'restored')),
+    created_at INTEGER NOT NULL,
+    restored_at INTEGER
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_tombstones_superseded_status
+    ON epistemic_memory_tombstones (superseded_memory_id, status);
+```
+
+### 8.2 Tabela `#18 weevolve_ratings`
+
+Armazena avaliações em malha fechada pelo algoritmo **Bradley-Terry ELO & EMA ($\alpha = 0.15$)** para fibras Cordis, skills, dicas de ferramentas e perfis de subagentes.
+
+```sql
+-- 18. WeEvolve Bradley-Terry ELO & EMA Ratings (v0.9.4 / ADR-034)
+CREATE TABLE IF NOT EXISTS weevolve_ratings (
+    target_id TEXT PRIMARY KEY NOT NULL,
+    target_kind TEXT NOT NULL CHECK(target_kind IN ('cordis_fiber', 'skill', 'tool_guidance', 'subagent_profile')),
+    elo_rating REAL NOT NULL DEFAULT 1200.0,
+    ema_score REAL NOT NULL DEFAULT 0.5 CHECK(ema_score >= 0.0 AND ema_score <= 1.0),
+    total_matches INTEGER NOT NULL DEFAULT 0,
+    last_signal TEXT NOT NULL DEFAULT 'init',
+    updated_at INTEGER NOT NULL
+) STRICT;
+```
+
+### 8.3 Tabela `#19 catnap_consolidation_ledger`
+
+Registra cada micro-fatia cooperativa executada ou preemptada pelo **Cognitive Catnap Protocol**, preservando `runmark_fingerprint` SHA-256, `cursor_checkpoint` e custo FinOps real.
+
+```sql
+-- 19. Cognitive Catnap & Shadow Probing Consolidation Ledger (v0.9.4 / ADR-034)
+CREATE TABLE IF NOT EXISTS catnap_consolidation_ledger (
+    slice_id TEXT PRIMARY KEY NOT NULL,
+    slice_kind TEXT NOT NULL CHECK(slice_kind IN ('shadow_probe_ppc', 'ladybug_reconcile', 'langevin_micro_batch', 'diary_distillation', 'ralph_crystallize')),
+    runmark_fingerprint TEXT NOT NULL,
+    cursor_checkpoint TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('completed', 'preempted', 'skipped', 'failed')),
+    duration_ms REAL NOT NULL DEFAULT 0.0,
+    cost_usd REAL NOT NULL DEFAULT 0.0,
+    summary_pt TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_catnap_ledger_created
+    ON catnap_consolidation_ledger (created_at DESC);
+```
+
+### 8.4 Correspondência em Rust (`crates/souls_protocol/src/harness_evolve.rs`)
+
+- **`MemoryTombstoneDto`:** Espelha `epistemic_memory_tombstones` e é complementado por arestas `conflicts_with` no `LadybugDB`.
+- **`WeEvolveRatingDto`:** Espelha `weevolve_ratings` e alimenta o detector de deriva Split-Brain no `CordisMicrokernel`.
+- **`CatnapSliceRecordDto` & `CatnapConfigDto`:** Espelham `catnap_consolidation_ledger` e a seção persistida `[evolutive_harness]` em `souls_config.toml`.

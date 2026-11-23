@@ -52,4 +52,8 @@ pub enum CoreError {
     /// Asynchronous MPSC batch logging error.
     #[error("Batch log error: {0}")]
     BatchLogError(String),
+
+    /// Evolutive harness governance or constitutional pin violation (fail-closed).
+    #[error("Harness governance violation: {0}")]
+    HarnessGovernanceViolation(String),
 }

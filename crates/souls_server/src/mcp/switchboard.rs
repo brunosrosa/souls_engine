@@ -21,7 +21,7 @@ pub struct SkillMeta {
     pub keywords: &'static [&'static str],
 }
 
-/// Static catalog of all 17 canonical skills.
+/// Static catalog of all 18 canonical skills.
 pub static CANONICAL_SKILLS: &[SkillMeta] = &[
     SkillMeta {
         name: "souls-code-surgeon",
@@ -144,6 +144,12 @@ pub static CANONICAL_SKILLS: &[SkillMeta] = &[
         description: "Percepção multimodal 0 MB VRAM: Visão Cognitiva AXTree LEAN, SoM & Snapshot sob demanda e Voz Soberana PT-BR (PCOMP, SenseVoice, prosódia e rapport).",
         primary_tools: &["ui_inspect", "ui_interact", "ui_snapshot", "ui_diff", "voice_transcribe", "voice_synthesize", "voice_rapport"],
         keywords: &["vision", "screen", "axtree", "snapshot", "canvas", "voice", "audio", "tts", "stt", "speech", "voz", "fala", "tela", "pt-br", "rapport", "tdah", "2e"],
+    },
+    SkillMeta {
+        name: "souls-evolutive-harness",
+        description: "Auto-evolução segura (ADR-034): pinagem SHA-256 de c1, microkernel Cordis reversível, cochilos Catnap (<1ms preempção), Tombstones lógicos e Ralph Loop.",
+        primary_tools: &["harness_status", "harness_catnap_pulse", "harness_cordis_rollback", "harness_tombstone_resolve", "harness_ralph_crystallize"],
+        keywords: &["harness", "evolve", "evolucao", "auto-evolucao", "catnap", "cordis", "rollback", "tombstone", "ralph", "skill", "quarantine", "weevolve", "elo", "c1", "pin", "idle", "ocio"],
     },
 ];
 

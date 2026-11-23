@@ -1,0 +1,251 @@
+    <!-- ========================================== -->
+    <!-- ABA: AUTO-EVOLUCAO & APRENDIZADO (v0.9.4)  -->
+    <!-- ========================================== -->
+    <section class="tab-pane" id="tab-evolutive-harness">
+      <div class="card-hero u-mb-6 multimodal-hub-hero">
+        <div class="u-d-flex u-justify-between u-items-start u-flex-wrap u-gap-4">
+          <div>
+            <h2 class="u-d-flex u-items-center u-gap-10p u-m-0 u-text-white">
+              <svg class="ui-icon icon-md u-text-cyan" aria-hidden="true"><use href="#icon-dna"></use></svg>
+              <span>Auto-Evolução &amp; Aprendizado</span>
+            </h2>
+            <p class="u-m-0 u-mt-2 u-text-muted">
+              Transforma lições aprendidas em habilidades revisáveis, corrige memórias contraditórias sem perder seu histórico e protege suas regras fundamentais.
+            </p>
+          </div>
+          <div class="mm-status-strip">
+            <span class="badge badge-value" id="harness-chip-pins">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg>
+              <span>Identidade: verificando...</span>
+            </span>
+            <span class="badge badge-champion" id="harness-chip-optimizations">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg>
+              <span>Otimizações: --</span>
+            </span>
+            <span class="badge badge-champion" id="harness-chip-catnap">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+              <span>Tempo ocioso: --</span>
+            </span>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="loadEvolutiveHarnessTab()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Atualizar Painel</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-harness-run-catnap" onclick="triggerHarnessCatnapCycle()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-play"></use></svg>
+              <span>Executar Ciclo Agora</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mm-grid-2 u-mb-6">
+        <!-- CARD 1: MEMORIAS SUBSTITUIDAS (TOMBSTONES) -->
+        <div class="card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-amber">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-history"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Memórias Substituídas</div>
+                <div class="u-text-muted gh-text-xs">Quando você muda uma preferência ou decisão, a versão antiga fica arquivada e não atrapalha novas buscas</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="scanHarnessTombstones()">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-search"></use></svg>
+              <span>Verificar Contradições</span>
+            </button>
+          </div>
+          <div class="harness-stack-list" id="harness-tombstones-list">
+            <div class="gh-subpanel u-text-muted gh-text-xs">Carregando histórico de substituições...</div>
+          </div>
+        </div>
+
+        <!-- CARD 2: OTIMIZACOES ATIVAS E REVERSIVEIS -->
+        <div class="card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-cyan">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-sliders"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Otimizações Ativas de Resposta</div>
+                <div class="u-text-muted gh-text-xs">Ajustes táticos reversíveis em 1 clique — suas regras centrais permanecem intocáveis</div>
+              </div>
+            </div>
+            <span class="badge badge-value" id="harness-badge-always-on">-- caracteres</span>
+          </div>
+
+          <div class="gh-subpanel u-mb-3">
+            <div class="u-fw-600 u-text-white gh-text-xs u-mb-2">Adicionar nova orientação tática reversível</div>
+            <input id="harness-cordis-title" type="text" class="form-control u-mb-2" placeholder="Nome curto da orientação (ex.: Resumir tabelas longas)" />
+            <input id="harness-cordis-cue" type="text" class="form-control u-mb-2" placeholder="Instrução prática (ex.: Sempre prefira resumos objetivos antes de listar tudo)" />
+            <div class="u-d-flex u-items-center u-gap-2">
+              <select id="harness-cordis-scope" class="form-control">
+                <option value="all" selected>Aplicar em tarefas técnicas e pesquisa</option>
+                <option value="code">Somente tarefas de código e arquivos</option>
+                <option value="research">Somente pesquisa e subagentes</option>
+              </select>
+              <button type="button" class="btn btn-sm btn-primary" onclick="mountHarnessFiberFromUi()">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-zap"></use></svg>
+                <span>Ativar Ajuste</span>
+              </button>
+            </div>
+            <div class="gh-text-xs u-text-muted u-mt-1" id="harness-cordis-create-status"></div>
+          </div>
+
+          <div class="harness-stack-list" id="harness-fibers-list">
+            <div class="gh-subpanel u-text-muted gh-text-xs">Carregando otimizações ativas...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mm-grid-2 u-mb-6">
+        <!-- CARD 3: NOVAS HABILIDADES APRENDIDAS (QUARENTENA) -->
+        <div class="card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-purple">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Habilidades Aprendidas em Quarentena</div>
+                <div class="u-text-muted gh-text-xs">Lições cristalizadas em novos roteiros prontos para sua revisão visual antes de ativar</div>
+              </div>
+            </div>
+            <span class="badge badge-champion" id="harness-badge-quarantine-count">0 aguardando</span>
+          </div>
+
+          <div class="gh-subpanel u-mb-3">
+            <div class="u-fw-600 u-text-white gh-text-xs u-mb-2">Registrar lição aprendida agora</div>
+            <input id="harness-ralph-title" type="text" class="form-control u-mb-2" placeholder="Título curto da habilidade (ex.: Verificar porta ocupada antes de reiniciar)" />
+            <input id="harness-ralph-problem" type="text" class="form-control u-mb-2" placeholder="Qual erro recorrente esta habilidade evita?" />
+            <textarea id="harness-ralph-playbook" rows="2" class="form-control u-mb-2" placeholder="Passos práticos da solução..."></textarea>
+            <div class="u-d-flex u-items-center u-gap-2">
+              <button type="button" class="btn btn-sm btn-primary" onclick="crystallizeHarnessSkillFromUi()">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-shield"></use></svg>
+                <span>Gerar na Quarentena</span>
+              </button>
+              <span class="gh-text-xs u-text-muted" id="harness-ralph-create-status"></span>
+            </div>
+          </div>
+
+          <div class="harness-stack-list" id="harness-ralph-list">
+            <div class="gh-subpanel u-text-muted gh-text-xs">Carregando habilidades aprendidas...</div>
+          </div>
+        </div>
+
+        <!-- CARD 4: MANUTENCAO EM TEMPO OCIOSO & HORARIO DE SILENCIO -->
+        <div class="card">
+          <div class="card-header u-mb-3">
+            <div class="card-title">
+              <div class="card-icon icon-green">
+                <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-clock"></use></svg>
+              </div>
+              <div>
+                <div class="u-fw-700 u-text-white">Manutenção em Tempo Ocioso</div>
+                <div class="u-text-muted gh-text-xs">Aproveita pausas curtas do seu uso e cede imediatamente quando você volta a trabalhar</div>
+              </div>
+            </div>
+            <span class="badge badge-value" id="harness-badge-budget-today">Gasto hoje: $0.00</span>
+          </div>
+
+          <div class="gh-subpanel u-mb-3">
+            <div class="mm-guidance-box u-mb-3">
+              <div class="mm-guidance-label">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-info"></use></svg>
+                <span>Estado Atual da Fila Silenciosa</span>
+              </div>
+              <div class="mm-guidance-text" id="harness-catnap-gate-reason">Avaliando temperatura e ociosidade...</div>
+            </div>
+
+            <label class="gh-checkbox-label u-mb-2">
+              <input type="checkbox" id="harness-cfg-enabled" checked />
+              <span>Ativar ciclos curtos de melhoria durante tempo ocioso</span>
+            </label>
+
+            <div class="mm-grid-2 u-mb-2">
+              <div>
+                <label for="harness-cfg-idle-secs" class="u-fw-600 u-text-white gh-text-xs u-mb-1">Espera ociosa mínima (segundos)</label>
+                <input id="harness-cfg-idle-secs" type="number" min="30" max="3600" value="180" class="form-control" />
+              </div>
+              <div>
+                <label for="harness-cfg-gpu-temp" class="u-fw-600 u-text-white gh-text-xs u-mb-1">Limite térmico da GPU (°C — histerese +5°C)</label>
+                <input id="harness-cfg-gpu-temp" type="number" min="40" max="80" step="1" value="62" class="form-control" />
+              </div>
+            </div>
+
+            <div class="mm-grid-2 u-mb-2">
+              <div>
+                <label for="harness-cfg-budget" class="u-fw-600 u-text-white gh-text-xs u-mb-1">Teto diário de nuvem (US$ — $0 = só local/grátis)</label>
+                <input id="harness-cfg-budget" type="number" min="0" max="20" step="0.10" value="0.00" class="form-control" />
+              </div>
+              <div class="u-d-flex u-items-center">
+                <label class="gh-checkbox-label">
+                  <input type="checkbox" id="harness-cfg-free-cloud" checked />
+                  <span>Usar avaliadores gratuitos sem custo extra</span>
+                </label>
+              </div>
+            </div>
+
+            <label class="gh-checkbox-label u-mb-2">
+              <input type="checkbox" id="harness-cfg-quiet-enabled" checked />
+              <span>Ativar Horário de Silêncio (sem alertas durante o descanso)</span>
+            </label>
+
+            <div class="mm-grid-2 u-mb-3">
+              <div>
+                <label for="harness-cfg-quiet-start" class="u-fw-600 u-text-white gh-text-xs u-mb-1">Início do silêncio (hora 0–23)</label>
+                <input id="harness-cfg-quiet-start" type="number" min="0" max="23" value="22" class="form-control" />
+              </div>
+              <div>
+                <label for="harness-cfg-quiet-end" class="u-fw-600 u-text-white gh-text-xs u-mb-1">Fim do silêncio (hora 0–23)</label>
+                <input id="harness-cfg-quiet-end" type="number" min="0" max="23" value="8" class="form-control" />
+              </div>
+            </div>
+
+            <div class="u-d-flex u-items-center u-gap-2">
+              <button type="button" class="btn btn-sm btn-primary" onclick="saveHarnessCatnapConfig()">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                <span>Salvar Preferências</span>
+              </button>
+              <span class="gh-text-xs u-text-muted" id="harness-cfg-save-status"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GAVETA TECNICA AVANCADA (RECOLHIDA POR PADRAO - LEI DE UX §9.1) -->
+      <details class="lab-drawer" id="drawer-lab-evolutive-harness">
+        <summary class="lab-drawer-header">
+          <div class="lab-drawer-title">
+            <svg class="ui-icon icon-sm lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+            <svg class="ui-icon icon-sm u-text-purple" aria-hidden="true"><use href="#icon-flask"></use></svg>
+            <span>Telemetria Técnica &amp; Contrato de Engenharia</span>
+          </div>
+          <span class="lab-drawer-badge">c1..c8 &bull; Cordis LIFO &bull; SHA-256 &bull; WeEvolve ELO &bull; INDEX.md</span>
+        </summary>
+        <div class="lab-drawer-body">
+          <div class="mm-grid-2 u-mb-3">
+            <div>
+              <div class="u-fw-600 u-text-white gh-text-xs u-mb-1">Pinagem Constitucional c1 (SHA-256 LF Fail-Closed)</div>
+              <pre class="mm-lean-pre" id="harness-lab-pins">Carregando hashes c1...</pre>
+            </div>
+            <div>
+              <div class="u-fw-600 u-text-white gh-text-xs u-mb-1">Superfície Modular (c1..c8) &amp; Coefeitos Cordis</div>
+              <pre class="mm-lean-pre" id="harness-lab-slots">Carregando inventário de superfície...</pre>
+            </div>
+          </div>
+          <div class="mm-grid-2">
+            <div>
+              <div class="u-fw-600 u-text-white gh-text-xs u-mb-1">Ranking WeEvolve (Bradley-Terry ELO / EMA) &amp; Fatias Catnap</div>
+              <pre class="mm-lean-pre" id="harness-lab-weevolve-catnap">Carregando métricas de avaliação...</pre>
+            </div>
+            <div>
+              <div class="u-fw-600 u-text-white gh-text-xs u-mb-1">Censo Domain Experience Library (INDEX.md)</div>
+              <pre class="mm-lean-pre" id="harness-lab-index-md">Carregando INDEX.md...</pre>
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
