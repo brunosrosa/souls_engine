@@ -19,6 +19,7 @@ pub mod minions;
 pub mod nvml;
 pub mod onnx;
 pub mod padder;
+pub mod vision_ephemeral;
 
 // Re-export canonical types and functions
 pub use cohomology::{
@@ -61,6 +62,10 @@ pub use padder::{
     apply_block_boundary_padding, resolve_model_pad_token, resolve_model_pad_token_from_path,
     BlockBoundaryPadder, IngestedBuffer, PromptPackagingInfo, BLOCK_BOUNDARY_ALIGNMENT,
     MMAP_THRESHOLD_BYTES,
+};
+pub use vision_ephemeral::{
+    EphemeralVisionOutcome, EphemeralVisionRequest, EphemeralVisionRunner,
+    EPHEMERAL_VLM_MAX_TEMP_C, EPHEMERAL_VLM_MAX_VRAM_USED_MB,
 };
 pub use souls_protocol::{
     DynamicReasoningRecommendation, ProviderReasoningPayloads, ReasoningEffortLevel,
