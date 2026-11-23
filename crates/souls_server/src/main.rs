@@ -6094,14 +6094,19 @@ telegram:
         let ov_json: serde_json::Value =
             serde_json::from_slice(&to_bytes(resp_ov.into_body(), usize::MAX).await.unwrap())
                 .unwrap();
-        assert_eq!(ov_json["version"], "0.9.4");
+        assert_eq!(ov_json["version"], "0.9.4+1");
         assert_eq!(ov_json["summary"]["pins_verified"], true);
+        assert_eq!(ov_json["summary"]["active_connections"], 0);
         assert_eq!(ov_json["slots_catalog"].as_array().unwrap().len(), 8);
         assert_eq!(ov_json["catnap"]["config"]["min_idle_secs"], 180);
         assert_eq!(ov_json["catnap"]["config"]["max_gpu_temp_c"], 62.0);
         assert_eq!(ov_json["catnap"]["config"]["max_daily_budget_usd"], 0.0);
 
-        // Passive observability (/health & /api/v1/telemetry) must NOT reset Catnap idle or preempt!
+        // Passive observability (/health & /api/v1/telemetry) must NOT reset Catnap idle or self-count active_connections!
+        let saved_catnap_cfg = state.evolutive_harness.catnap.get_config();
+        let mut idle_gate_cfg = saved_catnap_cfg.clone();
+        idle_gate_cfg.quiet_hours_enabled = false;
+        state.evolutive_harness.catnap.update_config(idle_gate_cfg);
         state.evolutive_harness.catnap.set_idle_elapsed_secs_for_test(210);
         let _ = app
             .clone()
@@ -6115,6 +6120,28 @@ telegram:
             .unwrap();
         assert!(!state.evolutive_harness.catnap.check_preempted());
         assert!(state.evolutive_harness.catnap.idle_elapsed_secs() >= 200);
+        let ov2_json: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/api/v1/harness/overview")
+                            .method("GET")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(ov2_json["summary"]["active_connections"], 0);
+        assert_eq!(ov2_json["summary"]["catnap_gate_allowed"], true);
+        state.evolutive_harness.catnap.update_config(saved_catnap_cfg);
 
         // Query-aware cues endpoint: casual personal query receives 0 code cues; coding query receives >= 1
         let cues_casual: serde_json::Value = serde_json::from_slice(
@@ -6562,7 +6589,7 @@ telegram:
         let ev_js = include_str!("templates/scripts/evolutive_harness.js");
         assert!(!ev_html.contains("style=\""), "Zero inline style= permitted");
         assert!(!ev_js.contains("style=\""), "Zero inline style= permitted in JS");
-        assert!(crate::templates::DASHBOARD_HTML.contains("(v0.9.4)"));
+        assert!(crate::templates::DASHBOARD_HTML.contains("(v0.9.4+1)"));
         assert!(crate::templates::DASHBOARD_HTML.contains("tab-evolutive-harness"));
         assert!(crate::templates::DASHBOARD_HTML.contains("drawer-lab-evolutive-harness"));
         assert!(crate::templates::DASHBOARD_HTML.contains("96 Ferramentas MCP Nativas"));

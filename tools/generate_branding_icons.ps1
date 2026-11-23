@@ -1,4 +1,4 @@
-# tools/generate_branding_icons.ps1
+﻿# tools/generate_branding_icons.ps1
 # Gerador Automatizado de Assets e Ícones de Branding para o Souls Engine v7
 # Produz variações de cores dos olhos (Ciano, Verde, Âmbar, Vermelho, Roxo)
 # e aplica recorte com BORDAS ARREDONDADAS (Squircle) e FUNDO TRANSPARENTE nos 4 cantos externos.
@@ -6,10 +6,12 @@
 
 $srcCandidates = @(
     "C:\Users\rosas\.gemini\antigravity-ide\brain\9879e3dc-0528-4554-8c33-7bb3608b04bc\.user_uploaded\media_1792209760265.jpg",
-    "C:\Users\rosas\.gemini\antigravity-ide\brain\4e3e1bda-872a-422e-ac39-cf8c34e69fa9\.user_uploaded\media_1791834488261.jpg"
+    "C:\Users\rosas\.gemini\antigravity-ide\brain\4e3e1bda-872a-422e-ac39-cf8c34e69fa9\.user_uploaded\media_1791834488261.jpg",
+    "Z:\souls_engine\assets\branding\souls_icon_cyan_1024.png"
 )
 
 $srcImage = $srcCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+$isAlreadyCropped = if ($srcImage -and $srcImage.EndsWith("souls_icon_cyan_1024.png")) { '$true' } else { '$false' }
 
 if (-not $srcImage) {
     Write-Error "Imagem fonte do mascote não encontrada!"
@@ -61,6 +63,14 @@ public class SoulsIconBuilder {
 
             // Se for pixel dos olhos (saturado e luminoso)
             if (sat > 0.14f && max > 0.12f) {
+                if (targetHue <= -2f) {
+                    float gVal = Math.Min(210f, Math.Max(60f, lum * 205f));
+                    destRgb[i] = (byte)Math.Min(255, Math.Max(0, gVal + 6f));
+                    destRgb[i + 1] = (byte)Math.Min(255, Math.Max(0, gVal));
+                    destRgb[i + 2] = (byte)Math.Min(255, Math.Max(0, gVal - 6f));
+                    destRgb[i + 3] = a;
+                    continue;
+                }
                 float c = (1f - Math.Abs(2f * lum - 1f)) * sat;
                 float x = c * (1f - Math.Abs((targetHue / 60f) % 2f - 1f));
                 float m = lum - c / 2f;
@@ -192,7 +202,12 @@ $csharpCode
 `$out = '$outDir'
 
 Write-Host "Carregando imagem fonte: `$src" -ForegroundColor Cyan
-`$orig = [Bitmap]::new(`$src)
+`$srcBytes = [System.IO.File]::ReadAllBytes(`$src)
+`$srcMs = [System.IO.MemoryStream]::new(`$srcBytes)
+`$tmpOrig = [Bitmap]::new(`$srcMs)
+`$orig = `$tmpOrig.Clone([Rectangle]::new(0, 0, `$tmpOrig.Width, `$tmpOrig.Height), [PixelFormat]::Format32bppArgb)
+`$tmpOrig.Dispose()
+`$srcMs.Dispose()
 
 # Cores: Nome, Hue, Descrição
 `$variants = @(
@@ -200,18 +215,24 @@ Write-Host "Carregando imagem fonte: `$src" -ForegroundColor Cyan
     @{ Name = 'green';  Hue = 135; Desc = 'Online / Healthy / Executing' },
     @{ Name = 'amber';  Hue = 38;  Desc = 'Subagent Active / Busy / Routing' },
     @{ Name = 'red';    Hue = 0;   Desc = 'Thermal Alert >= 78C / Error' },
-    @{ Name = 'purple'; Hue = 285; Desc = 'Deep Socratic Thinking / Memory' }
+    @{ Name = 'purple'; Hue = 285; Desc = 'Deep Socratic Thinking / Memory' },
+    @{ Name = 'gray';   Hue = -2;  Desc = 'Offline / Server Stopped' }
 )
 
 `$sizes = @(16, 24, 32, 48, 64, 128, 256, 512)
 `$icoSizes = [int[]]@(16, 24, 32, 48, 64, 128, 256)
+`$skipCornerCrop = $isAlreadyCropped
 
 foreach (`$v in `$variants) {
     Write-Host "Processando variante: `$(`$v.Name) (`$(`$v.Desc))..."
-    `$rawColor = if (`$v.Hue -lt 0) { `$orig } else { [SoulsIconBuilder]::ShiftHue(`$orig, [float]`$v.Hue) }
+    `$rawColor = if (`$v.Hue -eq -1) { `$orig } else { [SoulsIconBuilder]::ShiftHue(`$orig, [float]`$v.Hue) }
 
-    # Aplica o recorte de bordas arredondadas (Squircle) com fundo transparente nos 4 cantos
-    `$colorBmp = [SoulsIconBuilder]::ApplyRoundedCorners(`$rawColor, 60.0, 50.0, 878.0, 880.0, 180.0)
+    # Aplica o recorte de bordas arredondadas (Squircle) com fundo transparente nos 4 cantos (exceto se fonte já recortada)
+    `$colorBmp = if (`$skipCornerCrop) {
+        `$rawColor.Clone([Rectangle]::new(0, 0, `$rawColor.Width, `$rawColor.Height), [PixelFormat]::Format32bppArgb)
+    } else {
+        [SoulsIconBuilder]::ApplyRoundedCorners(`$rawColor, 60.0, 50.0, 878.0, 880.0, 180.0)
+    }
 
     # Salva o master PNG de 1024x1024
     `$masterPath = Join-Path `$out ("souls_icon_`$(`$v.Name)_1024.png")
@@ -234,7 +255,7 @@ foreach (`$v in `$variants) {
     [SoulsIconBuilder]::SaveAsIcon(`$colorBmp, `$icoPath, `$icoSizes)
 
     `$colorBmp.Dispose()
-    if (`$v.Hue -ge 0) {
+    if (`$v.Hue -ne -1) {
         `$rawColor.Dispose()
     }
 }

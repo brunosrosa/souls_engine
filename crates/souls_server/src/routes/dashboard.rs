@@ -40,6 +40,7 @@ pub async fn dashboard_icon_handler(AxumPath(color): AxumPath<String>) -> Respon
         "amber" => "amber",
         "red" => "red",
         "purple" => "purple",
+        "gray" => "gray",
         _ => "cyan",
     };
 

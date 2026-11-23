@@ -36,6 +36,12 @@ impl Drop for ConnectionGuard {
     }
 }
 
+/// Zero-overhead RAII marker for passive observability endpoints (`/health`, `/telemetry`,
+/// `/harness/overview`, `/harness/cues`) that must neither count as active load nor
+/// reset Catnap idle time.
+#[derive(Debug)]
+pub struct PassiveConnectionGuard;
+
 /// Thread-safe immutable application state shared across Axum handlers.
 #[derive(Clone)]
 pub struct AppState {
@@ -102,11 +108,11 @@ impl AppState {
         ConnectionGuard::new(Arc::clone(&self.active_connections))
     }
 
-    /// Acquires a passive observability connection guard (health/telemetry polling)
-    /// WITHOUT resetting Catnap idle time or causing false preemption.
+    /// Acquires a passive observability marker guard (health/telemetry polling)
+    /// WITHOUT incrementing `active_connections`, resetting Catnap idle time, or causing preemption.
     #[inline]
-    pub fn acquire_passive_connection(&self) -> ConnectionGuard {
-        ConnectionGuard::new(Arc::clone(&self.active_connections))
+    pub fn acquire_passive_connection(&self) -> PassiveConnectionGuard {
+        PassiveConnectionGuard
     }
 
     /// Returns the current number of active HTTP connections.

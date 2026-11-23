@@ -1,7 +1,7 @@
 # ADR-034: Souls Evolutive Harness — Microkernel Cordis, Catnap Protocol, Tombstones Lógicos e The Ralph Loop (`v0.9.4`)
 
 ## Status
-**Aprovado e Implementado** (Milestone `v0.9.4`)
+**Aprovado e Implementado** (Milestone `v0.9.4` / Patch Operacional `v0.9.4+1`)
 
 ## Data
 2026-11-23
@@ -36,7 +36,7 @@ Sistemas agênticos capazes de se auto-aprimorar enfrentam quatro armadilhas est
 
 ### 3. Protocolo Cognitive Catnap (`souls_core::harness::catnap` + `souls_server::routes::harness`)
 - **Gates Físicos, Histerese & FinOps:** Executa em loop cooperativo automático de segundo plano (`45s`, round-robin entre `shadow_probe_ppc`, `ladybug_reconcile`, `langevin_micro_batch`, `diary_distillation`, `ralph_crystallize`) somente quando `idle_elapsed_secs >= 180s`, `gpu_temp_c <= 62.0°C` (com banda de histerese **`+5.0°C`** em voo até `67.0°C` e permissão até `68.0°C` para fatias puramente CPU/SQLite `0 MB VRAM`), `cpu_load < 15%` e `active_connections == 0`.
-- **Preempção Cooperativa `< 1 ms` Isolada de Polling Passivo:** `AppState::acquire_connection()` em rotas de trabalho ativo dispara `evolutive_harness.notify_activity()`, sinalizando `AtomicBool` (`SeqCst`) para aborto instantâneo; já rotas passivas de observabilidade (`/health`, `/api/v1/telemetry`, `GET /api/v1/harness/overview`, `GET /api/v1/harness/cues`) usam `acquire_passive_connection()` para nunca zerar a ociosidade enquanto o Dashboard estiver aberto.
+- **Preempção Cooperativa `< 1 ms` Isolada de Polling Passivo:** `AppState::acquire_connection()` em rotas de trabalho ativo dispara `evolutive_harness.notify_activity()`, sinalizando `AtomicBool` (`SeqCst`) para aborto instantâneo; já rotas passivas de observabilidade (`/health`, `/api/v1/telemetry`, `GET /api/v1/harness/overview`, `GET /api/v1/harness/cues`) usam `acquire_passive_connection()` retornando `PassiveConnectionGuard` (marcador sem incremento em `active_connections`), evitando auto-contagem espúria e nunca zerando a ociosidade enquanto o Dashboard estiver aberto.
 - **Custo Zero por Padrão & Backoff Isolado:** `max_daily_budget_usd = 0.00` por padrão (`allow_free_cloud_improver = true`), *backoff* exponencial isolado por `slice_kind`, **Quiet Hours** configurável e desligável (`AGENTS.md` §9.5), e invalidação determinística por SHA-256 `runmark.fingerprint`.
 - **Configuração Persistente Cirúrgica:** `[evolutive_harness]` em `souls_config.toml` com parser/gravador específico de seção preservando blocos irmãos e finais LF.
 
@@ -48,7 +48,7 @@ Sistemas agênticos capazes de se auto-aprimorar enfrentam quatro armadilhas est
 ### 5. The Ralph Loop, MCP (`96 Tools / 18 Skills`) & Superfície Humana Zero-Jargão (`souls_server`)
 - **Ralph Loop -> Quarentena & Aprovação em 1 Clique:** `crystallize_ralph_skill()` gera `SKILL.md` normalizada em LF, executa Scanner Zero-Trust + cálculo FinOps ($E^3$) + Myers Diff e deposita na Quarentena do Skills Hub para revisão visual ou aprovação direta via `POST /api/v1/harness/ralph/approve`.
 - **12 Rotas REST (`/api/v1/harness/*`), 5 Ferramentas MCP & 18ª Skill Switchboard:** Totalizando **96** ferramentas canônicas (**8** Boot Level 0 + **88** progressivas) e **18** skills (`souls-evolutive-harness`).
-- **UI Centrada no Humano (`AGENTS.md` §9):** Sub-aba **Auto-Evolução & Aprendizado** sob o pilar **Agentes & Personas** (`evolutive_harness.html` + `evolutive_harness.js`), 100% livre de estilos inline (`style="..."`) e emojis crus, com botões de 1 clique em português claro e telemetria técnica encapsulada em `<details class="lab-drawer" id="drawer-lab-evolutive-harness">`.
+- **UI Centrada no Humano (`AGENTS.md` §9) & Companion Systray Desacoplado (`v0.9.4+1`):** Sub-aba **Auto-Evolução & Aprendizado** sob o pilar **Agentes & Personas** (`evolutive_harness.html` + `evolutive_harness.js`), 100% livre de estilos inline (`style="..."`) e emojis crus, com botões de 1 clique em português claro e telemetria técnica encapsulada em `<details class="lab-drawer" id="drawer-lab-evolutive-harness">`. O companion externo [souls_launcher.ps1](file:///z:/souls_engine/tools/souls_launcher.ps1) (mantendo `souls_server.exe` 100% headless) opera com instância única por substituição limpa (*takeover* ao abrir pelo atalho), verificação de processo `< 1 ms` sem trava TCP quando o daemon fecha, timeout `HttpClient` `450ms` + `DoEvents()`, ícone cinza (`souls_icon_gray.ico`) quando parado e ações 1-clique Iniciar/Reiniciar/Parar Servidor Daemon.
 
 ---
 

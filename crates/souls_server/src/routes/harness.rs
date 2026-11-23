@@ -585,7 +585,7 @@ impl EvolutiveHarnessService {
 
         json!({
             "status": "ok",
-            "version": "0.9.4",
+            "version": "0.9.4+1",
             "summary": {
                 "pins_verified": pins_all_ok,
                 "superseded_memories": superseded_count,

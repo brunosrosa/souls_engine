@@ -93,6 +93,17 @@ if ($buildExit -eq 0) {
         Copy-FileWithRetry -Source $serverExe -Destination $installedEngineExe
         Copy-FileWithRetry -Source $serverExe -Destination $installedServerExe
 
+        $srcLauncher = "Z:\souls_engine\tools\souls_launcher.ps1"
+        if (Test-Path $srcLauncher) {
+            Copy-FileWithRetry -Source $srcLauncher -Destination (Join-Path $appDataDir "souls_launcher.ps1")
+        }
+        $srcBranding = "Z:\souls_engine\assets\branding"
+        $destBranding = Join-Path $appDataDir "assets\branding"
+        if (Test-Path $srcBranding) {
+            if (-not (Test-Path $destBranding)) { New-Item -ItemType Directory -Path $destBranding -Force | Out-Null }
+            Copy-Item -Path "$srcBranding\*" -Destination $destBranding -Recurse -Force
+        }
+
         $srcHash = (Get-FileHash -Path $serverExe -Algorithm SHA256).Hash
         $instEngineHash = (Get-FileHash -Path $installedEngineExe -Algorithm SHA256).Hash
         $instServerHash = (Get-FileHash -Path $installedServerExe -Algorithm SHA256).Hash
