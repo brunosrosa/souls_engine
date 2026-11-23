@@ -111,6 +111,15 @@ struct PinnedFileTarget {
     file_path_posix: String,
     absolute_path: Option<std::path::PathBuf>,
     expected_sha256: String,
+    pin_mode: String,
+}
+
+fn normalize_pin_mode(mode: &str) -> String {
+    if mode.trim().eq_ignore_ascii_case("watch") {
+        "watch".to_string()
+    } else {
+        "fail_closed".to_string()
+    }
 }
 
 /// Cryptographic verifier enforcing fail-closed immutability for constitutional (`c1`) files.
@@ -137,20 +146,32 @@ impl ConstitutionalPinVerifier {
         Ok(())
     }
 
-    /// Registers a file on disk as constitutionally pinned, capturing its baseline LF SHA-256.
+    /// Registers a file on disk as constitutionally pinned (`fail_closed`), capturing its baseline LF SHA-256.
     pub fn pin_file_from_disk<P: AsRef<Path>>(
         &self,
         rel_path: &str,
         abs_path: P,
     ) -> Result<ConstitutionalPinStatusDto, CoreError> {
+        self.pin_file_from_disk_with_mode(rel_path, abs_path, "fail_closed")
+    }
+
+    /// Registers a file on disk with explicit governance mode (`"fail_closed"` or `"watch"`).
+    pub fn pin_file_from_disk_with_mode<P: AsRef<Path>>(
+        &self,
+        rel_path: &str,
+        abs_path: P,
+        pin_mode: &str,
+    ) -> Result<ConstitutionalPinStatusDto, CoreError> {
         let posix = normalize_posix_rel_path(rel_path)?;
         let bytes = std::fs::read(abs_path.as_ref())?;
         let hash = compute_lf_sha256_hex(&bytes);
+        let mode = normalize_pin_mode(pin_mode);
         let now = Utc::now().timestamp();
         let target = PinnedFileTarget {
             file_path_posix: posix.clone(),
             absolute_path: Some(abs_path.as_ref().to_path_buf()),
             expected_sha256: hash.clone(),
+            pin_mode: mode.clone(),
         };
         if let Ok(mut guard) = self.pins.write() {
             guard.insert(posix.clone(), target);
@@ -161,23 +182,36 @@ impl ConstitutionalPinVerifier {
             actual_sha256: hash,
             verified: true,
             fail_closed_triggered: false,
+            pin_mode: mode,
             checked_at: now,
         })
     }
 
-    /// Registers an in-memory constitutional content hash (useful for hermetic tests and virtual pins).
+    /// Registers an in-memory constitutional content hash (`fail_closed`).
     pub fn pin_in_memory(
         &self,
         rel_path: &str,
         baseline_content: &str,
     ) -> Result<ConstitutionalPinStatusDto, CoreError> {
+        self.pin_in_memory_with_mode(rel_path, baseline_content, "fail_closed")
+    }
+
+    /// Registers an in-memory constitutional content hash with explicit mode (`"fail_closed"` or `"watch"`).
+    pub fn pin_in_memory_with_mode(
+        &self,
+        rel_path: &str,
+        baseline_content: &str,
+        pin_mode: &str,
+    ) -> Result<ConstitutionalPinStatusDto, CoreError> {
         let posix = normalize_posix_rel_path(rel_path)?;
         let hash = compute_lf_sha256_hex(baseline_content.as_bytes());
+        let mode = normalize_pin_mode(pin_mode);
         let now = Utc::now().timestamp();
         let target = PinnedFileTarget {
             file_path_posix: posix.clone(),
             absolute_path: None,
             expected_sha256: hash.clone(),
+            pin_mode: mode.clone(),
         };
         if let Ok(mut guard) = self.pins.write() {
             guard.insert(posix.clone(), target);
@@ -188,11 +222,27 @@ impl ConstitutionalPinVerifier {
             actual_sha256: hash,
             verified: true,
             fail_closed_triggered: false,
+            pin_mode: mode,
             checked_at: now,
         })
     }
 
-    /// Verifies all registered pinned files against disk (fail-closed if modified or missing).
+    /// Re-calculates expected LF SHA-256 baselines from all disk-backed pinned files after human confirmation.
+    pub fn resign_all_disk_pins(&self) -> Vec<ConstitutionalPinStatusDto> {
+        if let Ok(mut guard) = self.pins.write() {
+            for target in guard.values_mut() {
+                if let Some(ref path) = target.absolute_path {
+                    if let Ok(bytes) = std::fs::read(path) {
+                        target.expected_sha256 = compute_lf_sha256_hex(&bytes);
+                    }
+                }
+            }
+        }
+        self.verify_or_fail_closed()
+    }
+
+    /// Verifies all registered pinned files against disk (`fail_closed` blocks automations on mismatch;
+    /// `watch` audits drift in `verified = false` without triggering fail-closed freeze).
     pub fn verify_or_fail_closed(&self) -> Vec<ConstitutionalPinStatusDto> {
         let now = Utc::now().timestamp();
         let snapshot: Vec<PinnedFileTarget> = self
@@ -211,12 +261,14 @@ impl ConstitutionalPinVerifier {
                 None => target.expected_sha256.clone(),
             };
             let verified = actual == target.expected_sha256;
+            let fail_closed_triggered = (target.pin_mode != "watch") && !verified;
             results.push(ConstitutionalPinStatusDto {
                 file_path_posix: target.file_path_posix,
                 expected_sha256: target.expected_sha256,
                 actual_sha256: actual,
                 verified,
-                fail_closed_triggered: !verified,
+                fail_closed_triggered,
+                pin_mode: target.pin_mode,
                 checked_at: now,
             });
         }

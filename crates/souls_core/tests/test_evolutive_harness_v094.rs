@@ -53,6 +53,35 @@ fn test_v094_surface_posix_scrub_and_constitutional_pin_fail_closed() {
     assert_eq!(check.len(), 1);
     assert!(!check[0].verified);
     assert!(check[0].fail_closed_triggered);
+    assert_eq!(check[0].pin_mode, "fail_closed");
+
+    // Watch mode tracks legitimate Hermes memory writes (verified=false) without fail-closed freeze
+    let memory_path = temp_dir.path().join("MEMORY.md");
+    std::fs::write(&memory_path, "- Prefer local zero-cost inference.\n").unwrap();
+    let watch_pin = verifier
+        .pin_file_from_disk_with_mode("hermes/memories/MEMORY.md", &memory_path, "watch")
+        .unwrap();
+    assert_eq!(watch_pin.pin_mode, "watch");
+    assert!(watch_pin.verified);
+
+    std::fs::write(&memory_path, "- Prefer local zero-cost inference.\n- New fact saved.\n").unwrap();
+    let check_mixed = verifier.verify_or_fail_closed();
+    let mem_check = check_mixed
+        .iter()
+        .find(|p| p.file_path_posix == "hermes/memories/MEMORY.md")
+        .unwrap();
+    assert!(!mem_check.verified);
+    assert!(!mem_check.fail_closed_triggered);
+
+    // 1-byte tamper in SOUL.md still triggers fail_closed_triggered=true until human re-sign
+    let soul_check = check_mixed
+        .iter()
+        .find(|p| p.file_path_posix == "SOUL.md")
+        .unwrap();
+    assert!(soul_check.fail_closed_triggered);
+
+    let resigned = verifier.resign_all_disk_pins();
+    assert!(resigned.iter().all(|p| p.verified && !p.fail_closed_triggered));
 
     // ACI folding and timeout_retry=false idempotency guard
     let long_output = (0..40)
