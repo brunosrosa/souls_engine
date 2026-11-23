@@ -6094,9 +6094,11 @@ telegram:
         let ov_json: serde_json::Value =
             serde_json::from_slice(&to_bytes(resp_ov.into_body(), usize::MAX).await.unwrap())
                 .unwrap();
-        assert_eq!(ov_json["version"], "0.9.4+1");
+        assert_eq!(ov_json["version"], "0.9.4+2");
         assert_eq!(ov_json["summary"]["pins_verified"], true);
         assert_eq!(ov_json["summary"]["active_connections"], 0);
+        assert_eq!(ov_json["constitutional_pins"].as_array().unwrap().len(), 4);
+        assert!(ov_json["quarantine"].is_array());
         assert_eq!(ov_json["slots_catalog"].as_array().unwrap().len(), 8);
         assert_eq!(ov_json["catnap"]["config"]["min_idle_secs"], 180);
         assert_eq!(ov_json["catnap"]["config"]["max_gpu_temp_c"], 62.0);
@@ -6369,9 +6371,108 @@ telegram:
         let mem2_json: serde_json::Value =
             serde_json::from_slice(&to_bytes(mem2.into_body(), usize::MAX).await.unwrap())
                 .unwrap();
-        let tombstones_applied = mem2_json["tombstones_applied"].as_array().unwrap();
-        assert!(!tombstones_applied.is_empty(), "Mirror write must apply JIT tombstone on key override");
+        assert!(
+            mem2_json["tombstones_applied"].as_array().unwrap().is_empty(),
+            "Mirror STABLE writes must be shielded from automatic JIT tombstones"
+        );
+
+        // EVOLVING JIT Tombstone: preview (read-only) -> scan (mutated, idempotent 2nd scan) -> 1-click restore
+        let ev1 = souls_protocol::EpistemicMemoryRecord {
+            id: "ev_editor_old".to_string(),
+            session_id: "sess_e2e_v094".to_string(),
+            category: "preferences".to_string(),
+            content: "editor_preferido: neovim no terminal".to_string(),
+            partition: souls_protocol::EpistemicPartition::Evolving,
+            salience: 0.9,
+            access_count: 1,
+            source_ref: None,
+            created_at: 1000,
+            last_accessed_at: 1000,
+            updated_at: 1000,
+        };
+        let ev2 = souls_protocol::EpistemicMemoryRecord {
+            id: "ev_editor_new".to_string(),
+            content: "editor_preferido: vscode com extensoes rust".to_string(),
+            created_at: 2000,
+            last_accessed_at: 2000,
+            updated_at: 2000,
+            ..ev1.clone()
+        };
+        {
+            let pool = state.memory.pool();
+            souls_memory::upsert_epistemic_memory(&pool, &ev1).await.unwrap();
+            souls_memory::upsert_epistemic_memory(&pool, &ev2).await.unwrap();
+        }
+        let preview_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 939, "method": "tools/call",
+                                    "params": { "name": "tool_dispatch", "arguments": { "tool": "harness_tombstone_resolve", "arguments": {} } }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(preview_resp["result"]["structuredContent"]["mutated"], false);
+        assert!(!preview_resp["result"]["structuredContent"]["candidates"].as_array().unwrap().is_empty());
+
+        let scan1 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/tombstones/resolve")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(scan1.status(), StatusCode::OK);
+        let scan1_json: serde_json::Value =
+            serde_json::from_slice(&to_bytes(scan1.into_body(), usize::MAX).await.unwrap())
+                .unwrap();
+        let tombstones_applied = scan1_json["tombstones_applied"].as_array().unwrap();
+        assert!(!tombstones_applied.is_empty(), "EVOLVING scan must apply JIT tombstone on key override");
         let tomb_id = tombstones_applied[0]["tombstone_id"].as_str().unwrap();
+
+        let scan2_json: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/api/v1/harness/tombstones/resolve")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from("{}"))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(scan2_json["tombstones_applied"].as_array().unwrap().is_empty(), "Second scan must be idempotent no-op");
 
         let resp_restore = app
             .clone()
@@ -6589,7 +6690,7 @@ telegram:
         let ev_js = include_str!("templates/scripts/evolutive_harness.js");
         assert!(!ev_html.contains("style=\""), "Zero inline style= permitted");
         assert!(!ev_js.contains("style=\""), "Zero inline style= permitted in JS");
-        assert!(crate::templates::DASHBOARD_HTML.contains("(v0.9.4+1)"));
+        assert!(crate::templates::DASHBOARD_HTML.contains("(v0.9.4+2)"));
         assert!(crate::templates::DASHBOARD_HTML.contains("tab-evolutive-harness"));
         assert!(crate::templates::DASHBOARD_HTML.contains("drawer-lab-evolutive-harness"));
         assert!(crate::templates::DASHBOARD_HTML.contains("96 Ferramentas MCP Nativas"));
@@ -6602,6 +6703,370 @@ telegram:
                 );
             }
         }
+
+        let _ = std::fs::remove_dir_all(&harness_root);
+        let _ = std::fs::remove_dir_all(&google_dir);
+    }
+
+    #[tokio::test]
+    async fn test_v094_2_audit_remediations_p0_through_p2b() {
+        let state = create_test_state().await;
+        let harness_root = state.evolutive_harness.data_dir.parent().unwrap().to_path_buf();
+        let google_dir = state.google_hub.data_dir.clone();
+        let app = build_router(state.clone());
+
+        // P0-B: tool_search(namespace="ops", query="tombstone ...") must discover harness_tombstone_resolve
+        let search_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1001, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_search",
+                                        "arguments": {
+                                            "namespace": "ops",
+                                            "query": "tombstone resolve superseded memory restore",
+                                            "top_k": 5
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        let matched_tools = search_resp["result"]["structuredContent"]["tools"]
+            .as_array()
+            .unwrap();
+        assert!(
+            matched_tools.iter().any(|t| t["name"] == "harness_tombstone_resolve" && t["schema"].is_object()),
+            "P0-B: harness_tombstone_resolve must appear in ops search: {matched_tools:?}"
+        );
+
+        // P1: 4 c1 disk pins (SOUL.md fail_closed vs MEMORY.md/USER.md watch) + resign endpoint
+        let fake_hermes = harness_root.join("hermes_c1_disk");
+        std::fs::create_dir_all(fake_hermes.join("memories")).unwrap();
+        std::fs::write(fake_hermes.join("SOUL.md"), "# Soul Original\n").unwrap();
+        std::fs::write(fake_hermes.join("memories").join("MEMORY.md"), "- Initial memory.\n").unwrap();
+        std::fs::write(fake_hermes.join("memories").join("USER.md"), "- Bruno.\n").unwrap();
+        state.evolutive_harness.pin_hermes_c1_dir_from_disk(&fake_hermes);
+
+        // Writing to MEMORY.md (watch) must set verified=false without triggering fail-closed block
+        std::fs::write(
+            fake_hermes.join("memories").join("MEMORY.md"),
+            "- Initial memory.\n- New memory written by Hermes.\n",
+        )
+        .unwrap();
+        let mut cfg = state.evolutive_harness.catnap.get_config();
+        cfg.quiet_hours_enabled = false;
+        state.evolutive_harness.catnap.update_config(cfg);
+        state.evolutive_harness.catnap.set_idle_elapsed_secs_for_test(240);
+        let catnap_watch = state
+            .evolutive_harness
+            .run_catnap_micro_slice(&state, Some("ladybug_reconcile"), false)
+            .await;
+        assert!(catnap_watch.is_ok(), "Watch pin update in MEMORY.md must NOT fail-closed abort Catnap");
+
+        // Editing 1 byte of SOUL.md (fail_closed) MUST trigger fail_closed_triggered=true & abort Catnap!
+        std::fs::write(fake_hermes.join("SOUL.md"), "# Soul Mutated!\n").unwrap();
+        let catnap_tampered = state
+            .evolutive_harness
+            .run_catnap_micro_slice(&state, Some("ladybug_reconcile"), false)
+            .await;
+        assert!(catnap_tampered.is_err(), "1-byte SOUL.md tamper MUST trigger fail-closed abort");
+
+        let ov_tampered: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(Request::builder().uri("/api/v1/harness/overview").method("GET").body(Body::empty()).unwrap())
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(ov_tampered["summary"]["pins_verified"], false);
+        assert!(ov_tampered["constitutional_pins"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["file_path_posix"] == "hermes/SOUL.md" && p["fail_closed_triggered"] == true));
+
+        // 1-click resign restores verified=true
+        let resign_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(Request::builder().uri("/api/v1/harness/pins/resign").method("POST").body(Body::empty()).unwrap())
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(resign_resp["pins_verified"], true);
+
+        // P1-C & P1-B: missing session_id returns typed -32013 ResourceNotFound (never -32000 InternalEnginePanic)
+        let missing_complete: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1002, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_dispatch",
+                                        "arguments": {
+                                            "tool": "sub_agent",
+                                            "arguments": {
+                                                "action": "complete",
+                                                "session_id": "pos_build_probe_inexistent",
+                                                "outcome": "SUCCESS",
+                                                "tokens_used": 1
+                                            }
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(missing_complete["error"]["code"], -32013);
+
+        // Spawn -> complete(session_id) closes WeEvolve + ParetoBandit + telemetry_events -> feedback
+        let spawned: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1003, "method": "tools/call",
+                                    "params": {
+                                        "name": "sub_agent",
+                                        "arguments": {
+                                            "action": "spawn",
+                                            "parent_session_id": "sess_loop",
+                                            "task_description": "Compile probe",
+                                            "assigned_tier": "tier0_onnx_cpu"
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        let spawned_id = spawned["result"]["structuredContent"]["agent_id"].as_str().unwrap();
+
+        let completed: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1004, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_dispatch",
+                                        "arguments": {
+                                            "tool": "sub_agent",
+                                            "arguments": {
+                                                "action": "complete",
+                                                "session_id": spawned_id,
+                                                "outcome": "SUCCESS",
+                                                "tokens_used": 1250,
+                                                "latency_ms": 42.5,
+                                                "task_type": "code"
+                                            }
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(completed["result"]["structuredContent"]["status"], "ok");
+        assert_eq!(completed["result"]["structuredContent"]["pareto_updated"], true);
+
+        let fb_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1005, "method": "tools/call",
+                                    "params": { "name": "tool_dispatch", "arguments": { "tool": "feedback", "arguments": { "limit": 20 } } }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(fb_resp["result"]["structuredContent"]["total_telemetry_events"].as_i64().unwrap() >= 1);
+        assert!(fb_resp["result"]["structuredContent"]["avg_latency_ms"].as_f64().unwrap() > 0.0);
+
+        // P2: route_subtask with Nominal GPU + 30000 tokens over local catalog MUST return -32012 TokenBudgetExceeded
+        {
+            let pool = state.memory.pool();
+            sqlx::query("UPDATE model_registry SET is_active = 0 WHERE provider_type = 'CLOUD'")
+                .execute(&*pool)
+                .await
+                .unwrap();
+        }
+        let route_30k: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1006, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_dispatch",
+                                        "arguments": {
+                                            "tool": "route_subtask",
+                                            "arguments": { "task_type": "code", "estimated_tokens": 30000 }
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(route_30k["error"]["code"], -32012, "Must return TokenBudgetExceeded (-32012), got: {route_30k}");
+        assert!(route_30k["error"]["message"].as_str().unwrap().contains("chunking"));
+
+        // P2-B: harness_status exposes top-level "quarantine" array (populated after crystallize)
+        let _ = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/ralph/crystallize")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "title_pt": "Teste quarentena v094+2",
+                            "domain": "ops",
+                            "problem_pattern_pt": "Erro de schema",
+                            "resolution_playbook": "1. Validar chaves."
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status_mcp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.oneshot(
+                    Request::builder()
+                        .uri("/mcp")
+                        .method("POST")
+                        .header("content-type", "application/json")
+                        .body(Body::from(
+                            serde_json::json!({
+                                "jsonrpc": "2.0", "id": 1007, "method": "tools/call",
+                                "params": { "name": "tool_dispatch", "arguments": { "tool": "harness_status", "arguments": { "include_index": false } } }
+                            })
+                            .to_string(),
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+                .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(status_mcp["result"]["structuredContent"]["quarantine"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|q| q["slug"] == "teste-quarentena-v0942"));
 
         let _ = std::fs::remove_dir_all(&harness_root);
         let _ = std::fs::remove_dir_all(&google_dir);

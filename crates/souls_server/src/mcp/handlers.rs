@@ -6,7 +6,8 @@
 use serde_json::{json, Value};
 use souls_model_router::bandit::unpack_gpu_telemetry;
 use souls_model_router::context::TaskContext;
-use souls_protocol::error::McpDomainError;
+use souls_model_router::{RouterError, TaskOutcome};
+use souls_protocol::error::{JsonRpcError, McpDomainError};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -18,7 +19,7 @@ use crate::state::AppState;
 pub async fn handle_route_subtask(
     state: &AppState,
     args: &serde_json::Map<String, Value>,
-) -> Result<Value, McpDomainError> {
+) -> Result<Value, JsonRpcError> {
     let task_type = args
         .get("task_type")
         .and_then(Value::as_str)
@@ -103,9 +104,32 @@ pub async fn handle_route_subtask(
 
     let (decision_res, fallback_chain) = rx
         .await
-        .map_err(|_| McpDomainError::InternalEnginePanic)?;
+        .map_err(|_| McpDomainError::InternalEnginePanic.to_jsonrpc_error())?;
 
-    let decision = decision_res.map_err(|_| McpDomainError::VramThermalThrottled)?;
+    let decision = match decision_res {
+        Ok(d) => d,
+        Err(RouterError::ContextWindowExceeded(msg)) => {
+            let max_ctx_hint: u32 = sqlx::query_scalar::<_, Option<i64>>(
+                "SELECT MAX(CASE WHEN provider_type = 'LOCAL' AND vram_base_mb > 0 THEN MIN(max_context_window, 16000) ELSE max_context_window END) FROM model_registry WHERE is_active = 1",
+            )
+            .fetch_one(&*state.memory.pool())
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or(16_000)
+            .max(1) as u32;
+            return Err(McpDomainError::TokenBudgetExceeded.to_jsonrpc_error_with_data(json!({
+                "estimated_tokens": estimated_tokens,
+                "max_active_context_tokens": max_ctx_hint,
+                "detail": msg,
+                "corrective_action": format!(
+                    "Faça chunking/map-reduce mantendo cada lote abaixo de {} tokens (preservando execução local $0.00).",
+                    max_ctx_hint
+                )
+            })));
+        }
+        Err(_) => return Err(McpDomainError::VramThermalThrottled.to_jsonrpc_error()),
+    };
 
     let packed = state.router.gpu_telemetry_atomic().load(Ordering::Acquire);
     let (vram_allocated_mb, gpu_temp_c, zone) = unpack_gpu_telemetry(packed);
@@ -331,7 +355,22 @@ pub async fn handle_handoff(
     }))
 }
 
-/// Handles `sub_agent` lifecycle management and diaries.
+fn map_subagent_memory_err(err: souls_memory::MemoryError) -> McpDomainError {
+    match err {
+        souls_memory::MemoryError::SubAgentNotFound(_) => McpDomainError::ResourceNotFound,
+        _ => McpDomainError::InternalEnginePanic,
+    }
+}
+
+fn resolve_subagent_id<'a>(args: &'a serde_json::Map<String, Value>) -> &'a str {
+    args.get("agent_id")
+        .or_else(|| args.get("session_id"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+}
+
+/// Handles `sub_agent` lifecycle management, diaries, and closed-loop ParetoBandit feedback.
 pub async fn handle_sub_agent(
     state: &AppState,
     args: &serde_json::Map<String, Value>,
@@ -342,13 +381,17 @@ pub async fn handle_sub_agent(
     match action {
         "spawn" => {
             let parent_session = args.get("parent_session_id").and_then(Value::as_str).unwrap_or("main");
-            let task_desc = args.get("task_description").and_then(Value::as_str).unwrap_or("general subagent task");
+            let task_desc = args
+                .get("task_description")
+                .or_else(|| args.get("task_name"))
+                .and_then(Value::as_str)
+                .unwrap_or("general subagent task");
             let assigned_tier = args.get("assigned_tier").and_then(Value::as_str).unwrap_or("Tier1");
 
             let record = sub_mgr
                 .spawn_subagent(parent_session, task_desc, assigned_tier)
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?;
 
             Ok(json!({
                 "content": [{
@@ -360,14 +403,17 @@ pub async fn handle_sub_agent(
             }))
         }
         "diary" => {
-            let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("anon");
+            let agent_id = resolve_subagent_id(args);
+            if agent_id.is_empty() {
+                return Err(McpDomainError::InvalidInputParameters);
+            }
             let session_id = args.get("session_id").and_then(Value::as_str).unwrap_or("main");
             let content = args.get("content").and_then(Value::as_str).unwrap_or("");
 
             let record = sub_mgr
                 .record_diary(agent_id, session_id, content)
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?;
 
             Ok(json!({
                 "content": [{
@@ -379,15 +425,18 @@ pub async fn handle_sub_agent(
             }))
         }
         "update_status" => {
-            let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("");
+            let agent_id = resolve_subagent_id(args);
+            if agent_id.is_empty() {
+                return Err(McpDomainError::InvalidInputParameters);
+            }
             let status_str = args.get("status").and_then(Value::as_str).unwrap_or("RUNNING");
             let status = souls_memory::SubAgentStatus::from_str_strict(status_str)
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(|_| McpDomainError::InvalidInputParameters)?;
 
             let record = sub_mgr
                 .update_status(agent_id, status)
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?;
 
             if status == souls_memory::SubAgentStatus::Failed {
                 let pool = state.memory.pool();
@@ -402,7 +451,7 @@ pub async fn handle_sub_agent(
                 )
                 .await;
                 if let Ok(failed_count) = sqlx::query_scalar::<_, i64>(
-                    "SELECT COUNT(*) FROM subagent_sessions WHERE status = 'FAILED'",
+                    "SELECT COUNT(*) FROM sub_agent_sessions WHERE status = 'FAILED'",
                 )
                 .fetch_one(&*pool)
                 .await
@@ -423,23 +472,43 @@ pub async fn handle_sub_agent(
             }))
         }
         "complete" => {
-            let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("");
+            let agent_id = resolve_subagent_id(args);
+            if agent_id.is_empty() {
+                return Err(McpDomainError::InvalidInputParameters);
+            }
+            let outcome_raw = args
+                .get("outcome")
+                .and_then(Value::as_str)
+                .unwrap_or("SUCCESS")
+                .trim()
+                .to_ascii_uppercase();
+            let is_success = outcome_raw != "FAILED" && outcome_raw != "ERROR" && outcome_raw != "FAIL";
+            let target_status = if is_success {
+                souls_memory::SubAgentStatus::Completed
+            } else {
+                souls_memory::SubAgentStatus::Failed
+            };
+
             let summary = args
                 .get("result_summary")
                 .or_else(|| args.get("summary"))
                 .and_then(Value::as_str)
-                .unwrap_or("Task completed successfully.");
+                .unwrap_or(if is_success {
+                    "Task completed successfully."
+                } else {
+                    "Task failed."
+                });
             let variables = args
                 .get("output_variables")
                 .or_else(|| args.get("variables"))
                 .cloned()
                 .unwrap_or(json!({}));
 
-            // 1. Update status to Completed
+            // 1. Update status in sub_agent_sessions (returns ResourceNotFound -32013 if missing)
             let record = sub_mgr
-                .update_status(agent_id, souls_memory::SubAgentStatus::Completed)
+                .update_status(agent_id, target_status)
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?;
 
             // 2. Automatically generate return handoff payload targeting the parent session
             let return_handoff = sub_mgr
@@ -450,29 +519,132 @@ pub async fn handle_sub_agent(
                     variables,
                 )
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?;
 
             let pool = state.memory.pool();
             let now = chrono::Utc::now().timestamp();
+            let tokens_used = args.get("tokens_used").and_then(Value::as_u64).unwrap_or(0) as u32;
+            let latency_ms = args
+                .get("latency_ms")
+                .and_then(Value::as_f64)
+                .unwrap_or_else(|| {
+                    let secs = now.saturating_sub(record.created_at).max(1);
+                    (secs as f64) * 1000.0
+                })
+                .max(1.0);
+            let tier_name = args
+                .get("model_id")
+                .and_then(Value::as_str)
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or(&record.assigned_tier)
+                .to_string();
+            let task_type = args
+                .get("task_type")
+                .and_then(Value::as_str)
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or("subagent")
+                .to_string();
+
+            // 3. Record WeEvolve rating signal
             let _ = souls_memory::record_weevolve_signal(
                 &pool,
                 &record.agent_id,
                 "subagent_profile",
-                "subagent_completed",
+                if is_success { "subagent_completed" } else { "subagent_failed" },
                 None,
                 now,
             )
             .await;
 
+            // 4. Close ParetoBandit Bayesian loop (updates pareto_bandit_priors)
+            let task_outcome = TaskOutcome {
+                task_id: record.agent_id.clone(),
+                tier_name: tier_name.clone(),
+                task_category: task_type.clone(),
+                success: is_success,
+                structural_score: if is_success { 1.0 } else { 0.0 },
+                direct_cost_usd: 0.0,
+                latency_ms,
+                tokens_input: tokens_used / 2,
+                tokens_output: tokens_used.saturating_sub(tokens_used / 2),
+                is_rate_limit: false,
+                retry_after_secs: None,
+            };
+            let e3_score = task_outcome.compute_e3();
+            let pareto_updated = if state.router.record_outcome(&record.agent_id, &task_outcome).await.is_ok() {
+                state.router.flush_outcomes().await.is_ok()
+            } else {
+                false
+            };
+
+            // 5. Persist subagent completion telemetry into STRICT telemetry_events table
+            let sub_seq = {
+                static SUB_TEL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+                SUB_TEL_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            };
+            let evt_id = format!(
+                "tel_sub_{:x}_{}",
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos(),
+                sub_seq
+            );
+            let tel_payload = json!({
+                "agent_id": record.agent_id,
+                "outcome": if is_success { "SUCCESS" } else { "FAILED" },
+                "task_category": task_type,
+                "pareto_updated": pareto_updated,
+            })
+            .to_string();
+            if let Err(e) = sqlx::query(
+                "INSERT INTO telemetry_events
+                 (id, session_id, event_type, execution_tier, payload_json, latency_ms, tokens_input, tokens_output, direct_cost_usd, e3_score, created_at)
+                 VALUES (?1, ?2, 'subagent_complete', ?3, ?4, ?5, ?6, ?7, 0.0, ?8, ?9)"
+            )
+            .bind(&evt_id)
+            .bind(&record.parent_session_id)
+            .bind(&tier_name)
+            .bind(&tel_payload)
+            .bind(latency_ms)
+            .bind((tokens_used / 2) as i64)
+            .bind(tokens_used.saturating_sub(tokens_used / 2) as i64)
+            .bind(e3_score)
+            .bind(now)
+            .execute(&*pool)
+            .await
+            {
+                tracing::warn!("Failed to record subagent_complete telemetry_event: {e}");
+            }
+
+            if !is_success {
+                if let Ok(failed_count) = sqlx::query_scalar::<_, i64>(
+                    "SELECT COUNT(*) FROM sub_agent_sessions WHERE status = 'FAILED'",
+                )
+                .fetch_one(&*pool)
+                .await
+                {
+                    state
+                        .evolutive_harness
+                        .refresh_pending_failures(failed_count.max(0) as usize);
+                }
+            }
+
             Ok(json!({
                 "content": [{
                     "type": "text",
                     "text": format!(
-                        "Sub-agent '{}' completed successfully. Return handoff '{}' generated for parent session '{}'.",
-                        record.agent_id, return_handoff.id, record.parent_session_id
+                        "Sub-agent '{}' completed ({}). Return handoff '{}' generated for parent session '{}'.",
+                        record.agent_id,
+                        if is_success { "SUCCESS" } else { "FAILED" },
+                        return_handoff.id,
+                        record.parent_session_id
                     )
                 }],
                 "structuredContent": {
+                    "status": "ok",
+                    "outcome": if is_success { "SUCCESS" } else { "FAILED" },
+                    "pareto_updated": pareto_updated,
                     "session": record,
                     "return_handoff": return_handoff
                 },
@@ -480,22 +652,25 @@ pub async fn handle_sub_agent(
             }))
         }
         "history" => {
-            let agent_id = args.get("agent_id").and_then(Value::as_str).unwrap_or("");
+            let agent_id = resolve_subagent_id(args);
+            if agent_id.is_empty() {
+                return Err(McpDomainError::InvalidInputParameters);
+            }
             let session = sub_mgr
                 .get_subagent(agent_id)
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?
-                .ok_or(McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?
+                .ok_or(McpDomainError::ResourceNotFound)?;
 
             let diaries = sub_mgr
                 .list_diaries(agent_id)
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?;
 
             let handoff = sub_mgr
                 .get_handoff(agent_id)
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?;
 
             Ok(json!({
                 "content": [{
@@ -518,7 +693,7 @@ pub async fn handle_sub_agent(
             let list = sub_mgr
                 .list_subagents_by_parent(parent_session)
                 .await
-                .map_err(|_| McpDomainError::InternalEnginePanic)?;
+                .map_err(map_subagent_memory_err)?;
 
             Ok(json!({
                 "content": [{
@@ -529,7 +704,7 @@ pub async fn handle_sub_agent(
                 "isError": false
             }))
         }
-        _ => Err(McpDomainError::InternalEnginePanic),
+        _ => Err(McpDomainError::InvalidInputParameters),
     }
 }
 

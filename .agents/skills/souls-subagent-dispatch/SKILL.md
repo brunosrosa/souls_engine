@@ -48,5 +48,6 @@ Para não poluir a janela de contexto do chat mestre:
 
 ### Etapa 4: Fechamento de Sessão e Telemetria
 Quando o subagente terminar:
-* Chame `sub_agent(action="complete", session_id="...", outcome="SUCCESS", tokens_used=1250)`.
-* O ParetoBandit atualiza as distribuições Beta ($\alpha$ e $\beta$) do modelo correspondente para calibrar futuras escolhas.
+* Chame `tool_dispatch(tool="sub_agent", arguments={"action": "complete", "session_id": "<agent_id_do_spawn>", "outcome": "SUCCESS", "tokens_used": 1250, "model_id": "<modelo_prescrito>", "task_type": "code"})`.
+* O handler aceita `agent_id` ou alias `session_id`, fecha `sub_agent_sessions`, atualiza `weevolve_ratings`, registra `telemetry_events` e atualiza as distribuições Beta ($\alpha$ e $\beta$) no ParetoBandit (`pareto_bandit_priors`). Se a sessão não existir, retorna erro tipado `-32013 ResourceNotFound`.
+* Se `route_subtask` retornar `-32012 TokenBudgetExceeded`, realize chunking / map-reduce abaixo do `max_active_context_tokens` informado antes de tentar novamente (não é erro térmico).

@@ -255,9 +255,7 @@ pub async fn dispatch_jsonrpc(
                     return Box::pin(dispatch_jsonrpc(state, forwarded_req, session_id)).await;
                 }
                 "route_subtask" => {
-                    handlers::handle_route_subtask(state, args)
-                        .await
-                        .map_err(|e| e.to_jsonrpc_error())
+                    handlers::handle_route_subtask(state, args).await
                 }
                 "sys_time" => Ok(handlers::handle_sys_time()),
                 "metrics" => Ok(handlers::handle_metrics(state)),
@@ -600,26 +598,44 @@ pub async fn dispatch_jsonrpc(
                 }
             };
 
-            // 3. Asynchronously record non-blocking telemetry in SQLite
-            let duration_ms = start_time.elapsed().as_millis() as u64;
+            // 3. Record MCP call telemetry into telemetry_events STRICT schema cleanly
+            let elapsed_ms = (start_time.elapsed().as_secs_f64() * 1000.0).max(0.01);
             let is_error = call_result.is_err();
-            let pool = (*state.memory.pool()).clone();
-            let sess_str = session_id.unwrap_or("anon").to_string();
-            let tool_str = norm_tool.to_string();
+            let pool = state.memory.pool();
+            let sess_str = session_id.unwrap_or("anon");
+            let evt_seq = {
+                static MCP_TEL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+                MCP_TEL_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            };
+            let evt_id = format!(
+                "tel_{:x}_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos(),
+                evt_seq
+            );
+            let payload_json = serde_json::json!({
+                "tool_name": norm_tool,
+                "is_error": is_error,
+            })
+            .to_string();
 
-            tokio::spawn(async move {
-                let _ = sqlx::query(
-                    "INSERT INTO telemetry_events (id, timestamp, tool_name, duration_ms, is_error, session_id)
-                     VALUES ($1, strftime('%s','now'), $2, $3, $4, $5)"
-                )
-                .bind(format!("tel_{:x}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos()))
-                .bind(&tool_str)
-                .bind(duration_ms as i64)
-                .bind(if is_error { 1 } else { 0 })
-                .bind(&sess_str)
-                .execute(&pool)
-                .await;
-            });
+            if let Err(e) = sqlx::query(
+                "INSERT INTO telemetry_events
+                 (id, session_id, event_type, execution_tier, payload_json, latency_ms, tokens_input, tokens_output, direct_cost_usd, e3_score, created_at)
+                 VALUES (?1, ?2, 'mcp_tool_call', 'mcp', ?3, ?4, 0, 0, 0.0, ?5, strftime('%s','now'))"
+            )
+            .bind(&evt_id)
+            .bind(sess_str)
+            .bind(&payload_json)
+            .bind(elapsed_ms)
+            .bind(if is_error { 0.0 } else { 1.0 })
+            .execute(&*pool)
+            .await
+            {
+                warn!("Failed to persist telemetry_events row for '{norm_tool}': {e}");
+            }
 
             call_result
         }

@@ -1,7 +1,7 @@
 # ADR-034: Souls Evolutive Harness — Microkernel Cordis, Catnap Protocol, Tombstones Lógicos e The Ralph Loop (`v0.9.4`)
 
 ## Status
-**Aprovado e Implementado** (Milestone `v0.9.4` / Patch Operacional `v0.9.4+1`)
+**Aprovado e Implementado** (Milestone `v0.9.4` / Hardening `v0.9.4+2`)
 
 ## Data
 2026-11-23
@@ -19,7 +19,7 @@ Sistemas agênticos capazes de se auto-aprimorar enfrentam quatro armadilhas est
 
 ### 1. Superfície Anatômica Modular `c1`–`c8` & Blindagem Windows (`souls_protocol::harness_evolve` + `souls_core::harness::surface`)
 - **8 Slots Canônicos (`HarnessComponentSlot`):**
-  - `c1` (`C1SystemPrompt` — `AGENTS.md`, `SOUL.md`): **Imutável (*fail-closed*)** e verificado por hash SHA-256 normalizado em LF (`\n`). Qualquer tentativa automatizada de mutação ou divergência em disco aborta o ciclo de evolução com `CoreError::HarnessGovernanceViolation`.
+  - `c1` (`C1SystemPrompt` — `AGENTS.md`, `hermes/SOUL.md` em modo `fail_closed`, somado a auditoria `watch` de `memories/MEMORY.md` e `memories/USER.md` sob `%LOCALAPPDATA%\hermes`): protegido por hash SHA-256 normalizado em LF (`\n`) com botão humano `POST /api/v1/harness/pins/resign`. Qualquer tentativa automatizada de mutação ou divergência em `AGENTS.md`/`SOUL.md` aborta o ciclo de evolução com `fail_closed_triggered = true`.
   - `c2`, `c5`, `c7`, `c8`: Mutáveis de forma efêmera e 100% reversível via **Fibras Cordis**.
   - `c4` (`C4Skills`) e `c6` (`C6Scripts`): Alterados exclusivamente pelo fluxo **The Ralph Loop -> Skills Hub Quarentena** com Scanner Zero-Trust + **Myers Diff** para aprovação explícita do operador.
   - `c3` (`C3Memory`): Higiene via **Tombstones Lógicos JIT**.
@@ -41,13 +41,13 @@ Sistemas agênticos capazes de se auto-aprimorar enfrentam quatro armadilhas est
 - **Configuração Persistente Cirúrgica:** `[evolutive_harness]` em `souls_config.toml` com parser/gravador específico de seção preservando blocos irmãos e finais LF.
 
 ### 4. Tombstones Lógicos Reversíveis, Ranking WeEvolve & Experience Library (`souls_memory::evolve`)
-- **Tombstones JIT sem Deleção Física (Tabela `#17 epistemic_memory_tombstones`):** Ao detectar substituição de preferência (`k: v`), diretriz de troca (`>= 2` tokens substantivos específicos fora da lista de stopwords genéricas ou citação direta do termo substituído) ou inversão de polaridade, marca o fato antigo como `status = 'superseded'`, adiciona aresta `conflicts_with` no `LadybugDB` (garantindo criação prévia dos nós `mem_node_<id>`) e filtra o ID em `0 ms` no FTS5, listagens e `RrfFusionEngine`. A restauração em 1 clique (`restore_tombstoned_memory`) remove a aresta `conflicts_with` correspondente e reabilita imediatamente a memória antiga sem violar o ADR-006.
-- **Bradley-Terry ELO & EMA ($\alpha = 0.15$) (Tabela `#18 weevolve_ratings`):** Pontua fibras Cordis, skills e perfis de subagentes a partir de sinais reais de conclusão, falhas e reversões manuais.
+- **Tombstones JIT sem Deleção Física (Tabela `#17 epistemic_memory_tombstones`):** O contrato MCP `harness_tombstone_resolve` opera por padrão em `action = "preview"` (100% *read-only*) e `action = "scan"` restringe a varredura automática à partição `EVOLVING`, preservando `STABLE` imune e exigindo causalidade temporal unidirecional (`updated_at < new.updated_at`). Ao detectar substituição de preferência (`k: v` validado contra falsos positivos como `http://` e `2e:`), diretriz de troca (`>= 2` tokens substantivos específicos fora da lista de stopwords genéricas ou citação direta do termo substituído) ou inversão de polaridade, marca o fato antigo como `status = 'superseded'`, adiciona aresta `conflicts_with` no `LadybugDB` (garantindo criação prévia dos nós `mem_node_<id>`) e filtra o ID em `0 ms` no FTS5, listagens e `RrfFusionEngine`. A restauração em 1 clique (`restore_tombstoned_memory`) remove a aresta `conflicts_with` correspondente e reabilita imediatamente a memória antiga sem violar o ADR-006.
+- **Bradley-Terry ELO, Fechamento `sub_agent` & Telemetria Unificada (Tabelas `#18 weevolve_ratings`, `telemetry_events` & `sub_agent_sessions`):** Pontua fibras Cordis, skills e perfis de subagentes a partir de sinais reais de conclusão, falhas e reversões manuais; `sub_agent(action="complete")` aceita `agent_id` ou `session_id`, atualiza `sub_agent_sessions`, `weevolve_ratings`, `telemetry_events` e `ParetoBanditRouter`, retornando `-32013 ResourceNotFound` quando ausente (e `-32012 TokenBudgetExceeded` quando o chunk excede a janela ativa sem barreira térmica).
 - **Catnap Ledger & Domain Experience Library (Tabela `#19 catnap_consolidation_ledger`):** Grava episódios em `EXPERIENCE.md` + `metadata.json` deduplicados por `runmark_fingerprint` (com teto de retenção em `50` episódios) e mantém inventário $\mathcal{O}(M)$ `INDEX.md` com censo `always_on_chars`.
 
-### 5. The Ralph Loop, MCP (`96 Tools / 18 Skills`) & Superfície Humana Zero-Jargão (`souls_server`)
-- **Ralph Loop -> Quarentena & Aprovação em 1 Clique:** `crystallize_ralph_skill()` gera `SKILL.md` normalizada em LF, executa Scanner Zero-Trust + cálculo FinOps ($E^3$) + Myers Diff e deposita na Quarentena do Skills Hub para revisão visual ou aprovação direta via `POST /api/v1/harness/ralph/approve`.
-- **12 Rotas REST (`/api/v1/harness/*`), 5 Ferramentas MCP & 18ª Skill Switchboard:** Totalizando **96** ferramentas canônicas (**8** Boot Level 0 + **88** progressivas) e **18** skills (`souls-evolutive-harness`).
+### 5. The Ralph Loop, MCP (`96 Tools / 18 Skills`), Pins `c1` Híbridos & Superfície Humana (`souls_server`)
+- **Ralph Loop -> Quarentena & Aprovação em 1 Clique:** `crystallize_ralph_skill()` gera `SKILL.md` normalizada em LF, executa Scanner Zero-Trust + cálculo FinOps ($E^3$) + Myers Diff e deposita na Quarentena do Skills Hub para revisão visual ou aprovação direta via `POST /api/v1/harness/ralph/approve`; `harness_status` expõe sempre a chave top-level `"quarantine"`.
+- **13 Rotas REST (`/api/v1/harness/*`), 4 Pins `c1` (`fail_closed` + `watch`) & 18ª Skill Switchboard (`namespace: "ops"`):** Inclui `POST /api/v1/harness/pins/resign`, monitorando `AGENTS.md` + `SOUL.md` (`fail_closed`) e `MEMORY.md` + `USER.md` (`watch`), mantendo **96** ferramentas canônicas (**8** Boot Level 0 + **88** progressivas, com `harness_tombstone_resolve` em `namespace: "ops"`) e **18** skills (`souls-evolutive-harness`).
 - **UI Centrada no Humano (`AGENTS.md` §9) & Companion Systray Desacoplado (`v0.9.4+1`):** Sub-aba **Auto-Evolução & Aprendizado** sob o pilar **Agentes & Personas** (`evolutive_harness.html` + `evolutive_harness.js`), 100% livre de estilos inline (`style="..."`) e emojis crus, com botões de 1 clique em português claro e telemetria técnica encapsulada em `<details class="lab-drawer" id="drawer-lab-evolutive-harness">`. O companion externo [souls_launcher.ps1](file:///z:/souls_engine/tools/souls_launcher.ps1) (mantendo `souls_server.exe` 100% headless) opera com instância única por substituição limpa (*takeover* ao abrir pelo atalho), verificação de processo `< 1 ms` sem trava TCP quando o daemon fecha, timeout `HttpClient` `450ms` + `DoEvents()`, ícone cinza (`souls_icon_gray.ico`) quando parado e ações 1-clique Iniciar/Reiniciar/Parar Servidor Daemon.
 
 ---

@@ -43,8 +43,8 @@ use souls_protocol::{
 
 use crate::skills_hub::{
     compute_normalized_lf_sha256, compute_skill_diff, discard_quarantine_item,
-    evaluate_skill_quality, normalize_skill_slug, parse_skill_markdown, scan_skill_zero_trust,
-    sync_skill_to_targets, QuarantineItem, SkillsHubRoots,
+    evaluate_skill_quality, list_quarantine_items, normalize_skill_slug, parse_skill_markdown,
+    scan_skill_zero_trust, sync_skill_to_targets, QuarantineItem, SkillsHubRoots,
 };
 use crate::state::AppState;
 
@@ -248,6 +248,47 @@ impl EvolutiveHarnessService {
         }
     }
 
+    fn resolve_hermes_c1_root() -> Option<PathBuf> {
+        if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+            let p = PathBuf::from(local_app).join("hermes");
+            if p.is_dir() {
+                return Some(p);
+            }
+        }
+        if let Ok(profile) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
+            let p = PathBuf::from(&profile).join(".hermes");
+            if p.is_dir() {
+                return Some(p);
+            }
+            let win_local = PathBuf::from(profile).join("AppData").join("Local").join("hermes");
+            if win_local.is_dir() {
+                return Some(win_local);
+            }
+        }
+        None
+    }
+
+    fn pin_hermes_files_in_verifier(verifier: &ConstitutionalPinVerifier, hermes_dir: &Path) {
+        let targets = [
+            ("hermes/SOUL.md", hermes_dir.join("SOUL.md"), "fail_closed"),
+            (
+                "hermes/memories/MEMORY.md",
+                hermes_dir.join("memories").join("MEMORY.md"),
+                "watch",
+            ),
+            (
+                "hermes/memories/USER.md",
+                hermes_dir.join("memories").join("USER.md"),
+                "watch",
+            ),
+        ];
+        for (rel, abs, mode) in targets {
+            if abs.is_file() {
+                let _ = verifier.pin_file_from_disk_with_mode(rel, &abs, mode);
+            }
+        }
+    }
+
     fn seed_constitutional_pins(verifier: &ConstitutionalPinVerifier, isolated_test: bool) {
         if !isolated_test {
             let candidates = [
@@ -256,34 +297,73 @@ impl EvolutiveHarnessService {
             ];
             let mut agents_pinned = false;
             for (rel, path) in candidates {
-                if path.is_file() && verifier.pin_file_from_disk(rel, &path).is_ok() {
+                if path.is_file()
+                    && verifier
+                        .pin_file_from_disk_with_mode(rel, &path, "fail_closed")
+                        .is_ok()
+                {
                     agents_pinned = true;
                     break;
                 }
             }
             if !agents_pinned {
-                let _ = verifier.pin_in_memory(
+                let _ = verifier.pin_in_memory_with_mode(
                     "AGENTS.md",
                     "# Souls Engine Constitutional Baseline (synthetic fallback)\n",
+                    "fail_closed",
                 );
             }
 
-            if let Ok(profile) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
-                let soul_path = PathBuf::from(profile).join(".hermes").join("SOUL.md");
-                if soul_path.is_file() {
-                    let _ = verifier.pin_file_from_disk("hermes/SOUL.md", &soul_path);
-                }
+            if let Some(hermes_dir) = Self::resolve_hermes_c1_root() {
+                Self::pin_hermes_files_in_verifier(verifier, &hermes_dir);
             }
         } else {
-            let _ = verifier.pin_in_memory(
+            let _ = verifier.pin_in_memory_with_mode(
                 "AGENTS.md",
                 "# Test Constitutional Pin: C1 Read-Only Identity\n",
+                "fail_closed",
             );
-            let _ = verifier.pin_in_memory(
+            let _ = verifier.pin_in_memory_with_mode(
                 "hermes/SOUL.md",
                 "# Test Soul Identity Snapshot\n",
+                "fail_closed",
+            );
+            let _ = verifier.pin_in_memory_with_mode(
+                "hermes/memories/MEMORY.md",
+                "# Test Memory Snapshot\n",
+                "watch",
+            );
+            let _ = verifier.pin_in_memory_with_mode(
+                "hermes/memories/USER.md",
+                "# Test User Snapshot\n",
+                "watch",
             );
         }
+    }
+
+    /// Registers a concrete Hermes home directory's `c1` files (`SOUL.md`, `memories/MEMORY.md`,
+    /// `memories/USER.md`) on disk and clears the 30s RAM pin cache.
+    pub fn pin_hermes_c1_dir_from_disk(&self, hermes_dir: &Path) {
+        if let Ok(guard) = self.pin_verifier.read() {
+            Self::pin_hermes_files_in_verifier(&guard, hermes_dir);
+        }
+        if let Ok(mut cache) = self.last_pin_check.write() {
+            cache.0 = 0;
+        }
+    }
+
+    /// Re-calculates disk SHA-256 baselines for all disk-backed `c1` pins and refreshes RAM cache.
+    pub fn resign_constitutional_pins(&self) -> Vec<ConstitutionalPinStatusDto> {
+        let pins = self
+            .pin_verifier
+            .read()
+            .map(|v| v.resign_all_disk_pins())
+            .unwrap_or_default();
+        let now = Utc::now().timestamp();
+        if let Ok(mut cache) = self.last_pin_check.write() {
+            *cache = (now, pins.clone());
+        }
+        pins
     }
 
     fn seed_default_cordis_fibers(cordis: &CordisMicrokernel) {
@@ -502,7 +582,7 @@ impl EvolutiveHarnessService {
     /// Returns human-friendly overview + technical telemetry for Dashboard, MCP, and audit.
     pub async fn build_overview(&self, state: &AppState) -> Value {
         let pins = self.verify_constitutional_pins_fresh();
-        let pins_all_ok = pins.iter().all(|p| p.verified && !p.fail_closed_triggered);
+        let pins_all_ok = pins.iter().all(|p| !p.fail_closed_triggered);
 
         let pool = state.memory.pool();
         let weevolve_ratings = list_weevolve_ratings(&pool, 50).await.unwrap_or_default();
@@ -544,10 +624,43 @@ impl EvolutiveHarnessService {
             .count();
         let catnap_slices = list_catnap_slices(&pool, 30).await.unwrap_or_default();
         let ralph_candidates = self.list_ralph_candidates();
+        let quarantine: Vec<Value> = if let Some(ref q_dir) = self.quarantine_dir_override {
+            let mut items = Vec::new();
+            if let Ok(rd) = fs::read_dir(q_dir) {
+                for entry in rd.flatten() {
+                    let slug = entry.file_name().to_string_lossy().to_string();
+                    let skill_path = entry.path().join("SKILL.md");
+                    if skill_path.is_file() {
+                        items.push(json!({
+                            "slug": slug,
+                            "source": "ralph_loop",
+                            "path_posix": format!("quarantine/{}/SKILL.md", entry.file_name().to_string_lossy()),
+                        }));
+                    }
+                }
+            }
+            items
+        } else {
+            let roots = SkillsHubRoots::from_system();
+            list_quarantine_items(&roots)
+                .into_iter()
+                .map(|q| {
+                    json!({
+                        "slug": q.slug,
+                        "name": q.name,
+                        "source": q.source,
+                        "quality_score": q.quality_score,
+                        "fetched_at_epoch": q.fetched_at_epoch,
+                        "path_posix": format!("quarantine/{}/SKILL.md", q.slug),
+                    })
+                })
+                .collect()
+        };
         let quarantined_count = ralph_candidates
             .iter()
             .filter(|c| c.status == "quarantined")
-            .count();
+            .count()
+            .max(quarantine.len());
 
         let episodes: Vec<DomainExperienceEntryDto> =
             self.experience_lib.list_episodes().unwrap_or_default();
@@ -585,7 +698,7 @@ impl EvolutiveHarnessService {
 
         json!({
             "status": "ok",
-            "version": "0.9.4+1",
+            "version": "0.9.4+2",
             "summary": {
                 "pins_verified": pins_all_ok,
                 "superseded_memories": superseded_count,
@@ -610,6 +723,7 @@ impl EvolutiveHarnessService {
             "tombstones": tombstones,
             "weevolve_ratings": weevolve_ratings,
             "ralph_candidates": ralph_candidates,
+            "quarantine": quarantine,
             "experience_library": {
                 "episodes": episodes,
                 "index_markdown": index_md,
@@ -667,7 +781,7 @@ impl EvolutiveHarnessService {
         }
 
         let pins = self.verify_constitutional_pins_fresh();
-        if pins.iter().any(|p| !p.verified || p.fail_closed_triggered) {
+        if pins.iter().any(|p| p.fail_closed_triggered) {
             self.catnap.record_slice_failure(&requested_kind);
             return Err(
                 "Integridade constitucional c1 falhou (SHA-256 mismatch): Catnap suspenso (fail-closed)."
@@ -851,7 +965,7 @@ impl EvolutiveHarnessService {
             }
             "ralph_crystallize" => {
                 let failed_row = sqlx::query(
-                    "SELECT agent_id, task_description FROM subagent_sessions WHERE status = 'FAILED' ORDER BY updated_at DESC LIMIT 1",
+                    "SELECT agent_id, task_description FROM sub_agent_sessions WHERE status = 'FAILED' ORDER BY updated_at DESC LIMIT 1",
                 )
                 .fetch_optional(&*pool)
                 .await
@@ -1010,9 +1124,9 @@ impl EvolutiveHarnessService {
         )
         .replace("\r\n", "\n");
 
-        // Enforce c1 pin integrity before staging new c4 skill
+        // Enforce c1 fail-closed integrity before staging new c4 skill
         let pins = self.verify_constitutional_pins_fresh();
-        if pins.iter().any(|p| !p.verified || p.fail_closed_triggered) {
+        if pins.iter().any(|p| p.fail_closed_triggered) {
             return Err("Integridade constitucional c1 falhou; cristalização abortada (fail-closed).".to_string());
         }
 
@@ -1190,12 +1304,25 @@ pub async fn cues_handler(
     let _guard = state.acquire_passive_connection();
     let query = params.get("query").map(String::as_str).unwrap_or("");
     let pins = state.evolutive_harness.verify_constitutional_pins();
-    let pins_verified = pins.iter().all(|p| p.verified && !p.fail_closed_triggered);
+    let pins_verified = pins.iter().all(|p| !p.fail_closed_triggered);
     let cues = state.evolutive_harness.select_query_aware_cues(query);
     Json(json!({
         "status": "ok",
         "pins_verified": pins_verified,
         "cues": cues,
+    }))
+}
+
+/// `POST /api/v1/harness/pins/resign` (human 1-click re-signing of modified `c1` disk baselines)
+pub async fn resign_constitutional_pins_handler(State(state): State<AppState>) -> Json<Value> {
+    let _guard = state.acquire_connection();
+    let pins = state.evolutive_harness.resign_constitutional_pins();
+    let pins_verified = pins.iter().all(|p| !p.fail_closed_triggered);
+    Json(json!({
+        "status": "ok",
+        "message": "Base constitucional c1 re-assinada com sucesso.",
+        "pins_verified": pins_verified,
+        "pins": pins,
     }))
 }
 
@@ -1519,12 +1646,23 @@ pub async fn resolve_tombstone_handler(
         };
     }
 
-    let recent = state.memory.list_epistemic(None, 10).await.unwrap_or_default();
+    let recent = state
+        .memory
+        .list_epistemic(Some(EpistemicPartition::Evolving), 20)
+        .await
+        .unwrap_or_default();
     let mut all_applied = Vec::new();
+    let mut seen_superseded = std::collections::HashSet::new();
     for mem in recent {
+        if seen_superseded.contains(&mem.id) {
+            continue;
+        }
         if let Ok(mut applied) =
             detect_and_apply_jit_tombstones(&pool, state.memory.ladybug(), &mem, now).await
         {
+            for t in &applied {
+                seen_superseded.insert(t.superseded_memory_id.clone());
+            }
             all_applied.append(&mut applied);
         }
     }
@@ -1533,6 +1671,7 @@ pub async fn resolve_tombstone_handler(
         StatusCode::OK,
         Json(json!({
             "status": "ok",
+            "mutated": true,
             "tombstones_applied": all_applied,
         })),
     )

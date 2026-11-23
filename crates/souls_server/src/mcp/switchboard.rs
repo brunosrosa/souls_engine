@@ -257,6 +257,11 @@ fn compute_semantic_score(
                     domain_boost = 1.8;
                 }
             }
+            "tombstone" | "tombstones" | "cordis" | "catnap" | "ralph" | "harness" | "quarantine" | "superseded" => {
+                if namespace == "ops" || target_lower.contains("harness") || target_lower.contains("tombstone") {
+                    domain_boost = 1.8;
+                }
+            }
             _ => {}
         }
     }

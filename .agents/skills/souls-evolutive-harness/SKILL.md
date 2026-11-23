@@ -31,10 +31,11 @@ Acione este playbook e suas ferramentas canônicas via `tool_dispatch` sempre qu
 
 ### 3. Higiene de Memória sem Apagamento (`TencentDB Tombstones`)
 - Ao detectar mudança de preferência, troca de tecnologia ou instrução contraditória:
-  - Para varredura automática: `tool_dispatch(tool="harness_tombstone_resolve", arguments={"action": "scan"})`
-  - Para marcar um par específico: `tool_dispatch(tool="harness_tombstone_resolve", arguments={"action": "apply", "superseded_memory_id": "...", "superseded_by_memory_id": "...", "reason_pt": "..."})`
-  - Para restaurar em 1 clique uma memória antiga: `tool_dispatch(tool="harness_tombstone_resolve", arguments={"action": "restore", "tombstone_id": "..."})`
-- Registros na partição `STABLE` **nunca** são apagados fisicamente (`ADR-006`).
+  - Para **inspeção somente leitura** (padrão seguro, zero mutações): `tool_dispatch(tool="harness_tombstone_resolve", arguments={"action": "preview"})` (ou omitindo `action` / `action="dry_run"`).
+  - Para **varredura automática mutante** (atua **exclusivamente sobre memórias `EVOLVING`**, nunca altera `STABLE`, retornando `"mutated": true` e `reason_pt`): `tool_dispatch(tool="harness_tombstone_resolve", arguments={"action": "scan"})`.
+  - Para marcar explicitamente um par específico: `tool_dispatch(tool="harness_tombstone_resolve", arguments={"action": "apply", "superseded_memory_id": "...", "superseded_by_memory_id": "...", "reason_pt": "..."})`.
+  - Para restaurar em 1 clique uma memória antiga: `tool_dispatch(tool="harness_tombstone_resolve", arguments={"action": "restore", "tombstone_id": "..."})`.
+- Registros na partição `STABLE` **nunca** são apagados fisicamente (`ADR-006`) nem superados por varreduras automáticas (`scan`).
 
 ### 4. Cristalização de Habilidades (`The Ralph Loop -> Quarentena`)
 - Quando uma falha recorrente for diagnosticada e resolvida com sucesso, cristalize a lição em habilidade modular revisável:
@@ -48,7 +49,7 @@ Acione este playbook e suas ferramentas canônicas via `tool_dispatch` sempre qu
 
 ## Guardrails & Pitfalls
 
-1. **Imutabilidade de `c1` (`SOUL.md` / `AGENTS.md` / `MEMORY.md` / `USER.md`):** Nenhuma evolução autônoma pode alterar `system_prompt_snapshot` ou arquivos `c1` (pinados via SHA-256 LF *fail-closed*). Adaptações entram exclusivamente via injeção efêmera em `prefetch()` / `route_subtask` preservando `> 95%` de hit no prefix caching.
+1. **Imutabilidade de `c1` (`AGENTS.md` + `SOUL.md` em `%LOCALAPPDATA%\hermes`, + auditoria de `MEMORY.md` / `USER.md`):** `AGENTS.md` e `SOUL.md` operam em modo `fail_closed` (1 byte alterado aborta automações Catnap/Ralph); `memories/MEMORY.md` e `memories/USER.md` são monitorados em modo `watch` (registram drift sem travar escritas legítimas do Hermes). Re-assinatura explícita via `POST /api/v1/harness/pins/resign`. Adaptações entram exclusivamente via injeção efêmera em `prefetch()` / `route_subtask` preservando `> 95%` de hit no prefix caching.
 2. **Proibição de `timeout_retry = true` em ações não-idempotentes:** Nunca repita automaticamente chamadas mutantes (envio de e-mail, deleção ou mutação externa) após timeout.
 3. **Preservação de Sigilo (`SCRUB_ENV`):** Variáveis sensíveis (`GITHUB_TOKEN`, `OPENAI_API_KEY`, etc.) são removidas antes de qualquer sonda ou script `c6`.
 4. **Custo Zero por Padrão & Termodinâmica Realista:** `max_daily_budget_usd = 0.00` por padrão; sondas respeitam o teto térmico padrão `gpu_temp_c <= 62.0°C` com banda de histerese `+5.0°C` em voo (até `68.0°C` para fatias leves CPU/SQLite `0 MB VRAM`) e Horário de Silêncio configurável (`quiet_hours_enabled`).

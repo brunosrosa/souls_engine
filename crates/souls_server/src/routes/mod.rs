@@ -246,6 +246,7 @@ pub fn build_router(state: AppState) -> Router {
         // Milestone v0.9.4: Souls Evolutive Harness (Cordis, Catnap, Tombstones, WeEvolve & Ralph Loop)
         .route("/api/v1/harness/overview", get(harness::overview_handler))
         .route("/api/v1/harness/cues", get(harness::cues_handler))
+        .route("/api/v1/harness/pins/resign", post(harness::resign_constitutional_pins_handler))
         .route("/api/v1/harness/catnap/config", post(harness::update_catnap_config_handler))
         .route("/api/v1/harness/catnap/trigger", post(harness::trigger_catnap_slice_handler))
         .route("/api/v1/harness/cordis/mount", post(harness::mount_cordis_fiber_handler))

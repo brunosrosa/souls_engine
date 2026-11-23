@@ -228,7 +228,13 @@
         <div class="lab-drawer-body">
           <div class="mm-grid-2 u-mb-3">
             <div>
-              <div class="u-fw-600 u-text-white gh-text-xs u-mb-1">Pinagem Constitucional c1 (SHA-256 LF Fail-Closed)</div>
+              <div class="u-d-flex u-justify-between u-items-center u-gap-2 u-mb-1">
+                <div class="u-fw-600 u-text-white gh-text-xs">Pinagem Constitucional c1 (SHA-256 LF)</div>
+                <button type="button" class="btn btn-sm btn-secondary" id="btn-harness-resign-pins" onclick="resignHarnessConstitutionalPins()">
+                  <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg>
+                  <span>Re-assinar base c1</span>
+                </button>
+              </div>
               <pre class="mm-lean-pre" id="harness-lab-pins">Carregando hashes c1...</pre>
             </div>
             <div>

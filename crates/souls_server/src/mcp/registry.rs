@@ -495,16 +495,29 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
         ToolMeta {
             name: "sub_agent",
             namespace: "memory",
-            description: "Registra e gerencia o ciclo de vida e estado de subagentes autônomos.",
+            description: "Registra e gerencia o ciclo de vida, conclusão com feedback ParetoBandit/WeEvolve e diários de subagentes autônomos.",
             is_level_0: false,
             input_schema: || json!({
                 "type": "object",
                 "properties": {
-                    "agent_id": { "type": "string", "description": "ID do subagente." },
-                    "task_name": { "type": "string", "description": "Nome da tarefa atribuída." },
-                    "status": { "type": "string", "description": "Estado atual da execução." }
+                    "action": { "type": "string", "enum": ["spawn", "diary", "update_status", "complete", "history", "list"], "default": "spawn", "description": "Ação do ciclo de vida do subagente." },
+                    "agent_id": { "type": "string", "description": "ID do subagente/sessão." },
+                    "session_id": { "type": "string", "description": "Alias para agent_id em complete/history, ou sessão do diário." },
+                    "parent_session_id": { "type": "string", "description": "ID da sessão pai (para spawn/list)." },
+                    "task_description": { "type": "string", "description": "Descrição da tarefa delegada (para spawn)." },
+                    "task_name": { "type": "string", "description": "Nome legado opcional da tarefa." },
+                    "task_type": { "type": "string", "description": "Categoria da tarefa para atualização de priors no ParetoBandit (ex.: code, research)." },
+                    "assigned_tier": { "type": "string", "description": "Tier ou modelo prescrito (ex.: Tier1, smollm2-360m-instruct-q8-0)." },
+                    "model_id": { "type": "string", "description": "Modelo exato utilizado na execução (para complete)." },
+                    "outcome": { "type": "string", "enum": ["SUCCESS", "FAILED"], "default": "SUCCESS", "description": "Resultado final da delegação (para complete)." },
+                    "tokens_used": { "type": "integer", "description": "Total aproximado de tokens consumidos na tarefa." },
+                    "latency_ms": { "type": "number", "description": "Duração em milissegundos medida na execução." },
+                    "result_summary": { "type": "string", "description": "Síntese final de retorno para a sessão pai." },
+                    "summary": { "type": "string", "description": "Alias para result_summary." },
+                    "output_variables": { "type": "object", "description": "Variáveis estruturadas de handoff de retorno." },
+                    "content": { "type": "string", "description": "Conteúdo da nota de diário (para diary)." },
+                    "status": { "type": "string", "description": "Novo estado explícito (RUNNING, COMPLETED, FAILED, KILLED)." }
                 },
-                "required": ["agent_id", "task_name", "status"],
                 "additionalProperties": false
             }),
         },
@@ -1653,14 +1666,14 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
         },
         ToolMeta {
             name: "harness_tombstone_resolve",
-            namespace: "memory",
-            description: "Detecta contradições de memória via Tombstone JIT (sem apagar STABLE), aplica substituição ou restaura versão anterior em 1 clique.",
+            namespace: "ops",
+            description: "Inspeciona (action='preview' somente leitura por padrão) ou resolve contradições de memória EVOLVING via Tombstone JIT sem apagar STABLE, aplicando/restaurando em 1 clique.",
             is_level_0: false,
             input_schema: || json!({
                 "type": "object",
                 "properties": {
-                    "action": { "type": "string", "enum": ["scan", "apply", "restore", "list"], "default": "scan", "description": "Ação sobre tombstones lógicos." },
-                    "memory_id": { "type": "string", "description": "ID da memória recém-salva para varredura pontual (action='scan')." },
+                    "action": { "type": "string", "enum": ["preview", "dry_run", "scan", "apply", "restore", "list"], "default": "preview", "description": "preview/dry_run é 100% somente leitura; scan aplica tombstones lógicos apenas em EVOLVING (nunca em STABLE)." },
+                    "memory_id": { "type": "string", "description": "ID da memória recém-salva para pré-visualização ou varredura pontual (preview/scan)." },
                     "superseded_memory_id": { "type": "string", "description": "ID da memória antiga a marcar como substituída (action='apply')." },
                     "superseded_by_memory_id": { "type": "string", "description": "ID da nova memória prevalente (action='apply')." },
                     "tombstone_id": { "type": "string", "description": "ID do tombstone ou da memória antiga para restaurar (action='restore')." },

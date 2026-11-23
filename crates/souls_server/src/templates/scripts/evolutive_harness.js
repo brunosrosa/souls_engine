@@ -234,10 +234,15 @@ function renderHarnessLabDrawer(data) {
     const pins = Array.isArray(data?.constitutional_pins) ? data.constitutional_pins : [];
     pinsPre.textContent = pins.length
       ? pins
-          .map(
-            (p) =>
-              `[${p.verified ? 'OK' : 'FAIL-CLOSED'}] ${p.file_path_posix}\n  expected: ${p.expected_sha256}\n  actual:   ${p.actual_sha256}`
-          )
+          .map((p) => {
+            const stateTag = p.fail_closed_triggered
+              ? 'FAIL-CLOSED'
+              : p.verified
+                ? 'OK'
+                : 'DRIFT';
+            const modeTag = p.pin_mode || 'fail_closed';
+            return `[${stateTag} | ${modeTag}] ${p.file_path_posix}\n  expected: ${p.expected_sha256}\n  actual:   ${p.actual_sha256}`;
+          })
           .join('\n\n')
       : 'Sem arquivos c1 registrados.';
   }
@@ -460,6 +465,24 @@ async function approveHarnessRalphSkill(slug) {
     showToast(`Habilidade '${slug}' ativada com sucesso!`, 'success');
   }
   await loadEvolutiveHarnessTab();
+}
+
+async function resignHarnessConstitutionalPins() {
+  const btn = document.getElementById('btn-harness-resign-pins');
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch('/api/v1/harness/pins/resign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await resp.json();
+    if (res.status === 'ok' && typeof showToast === 'function') {
+      showToast(res.message || 'Base constitucional c1 re-assinada.', 'success');
+    }
+    await loadEvolutiveHarnessTab();
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function openHarnessSkillInQuarantine(slug) {
