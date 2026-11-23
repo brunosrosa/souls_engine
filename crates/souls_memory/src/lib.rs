@@ -10,6 +10,7 @@ pub mod error;
 pub mod ladybug;
 pub mod lancedb;
 pub mod mpsc_bridge;
+pub mod rapport;
 pub mod research_cache;
 pub mod rrf;
 pub mod session_manager;
@@ -31,6 +32,11 @@ pub use error::MemoryError;
 pub use ladybug::{LadybugOntologyGraph, OntologicalEdge, OntologicalNode};
 pub use lancedb::{get_vector_table_schema, LanceDbVectorStore, VECTOR_DIMENSION};
 pub use mpsc_bridge::{MemoryBridgeOp, MemoryMpscBridge};
+pub use rapport::{
+    get_or_init_rapport_profile, record_and_check_vision_snapshot,
+    update_rapport_ema_from_utterance, upsert_rapport_profile, MAX_SNAPSHOT_OMISSION_STREAK,
+    RAPPORT_EMA_ALPHA,
+};
 pub use research_cache::{
     compute_passage_hash, compute_query_hash, get_epistemic_passage,
     purge_expired_epistemic_passages, upsert_epistemic_passage, EpistemicPassageCache,
@@ -391,5 +397,62 @@ impl SoulsMemoryStore {
         }
 
         Ok(report)
+    }
+
+    /// Retrieves or initializes the user's linguistic rapport and cognitive voice profile.
+    pub async fn get_rapport_profile(
+        &self,
+        user_id: &str,
+    ) -> Result<souls_protocol::UserRapportProfileDto, MemoryError> {
+        let pool = self.pool();
+        get_or_init_rapport_profile(&pool, user_id).await
+    }
+
+    /// Sanitizes and persists a user rapport profile into `user_rapport_profile`.
+    pub async fn save_rapport_profile(
+        &self,
+        profile: &souls_protocol::UserRapportProfileDto,
+    ) -> Result<souls_protocol::UserRapportProfileDto, MemoryError> {
+        let pool = self.pool();
+        upsert_rapport_profile(&pool, profile).await
+    }
+
+    /// Updates the user's rapport profile via bounded EMA smoothing from a live utterance.
+    pub async fn update_rapport_from_utterance(
+        &self,
+        user_id: &str,
+        transcript: &str,
+        emotion: souls_protocol::DetectedEmotionTag,
+    ) -> Result<souls_protocol::UserRapportProfileDto, MemoryError> {
+        let pool = self.pool();
+        update_rapport_ema_from_utterance(&pool, user_id, transcript, emotion).await
+    }
+
+    /// Records a visual snapshot capture and returns `true` when deduplicated within the omission cap.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn check_and_record_vision_snapshot(
+        &self,
+        session_id: &str,
+        app_name: &str,
+        window_title: &str,
+        sha256_hash: &str,
+        width: u32,
+        height: u32,
+        som_count: usize,
+        reason: souls_protocol::VisionEscalationReason,
+    ) -> Result<bool, MemoryError> {
+        let pool = self.pool();
+        record_and_check_vision_snapshot(
+            &pool,
+            session_id,
+            app_name,
+            window_title,
+            sha256_hash,
+            width,
+            height,
+            som_count,
+            reason,
+        )
+        .await
     }
 }

@@ -245,6 +245,40 @@ CREATE INDEX IF NOT EXISTS idx_epistemic_passages_query
 
 CREATE INDEX IF NOT EXISTS idx_epistemic_passages_url
     ON epistemic_passages (raw_url);
+
+-- 15. User Rapport & Polivagal Cognitive Profile (v0.9.3 / ADR-033)
+CREATE TABLE IF NOT EXISTS user_rapport_profile (
+    user_id TEXT PRIMARY KEY NOT NULL,
+    formality_score REAL NOT NULL DEFAULT 3.5 CHECK(formality_score >= 0.0 AND formality_score <= 10.0),
+    avg_sentence_length INTEGER NOT NULL DEFAULT 12 CHECK(avg_sentence_length >= 1),
+    preferred_pacing TEXT NOT NULL DEFAULT 'short_direct' CHECK(preferred_pacing IN ('short_direct', 'elaborate', 'bulleted')),
+    slang_lexicon_json TEXT NOT NULL DEFAULT '[]',
+    mirroring_ratio REAL NOT NULL DEFAULT 0.25 CHECK(mirroring_ratio >= 0.0 AND mirroring_ratio <= 0.35),
+    active_cognitive_mode TEXT NOT NULL DEFAULT 'auto' CHECK(active_cognitive_mode IN ('auto', 'hands_on', 'sparring', 'decompression', 'crisis_paralysis', 'philosophical')),
+    contemplative_base_ms INTEGER NOT NULL DEFAULT 250 CHECK(contemplative_base_ms >= 100 AND contemplative_base_ms <= 1000),
+    backchannel_enabled INTEGER NOT NULL DEFAULT 1 CHECK(backchannel_enabled IN (0, 1)),
+    last_emotion TEXT NOT NULL DEFAULT 'neutral',
+    turn_count INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL
+) STRICT;
+
+-- 16. Vision Snapshot Dedup & Ephemeral Audit Ledger (v0.9.3 / ADR-033)
+CREATE TABLE IF NOT EXISTS vision_snapshot_ledger (
+    snapshot_id TEXT PRIMARY KEY NOT NULL,
+    session_id TEXT NOT NULL,
+    app_name TEXT NOT NULL,
+    window_title TEXT NOT NULL,
+    sha256_hash TEXT NOT NULL,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    som_marks_count INTEGER NOT NULL DEFAULT 0,
+    escalation_reason TEXT NOT NULL,
+    screen_unchanged INTEGER NOT NULL DEFAULT 0 CHECK(screen_unchanged IN (0, 1)),
+    created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS idx_vision_snapshot_session_target
+    ON vision_snapshot_ledger (session_id, app_name, window_title, created_at DESC);
 "#;
 
 /// Configures and bootstraps an NT-safe FrankenSQLite connection pool with required PRAGMAs.
