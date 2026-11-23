@@ -1,5 +1,6 @@
 use souls_memory::{
-    calculate_bradley_terry_elo, list_catnap_slices, list_memory_tombstones, list_weevolve_ratings,
+    apply_memory_tombstone, calculate_bradley_terry_elo, detect_and_apply_jit_tombstones,
+    list_catnap_slices, list_memory_tombstones, list_weevolve_ratings, preview_jit_tombstones,
     record_catnap_slice, record_weevolve_signal, restore_tombstoned_memory, update_ema,
     DomainExperienceLibrary, EpistemicMemoryRecord, EpistemicPartition, SoulsMemoryStore,
 };
@@ -9,13 +10,13 @@ use souls_protocol::{CatnapSliceRecordDto, DomainExperienceEntryDto};
 async fn test_v094_jit_tombstone_preserves_stable_creates_ladybug_edge_and_restores() {
     let store = SoulsMemoryStore::new_in_memory().await.unwrap();
 
-    // 1. Store STABLE architectural rule
+    // 1. Store EVOLVING architectural rule for automatic scan + preview check
     let old_mem = EpistemicMemoryRecord {
         id: "mem_lib_old".to_string(),
         session_id: "sess_1".to_string(),
         category: "architecture".to_string(),
         content: "Usar biblioteca X para serialização rápida".to_string(),
-        partition: EpistemicPartition::Stable,
+        partition: EpistemicPartition::Evolving,
         salience: 1.0,
         access_count: 3,
         source_ref: Some("decision".to_string()),
@@ -29,13 +30,13 @@ async fn test_v094_jit_tombstone_preserves_stable_creates_ladybug_edge_and_resto
     let before_recall = store.hybrid_recall("biblioteca X", None, 5).await.unwrap();
     assert!(before_recall.iter().any(|m| m.id == "mem_lib_old"));
 
-    // 2. Store contradicting decision -> triggers JIT Tombstone in 0ms
+    // 2. Dry-run preview must NOT write any tombstones, then upsert triggers JIT Tombstone in 0ms
     let new_mem = EpistemicMemoryRecord {
         id: "mem_lib_new".to_string(),
         session_id: "sess_1".to_string(),
         category: "architecture".to_string(),
         content: "Substituímos X por Y, nunca use X novamente".to_string(),
-        partition: EpistemicPartition::Stable,
+        partition: EpistemicPartition::Evolving,
         salience: 1.0,
         access_count: 1,
         source_ref: Some("decision".to_string()),
@@ -43,16 +44,69 @@ async fn test_v094_jit_tombstone_preserves_stable_creates_ladybug_edge_and_resto
         last_accessed_at: 2000,
         updated_at: 2000,
     };
+    let preview = preview_jit_tombstones(&store.pool(), &new_mem, 2000)
+        .await
+        .unwrap();
+    assert_eq!(preview.len(), 1);
+    assert_eq!(preview[0].status, "preview");
+    assert!(list_memory_tombstones(&store.pool(), 10).await.unwrap().is_empty());
+
     let tombs = store.upsert_epistemic_memory_jit(&new_mem).await.unwrap();
     assert_eq!(tombs.len(), 1);
     assert_eq!(tombs[0].superseded_memory_id, "mem_lib_old");
     assert_eq!(tombs[0].superseded_by_memory_id, "mem_lib_new");
     assert_eq!(tombs[0].status, "superseded");
 
-    // 3. Old STABLE memory MUST NOT be deleted physically (ADR-006 compliance!)
-    let physical_old = store.get_epistemic_memory("mem_lib_old").await.unwrap();
+    // Second scan on the same pair MUST be a no-op (idempotent)
+    let second_scan = detect_and_apply_jit_tombstones(&store.pool(), store.ladybug(), &new_mem, 2001)
+        .await
+        .unwrap();
+    assert!(second_scan.is_empty());
+
+    // Reverse scan with the older memory MUST NOT cause circular mutual suicide
+    let reverse_scan = detect_and_apply_jit_tombstones(&store.pool(), store.ladybug(), &old_mem, 2002)
+        .await
+        .unwrap();
+    assert!(reverse_scan.is_empty());
+
+    // 3. Explicit STABLE tombstone must NOT physically delete STABLE rows (ADR-006 compliance!)
+    let stable_keep = EpistemicMemoryRecord {
+        id: "mem_stable_rule".to_string(),
+        session_id: "sess_1".to_string(),
+        category: "architecture".to_string(),
+        content: "Regra permanente A".to_string(),
+        partition: EpistemicPartition::Stable,
+        salience: 1.0,
+        access_count: 2,
+        source_ref: None,
+        created_at: 1500,
+        last_accessed_at: 1500,
+        updated_at: 1500,
+    };
+    assert!(store.upsert_epistemic_memory_jit(&stable_keep).await.unwrap().is_empty());
+    let stable_override = EpistemicMemoryRecord {
+        id: "mem_stable_override".to_string(),
+        content: "Regra permanente B em vez de A".to_string(),
+        updated_at: 2500,
+        ..stable_keep.clone()
+    };
     assert!(
-        physical_old.is_some(),
+        store.upsert_epistemic_memory_jit(&stable_override).await.unwrap().is_empty(),
+        "Automatic JIT scan must never mutate STABLE records"
+    );
+    let _explicit_stable_tomb = apply_memory_tombstone(
+        &store.pool(),
+        store.ladybug(),
+        &stable_keep,
+        &stable_override,
+        "Substituição explícita em STABLE.",
+        2600,
+    )
+    .await
+    .unwrap();
+    let physical_stable = store.get_epistemic_memory("mem_stable_rule").await.unwrap();
+    assert!(
+        physical_stable.is_some(),
         "STABLE memory must stay physically in SQLite (ADR-006)"
     );
 
@@ -80,7 +134,7 @@ async fn test_v094_jit_tombstone_preserves_stable_creates_ladybug_edge_and_resto
     assert!(restored_recall.iter().any(|m| m.id == "mem_lib_old"));
 
     let all_tombs = list_memory_tombstones(&pool, 10).await.unwrap();
-    assert_eq!(all_tombs.len(), 1);
+    assert_eq!(all_tombs.len(), 2);
 
     // 7. Restoring tombstone must also clear the conflicts_with edge in SQLite ladybug_edges
     let edge_count_after_restore: i64 = sqlx::query_scalar(
@@ -91,13 +145,52 @@ async fn test_v094_jit_tombstone_preserves_stable_creates_ladybug_edge_and_resto
     .unwrap();
     assert_eq!(edge_count_after_restore, 0);
 
-    // 8. Precision guard: generic single-word overlap ("sistema") + "agora usamos" MUST NOT falsely tombstone!
+    // 8. URL ('http://') & bio ('2e:') colons must NEVER trigger false key:value tombstones!
+    let prose_a = EpistemicMemoryRecord {
+        id: "mem_prose_url_a".to_string(),
+        session_id: "sess_prose".to_string(),
+        category: "hermes_memory".to_string(),
+        content: "Souls Engine (v0.9.2+3 / MCP v7.2.0 at http://127.0.0.1:9123/mcp) exposes 85 tools.".to_string(),
+        partition: EpistemicPartition::Evolving,
+        salience: 1.0,
+        access_count: 1,
+        source_ref: None,
+        created_at: 3500,
+        last_accessed_at: 3500,
+        updated_at: 3500,
+    };
+    let prose_b = EpistemicMemoryRecord {
+        id: "mem_prose_url_b".to_string(),
+        content: "Souls Engine (v0.9.2+3 / MCP v7.2.0 at http://127.0.0.1:9123/mcp) exposes 96 tools.".to_string(),
+        updated_at: 3600,
+        ..prose_a.clone()
+    };
+    let bio_a = EpistemicMemoryRecord {
+        id: "mem_bio_a".to_string(),
+        category: "hermes_user".to_string(),
+        content: "Bruno (born 1985-02-08, 2e: ADHD + AH/SD, father of Lucca) works with Rust.".to_string(),
+        updated_at: 3500,
+        ..prose_a.clone()
+    };
+    let bio_b = EpistemicMemoryRecord {
+        id: "mem_bio_b".to_string(),
+        category: "hermes_user".to_string(),
+        content: "Bruno (born 1985-02-08, 2e: ADHD + AH/SD, father of Lucca) uses Windows 11.".to_string(),
+        updated_at: 3600,
+        ..prose_a.clone()
+    };
+    assert!(store.upsert_epistemic_memory_jit(&prose_a).await.unwrap().is_empty());
+    assert!(store.upsert_epistemic_memory_jit(&prose_b).await.unwrap().is_empty(), "http:// must never trigger KV prefix");
+    assert!(store.upsert_epistemic_memory_jit(&bio_a).await.unwrap().is_empty());
+    assert!(store.upsert_epistemic_memory_jit(&bio_b).await.unwrap().is_empty(), "2e: in prose must never trigger KV prefix");
+
+    // 9. Precision guard: generic single-word overlap ("sistema") + "agora usamos" MUST NOT falsely tombstone!
     let stable_rust = EpistemicMemoryRecord {
         id: "mem_rust_sys".to_string(),
         session_id: "sess_2".to_string(),
         category: "architecture".to_string(),
         content: "Usamos Rust no backend do sistema".to_string(),
-        partition: EpistemicPartition::Stable,
+        partition: EpistemicPartition::Evolving,
         salience: 1.0,
         access_count: 1,
         source_ref: None,
@@ -110,7 +203,7 @@ async fn test_v094_jit_tombstone_preserves_stable_creates_ladybug_edge_and_resto
         session_id: "sess_2".to_string(),
         category: "architecture".to_string(),
         content: "Agora usamos Edge Neural TTS no sistema".to_string(),
-        partition: EpistemicPartition::Stable,
+        partition: EpistemicPartition::Evolving,
         salience: 1.0,
         access_count: 1,
         source_ref: None,
@@ -124,13 +217,13 @@ async fn test_v094_jit_tombstone_preserves_stable_creates_ladybug_edge_and_resto
         "Generic shared word 'sistema' must not trigger false JIT tombstone"
     );
 
-    // >= 2 shared specific subject tokens ("validador", "json") + replacement marker MUST tombstone
+    // >= 2 shared specific subject tokens ("validador", "json") + replacement marker on EVOLVING MUST tombstone
     let json_old = EpistemicMemoryRecord {
         id: "mem_json_old".to_string(),
         session_id: "sess_2".to_string(),
         category: "architecture".to_string(),
         content: "Usamos validador json legado nos contratos".to_string(),
-        partition: EpistemicPartition::Stable,
+        partition: EpistemicPartition::Evolving,
         salience: 1.0,
         access_count: 1,
         source_ref: None,
@@ -143,7 +236,7 @@ async fn test_v094_jit_tombstone_preserves_stable_creates_ladybug_edge_and_resto
         session_id: "sess_2".to_string(),
         category: "architecture".to_string(),
         content: "Agora usamos validador json estrito em vez do legado".to_string(),
-        partition: EpistemicPartition::Stable,
+        partition: EpistemicPartition::Evolving,
         salience: 1.0,
         access_count: 1,
         source_ref: None,

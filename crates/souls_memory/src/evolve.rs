@@ -134,15 +134,25 @@ fn extract_subject_tokens(text: &str) -> HashSet<String> {
 
 fn split_key_value_prefix(text: &str) -> Option<(String, String)> {
     let idx = text.find(':')?;
-    if idx < 3 || idx > 48 {
+    if !(3..=32).contains(&idx) {
         return None;
     }
-    let key = text[..idx].trim().to_ascii_lowercase();
-    let val = text[idx + 1..].trim().to_ascii_lowercase();
-    if key.is_empty() || val.is_empty() {
+    if text[..=idx].contains("://") {
         return None;
     }
-    Some((key, val))
+    let key_slice = text[..idx].trim();
+    if key_slice.chars().count() < 3
+        || !key_slice
+            .chars()
+            .all(|c| c.is_alphanumeric() || matches!(c, ' ' | '_' | '-' | '.'))
+    {
+        return None;
+    }
+    let val_slice = text[idx + 1..].trim();
+    if val_slice.is_empty() || val_slice.starts_with("//") {
+        return None;
+    }
+    Some((key_slice.to_ascii_lowercase(), val_slice.to_ascii_lowercase()))
 }
 
 fn detect_contradiction_reason(old_content: &str, new_content: &str) -> Option<String> {
@@ -358,20 +368,35 @@ pub async fn apply_memory_tombstone(
     })
 }
 
-/// Scans active memories in the same category/context for contradictions against `new_mem`
-/// and applies logical JIT tombstones (`status = 'superseded'`) without physical deletion.
-pub async fn detect_and_apply_jit_tombstones(
+/// Finds contradiction candidates strictly within the `EVOLVING` partition and same `category`,
+/// enforcing unidirectional temporal causality (`old.updated_at < new.updated_at`, or `id < new.id` tie-break)
+/// so `STABLE` is never mutated automatically and mutual/circular tombstones cannot occur.
+async fn find_jit_tombstone_candidates(
     pool: &Pool<Sqlite>,
-    ladybug: &LadybugOntologyGraph,
     new_mem: &EpistemicMemoryRecord,
-    now_epoch: i64,
-) -> Result<Vec<MemoryTombstoneDto>, MemoryError> {
+) -> Result<Vec<(EpistemicMemoryRecord, String)>, MemoryError> {
+    if new_mem.partition == souls_protocol::EpistemicPartition::Stable {
+        return Ok(Vec::new());
+    }
+
+    let already_superseded: Option<i64> = sqlx::query_scalar(
+        "SELECT 1 FROM epistemic_memory_tombstones WHERE superseded_memory_id = ?1 AND status = 'superseded' LIMIT 1",
+    )
+    .bind(&new_mem.id)
+    .fetch_optional(pool)
+    .await?;
+    if already_superseded.is_some() {
+        return Ok(Vec::new());
+    }
+
     let rows = sqlx::query(
         r#"
         SELECT id, session_id, category, content, partition, salience, access_count, source_ref, created_at, last_accessed_at, updated_at
         FROM epistemic_memories
         WHERE id != ?1
-          AND (category = ?2 OR category LIKE 'hermes_%' OR ?2 LIKE 'hermes_%')
+          AND category = ?2
+          AND UPPER(partition) != 'STABLE'
+          AND (updated_at < ?3 OR (updated_at = ?3 AND id < ?1))
           AND id NOT IN (SELECT superseded_memory_id FROM epistemic_memory_tombstones WHERE status = 'superseded')
         ORDER BY updated_at DESC
         LIMIT 120
@@ -379,10 +404,11 @@ pub async fn detect_and_apply_jit_tombstones(
     )
     .bind(&new_mem.id)
     .bind(&new_mem.category)
+    .bind(new_mem.updated_at)
     .fetch_all(pool)
     .await?;
 
-    let mut applied = Vec::new();
+    let mut matches = Vec::new();
     for r in rows {
         let part_str: String = r.get(4);
         let partition = match part_str.as_str() {
@@ -404,13 +430,55 @@ pub async fn detect_and_apply_jit_tombstones(
         };
 
         if let Some(reason_pt) = detect_contradiction_reason(&old_mem.content, &new_mem.content) {
-            let tomb =
-                apply_memory_tombstone(pool, ladybug, &old_mem, new_mem, &reason_pt, now_epoch)
-                    .await?;
-            applied.push(tomb);
+            matches.push((old_mem, reason_pt));
         }
     }
 
+    Ok(matches)
+}
+
+/// Strictly read-only dry-run preview of JIT tombstone candidates without mutating SQLite or LadybugDB.
+pub async fn preview_jit_tombstones(
+    pool: &Pool<Sqlite>,
+    new_mem: &EpistemicMemoryRecord,
+    now_epoch: i64,
+) -> Result<Vec<MemoryTombstoneDto>, MemoryError> {
+    let candidates = find_jit_tombstone_candidates(pool, new_mem).await?;
+    Ok(candidates
+        .into_iter()
+        .map(|(old_mem, reason_pt)| MemoryTombstoneDto {
+            tombstone_id: format!(
+                "preview_{}",
+                short_hash16(&format!("{}->{}", new_mem.id, old_mem.id))
+            ),
+            superseded_memory_id: old_mem.id,
+            superseded_by_memory_id: new_mem.id.clone(),
+            category: new_mem.category.clone(),
+            superseded_content_preview: preview_text(&old_mem.content, 160),
+            new_content_preview: preview_text(&new_mem.content, 160),
+            reason_pt,
+            status: "preview".to_string(),
+            created_at: now_epoch,
+            restored_at: None,
+        })
+        .collect())
+}
+
+/// Scans active `EVOLVING` memories in the same category for contradictions against `new_mem`
+/// and applies logical JIT tombstones (`status = 'superseded'`), never mutating `STABLE` records automatically.
+pub async fn detect_and_apply_jit_tombstones(
+    pool: &Pool<Sqlite>,
+    ladybug: &LadybugOntologyGraph,
+    new_mem: &EpistemicMemoryRecord,
+    now_epoch: i64,
+) -> Result<Vec<MemoryTombstoneDto>, MemoryError> {
+    let candidates = find_jit_tombstone_candidates(pool, new_mem).await?;
+    let mut applied = Vec::with_capacity(candidates.len());
+    for (old_mem, reason_pt) in candidates {
+        let tomb = apply_memory_tombstone(pool, ladybug, &old_mem, new_mem, &reason_pt, now_epoch)
+            .await?;
+        applied.push(tomb);
+    }
     Ok(applied)
 }
 

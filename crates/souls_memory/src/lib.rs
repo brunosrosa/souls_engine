@@ -33,9 +33,9 @@ pub use error::MemoryError;
 pub use evolve::{
     apply_memory_tombstone, calculate_bradley_terry_elo, detect_and_apply_jit_tombstones,
     list_active_tombstoned_ids, list_catnap_slices, list_memory_tombstones, list_weevolve_ratings,
-    map_signal_to_reward, record_catnap_slice, record_weevolve_signal, restore_tombstoned_memory,
-    sigmoid_reward, update_ema, DomainExperienceLibrary, WEEVOLVE_BASELINE_ELO,
-    WEEVOLVE_EMA_ALPHA, WEEVOLVE_K_FACTOR,
+    map_signal_to_reward, preview_jit_tombstones, record_catnap_slice, record_weevolve_signal,
+    restore_tombstoned_memory, sigmoid_reward, update_ema, DomainExperienceLibrary,
+    WEEVOLVE_BASELINE_ELO, WEEVOLVE_EMA_ALPHA, WEEVOLVE_K_FACTOR,
 };
 pub use ladybug::{LadybugOntologyGraph, OntologicalEdge, OntologicalNode};
 pub use lancedb::{get_vector_table_schema, LanceDbVectorStore, VECTOR_DIMENSION};
