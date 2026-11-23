@@ -10,6 +10,7 @@
 //! - Asynchronous and synchronous panic containment barriers (`catch_unwind`).
 
 pub mod ansi_filter;
+pub mod audio;
 pub mod context_lean;
 pub mod error;
 pub mod fs;
@@ -59,8 +60,19 @@ pub use google_bridge::{
     DualLayerWorkspace, GoogleSessionCredentials, GoogleSessionVault, JulesMigrationRouter,
     LegacyJulesCommand, WizRpcClient, WizRpcId, WizRpcPayload, WizRpcResponse,
 };
+pub use audio::{
+    backchannel_pcm_wav, discover_hermes_audio_tools, evaluate_pcomp_turn_taking,
+    generate_pcm_wav_buffer, handoff_chime_wav, normalize_stt_bcp47_language,
+    parse_sensevoice_and_filter_hallucinations, probe_audio_engines,
+    provision_local_faster_whisper_model, shape_prosodic_text_for_tts, split_prosodic_sentences,
+    synthesize_speech_cascade, transcribe_audio_cascade, AudioEngineInventory,
+    HermesAudioToolchainProbe, BARGE_IN_MIN_SPEECH_MS, NOISE_IGNORE_MAX_MS,
+    SILERO_VAD_STANDBY_HYSTERESIS_MS, ZERO_AUDIO_VRAM_CONSUMPTION_MB,
+};
 pub use vision::{
-    parse_cdp_ax_tree, AXNode, AXNodeState, AXTreeCompressionMetrics, AXTreeSerializer,
+    assess_blind_spot, capture_live_windows_ax_tree, capture_on_demand_snapshot,
+    compute_ax_tree_diff, filter_ax_tree_by_intent, generate_som_marks, parse_cdp_ax_tree,
+    standard_base64_encode, AXNode, AXNodeState, AXTreeCompressionMetrics, AXTreeSerializer,
     ZERO_VLM_VRAM_CONSUMPTION_MB,
 };
 
