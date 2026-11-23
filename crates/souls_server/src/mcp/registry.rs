@@ -1,6 +1,6 @@
 //! # Canonical MCP Tool Registry (`souls_server::mcp::registry`)
 //!
-//! Exposes all 55 canonical MCP tools, input schemas, namespaces, and Progressive
+//! Exposes all 91 canonical MCP tools, input schemas, namespaces, and Progressive
 //! Tool Disclosure (Level 0 boot compact vs Level 1 dynamic discovery).
 
 use serde_json::{json, Value};
@@ -18,7 +18,7 @@ pub struct ToolMeta {
 
 static ALL_TOOLS: OnceLock<Vec<ToolMeta>> = OnceLock::new();
 
-/// Returns the static repository of all 55 tools.
+/// Returns the static repository of all 91 tools.
 pub fn get_canonical_tools() -> &'static [ToolMeta] {
     ALL_TOOLS.get_or_init(build_canonical_tools)
 }
@@ -973,17 +973,21 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 "additionalProperties": false
             }),
         },
-        // ui.* namespace (v0.8.3 Cognitive Vision O(1) & AXTree LEAN)
+        // ui.* namespace (v0.8.3 + v0.9.3 Multimodal Cognitive Vision & Sovereign Voice)
         ToolMeta {
             name: "ui_inspect",
             namespace: "ui",
-            description: "Extrai e serializa a árvore de acessibilidade no formato LEAN dot-notation com 71% de redução de tokens e 0 MB VRAM.",
+            description: "Extrai e serializa a árvore de acessibilidade (CDP ou captura ativa ao vivo do Windows) no formato LEAN dot-notation com diagnóstico de blind-spot e 0 MB VRAM.",
             is_level_0: false,
             input_schema: || json!({
                 "type": "object",
                 "properties": {
+                    "window_filter": { "type": "string", "description": "Filtro opcional de título da janela" },
+                    "intent_filter": { "type": "string", "description": "Filtro de intenção: all, actionable, inputs, buttons" },
                     "include_click_coords": { "type": "boolean", "default": true, "description": "Incluir coordenadas geométricas de clique" },
-                    "max_depth": { "type": "integer", "description": "Profundidade máxima de serialização da árvore" }
+                    "max_depth": { "type": "integer", "description": "Profundidade máxima de serialização da árvore" },
+                    "cursor_x": { "type": "number", "description": "Coordenada X opcional do cursor" },
+                    "cursor_y": { "type": "number", "description": "Coordenada Y opcional do cursor" }
                 },
                 "additionalProperties": true
             }),
@@ -991,7 +995,7 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
         ToolMeta {
             name: "ui_interact",
             namespace: "ui",
-            description: "Calcula coordenadas de clique centrais determinísticas e resolve o nó tátil sob o cursor.",
+            description: "Calcula coordenadas de clique centrais determinísticas e resolve o nó tátil sob o cursor (ao vivo ou via árvore fornecida).",
             is_level_0: false,
             input_schema: || json!({
                 "type": "object",
@@ -1001,6 +1005,98 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 },
                 "required": ["x", "y"],
                 "additionalProperties": true
+            }),
+        },
+        ToolMeta {
+            name: "ui_snapshot",
+            namespace: "ui",
+            description: "Captura snapshot visual sob demanda com marcas Set-of-Mark (SoM), detecção de blind-spot, deduplicação SHA-256 e escalonamento opcional.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "window_filter": { "type": "string", "description": "Filtro opcional da janela alvo" },
+                    "region": { "type": "array", "items": { "type": "integer" }, "description": "Região [x, y, width, height]" },
+                    "mode": { "type": "string", "enum": ["auto", "deterministic_som_only", "local_ephemeral_vlm", "cloud_frontier"], "default": "auto" },
+                    "session_id": { "type": "string", "description": "ID de sessão para deduplicação SHA-256" },
+                    "include_base64": { "type": "boolean", "default": false, "description": "Incluir PNG em Base64 quando a tela mudar" },
+                    "prompt": { "type": "string", "description": "Pergunta visual opcional sobre o snapshot" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "ui_diff",
+            namespace: "ui",
+            description: "Computa diff estrutural LEAN entre duas árvores de acessibilidade (ou entre referência anterior e captura ao vivo) poupando tokens.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "previous_tree": { "type": "object", "description": "Árvore AXNode de referência anterior" },
+                    "after_tree": { "type": "object", "description": "Árvore AXNode posterior opcional (captura ao vivo se omitida)" },
+                    "window_filter": { "type": "string", "description": "Filtro opcional de janela para captura ao vivo" },
+                    "intent_filter": { "type": "string", "description": "Filtro de intenção opcional" }
+                },
+                "required": ["previous_tree"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "voice_transcribe",
+            namespace: "ui",
+            description: "Transcreve áudio Base64 ou avalia texto de fala com detecção de emoção SenseVoice, filtro de alucinação e veredito PCOMP de turno (0 MB VRAM).",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "audio_base64": { "type": "string", "description": "Áudio codificado em Base64" },
+                    "filename": { "type": "string", "description": "Nome ou extensão do arquivo (ex: audio.wav)" },
+                    "language": { "type": "string", "default": "pt", "description": "Idioma alvo (padrão: pt)" },
+                    "sample_text": { "type": "string", "description": "Texto de amostra opcional para avaliação PCOMP/SenseVoice sem áudio" },
+                    "silence_duration_ms": { "type": "integer", "default": 450, "description": "Duração do silêncio final em ms" },
+                    "user_id": { "type": "string", "default": "default", "description": "Identificador do usuário para EMA de rapport" }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "voice_synthesize",
+            namespace: "ui",
+            description: "Sintetiza fala em português brasileiro na CPU (0 MB VRAM) com modelagem prosódica Camada 3 e adaptação ao modo cognitivo.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "input": { "type": "string", "description": "Texto em português para sintetizar" },
+                    "cognitive_mode": { "type": "string", "enum": ["auto", "hands_on", "sparring", "decompression", "crisis_paralysis", "philosophical"] },
+                    "apply_prosody_shaping": { "type": "boolean", "default": true },
+                    "voice": { "type": "string" },
+                    "user_id": { "type": "string", "default": "default" }
+                },
+                "required": ["input"],
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "voice_rapport",
+            namespace: "ui",
+            description: "Consulta ou atualiza o perfil de rapport linguístico, formalidade, cadência e modo cognitivo de voz em português.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "action": { "type": "string", "enum": ["get", "set"], "default": "get" },
+                    "user_id": { "type": "string", "default": "default" },
+                    "active_cognitive_mode": { "type": "string", "enum": ["auto", "hands_on", "sparring", "decompression", "crisis_paralysis", "philosophical"] },
+                    "formality_score": { "type": "number" },
+                    "preferred_pacing": { "type": "string" },
+                    "contemplative_base_ms": { "type": "integer" },
+                    "mirroring_ratio": { "type": "number" },
+                    "backchannel_enabled": { "type": "boolean" },
+                    "slang_lexicon": { "type": "array", "items": { "type": "string" } }
+                },
+                "additionalProperties": false
             }),
         },
         // google.* namespace (v0.8.2 Google Universe Bridge & NotebookLM)

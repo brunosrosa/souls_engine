@@ -1,0 +1,364 @@
+    <!-- ========================================== -->
+    <!-- ABA: VOZ SOBERANA & VISAO HIBRIDA (v0.9.3) -->
+    <!-- ========================================== -->
+    <section class="tab-pane" id="tab-multimodal">
+      <div class="card-hero u-mb-6 multimodal-hub-hero">
+        <div class="u-d-flex u-justify-between u-items-start u-flex-wrap u-gap-4">
+          <div>
+            <h2 class="u-d-flex u-items-center u-gap-10p u-m-0 u-text-white">
+              <svg class="ui-icon icon-md u-text-cyan" aria-hidden="true"><use href="#icon-mic"></use></svg>
+              <span>Voz Soberana &amp; Visão Híbrida</span>
+            </h2>
+            <p class="u-m-0 u-mt-2 u-text-muted">
+              Converse em português com ritmo humano e leitura inteligente da sua tela — rodando no processador sem gastar memória de vídeo.
+            </p>
+          </div>
+          <div class="mm-status-strip">
+            <span class="badge badge-value" id="mm-vram-chip">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-cpu"></use></svg>
+              <span>0 MB de vídeo</span>
+            </span>
+            <span class="badge badge-champion" id="mm-tts-chip">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-message-square"></use></svg>
+              <span>Voz: verificando...</span>
+            </span>
+            <span class="badge badge-champion" id="mm-stt-chip">
+              <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-mic"></use></svg>
+              <span>Escuta: verificando...</span>
+            </span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadMultimodalHubTab(true)">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+              <span>Atualizar Status</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 1: MODOS DE PARCERIA COGNITIVA -->
+      <div class="card u-mb-6">
+        <div class="card-header u-mb-3">
+          <div class="card-title">
+            <div class="card-icon icon-purple">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-brain"></use></svg>
+            </div>
+            <div>
+              <div class="u-fw-700 u-text-white">Modos de Parceria Cognitiva</div>
+              <div class="u-text-muted gh-text-xs">Escolha como o assistente adapta ritmo, tom de voz e profundidade a cada momento do seu dia</div>
+            </div>
+          </div>
+          <span class="badge badge-champion" id="mm-active-mode-badge">
+            <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+            <span>Modo Ativo: Automático</span>
+          </span>
+        </div>
+
+        <div class="mm-modes-grid u-mb-4" id="mm-cognitive-modes-grid">
+          <button type="button" class="mm-mode-card active" data-cognitive-mode="auto" onclick="selectCognitiveVoiceMode('auto')">
+            <div class="mm-mode-card-head">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+              <span>Automático</span>
+            </div>
+            <p class="mm-mode-card-desc">Adapta tom e ritmo automaticamente ao seu estado e contexto atual.</p>
+          </button>
+
+          <button type="button" class="mm-mode-card" data-cognitive-mode="hands_on" onclick="selectCognitiveVoiceMode('hands_on')">
+            <div class="mm-mode-card-head">
+              <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-zap"></use></svg>
+              <span>Mão na massa</span>
+            </div>
+            <p class="mm-mode-card-desc">Direto ao ponto, com passos curtos e foco em execução prática imediata.</p>
+          </button>
+
+          <button type="button" class="mm-mode-card" data-cognitive-mode="sparring" onclick="selectCognitiveVoiceMode('sparring')">
+            <div class="mm-mode-card-head">
+              <svg class="ui-icon icon-sm u-text-amber" aria-hidden="true"><use href="#icon-message-square"></use></svg>
+              <span>Debate crítico</span>
+            </div>
+            <p class="mm-mode-card-desc">Questiona premissas e testa ideias com perguntas objetivas e construtivas.</p>
+          </button>
+
+          <button type="button" class="mm-mode-card" data-cognitive-mode="decompression" onclick="selectCognitiveVoiceMode('decompression')">
+            <div class="mm-mode-card-head">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-clock"></use></svg>
+              <span>Descompressão</span>
+            </div>
+            <p class="mm-mode-card-desc">Escuta leve e acolhedora, sem cobrança nem pressa por produtividade.</p>
+          </button>
+
+          <button type="button" class="mm-mode-card" data-cognitive-mode="crisis_paralysis" onclick="selectCognitiveVoiceMode('crisis_paralysis')">
+            <div class="mm-mode-card-head">
+              <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-shield"></use></svg>
+              <span>Apoio na crise</span>
+            </div>
+            <p class="mm-mode-card-desc">Voz calma e estável propondo apenas um micro-passo simples por vez.</p>
+          </button>
+
+          <button type="button" class="mm-mode-card" data-cognitive-mode="philosophical" onclick="selectCognitiveVoiceMode('philosophical')">
+            <div class="mm-mode-card-head">
+              <svg class="ui-icon icon-sm u-text-purple" aria-hidden="true"><use href="#icon-layers"></use></svg>
+              <span>Reflexão profunda</span>
+            </div>
+            <p class="mm-mode-card-desc">Ritmo pausado e perguntas abertas para explorar sentidos e nuances.</p>
+          </button>
+        </div>
+
+        <div class="mm-guidance-box">
+          <div class="mm-guidance-label">
+            <svg class="ui-icon icon-xs u-text-cyan" aria-hidden="true"><use href="#icon-activity"></use></svg>
+            <span>Prévia de como o assistente responde neste turno</span>
+          </div>
+          <div class="mm-guidance-text" id="mm-turn-guidance-preview">
+            Modo Automático: ajusta ritmo e acolhimento ao seu estado imediato, com pausas suaves e linguagem natural em português.
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: SINCRONIA 1-CLIQUE COM HERMES & TELEGRAM + ESTUDIO DE VOZ PT-BR -->
+      <div class="card u-mb-6">
+        <div class="card-header u-mb-3">
+          <div class="card-title">
+            <div class="card-icon icon-cyan">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-mic"></use></svg>
+            </div>
+            <div>
+              <div class="u-fw-700 u-text-white">Sincronia de Voz no Hermes &amp; Estúdio em Português</div>
+              <div class="u-text-muted gh-text-xs">Alinhe o modo de voz em português no Hermes e Telegram em 1 clique e teste fala natural e escuta no processador</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="customs-banner-shell u-mb-4" id="mm-hermes-voice-banner">
+          <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-3">
+            <div class="u-d-flex u-items-center u-gap-2">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-link"></use></svg>
+              <strong class="u-text-white">Sincronia de Voz no Hermes &amp; Telegram</strong>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-sync-hermes-voice" onclick="syncHermesVoiceCustoms()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-link"></use></svg>
+              <span>Sincronizar Voz em Português no Hermes (1-Clique)</span>
+            </button>
+          </div>
+          <div class="u-text-slate gh-text-sm" id="mm-hermes-voice-summary">
+            Verificando preferências de áudio na configuração do Hermes...
+          </div>
+          <div class="mm-issues-list" id="mm-hermes-voice-issues"></div>
+        </div>
+
+        <div class="mm-provision-box u-mb-4">
+          <div class="u-d-flex u-justify-between u-items-center u-flex-wrap u-gap-3 u-mb-2">
+            <div>
+              <div class="u-fw-600 u-text-white">Prontidão da Voz Local em Português (Processador)</div>
+              <div class="u-text-muted gh-text-xs">Prepara as pastas locais de voz e verifica os motores disponíveis sem tocar na placa de vídeo</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-provision-audio" onclick="provisionAudioEngines()">
+              <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-download"></use></svg>
+              <span>Baixar &amp; Ativar Voz Local (1-Clique)</span>
+            </button>
+          </div>
+          <div class="mm-engines-strip" id="mm-voice-engines-list">
+            <span class="badge badge-champion">Verificando motores locais...</span>
+          </div>
+        </div>
+
+        <div class="mm-grid-2">
+          <!-- BANCADA DE FALA NATURAL -->
+          <div class="gh-subpanel">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-cyan" aria-hidden="true"><use href="#icon-play"></use></svg>
+              <span>Bancada de Teste de Fala Natural</span>
+            </h4>
+            <textarea id="mm-tts-input" rows="3" class="form-control gh-textarea u-mb-2" placeholder="Digite uma frase em português para ouvir o ritmo e as pausas naturais...">Tudo pronto por aqui! Concluímos a etapa com folga e agora podemos avançar para o próximo passo com calma.</textarea>
+            <div class="mm-preset-row u-mb-2">
+              <button type="button" class="btn btn-xs btn-secondary" onclick="testVoicePreset('celebrar')">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-sparkles"></use></svg>
+                <span>Celebrar conquista</span>
+              </button>
+              <button type="button" class="btn btn-xs btn-secondary" onclick="testVoicePreset('acalmar')">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-shield"></use></svg>
+                <span>Acalmar sobrecarga</span>
+              </button>
+              <button type="button" class="btn btn-xs btn-secondary" onclick="testVoicePreset('explicar')">
+                <svg class="ui-icon icon-xs" aria-hidden="true"><use href="#icon-edit"></use></svg>
+                <span>Explicar código</span>
+              </button>
+            </div>
+            <div class="u-d-flex u-gap-2 u-items-center u-flex-wrap u-mb-2">
+              <button type="button" class="btn btn-sm btn-primary" onclick="testVoiceSynthesize()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-play"></use></svg>
+                <span>Ouvir Resposta</span>
+              </button>
+            </div>
+            <audio id="mm-tts-audio" controls class="mm-audio-player is-hidden u-mb-2"></audio>
+            <div class="mm-shaped-preview" id="mm-tts-shaped-preview">
+              As pausas naturais e a cadência respiratória aparecem aqui após sintetizar.
+            </div>
+          </div>
+
+          <!-- TESTE DE ESCUTA & MICROFONE -->
+          <div class="gh-subpanel">
+            <h4 class="gh-subpanel-title">
+              <svg class="ui-icon icon-sm u-text-green" aria-hidden="true"><use href="#icon-mic"></use></svg>
+              <span>Teste de Escuta &amp; Microfone</span>
+            </h4>
+            <p class="u-text-muted gh-text-xs u-m-0 u-mb-2">
+              Grave direto pelo microfone, envie um arquivo de áudio ou rode uma amostra rápida para ver percepção de humor e espera de turno.
+            </p>
+            <div class="mm-preset-row u-mb-3">
+              <button type="button" class="btn btn-sm btn-primary" id="btn-mm-mic-toggle" onclick="toggleMicRecording()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-mic"></use></svg>
+                <span>Gravar pelo Microfone</span>
+              </button>
+              <label for="mm-stt-file" class="btn btn-sm btn-secondary">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-download"></use></svg>
+                <span>Enviar Áudio</span>
+              </label>
+              <input id="mm-stt-file" type="file" accept="audio/*" class="conn-hidden-input" onchange="testTranscriptUpload()" />
+              <button type="button" class="btn btn-sm btn-secondary" onclick="testTranscriptUpload()">
+                <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-activity"></use></svg>
+                <span>Testar Avaliação de Fala</span>
+              </button>
+            </div>
+            <div class="mm-stt-result" id="mm-stt-result-box">
+              Nenhum áudio avaliado ainda. Grave, envie um arquivo ou clique em "Testar Avaliação de Fala".
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: VISAO HIBRIDA (LEITURA INSTANTANEA DA TELA + CAPTURA SOB DEMANDA) -->
+      <div class="card u-mb-6">
+        <div class="card-header u-mb-3">
+          <div class="card-title">
+            <div class="card-icon icon-green">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-eye"></use></svg>
+            </div>
+            <div>
+              <div class="u-fw-700 u-text-white">Visão Híbrida (Leitura Rápida da Tela &amp; Captura Inteligente)</div>
+              <div class="u-text-muted gh-text-xs">Lê botões, campos e textos da tela a custo zero e só captura imagem com marcações quando a tela é gráfica</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mm-vision-controls u-mb-3">
+          <input id="mm-vision-window-input" type="text" class="form-control" placeholder="Filtrar janela (opcional, ex: Navegador)" />
+          <select id="mm-vision-intent-select" class="form-control">
+            <option value="all">Todos os elementos</option>
+            <option value="actionable" selected>Apenas itens clicáveis e campos</option>
+            <option value="inputs">Campos de texto e formulários</option>
+            <option value="buttons">Somente botões e links</option>
+          </select>
+          <select id="mm-vision-mode-select" class="form-control">
+            <option value="auto" selected>Automático (Texto primeiro, imagem só se precisar)</option>
+            <option value="deterministic_som_only">Captura Inteligente com Marcações (0 gasto)</option>
+            <option value="cloud_frontier">Análise visual completa na nuvem</option>
+            <option value="local_ephemeral_vlm">Visão local temporária</option>
+          </select>
+        </div>
+
+        <div class="mm-preset-row u-mb-3">
+          <button type="button" class="btn btn-sm btn-primary" onclick="inspectLiveScreen()">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-search"></use></svg>
+            <span>Ler Tela em Texto (Custo Zero)</span>
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="diffScreenSnapshots()">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+            <span>Comparar Mudanças da Tela</span>
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="captureOnDemandSnapshot()">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-eye"></use></svg>
+            <span>Capturar Imagem com Marcações</span>
+          </button>
+        </div>
+
+        <div class="mm-blindspot-banner is-hidden u-mb-3" id="mm-vision-blindspot-banner">
+          <svg class="ui-icon icon-md u-text-amber" aria-hidden="true"><use href="#icon-alert-triangle"></use></svg>
+          <span id="mm-vision-blindspot-text">Área gráfica detectada — recomendamos captura visual com marcações.</span>
+        </div>
+
+        <div class="mm-grid-2">
+          <div>
+            <div class="u-fw-600 u-text-white gh-text-xs u-mb-2">Leitura Estrutural da Tela (Texto Compacto)</div>
+            <pre class="mm-lean-pre" id="mm-vision-lean-output">Clique em "Ler Tela em Texto (Custo Zero)" para mapear janelas, botões e campos sem gastar memória de vídeo.</pre>
+          </div>
+          <div>
+            <div class="u-fw-600 u-text-white gh-text-xs u-mb-2">Captura Visual &amp; Elementos Numerados</div>
+            <div class="mm-snapshot-box" id="mm-vision-snapshot-preview">
+              <div class="u-text-muted gh-text-xs">Nenhuma captura visual solicitada ainda.</div>
+            </div>
+            <div class="mm-som-list u-mt-2" id="mm-vision-som-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 4: SEU ESTILO & RITMO DE CONVERSA + GAVETA LABORATORIO -->
+      <div class="card u-mb-6">
+        <div class="card-header u-mb-3">
+          <div class="card-title">
+            <div class="card-icon icon-amber">
+              <svg class="ui-icon icon-md" aria-hidden="true"><use href="#icon-sliders"></use></svg>
+            </div>
+            <div>
+              <div class="u-fw-700 u-text-white">Seu Estilo &amp; Ritmo de Conversa</div>
+              <div class="u-text-muted gh-text-xs">Personalize formalidade, tempo de pausa antes de responder e expressões naturais que combinam com você</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" onclick="saveRapportPreferences()">
+            <svg class="ui-icon icon-sm" aria-hidden="true"><use href="#icon-check-circle"></use></svg>
+            <span>Salvar Preferências de Voz</span>
+          </button>
+        </div>
+
+        <div class="mm-grid-2 u-mb-4">
+          <div class="gh-subpanel">
+            <div class="u-d-flex u-justify-between u-items-center u-mb-1">
+              <label for="mm-formality-range" class="u-fw-600 u-text-white gh-text-xs">Nível de Formalidade</label>
+              <span class="range-val-badge" id="mm-formality-val">3.5 / 10</span>
+            </div>
+            <input id="mm-formality-range" type="range" min="0" max="10" step="0.5" value="3.5" class="form-control u-mb-3" />
+
+            <label for="mm-pacing-select" class="u-fw-600 u-text-white gh-text-xs u-mb-1">Formato Preferido da Resposta</label>
+            <select id="mm-pacing-select" class="form-control u-mb-3">
+              <option value="short_direct" selected>Curto e direto (ideal para conversa por voz)</option>
+              <option value="elaborate">Explicativo e detalhado</option>
+              <option value="bulleted">Em tópicos organizados</option>
+            </select>
+
+            <div class="u-d-flex u-justify-between u-items-center u-mb-1">
+              <label for="mm-contemplative-ms-range" class="u-fw-600 u-text-white gh-text-xs">Pausa de Escuta Antes de Responder</label>
+              <span class="range-val-badge" id="mm-contemplative-ms-val">250 ms</span>
+            </div>
+            <input id="mm-contemplative-ms-range" type="range" min="100" max="1000" step="25" value="250" class="form-control" />
+          </div>
+
+          <div class="gh-subpanel">
+            <div class="u-d-flex u-justify-between u-items-center u-mb-1">
+              <label for="mm-mirroring-range" class="u-fw-600 u-text-white gh-text-xs">Espelhamento Sutil do Seu Vocabulário (máx. 35%)</label>
+              <span class="range-val-badge" id="mm-mirroring-val">25%</span>
+            </div>
+            <input id="mm-mirroring-range" type="range" min="0" max="35" step="1" value="25" class="form-control u-mb-3" />
+
+            <label for="mm-slang-input" class="u-fw-600 u-text-white gh-text-xs u-mb-1">Expressões Pessoais Permitidas (separadas por vírgula)</label>
+            <input id="mm-slang-input" type="text" class="form-control u-mb-3" placeholder="Ex: beleza, bora, tranquilo, show" />
+
+            <label class="gh-checkbox-label">
+              <input type="checkbox" id="mm-backchannel-toggle" checked />
+              <span>Emitir sinais breves de escuta enquanto você raciocina (ex.: &ldquo;entendi&rdquo;, &ldquo;hum&rdquo;)</span>
+            </label>
+          </div>
+        </div>
+
+        <details class="lab-drawer" id="drawer-lab-multimodal">
+          <summary class="lab-drawer-header">
+            <div class="lab-drawer-title">
+              <svg class="ui-icon icon-sm lab-drawer-chevron" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+              <svg class="ui-icon icon-sm u-text-purple" aria-hidden="true"><use href="#icon-flask"></use></svg>
+              <span>Diagnóstico &amp; Laboratório Avançado</span>
+            </div>
+            <span class="lab-drawer-badge">PCOMP &bull; SER &bull; AXTree &bull; SoM &bull; SHA-256</span>
+          </summary>
+          <div class="lab-drawer-body">
+            <pre class="mm-lean-pre" id="mm-lab-diagnostics">Aguardando telemetria detalhada dos subsistemas de áudio, prosódia e visão...</pre>
+          </div>
+        </details>
+      </div>
+    </section>

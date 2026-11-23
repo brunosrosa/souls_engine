@@ -1,6 +1,7 @@
 //! Route definitions and router construction for `souls_server`.
 
 pub mod arena;
+pub mod audio;
 pub mod chat;
 pub mod cloud;
 pub mod connections;
@@ -198,6 +199,22 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/vision/status", get(vision::vision_status_handler))
         .route("/api/v1/vision/axtree/serialize", post(vision::serialize_axtree_handler))
         .route("/api/v1/vision/axtree/hit-test", post(vision::hit_test_handler))
+        // Milestone v0.9.3: Hybrid Vision, Sovereign PT-BR Audio & OpenAI Audio Gateway
+        .route("/api/v1/vision/axtree/live", post(vision::live_axtree_handler))
+        .route("/api/v1/vision/axtree/diff", post(vision::diff_axtree_handler))
+        .route("/api/v1/vision/snapshot", post(vision::snapshot_vision_handler))
+        .route("/v1/audio/speech", post(audio::openai_audio_speech_handler))
+        .route("/v1/audio/transcriptions", post(audio::openai_audio_transcriptions_handler))
+        .route("/api/v1/audio/status", get(audio::audio_status_handler))
+        .route("/api/v1/audio/transcribe", post(audio::transcribe_audio_handler))
+        .route("/api/v1/audio/synthesize", post(audio::synthesize_audio_handler))
+        .route(
+            "/api/v1/audio/rapport",
+            get(audio::get_rapport_handler).post(audio::post_rapport_handler),
+        )
+        .route("/api/v1/audio/provision", post(audio::provision_audio_handler))
+        .route("/api/v1/hermes/voice-customs", get(audio::hermes_voice_customs_handler))
+        .route("/api/v1/hermes/voice-customs/sync", post(audio::hermes_voice_customs_sync_handler))
         // Local Silicon Arena Endpoints
         .route("/api/v1/arena/models", get(arena::arena_models_handler))
         .route("/api/v1/arena/benchmarks", get(arena::arena_benchmarks_handler))

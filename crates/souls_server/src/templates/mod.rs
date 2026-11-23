@@ -15,6 +15,7 @@ pub const DASHBOARD_HTML: &str = concat!(
     include_str!("tabs/overview.html"),
     include_str!("tabs/google_hub.html"),
     include_str!("tabs/agent_inbox.html"),
+    include_str!("tabs/multimodal_hub.html"),
     include_str!("tabs/personas_hub.html"),
     include_str!("tabs/subagents.html"),
     include_str!("tabs/skills_hub.html"),
@@ -48,6 +49,8 @@ pub const DASHBOARD_HTML: &str = concat!(
     include_str!("scripts/connections.js"),
     "\n",
     include_str!("scripts/google_hub.js"),
+    "\n",
+    include_str!("scripts/multimodal_hub.js"),
     "  </script>\n",
     include_str!("components/modals.html"),
     include_str!("base_body_end.html")

@@ -21,7 +21,7 @@ pub struct SkillMeta {
     pub keywords: &'static [&'static str],
 }
 
-/// Static catalog of all 16 canonical skills.
+/// Static catalog of all 17 canonical skills.
 pub static CANONICAL_SKILLS: &[SkillMeta] = &[
     SkillMeta {
         name: "souls-code-surgeon",
@@ -139,6 +139,12 @@ pub static CANONICAL_SKILLS: &[SkillMeta] = &[
             "drive notebook",
         ],
     },
+    SkillMeta {
+        name: "souls-multimodal-perception",
+        description: "Percepção multimodal 0 MB VRAM: Visão Cognitiva AXTree LEAN, SoM & Snapshot sob demanda e Voz Soberana PT-BR (PCOMP, SenseVoice, prosódia e rapport).",
+        primary_tools: &["ui_inspect", "ui_interact", "ui_snapshot", "ui_diff", "voice_transcribe", "voice_synthesize", "voice_rapport"],
+        keywords: &["vision", "screen", "axtree", "snapshot", "canvas", "voice", "audio", "tts", "stt", "speech", "voz", "fala", "tela", "pt-br", "rapport", "tdah", "2e"],
+    },
 ];
 
 /// Ranked tool candidate from Stage 1.
@@ -237,6 +243,11 @@ fn compute_semantic_score(
             }
             "inbox" | "bmad" | "approval" | "proposal" => {
                 if namespace == "inbox" || target_lower.contains("inbox") || target_lower.contains("bmad") {
+                    domain_boost = 1.8;
+                }
+            }
+            "vision" | "screen" | "axtree" | "snapshot" | "canvas" | "voice" | "tts" | "stt" | "speech" | "voz" | "fala" | "tela" | "rapport" => {
+                if namespace == "ui" {
                     domain_boost = 1.8;
                 }
             }

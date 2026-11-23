@@ -668,7 +668,7 @@ mod tests {
         let tools_compact = val["result"]["tools"].as_array().unwrap();
         assert_eq!(tools_compact.len(), 8, "Level 0 must expose exactly 8 boot tools");
 
-        // 2. Full mode (86 tools)
+        // 2. Full mode (91 tools)
         let payload_full = serde_json::json!({
             "jsonrpc": "2.0",
             "id": 3,
@@ -690,7 +690,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 86, "Full mode must expose all 86 canonical tools (64 baseline + 19 google.* + 3 inbox.*)");
+        assert_eq!(tools_full.len(), 91, "Full mode must expose all 91 canonical tools (64 baseline + 19 google.* + 3 inbox.* + 5 multimodal ui.*)");
     }
 
     #[tokio::test]
@@ -2082,8 +2082,8 @@ model:
         let bytes_h = to_bytes(resp_health.into_body(), usize::MAX).await.unwrap();
         let json_h: serde_json::Value = serde_json::from_slice(&bytes_h).unwrap();
         assert_eq!(json_h["status"], "healthy");
-        assert_eq!(json_h["total_skills"], 16);
-        assert_eq!(json_h["total_tools"], 86);
+        assert_eq!(json_h["total_skills"], 17);
+        assert_eq!(json_h["total_tools"], 91);
 
         // 2. GET /api/v1/switchboard/skills
         let req_skills = Request::builder()
@@ -2096,7 +2096,7 @@ model:
         let bytes_s = to_bytes(resp_skills.into_body(), usize::MAX).await.unwrap();
         let json_s: serde_json::Value = serde_json::from_slice(&bytes_s).unwrap();
         assert_eq!(json_s["status"], "success");
-        assert_eq!(json_s["total"], 16);
+        assert_eq!(json_s["total"], 17);
 
         // 3. POST /api/v1/switchboard/evaluate (Code refactor query -> souls-code-surgeon)
         let eval_payload = serde_json::json!({
@@ -4822,6 +4822,7 @@ model:
                 include_str!("templates/tabs/gemini_notebooks.html"),
             ),
             ("agent_inbox.html", include_str!("templates/tabs/agent_inbox.html")),
+            ("multimodal_hub.html", include_str!("templates/tabs/multimodal_hub.html")),
             ("connections.html", connections_html),
         ];
 
@@ -5438,5 +5439,591 @@ fallback_providers:
         let val_missing: serde_json::Value = serde_json::from_slice(&bytes_missing).unwrap();
         assert!(val_missing.get("error").is_some());
         assert_eq!(val_missing["error"]["code"], -32602);
+    }
+
+    #[tokio::test]
+    async fn test_v093_multimodal_vision_audio_and_hermes_voice_customs() {
+        let state = create_test_state().await;
+        let test_data_dir = state.google_hub.data_dir.clone();
+        let app = build_router(state);
+
+        // 1. Vision status + live AXTree + diff + SHA-256 deduplicated snapshot (0 MB VRAM)
+        let resp_vis_status = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/vision/status")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_vis_status.status(), StatusCode::OK);
+        let vis_status: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_vis_status.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(vis_status["vram_consumed_mb"], 0);
+        assert_eq!(vis_status["live_inspector_active"], true);
+
+        let resp_live = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/vision/axtree/live")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"intent_filter":"actionable"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_live.status(), StatusCode::OK);
+        let live_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_live.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(live_val["status"], "success");
+        assert_eq!(live_val["vram_consumed_mb"], 0);
+        assert!(!live_val["lean_text"].as_str().unwrap().is_empty());
+
+        let prev_tree = live_val["tree"].clone();
+        let diff_req_body = serde_json::json!({
+            "previous_tree": prev_tree,
+            "intent_filter": "actionable"
+        });
+        let resp_diff = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/vision/axtree/diff")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(diff_req_body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_diff.status(), StatusCode::OK);
+        let diff_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_diff.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(diff_val["status"], "success");
+        assert_eq!(diff_val["vram_consumed_mb"], 0);
+        assert!(diff_val["diff"]["compact_lean_diff"].is_string());
+
+        let snap_payload = serde_json::json!({
+            "session_id": "v093_snap_sess",
+            "mode": "deterministic_som_only",
+            "include_base64": true
+        });
+        let resp_snap1 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/vision/snapshot")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(snap_payload.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_snap1.status(), StatusCode::OK);
+        let snap1: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_snap1.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(snap1["vram_consumed_mb"], 0);
+        assert_eq!(snap1["screen_unchanged"], false);
+        assert!(snap1["image_base64_png"].as_str().is_some());
+        assert!(!snap1["som_marks"].as_array().unwrap().is_empty());
+
+        // Second consecutive identical snapshot in same session must deduplicate via SHA-256!
+        let resp_snap2 = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/vision/snapshot")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(snap_payload.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_snap2.status(), StatusCode::OK);
+        let snap2: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_snap2.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(snap2["screen_unchanged"], true);
+        assert!(snap2["image_base64_png"].is_null());
+
+        // 2. Audio status & provision (0 MB VRAM, isolated test dir)
+        let resp_prov = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/audio/provision")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_prov.status(), StatusCode::OK);
+        let prov_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_prov.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(prov_val["status"], "success");
+        assert_eq!(prov_val["vram_consumed_mb"], 0);
+        assert!(test_data_dir.join("models").join("audio").is_dir());
+        assert!(test_data_dir.join("audio_cache").is_dir());
+        let manifest_path = std::path::PathBuf::from(prov_val["manifest_path"].as_str().unwrap());
+        assert!(manifest_path.is_file());
+        assert!(prov_val["toolchain"].is_object());
+
+        // 3. OpenAI-compatible POST /v1/audio/speech -> valid RIFF WAV bytes
+        let resp_speech = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/audio/speech")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"model":"souls-kokoro-ptbr","input":"Teste em português brasileiro!","voice":"souls-pt-br"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_speech.status(), StatusCode::OK);
+        assert_eq!(
+            resp_speech.headers().get("content-type").unwrap().to_str().unwrap(),
+            "audio/wav"
+        );
+        let wav_bytes = to_bytes(resp_speech.into_body(), usize::MAX).await.unwrap();
+        assert!(wav_bytes.len() >= 44);
+        assert_eq!(&wav_bytes[..4], b"RIFF");
+
+        // 4. OpenAI-compatible POST /v1/audio/transcriptions (both multipart/form-data and JSON)
+        let boundary = "----SoulsTestBoundary9123";
+        let mut mp_body = Vec::new();
+        mp_body.extend_from_slice(
+            format!("--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"voz.wav\"\r\nContent-Type: audio/wav\r\n\r\n").as_bytes(),
+        );
+        mp_body.extend_from_slice(&wav_bytes);
+        mp_body.extend_from_slice(
+            format!("\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"language\"\r\n\r\npt\r\n--{boundary}--\r\n").as_bytes(),
+        );
+        let resp_mp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/audio/transcriptions")
+                    .method("POST")
+                    .header("content-type", format!("multipart/form-data; boundary={boundary}"))
+                    .body(Body::from(mp_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_mp.status(), StatusCode::OK);
+        let mp_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_mp.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert!(mp_val.get("text").is_some());
+        assert_eq!(mp_val["language"], "pt-BR");
+
+        let mut mp_text_body = Vec::new();
+        mp_text_body.extend_from_slice(
+            format!("--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"voz.wav\"\r\nContent-Type: audio/wav\r\n\r\n").as_bytes(),
+        );
+        mp_text_body.extend_from_slice(&wav_bytes);
+        mp_text_body.extend_from_slice(
+            format!("\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"response_format\"\r\n\r\ntext\r\n--{boundary}--\r\n").as_bytes(),
+        );
+        let resp_mp_text = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/audio/transcriptions")
+                    .method("POST")
+                    .header("content-type", format!("multipart/form-data; boundary={boundary}"))
+                    .body(Body::from(mp_text_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_mp_text.status(), StatusCode::OK);
+        assert!(resp_mp_text
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("text/plain"));
+
+        let resp_oai_json = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/audio/transcriptions")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"sample_text":"<HAPPY> Bora testar isso agora!","language":"pt"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_oai_json.status(), StatusCode::OK);
+        let oai_json_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_oai_json.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(oai_json_val["text"], "Bora testar isso agora!");
+        assert_eq!(oai_json_val["emotion"], "happy");
+
+        // OpenAI response_format=text contract (used by Hermes transcription_cloud.py for whisper-1)
+        let resp_oai_text = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/audio/transcriptions")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"sample_text":"<HAPPY> Bora testar texto puro!","language":"pt","response_format":"text"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_oai_text.status(), StatusCode::OK);
+        assert!(resp_oai_text
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("text/plain"));
+        let raw_text_body = String::from_utf8(
+            to_bytes(resp_oai_text.into_body(), usize::MAX).await.unwrap().to_vec(),
+        )
+        .unwrap();
+        assert_eq!(raw_text_body, "Bora testar texto puro!");
+
+        // 5. Rapport GET/POST + /api/v1/audio/synthesize + /api/v1/audio/transcribe with PCOMP
+        let resp_rap_post = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/audio/rapport")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"user_id":"default","active_cognitive_mode":"sparring","formality_score":4.0,"mirroring_ratio":0.30}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_rap_post.status(), StatusCode::OK);
+        let rap_post_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_rap_post.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rap_post_val["profile"]["active_cognitive_mode"], "sparring");
+        assert!(rap_post_val["ephemeral_turn_note_pt"]
+            .as_str()
+            .unwrap()
+            .contains("Debate Crítico"));
+
+        let resp_synth = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/audio/synthesize")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"input":"**Atenção** — vamos testar # prosódia!","apply_prosody_shaping":true}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_synth.status(), StatusCode::OK);
+        let synth_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_synth.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(synth_val["status"], "success");
+        assert_eq!(synth_val["vram_consumed_mb"], 0);
+        assert!(!synth_val["shaped_text"].as_str().unwrap().contains("**"));
+        assert!(!synth_val["audio_base64"].as_str().unwrap().is_empty());
+
+        let resp_tr = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/audio/transcribe")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"sample_text":"<HAPPY> Então eu queria revisar porque","silence_duration_ms":480,"language":"pt"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_tr.status(), StatusCode::OK);
+        let tr_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_tr.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(tr_val["emotion_tag"], "happy");
+        assert_eq!(tr_val["turn_evaluation"]["ends_with_open_connective"], true);
+        assert_eq!(tr_val["turn_evaluation"]["verdict"], "emit_backchannel");
+        assert!(tr_val["turn_evaluation"]["suggested_backchannel"].as_str().is_some());
+
+        let resp_rap_get = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/audio/rapport")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let rap_get_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_rap_get.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert!(rap_get_val["profile"]["turn_count"].as_u64().unwrap() >= 2);
+
+        // 6. Hermes Voice Customs inspect + hierarchical YAML sync on isolated temp config.yaml
+        let cfg_dir = std::env::temp_dir().join(format!(
+            "souls_test_voice_customs_{}_{}",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&cfg_dir).unwrap();
+        let cfg_file = cfg_dir.join("config.yaml");
+        let sub_prof_dir = cfg_dir.join("profiles").join("foco");
+        std::fs::create_dir_all(&sub_prof_dir).unwrap();
+        let sub_cfg_file = sub_prof_dir.join("config.yaml");
+        std::fs::write(
+            &sub_cfg_file,
+            "model:\n  default: nous/hermes\nstt:\n  enabled: true\n  language: en\n",
+        )
+        .unwrap();
+        let initial_yaml = "\
+model:
+  default: anthropic/claude-sonnet-4
+  provider: nous
+stt:
+  enabled: false
+  use_gateway: true
+  provider: openai
+  language: en
+  local:
+    model: base
+  openai:
+    model: whisper-1
+    language: en
+    base_url: https://api.openai.com/v1
+tts:
+  provider: elevenlabs
+  use_gateway: true
+  elevenlabs:
+    voice_id: test_voice_123
+  openai:
+    model: tts-1
+    voice: alloy
+    base_url: https://api.openai.com/v1
+telegram:
+  enabled: true
+  voice: true
+";
+        std::fs::write(&cfg_file, initial_yaml).unwrap();
+
+        let prev_env = std::env::var_os("SOULS_HERMES_CONFIG_PATH");
+        std::env::set_var("SOULS_HERMES_CONFIG_PATH", &cfg_file);
+
+        let resp_vc_get = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/hermes/voice-customs")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_vc_get.status(), StatusCode::OK);
+        let vc_get: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_vc_get.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(vc_get["is_synced_with_souls_pt_br"], false);
+        assert_eq!(vc_get["current_stt_language"], "en");
+        assert_eq!(vc_get["current_tts_provider"], "elevenlabs");
+
+        let resp_vc_sync = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/hermes/voice-customs/sync")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"apply":true}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_vc_sync.status(), StatusCode::OK);
+        let vc_sync: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_vc_sync.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(vc_sync["status"], "success");
+        assert!(vc_sync["backup_path"].as_str().is_some());
+        assert!(cfg_file.with_extension("yaml.bak").is_file());
+        assert_eq!(vc_sync["report"]["is_synced_with_souls_pt_br"], true);
+        assert_eq!(vc_sync["report"]["current_stt_language"], "pt");
+        assert_eq!(vc_sync["report"]["current_tts_provider"], "openai");
+
+        let synced_yaml = std::fs::read_to_string(&cfg_file).unwrap();
+        assert!(!synced_yaml.contains("\r\n"), "config.yaml must preserve LF line endings");
+        assert!(synced_yaml.contains("model:\n  default: anthropic/claude-sonnet-4\n  provider: nous"));
+        assert!(synced_yaml.contains("telegram:\n  enabled: true\n  voice: true"));
+        assert!(synced_yaml.contains("base_url: 'http://127.0.0.1:9123/v1'"));
+        assert!(synced_yaml.contains("local:\n    model: base"), "Sibling stt.local block must be preserved");
+        assert!(synced_yaml.contains("elevenlabs:\n    voice_id: test_voice_123"), "Sibling tts.elevenlabs block must be preserved");
+        assert!(synced_yaml.contains("use_gateway: false"), "use_gateway must be disarmed");
+        let synced_sub = std::fs::read_to_string(&sub_cfg_file).unwrap();
+        assert!(synced_sub.contains("language: pt"), "Sub-profile stt language must be synced");
+        assert!(synced_sub.contains("base_url: 'http://127.0.0.1:9123/v1'"), "Sub-profile base_url must be synced");
+        assert!(vc_sync["synced_profiles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|v| v.as_str() == Some("foco")));
+
+        if let Some(prev) = prev_env {
+            std::env::set_var("SOULS_HERMES_CONFIG_PATH", prev);
+        } else {
+            std::env::remove_var("SOULS_HERMES_CONFIG_PATH");
+        }
+        let _ = std::fs::remove_dir_all(&cfg_dir);
+
+        // 7. Switchboard 17th skill & MCP tool_dispatch across multimodal tools
+        let resp_sw = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/switchboard/evaluate")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"query":"capturar snapshot vision tela voz fala pt-br","top_k":5}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_sw.status(), StatusCode::OK);
+        let sw_val: serde_json::Value = serde_json::from_slice(
+            &to_bytes(resp_sw.into_body(), usize::MAX).await.unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            sw_val["decision"]["recommended_skill"]["name"],
+            "souls-multimodal-perception"
+        );
+
+        let mcp_calls = [
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 901,
+                "method": "tools/call",
+                "params": {
+                    "name": "tool_dispatch",
+                    "arguments": {
+                        "tool": "ui_inspect",
+                        "arguments": { "intent_filter": "actionable" }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 902,
+                "method": "tools/call",
+                "params": {
+                    "name": "tool_dispatch",
+                    "arguments": {
+                        "tool": "ui_snapshot",
+                        "arguments": { "session_id": "mcp_mm_sess", "mode": "deterministic_som_only" }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 903,
+                "method": "tools/call",
+                "params": {
+                    "name": "tool_dispatch",
+                    "arguments": {
+                        "tool": "ui_diff",
+                        "arguments": { "previous_tree": prev_tree }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 904,
+                "method": "tools/call",
+                "params": {
+                    "name": "tool_dispatch",
+                    "arguments": {
+                        "tool": "voice_synthesize",
+                        "arguments": { "input": "Olá via MCP!", "cognitive_mode": "hands_on" }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 905,
+                "method": "tools/call",
+                "params": {
+                    "name": "tool_dispatch",
+                    "arguments": {
+                        "tool": "voice_rapport",
+                        "arguments": { "action": "set", "active_cognitive_mode": "decompression" }
+                    }
+                }
+            }),
+        ];
+
+        for payload in mcp_calls {
+            let resp = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri("/mcp")
+                        .method("POST")
+                        .header("content-type", "application/json")
+                        .body(Body::from(payload.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let val: serde_json::Value =
+                serde_json::from_slice(&to_bytes(resp.into_body(), usize::MAX).await.unwrap())
+                    .unwrap();
+            assert_eq!(val["result"]["isError"], false, "MCP call failed: {val}");
+        }
+
+        let _ = std::fs::remove_dir_all(&test_data_dir);
     }
 }

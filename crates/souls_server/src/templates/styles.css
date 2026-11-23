@@ -8231,3 +8231,206 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* ================================================================
+       MILESTONE v0.9.3: VOZ SOBERANA & VISAO HIBRIDA (MULTIMODAL HUB)
+       ================================================================ */
+    .multimodal-hub-hero {
+      background: linear-gradient(135deg, oklch(0.18 0.024 215 / 0.92), oklch(0.15 0.016 260 / 0.95));
+      border-color: oklch(0.68 0.14 205 / 0.35);
+    }
+    .mm-status-strip {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .mm-modes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      contain: layout style;
+    }
+    .mm-mode-card {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 13px 14px;
+      border-radius: var(--radius-md);
+      background: oklch(0.15 0.008 260 / 0.88);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease, transform 0.14s ease;
+    }
+    .mm-mode-card:hover {
+      border-color: oklch(0.72 0.14 210 / 0.55);
+      background: oklch(0.18 0.015 245 / 0.9);
+      transform: translateY(-1px);
+    }
+    .mm-mode-card.active {
+      border-color: oklch(0.76 0.16 195);
+      background: oklch(0.22 0.04 205 / 0.42);
+      box-shadow: 0 0 18px oklch(0.70 0.15 200 / 0.18);
+    }
+    .mm-mode-card-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-white);
+    }
+    .mm-mode-card-desc {
+      margin: 0;
+      font-size: 0.75rem;
+      line-height: 1.42;
+      color: var(--text-muted);
+    }
+    .mm-guidance-box {
+      padding: 11px 14px;
+      border-radius: var(--radius-md);
+      background: oklch(0.14 0.012 240 / 0.85);
+      border: 1px solid oklch(0.68 0.12 205 / 0.28);
+    }
+    .mm-guidance-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--cyan);
+      margin-bottom: 4px;
+    }
+    .mm-guidance-text {
+      font-size: 0.8rem;
+      line-height: 1.48;
+      color: var(--text-slate);
+    }
+    .mm-issues-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mm-issue-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.76rem;
+      color: oklch(0.86 0.14 75);
+    }
+    .mm-provision-box {
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      background: oklch(0.14 0.008 260 / 0.82);
+      border: 1px solid var(--border-subtle);
+    }
+    .mm-engines-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .mm-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      contain: layout style;
+    }
+    .mm-preset-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .mm-audio-player {
+      width: 100%;
+      height: 36px;
+      border-radius: var(--radius-sm);
+    }
+    .mm-shaped-preview,
+    .mm-stt-result {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: oklch(0.13 0.008 260 / 0.85);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      line-height: 1.48;
+      color: var(--text-muted);
+    }
+    .mm-vision-controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .mm-blindspot-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background: oklch(0.22 0.04 75 / 0.25);
+      border: 1px solid oklch(0.78 0.16 75 / 0.45);
+      color: oklch(0.90 0.12 80);
+      font-size: 0.78rem;
+    }
+    .mm-lean-pre {
+      margin: 0;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: oklch(0.12 0.008 260 / 0.92);
+      border: 1px solid var(--border-subtle);
+      color: oklch(0.86 0.04 220);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      line-height: 1.5;
+      max-height: 320px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .mm-snapshot-box {
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: oklch(0.12 0.008 260 / 0.88);
+      border: 1px solid var(--border-subtle);
+      min-height: 120px;
+    }
+    .mm-snapshot-img {
+      display: block;
+      max-width: 100%;
+      max-height: 280px;
+      border-radius: var(--radius-sm);
+      border: 1px solid oklch(0.68 0.12 205 / 0.35);
+      object-fit: contain;
+    }
+    .mm-som-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .mm-som-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      background: oklch(0.16 0.01 260 / 0.9);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.72rem;
+    }
+    #btn-mm-mic-toggle.is-recording {
+      background: oklch(0.55 0.20 25);
+      border-color: oklch(0.70 0.20 25);
+      color: var(--text-white);
+    }
+    @media (max-width: 1120px) {
+      .mm-modes-grid,
+      .mm-grid-2,
+      .mm-vision-controls {
+        grid-template-columns: 1fr;
+      }
+    }

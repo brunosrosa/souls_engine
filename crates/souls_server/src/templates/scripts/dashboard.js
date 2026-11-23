@@ -96,7 +96,7 @@
 
       // Mapeamento de pilar para botão do topo (6 pilares canônicos)
       let topBtnId = 'btn-' + tabId;
-      if (tabId === 'tab-google-hub' || tabId === 'tab-agent-inbox') topBtnId = 'btn-tab-overview';
+      if (tabId === 'tab-google-hub' || tabId === 'tab-agent-inbox' || tabId === 'tab-multimodal') topBtnId = 'btn-tab-overview';
       if (tabId === 'tab-gemini-notebooks') topBtnId = 'btn-tab-research';
       if (tabId === 'tab-subagents') topBtnId = 'btn-tab-personas';
       if (tabId === 'tab-connections') topBtnId = 'btn-tab-settings';
@@ -110,7 +110,7 @@
       const agentsSubnav = document.getElementById('pillar-subnav-agents');
       const systemSubnav = document.getElementById('pillar-subnav-system');
       if (cockpitSubnav) {
-        cockpitSubnav.classList.toggle('is-hidden', tabId !== 'tab-overview' && tabId !== 'tab-google-hub' && tabId !== 'tab-agent-inbox');
+        cockpitSubnav.classList.toggle('is-hidden', tabId !== 'tab-overview' && tabId !== 'tab-google-hub' && tabId !== 'tab-agent-inbox' && tabId !== 'tab-multimodal');
       }
       if (researchSubnav) {
         researchSubnav.classList.toggle('is-hidden', tabId !== 'tab-research' && tabId !== 'tab-gemini-notebooks');
@@ -124,6 +124,7 @@
       if (tabId === 'tab-overview') document.getElementById('btn-pillar-overview')?.classList.add('active');
       if (tabId === 'tab-google-hub') document.getElementById('btn-pillar-google-hub')?.classList.add('active');
       if (tabId === 'tab-agent-inbox') document.getElementById('btn-pillar-agent-inbox')?.classList.add('active');
+      if (tabId === 'tab-multimodal') document.getElementById('btn-pillar-multimodal')?.classList.add('active');
       if (tabId === 'tab-research') document.getElementById('btn-pillar-research')?.classList.add('active');
       if (tabId === 'tab-gemini-notebooks') document.getElementById('btn-pillar-notebooks')?.classList.add('active');
       if (tabId === 'tab-personas') document.getElementById('btn-pillar-personas')?.classList.add('active');
@@ -159,6 +160,10 @@
       } else if (tabId === 'tab-agent-inbox') {
         if (typeof loadAgentInboxTab === 'function') {
           loadAgentInboxTab();
+        }
+      } else if (tabId === 'tab-multimodal') {
+        if (typeof loadMultimodalHubTab === 'function') {
+          loadMultimodalHubTab();
         }
       } else if (tabId === 'tab-gemini-notebooks') {
         if (typeof loadGeminiNotebooksTab === 'function') {
@@ -11201,6 +11206,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       { id: 'nav-overview', title: 'Ir para Cockpit & Overview', desc: 'Pulso pessoal, telemetria de silício e status do Master Brain', category: 'Navegação', action: () => switchTab('tab-overview') },
       { id: 'nav-google-hub', title: 'Ir para Google Life Hub', desc: 'Resumo diário, Gmail, Agenda, previsão de trânsito, Docs, Sheets, Tarefas e YouTube', category: 'Navegação', action: () => switchTab('tab-google-hub') },
       { id: 'nav-agent-inbox', title: 'Ir para Central de Aprovações', desc: 'Revisar alterações com destaque visual e confirmar envios com segurança', category: 'Navegação', action: () => switchTab('tab-agent-inbox') },
+      { id: 'nav-multimodal', title: 'Ir para Voz & Visão Híbrida', desc: 'Modos de parceria, áudio local em português e leitura de tela', category: 'Navegação', action: () => switchTab('tab-multimodal') },
       { id: 'nav-research', title: 'Ir para Pesquisa & Conhecimento', desc: 'Missões STORM, Deep Research e biblioteca verificada', category: 'Navegação', action: () => switchTab('tab-research') },
       { id: 'act-new-research', title: 'Iniciar Nova Pesquisa Profunda', desc: 'Abrir formulário de scoping STORM com preview FinOps', category: 'Ação Rápida', action: () => { switchTab('tab-research'); if (typeof switchResearchSubtab === 'function') switchResearchSubtab('new-mission'); } },
       { id: 'nav-gemini-notebooks', title: 'Ir para Gemini Notebooks', desc: 'Cadernos NotebookLM, Drive, perguntas com fontes citadas e player de áudio', category: 'Navegação', action: () => switchTab('tab-gemini-notebooks') },
