@@ -605,6 +605,12 @@ Em vez de reescrever ingenuamente o system prompt a cada falha, o sistema partic
 * **Aprendizado Permanente:** Quando um subagente resolve um problema complexo sob o ciclo *tentativa ➔ erro ➔ traceback ➔ correção* e atinge alta eficiência na métrica $E^3$, o módulo de metacognição sintetiza automaticamente uma nova **Skill Parametrizada (`SKILL.md` + scripts)**.
 * **Promoção via Quarentena:** A skill gerada é depositada na Quarentena do **Skills Hub** para aprovação do operador em 1 clique, evitando que o agente reaprenda tarefas difíceis do zero.
 
+#### 6. Backlog Pós-Fechamento `v0.9.4+2` (Auditoria Hermes — Tratar na `v0.9.5` / `v1.0.0`)
+* **Hidratação de `catnap.slices_completed_today` no Cold Boot (`v0.9.5`):** Derivar/hidratar `slices_completed_today` (e `spent_today_usd`) a partir de `catnap_consolidation_ledger` chaveado por data UTC no boot, evitando que o contador volte a `0` após reinício do daemon.
+* **Clareza de Nomenclatura em `route_subtask` (`v0.9.5`):** Distinguir explicitamente no resumo textual e payload estruturado a **Janela de Contexto ativa** (`Context Window`, ex.: `16000` tokens) do **Orçamento de Raciocínio** (`Thinking Budget`, ex.: `4096` tokens), eliminando ambiguidade entre o erro `-32012` e o retorno nominal.
+* **Preservação de Diretivas Locais do Hermes no `tools/sync_skills.ps1` (`v0.9.5`):** Garantir que sincronizações das skills canônicas não sobrescrevam protocolos/preferências pessoais editados localmente no Hermes (separando skills customizadas do operador das skills do motor; qualquer promoção para `c1` exige aprovação e re-assinatura explícita do operador).
+* **Portabilidade de `souls_data_dir` & Migração `ADR-035` (`v1.0.0`):** Tornar `souls_data_dir` configurável com segurança e planejar via futura `ADR-035` eventual mudança de padrão na `v1.0.0` (migrador *Delta Merge*, teste de byte-exatidão LF fora do Dev Drive ReFS, aprovação *ASK FIRST* e re-assinatura `c1`).
+
 ---
 
 ### MILESTONE v0.9.5: SOULS ANTHROPOPHAGY (PIPELINE DE CANIBALIZAÇÃO, JANELA DE VIDRO GOOGLE SHEETS & PRIORIZAÇÃO DE FEATURES)
