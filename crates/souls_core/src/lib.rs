@@ -1,6 +1,6 @@
 //! # Souls Core (`souls_core`)
 //!
-//! Bare-metal low-level infrastructure for the Souls Engine v7:
+//! Bare-metal low-level infrastructure for the Souls Engine:
 //! - ANSI escape terminal sanitization and structured async tracing.
 //! - Adaptive token-aware smart reading (cl100k_base tiktoken) and auto-shrink context pruning.
 //! - Windows 11 ReFS Block Cloning (Copy-on-Write) zero-copy NVMe preservation.

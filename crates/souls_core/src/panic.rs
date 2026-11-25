@@ -1,4 +1,4 @@
-//! Asynchronous and synchronous panic containment barriers for Souls Engine (v7).
+//! Asynchronous and synchronous panic containment barriers for Souls Engine.
 //!
 //! Envelopes Tokio task futures and synchronous closures to prevent isolated panics
 //! from bringing down the bare-metal daemon process.

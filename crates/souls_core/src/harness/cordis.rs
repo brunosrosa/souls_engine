@@ -12,9 +12,16 @@
 
 use std::collections::BTreeMap;
 use std::sync::RwLock;
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use souls_protocol::{CordisFiberDto, CordisRollbackReportDto, HarnessComponentSlot};
+
+fn current_unix_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64
+}
 
 use crate::error::CoreError;
 use crate::harness::surface::ConstitutionalPinVerifier;
@@ -93,6 +100,75 @@ impl CordisMicrokernel {
         undo_ops: Vec<EffectUndoOp>,
         now_epoch: i64,
     ) -> Result<CordisFiberDto, CoreError> {
+        self.mount_fiber_internal(
+            fiber_id,
+            slot,
+            title_pt,
+            benefit_summary_pt,
+            ephemeral_cue_text,
+            target_task_type,
+            coeffect_dependencies,
+            undo_ops,
+            false,
+            None,
+            now_epoch,
+        )
+    }
+
+    /// Mounts a disposable ephemeral fiber with an explicit TTL (`5..=3600` seconds)
+    /// so LIFO `< 1 ms` rollback can be safely exercised without disturbing active protections.
+    #[allow(clippy::too_many_arguments)]
+    pub fn mount_ephemeral_fiber(
+        &self,
+        fiber_id: Option<String>,
+        slot: HarnessComponentSlot,
+        title_pt: &str,
+        benefit_summary_pt: &str,
+        ephemeral_cue_text: &str,
+        target_task_type: Option<String>,
+        coeffect_dependencies: Vec<String>,
+        ttl_secs: u64,
+        now_epoch: i64,
+    ) -> Result<CordisFiberDto, CoreError> {
+        let clamped_ttl = ttl_secs.clamp(5, 3600) as i64;
+        let assigned_hint = fiber_id.clone().unwrap_or_else(|| "ephemeral".to_string());
+        let undo_op = EffectUndoOp {
+            op_id: format!("undo_ephemeral_{assigned_hint}"),
+            description_pt: format!("Reverter fibra efêmera '{}'", title_pt.trim()),
+            state_key: format!("ephemeral.fiber.{}", assigned_hint.trim()),
+            new_value: ephemeral_cue_text.trim().to_string(),
+            previous_value: None,
+        };
+        self.mount_fiber_internal(
+            fiber_id,
+            slot,
+            title_pt,
+            benefit_summary_pt,
+            ephemeral_cue_text,
+            target_task_type,
+            coeffect_dependencies,
+            vec![undo_op],
+            true,
+            Some(now_epoch.saturating_add(clamped_ttl)),
+            now_epoch,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn mount_fiber_internal(
+        &self,
+        fiber_id: Option<String>,
+        slot: HarnessComponentSlot,
+        title_pt: &str,
+        benefit_summary_pt: &str,
+        ephemeral_cue_text: &str,
+        target_task_type: Option<String>,
+        coeffect_dependencies: Vec<String>,
+        undo_ops: Vec<EffectUndoOp>,
+        ephemeral: bool,
+        expires_at: Option<i64>,
+        now_epoch: i64,
+    ) -> Result<CordisFiberDto, CoreError> {
         ConstitutionalPinVerifier::reject_if_c1_mutated(slot)?;
         if matches!(
             slot,
@@ -113,7 +189,11 @@ impl CordisMicrokernel {
             _ => {
                 let seq = guard.next_seq;
                 guard.next_seq += 1;
-                format!("cordis_fib_{seq:04}")
+                if ephemeral {
+                    format!("cordis_ephem_{seq:04}")
+                } else {
+                    format!("cordis_fib_{seq:04}")
+                }
             }
         };
 
@@ -141,6 +221,10 @@ impl CordisMicrokernel {
             });
         } else {
             for mut op in undo_ops {
+                if ephemeral && op.state_key == "ephemeral.fiber.ephemeral" {
+                    op.state_key = format!("ephemeral.fiber.{assigned_id}");
+                    op.op_id = format!("undo_ephemeral_{assigned_id}");
+                }
                 let prev = guard
                     .runtime_kv
                     .insert(op.state_key.clone(), op.new_value.clone());
@@ -165,6 +249,8 @@ impl CordisMicrokernel {
             elo_rating: 1200.0,
             ema_score: 0.5,
             drift_streak: 0,
+            ephemeral,
+            expires_at,
             created_at: now_epoch,
         };
 
@@ -285,13 +371,69 @@ impl CordisMicrokernel {
         }
     }
 
-    /// Lists all fibers (active and reverted).
+    /// Purges expired ephemeral fibers (`ephemeral && expires_at <= now_epoch`), reverting their undo stacks.
+    pub fn purge_expired_ephemeral_fibers(&self, now_epoch: i64) -> usize {
+        let Ok(mut guard) = self.inner.write() else {
+            return 0;
+        };
+        let expired_ids: Vec<String> = guard
+            .fibers
+            .iter()
+            .filter(|(_, rec)| {
+                rec.dto.ephemeral
+                    && rec
+                        .dto
+                        .expires_at
+                        .map(|exp| now_epoch >= exp)
+                        .unwrap_or(false)
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
+
+        for id in &expired_ids {
+            if let Some(mut rec) = guard.fibers.remove(id) {
+                while let Some(op) = rec.undo_stack.pop() {
+                    match op.previous_value {
+                        Some(prev) => {
+                            guard.runtime_kv.insert(op.state_key, prev);
+                        }
+                        None => {
+                            guard.runtime_kv.remove(&op.state_key);
+                        }
+                    }
+                }
+            }
+        }
+        expired_ids.len()
+    }
+
+    /// Returns `true` if `fiber_id` refers to a registered ephemeral fiber.
+    #[must_use]
+    pub fn is_ephemeral(&self, fiber_id: &str) -> bool {
+        self.inner
+            .read()
+            .ok()
+            .and_then(|g| g.fibers.get(fiber_id).map(|r| r.dto.ephemeral))
+            .unwrap_or(false)
+    }
+
+    /// Lists all fibers (active and reverted), automatically purging expired ephemeral fibers.
     #[must_use]
     pub fn list_fibers(&self) -> Vec<CordisFiberDto> {
+        let _ = self.purge_expired_ephemeral_fibers(current_unix_secs());
         self.inner
             .read()
             .map(|g| g.fibers.values().map(|r| r.dto.clone()).collect())
             .unwrap_or_default()
+    }
+
+    /// Lists only persistent (non-ephemeral) fibers suitable for disk serialization.
+    #[must_use]
+    pub fn list_persistent_fibers(&self) -> Vec<CordisFiberDto> {
+        self.list_fibers()
+            .into_iter()
+            .filter(|f| !f.ephemeral)
+            .collect()
     }
 
     /// Returns a snapshot of current reactive coeffects.
@@ -362,6 +504,7 @@ impl CordisMicrokernel {
     /// Casual/personal queries (agenda, email, greeting) receive an empty list.
     #[must_use]
     pub fn select_query_aware_cues(&self, query: &str) -> Vec<String> {
+        let _ = self.purge_expired_ephemeral_fibers(current_unix_secs());
         let lower = query.trim().to_ascii_lowercase();
         if lower.is_empty() {
             return Vec::new();
@@ -414,6 +557,7 @@ impl CordisMicrokernel {
     /// Returns concise ephemeral cues for `prefetch()` (only active, non-paused fibers).
     #[must_use]
     pub fn active_prefetch_cues(&self) -> Vec<String> {
+        let _ = self.purge_expired_ephemeral_fibers(current_unix_secs());
         let Ok(guard) = self.inner.read() else {
             return Vec::new();
         };
@@ -437,6 +581,7 @@ impl CordisMicrokernel {
     /// Returns active tactical cues matching a delegated sub-agent `task_type` (`route_subtask`).
     #[must_use]
     pub fn active_cues_for_task_type(&self, task_type: &str) -> Vec<String> {
+        let _ = self.purge_expired_ephemeral_fibers(current_unix_secs());
         let norm_task = task_type.trim().to_ascii_lowercase();
         let Ok(guard) = self.inner.read() else {
             return Vec::new();

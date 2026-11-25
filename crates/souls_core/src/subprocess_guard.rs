@@ -1,4 +1,4 @@
-//! RAII Subprocess Guard and lifecycle owner for Souls Engine (v7).
+//! RAII Subprocess Guard and lifecycle owner for Souls Engine.
 //!
 //! Encapsulates `tokio::process::Child` in a RAII guard that sends atomic termination
 //! on `Drop`, eradicating zombie processes in host memory.

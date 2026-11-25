@@ -114,6 +114,14 @@ struct PinnedFileTarget {
     pin_mode: String,
 }
 
+fn format_resolved_path(path: &Path) -> String {
+    let raw = std::fs::canonicalize(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+        .to_string_lossy()
+        .replace('\\', "/");
+    raw.strip_prefix("//?/").unwrap_or(&raw).to_string()
+}
+
 fn normalize_pin_mode(mode: &str) -> String {
     if mode.trim().eq_ignore_ascii_case("watch") {
         "watch".to_string()
@@ -162,15 +170,39 @@ impl ConstitutionalPinVerifier {
         abs_path: P,
         pin_mode: &str,
     ) -> Result<ConstitutionalPinStatusDto, CoreError> {
-        let posix = normalize_posix_rel_path(rel_path)?;
         let bytes = std::fs::read(abs_path.as_ref())?;
         let hash = compute_lf_sha256_hex(&bytes);
+        self.pin_file_with_expected_hash(rel_path, abs_path, &hash, pin_mode)
+    }
+
+    /// Registers a file on disk against a previously persisted expected LF SHA-256 baseline.
+    ///
+    /// Preserves drift detection across daemon restarts (particularly for `"watch"` pins like
+    /// `MEMORY.md` / `USER.md`) instead of silently overwriting the expected baseline on boot.
+    pub fn pin_file_with_expected_hash<P: AsRef<Path>>(
+        &self,
+        rel_path: &str,
+        abs_path: P,
+        expected_sha256: &str,
+        pin_mode: &str,
+    ) -> Result<ConstitutionalPinStatusDto, CoreError> {
+        let posix = normalize_posix_rel_path(rel_path)?;
+        let abs_buf = abs_path.as_ref().to_path_buf();
+        let resolved = Some(format_resolved_path(&abs_buf));
+        let actual = match std::fs::read(&abs_buf) {
+            Ok(bytes) => compute_lf_sha256_hex(&bytes),
+            Err(_) => "missing_or_unreadable".to_string(),
+        };
+        let expected = expected_sha256.trim().to_ascii_lowercase();
+        let drift_detected = actual != expected;
+        let verified = !drift_detected;
         let mode = normalize_pin_mode(pin_mode);
+        let fail_closed_triggered = (mode != "watch") && drift_detected;
         let now = Utc::now().timestamp();
         let target = PinnedFileTarget {
             file_path_posix: posix.clone(),
-            absolute_path: Some(abs_path.as_ref().to_path_buf()),
-            expected_sha256: hash.clone(),
+            absolute_path: Some(abs_buf),
+            expected_sha256: expected.clone(),
             pin_mode: mode.clone(),
         };
         if let Ok(mut guard) = self.pins.write() {
@@ -178,11 +210,13 @@ impl ConstitutionalPinVerifier {
         }
         Ok(ConstitutionalPinStatusDto {
             file_path_posix: posix,
-            expected_sha256: hash.clone(),
-            actual_sha256: hash,
-            verified: true,
-            fail_closed_triggered: false,
+            expected_sha256: expected,
+            actual_sha256: actual,
+            verified,
+            fail_closed_triggered,
             pin_mode: mode,
+            drift_detected,
+            resolved_path: resolved,
             checked_at: now,
         })
     }
@@ -223,14 +257,47 @@ impl ConstitutionalPinVerifier {
             verified: true,
             fail_closed_triggered: false,
             pin_mode: mode,
+            drift_detected: false,
+            resolved_path: None,
             checked_at: now,
         })
     }
 
-    /// Re-calculates expected LF SHA-256 baselines from all disk-backed pinned files after human confirmation.
-    pub fn resign_all_disk_pins(&self) -> Vec<ConstitutionalPinStatusDto> {
+    /// Exports current `file_path_posix -> expected_sha256` baselines for disk persistence.
+    #[must_use]
+    pub fn export_baselines(&self) -> BTreeMap<String, String> {
+        self.pins
+            .read()
+            .map(|g| {
+                g.iter()
+                    .filter(|(_, t)| t.absolute_path.is_some())
+                    .map(|(k, t)| (k.clone(), t.expected_sha256.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Re-calculates expected LF SHA-256 baselines for selected disk-backed pins (or all if `None`/empty).
+    pub fn resign_disk_pins_selective(
+        &self,
+        paths: Option<&[String]>,
+    ) -> Vec<ConstitutionalPinStatusDto> {
+        let filter_set: Option<Vec<String>> = paths
+            .filter(|slice| !slice.is_empty())
+            .map(|slice| {
+                slice
+                    .iter()
+                    .filter_map(|p| normalize_posix_rel_path(p).ok())
+                    .collect()
+            });
+
         if let Ok(mut guard) = self.pins.write() {
             for target in guard.values_mut() {
+                if let Some(ref allowed) = filter_set {
+                    if !allowed.iter().any(|p| p == &target.file_path_posix) {
+                        continue;
+                    }
+                }
                 if let Some(ref path) = target.absolute_path {
                     if let Ok(bytes) = std::fs::read(path) {
                         target.expected_sha256 = compute_lf_sha256_hex(&bytes);
@@ -241,8 +308,13 @@ impl ConstitutionalPinVerifier {
         self.verify_or_fail_closed()
     }
 
+    /// Re-calculates expected LF SHA-256 baselines from all disk-backed pinned files after human confirmation.
+    pub fn resign_all_disk_pins(&self) -> Vec<ConstitutionalPinStatusDto> {
+        self.resign_disk_pins_selective(None)
+    }
+
     /// Verifies all registered pinned files against disk (`fail_closed` blocks automations on mismatch;
-    /// `watch` audits drift in `verified = false` without triggering fail-closed freeze).
+    /// `watch` audits drift in `drift_detected = true` and `verified = false` without triggering fail-closed freeze).
     pub fn verify_or_fail_closed(&self) -> Vec<ConstitutionalPinStatusDto> {
         let now = Utc::now().timestamp();
         let snapshot: Vec<PinnedFileTarget> = self
@@ -253,6 +325,7 @@ impl ConstitutionalPinVerifier {
 
         let mut results = Vec::with_capacity(snapshot.len());
         for target in snapshot {
+            let resolved_path = target.absolute_path.as_ref().map(|p| format_resolved_path(p));
             let actual = match &target.absolute_path {
                 Some(path) => match std::fs::read(path) {
                     Ok(bytes) => compute_lf_sha256_hex(&bytes),
@@ -260,8 +333,9 @@ impl ConstitutionalPinVerifier {
                 },
                 None => target.expected_sha256.clone(),
             };
-            let verified = actual == target.expected_sha256;
-            let fail_closed_triggered = (target.pin_mode != "watch") && !verified;
+            let drift_detected = actual != target.expected_sha256;
+            let verified = !drift_detected;
+            let fail_closed_triggered = (target.pin_mode != "watch") && drift_detected;
             results.push(ConstitutionalPinStatusDto {
                 file_path_posix: target.file_path_posix,
                 expected_sha256: target.expected_sha256,
@@ -269,6 +343,8 @@ impl ConstitutionalPinVerifier {
                 verified,
                 fail_closed_triggered,
                 pin_mode: target.pin_mode,
+                drift_detected,
+                resolved_path,
                 checked_at: now,
             });
         }

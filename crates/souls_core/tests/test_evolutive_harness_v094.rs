@@ -286,3 +286,153 @@ fn test_v094_catnap_preemption_gates_backoff_and_runmark() {
     let fp2 = compute_runmark_fingerprint("task_a", "hash_2", HarnessComponentSlot::C5ToolGuidance);
     assert_ne!(fp1, fp2);
 }
+
+#[test]
+fn test_v0943_watch_pin_drift_resolved_path_and_selective_resign() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let agents_path = temp_dir.path().join("AGENTS.md");
+    let memory_path = temp_dir.path().join("MEMORY.md");
+    std::fs::write(&agents_path, "# Agents\n").unwrap();
+    std::fs::write(&memory_path, "fact 1\n").unwrap();
+
+    let verifier = ConstitutionalPinVerifier::new();
+    let p_agents = verifier
+        .pin_file_from_disk_with_mode("AGENTS.md", &agents_path, "fail_closed")
+        .unwrap();
+    let p_mem = verifier
+        .pin_file_from_disk_with_mode("hermes/memories/MEMORY.md", &memory_path, "watch")
+        .unwrap();
+
+    assert!(!p_agents.drift_detected);
+    assert!(p_agents
+        .resolved_path
+        .as_deref()
+        .unwrap_or("")
+        .ends_with("AGENTS.md"));
+    assert!(!p_mem.drift_detected);
+
+    // Mutate both files on disk; test selective resign of AGENTS.md ONLY
+    std::fs::write(&agents_path, "# Agents v2\n").unwrap();
+    std::fs::write(&memory_path, "fact 1\nfact 2\n").unwrap();
+
+    let before = verifier.verify_or_fail_closed();
+    let a_before = before.iter().find(|p| p.file_path_posix == "AGENTS.md").unwrap();
+    let m_before = before
+        .iter()
+        .find(|p| p.file_path_posix == "hermes/memories/MEMORY.md")
+        .unwrap();
+    assert!(a_before.drift_detected && a_before.fail_closed_triggered);
+    assert!(m_before.drift_detected && !m_before.verified && !m_before.fail_closed_triggered);
+    assert_ne!(m_before.actual_sha256, m_before.expected_sha256);
+
+    // Selective resign keeps MEMORY.md drift intact while clearing AGENTS.md fail_closed
+    let after = verifier.resign_disk_pins_selective(Some(&["AGENTS.md".to_string()]));
+    let a_after = after.iter().find(|p| p.file_path_posix == "AGENTS.md").unwrap();
+    let m_after = after
+        .iter()
+        .find(|p| p.file_path_posix == "hermes/memories/MEMORY.md")
+        .unwrap();
+    assert!(a_after.verified && !a_after.drift_detected && !a_after.fail_closed_triggered);
+    assert!(m_after.drift_detected && !m_after.verified && !m_after.fail_closed_triggered);
+
+    // Persisted baseline check across simulated restart
+    let baselines = verifier.export_baselines();
+    let verifier2 = ConstitutionalPinVerifier::new();
+    let reloaded = verifier2
+        .pin_file_with_expected_hash(
+            "hermes/memories/MEMORY.md",
+            &memory_path,
+            &baselines["hermes/memories/MEMORY.md"],
+            "watch",
+        )
+        .unwrap();
+    assert!(reloaded.drift_detected);
+    assert!(!reloaded.verified);
+    assert!(!reloaded.fail_closed_triggered);
+}
+
+#[test]
+fn test_v0943_cordis_ephemeral_ttl_and_sub_ms_rollback() {
+    let now = chrono::Utc::now().timestamp();
+    let cordis = CordisMicrokernel::new();
+    let prod = cordis
+        .mount_fiber(
+            Some("fib_prod_guard".to_string()),
+            HarnessComponentSlot::C2Guardrails,
+            "Proteção ativa",
+            "Mantém segurança",
+            "Regra de produção",
+            None,
+            vec![],
+            vec![],
+            now,
+        )
+        .unwrap();
+    assert!(!prod.ephemeral);
+
+    let ephem = cordis
+        .mount_ephemeral_fiber(
+            Some("fib_ephem_test".to_string()),
+            HarnessComponentSlot::C5ToolGuidance,
+            "Fibra descartável de teste",
+            "Exercita rollback LIFO sem risco",
+            "Cue temporária",
+            Some("ops".to_string()),
+            vec![],
+            60,
+            now,
+        )
+        .unwrap();
+    assert!(ephem.ephemeral);
+    assert_eq!(ephem.expires_at, Some(now + 60));
+    assert_eq!(ephem.undo_operations_count, 1);
+    assert!(cordis.is_ephemeral("fib_ephem_test"));
+    assert_eq!(cordis.list_persistent_fibers().len(), 1);
+
+    let report = cordis.dispose_fiber("fib_ephem_test").unwrap();
+    assert!(report.restored_cleanly);
+    assert!(report.elapsed_us < 1000);
+    assert_eq!(
+        cordis.get_runtime_value("ephemeral.fiber.fib_ephem_test"),
+        None
+    );
+
+    // TTL expiry automatically purges expired ephemeral fibers without touching prod
+    let _exp = cordis
+        .mount_ephemeral_fiber(
+            Some("fib_ephem_exp".to_string()),
+            HarnessComponentSlot::C5ToolGuidance,
+            "Expira rápido",
+            "Teste TTL",
+            "Cue expira",
+            None,
+            vec![],
+            10,
+            now,
+        )
+        .unwrap();
+    assert_eq!(cordis.purge_expired_ephemeral_fibers(now + 10), 1);
+    assert!(!cordis.is_ephemeral("fib_ephem_exp"));
+    assert_eq!(cordis.list_persistent_fibers().len(), 1);
+}
+
+#[test]
+fn test_v0943_catnap_cold_boot_hydration_and_utc_rollover() {
+    let monitor = CatnapMonitor::new(CatnapConfigDto::default());
+    monitor.hydrate_today_stats(4, 0.25);
+    let snap = monitor.snapshot_state();
+    assert_eq!(snap.slices_completed_today, 4);
+    assert!((snap.spent_today_usd - 0.25).abs() < 1e-6);
+
+    monitor.begin_slice("cursor_test");
+    assert!(monitor.is_slice_running());
+    monitor.record_slice_completed("cursor_test", 0.0);
+    assert!(!monitor.is_slice_running());
+    assert_eq!(monitor.snapshot_state().slices_completed_today, 5);
+
+    // Rollover to next UTC day resets daily counters cleanly
+    monitor.rollover_utc_day_at(99_999);
+    let after_rollover = monitor.snapshot_state();
+    assert_eq!(after_rollover.slices_completed_today, 0);
+    assert!((after_rollover.spent_today_usd - 0.0).abs() < 1e-9);
+}

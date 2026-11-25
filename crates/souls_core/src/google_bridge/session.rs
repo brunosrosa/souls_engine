@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use tracing::{debug, info};
 
+// CRYPTO INVARIANT: immutable key derivation seed (GV2 vault compatibility) — do not rename.
 const GV2_MASTER_SEED: &[u8] = b"SoulsEngineV7_GoogleMultiAccountVault_GV2_MasterKey_2026";
 static NONCE_SEQ: AtomicU64 = AtomicU64::new(1);
 
@@ -244,6 +245,7 @@ impl GoogleSessionVault {
 
     /// Encrypts bytes using reversible machine-bound key stream.
     pub fn encrypt(data: &[u8]) -> Vec<u8> {
+        // CRYPTO INVARIANT: immutable key derivation seed (GV1 vault compatibility) — do not rename.
         let key = b"SoulsEngineV7_GoogleUniverseBridge_EntropySeed_2026";
         let mut out = Vec::with_capacity(data.len() + 4);
         out.extend_from_slice(b"GV1:"); // Google Vault v1 magic header
@@ -260,6 +262,7 @@ impl GoogleSessionVault {
                 "Invalid vault format: missing GV1 header".to_string(),
             ));
         }
+        // CRYPTO INVARIANT: immutable key derivation seed (GV1 vault compatibility) — do not rename.
         let key = b"SoulsEngineV7_GoogleUniverseBridge_EntropySeed_2026";
         let payload = &data[4..];
         let mut out = Vec::with_capacity(payload.len());

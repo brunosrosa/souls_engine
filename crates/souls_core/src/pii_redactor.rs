@@ -1,4 +1,4 @@
-//! Linear PII Redactor with reversible opaque token mapping for Souls Engine (v7).
+//! Linear PII Redactor with reversible opaque token mapping for Souls Engine.
 //!
 //! Sanitizes inbound prompt bodies and text buffers before upstream cloud dispatch,
 //! mapping sensitive paths, tokens, and credentials into reversible opaque tokens

@@ -93,6 +93,8 @@ pub struct CatnapMonitor {
     last_activity_epoch_ms: Arc<AtomicU64>,
     preempt_flag: Arc<AtomicBool>,
     last_preemption_latency_bits: AtomicU64,
+    active_utc_day: AtomicU64,
+    slice_running: AtomicBool,
     slices_completed_today: AtomicU64,
     spent_today_micro_usd: AtomicU64,
     next_rr_index: AtomicU64,
@@ -117,6 +119,8 @@ impl CatnapMonitor {
             last_activity_epoch_ms: Arc::new(AtomicU64::new(current_epoch_ms())),
             preempt_flag: Arc::new(AtomicBool::new(false)),
             last_preemption_latency_bits: AtomicU64::new(0.0_f64.to_bits()),
+            active_utc_day: AtomicU64::new(current_epoch_secs() / 86_400),
+            slice_running: AtomicBool::new(false),
             slices_completed_today: AtomicU64::new(0),
             spent_today_micro_usd: AtomicU64::new(0),
             next_rr_index: AtomicU64::new(0),
@@ -126,6 +130,46 @@ impl CatnapMonitor {
             backoff_by_kind: RwLock::new(BTreeMap::new()),
             config: RwLock::new(config),
         }
+    }
+
+    /// Resets daily counters when UTC midnight passes so continuous daemon runs stay accurate.
+    pub fn ensure_utc_day_current(&self) {
+        self.rollover_utc_day_at(current_epoch_secs() / 86_400);
+    }
+
+    /// Applies deterministic UTC-day rollover for a given day index (`epoch_secs / 86_400`).
+    pub fn rollover_utc_day_at(&self, utc_day_index: u64) {
+        let prev = self.active_utc_day.load(Ordering::Acquire);
+        if utc_day_index != prev
+            && self
+                .active_utc_day
+                .compare_exchange(prev, utc_day_index, Ordering::SeqCst, Ordering::Acquire)
+                .is_ok()
+        {
+            self.slices_completed_today.store(0, Ordering::Release);
+            self.spent_today_micro_usd.store(0, Ordering::Release);
+        }
+    }
+
+    /// Hydrates today's completed slice count and USD spend from `catnap_consolidation_ledger` on cold boot.
+    pub fn hydrate_today_stats(&self, slices_completed: u64, spent_usd: f64) {
+        self.active_utc_day
+            .store(current_epoch_secs() / 86_400, Ordering::Release);
+        self.slices_completed_today
+            .store(slices_completed, Ordering::Release);
+        let micro = (spent_usd.max(0.0) * 1_000_000.0).round() as u64;
+        self.spent_today_micro_usd.store(micro, Ordering::Release);
+    }
+
+    /// Returns `true` while a Catnap micro-slice is actively executing.
+    #[must_use]
+    pub fn is_slice_running(&self) -> bool {
+        self.slice_running.load(Ordering::Acquire)
+    }
+
+    /// Clears active slice execution flag when a slice exits without completing (skipped/preempted/error).
+    pub fn finish_slice_idle(&self) {
+        self.slice_running.store(false, Ordering::SeqCst);
     }
 
     /// Invoked in `0 ns` by `AppState::acquire_connection()` or user input events.
@@ -140,6 +184,7 @@ impl CatnapMonitor {
     /// Marks the start of a micro-slice, clearing the preemption flag before entering work.
     pub fn begin_slice(&self, cursor_checkpoint: &str) {
         self.preempt_flag.store(false, Ordering::SeqCst);
+        self.slice_running.store(true, Ordering::SeqCst);
         if let Ok(mut st) = self.state_label.write() {
             *st = "catnapping".to_string();
         }
@@ -156,6 +201,7 @@ impl CatnapMonitor {
             let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
             self.last_preemption_latency_bits
                 .store(elapsed_ms.to_bits(), Ordering::Relaxed);
+            self.slice_running.store(false, Ordering::SeqCst);
             if let Ok(mut st) = self.state_label.write() {
                 *st = "preempted".to_string();
             }
@@ -166,6 +212,8 @@ impl CatnapMonitor {
 
     /// Records completion of a micro-slice and updates daily FinOps accounting.
     pub fn record_slice_completed(&self, cursor_checkpoint: &str, cost_usd: f64) {
+        self.ensure_utc_day_current();
+        self.slice_running.store(false, Ordering::SeqCst);
         self.slices_completed_today.fetch_add(1, Ordering::Relaxed);
         let micro = (cost_usd.max(0.0) * 1_000_000.0).round() as u64;
         self.spent_today_micro_usd
@@ -267,6 +315,7 @@ impl CatnapMonitor {
         current_hour: u8,
         slice_kind: Option<&str>,
     ) -> (bool, String) {
+        self.ensure_utc_day_current();
         let cfg = self.get_config();
         if !cfg.enabled {
             return (false, "Cochilos inteligentes desativados pelo operador.".to_string());
@@ -374,12 +423,14 @@ impl CatnapMonitor {
     /// Dollars spent today on shadow probing.
     #[must_use]
     pub fn spent_today_usd(&self) -> f64 {
+        self.ensure_utc_day_current();
         (self.spent_today_micro_usd.load(Ordering::Relaxed) as f64) / 1_000_000.0
     }
 
     /// Produces a full `CatnapStateDto` telemetry snapshot.
     #[must_use]
     pub fn snapshot_state(&self) -> CatnapStateDto {
+        self.ensure_utc_day_current();
         let state = self
             .state_label
             .read()
