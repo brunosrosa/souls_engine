@@ -1,4 +1,4 @@
-//! McpDomainError, ProtocolError and error envelopes for Souls Engine (v7).
+//! McpDomainError, ProtocolError and error envelopes for Souls Engine.
 //!
 //! Maps domain errors to the non-negotiable JSON-RPC error code range (-32000..=-32099)
 //! as specified in ADR-041 and MCP_TOOL_CONTRACTS.md.

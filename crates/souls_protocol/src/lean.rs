@@ -1,4 +1,4 @@
-//! LEAN context compression and deduplication data types for Souls Engine (v7).
+//! LEAN context compression and deduplication data types for Souls Engine.
 //!
 //! Provides memory-efficient structures for syntactic dehydration,
 //! lossless deduplication caches, and context headroom metrics.

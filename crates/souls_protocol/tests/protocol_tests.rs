@@ -659,6 +659,8 @@ fn test_v094_harness_evolve_dtos_and_slots_roundtrip() {
         elo_rating: 1216.0,
         ema_score: 0.56,
         drift_streak: 0,
+        ephemeral: false,
+        expires_at: None,
         created_at: 1795440000,
     };
     let json_fiber = serde_json::to_string(&fiber).unwrap();
@@ -672,6 +674,8 @@ fn test_v094_harness_evolve_dtos_and_slots_roundtrip() {
         verified: true,
         fail_closed_triggered: false,
         pin_mode: "fail_closed".to_string(),
+        drift_detected: false,
+        resolved_path: Some("Z:/souls_engine/AGENTS.md".to_string()),
         checked_at: 1795440000,
     };
     let legacy_pin: ConstitutionalPinStatusDto = serde_json::from_str(
@@ -704,6 +708,9 @@ fn test_v094_harness_evolve_dtos_and_slots_roundtrip() {
         duration_ms: 12.5,
         cost_usd: 0.0,
         summary_pt: "Sondagem sem regressões".to_string(),
+        trigger_mode: "auto".to_string(),
+        actor: "catnap_scheduler".to_string(),
+        authorization_provenance: None,
         created_at: 1795440000,
     };
     let tomb = MemoryTombstoneDto {

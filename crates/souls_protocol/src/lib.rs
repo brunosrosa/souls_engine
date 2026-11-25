@@ -2,7 +2,7 @@
 //!
 //! Universal Data Transfer Objects (DTOs), LEAN compression types,
 //! Model Context Protocol (MCP) envelopes, and JSON-RPC domain error definitions
-//! for the Souls Engine v7.
+//! for the Souls Engine.
 //!
 //! Bare-metal foundation crate: pure types, zero I/O side effects, zero unsafe code.
 

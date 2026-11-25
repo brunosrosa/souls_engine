@@ -103,6 +103,32 @@ fn default_pin_mode() -> String {
     "fail_closed".to_string()
 }
 
+fn default_catnap_trigger_mode() -> String {
+    "auto".to_string()
+}
+
+fn default_catnap_actor() -> String {
+    "catnap_scheduler".to_string()
+}
+
+/// Auditable cross-channel authorization provenance attached to sensitive mutations.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthorizationProvenanceDto {
+    pub channel: String,
+    pub timestamp: i64,
+    pub scope: String,
+    #[serde(default)]
+    pub actor: Option<String>,
+}
+
+impl AuthorizationProvenanceDto {
+    /// Returns `true` when channel, positive timestamp, and scope are explicitly provided.
+    #[must_use]
+    pub fn is_valid(&self) -> bool {
+        !self.channel.trim().is_empty() && self.timestamp > 0 && !self.scope.trim().is_empty()
+    }
+}
+
 /// Cryptographic SHA-256 pin verification record for a constitutional (`c1`) file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConstitutionalPinStatusDto {
@@ -113,6 +139,10 @@ pub struct ConstitutionalPinStatusDto {
     pub fail_closed_triggered: bool,
     #[serde(default = "default_pin_mode")]
     pub pin_mode: String,
+    #[serde(default)]
+    pub drift_detected: bool,
+    #[serde(default)]
+    pub resolved_path: Option<String>,
     pub checked_at: i64,
 }
 
@@ -132,6 +162,10 @@ pub struct CordisFiberDto {
     pub elo_rating: f64,
     pub ema_score: f64,
     pub drift_streak: u32,
+    #[serde(default)]
+    pub ephemeral: bool,
+    #[serde(default)]
+    pub expires_at: Option<i64>,
     pub created_at: i64,
 }
 
@@ -198,6 +232,12 @@ pub struct CatnapSliceRecordDto {
     pub duration_ms: f64,
     pub cost_usd: f64,
     pub summary_pt: String,
+    #[serde(default = "default_catnap_trigger_mode")]
+    pub trigger_mode: String,
+    #[serde(default = "default_catnap_actor")]
+    pub actor: String,
+    #[serde(default)]
+    pub authorization_provenance: Option<AuthorizationProvenanceDto>,
     pub created_at: i64,
 }
 
@@ -259,4 +299,64 @@ pub struct DomainExperienceEntryDto {
     pub runmark_fingerprint: String,
     pub experience_summary_pt: String,
     pub created_at: i64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_authorization_provenance_validation() {
+        let valid = AuthorizationProvenanceDto {
+            channel: "antigravity_ide".to_string(),
+            timestamp: 1795577667,
+            scope: "resign_c1_agents".to_string(),
+            actor: Some("bruno".to_string()),
+        };
+        assert!(valid.is_valid());
+
+        let empty_channel = AuthorizationProvenanceDto {
+            channel: "   ".to_string(),
+            ..valid.clone()
+        };
+        assert!(!empty_channel.is_valid());
+
+        let bad_ts = AuthorizationProvenanceDto {
+            timestamp: 0,
+            ..valid.clone()
+        };
+        assert!(!bad_ts.is_valid());
+    }
+
+    #[test]
+    fn test_harness_dtos_backwards_compatible_serde_defaults() {
+        let legacy_pin = r#"{
+            "file_path_posix": "hermes/memories/MEMORY.md",
+            "expected_sha256": "abc",
+            "actual_sha256": "def",
+            "verified": false,
+            "fail_closed_triggered": false,
+            "checked_at": 1795500000
+        }"#;
+        let pin: ConstitutionalPinStatusDto = serde_json::from_str(legacy_pin).unwrap();
+        assert_eq!(pin.pin_mode, "fail_closed");
+        assert!(!pin.drift_detected);
+        assert!(pin.resolved_path.is_none());
+
+        let legacy_slice = r#"{
+            "slice_id": "s1",
+            "slice_kind": "shadow_probe_ppc",
+            "runmark_fingerprint": "fp",
+            "cursor_checkpoint": "c1",
+            "status": "completed",
+            "duration_ms": 1.2,
+            "cost_usd": 0.0,
+            "summary_pt": "ok",
+            "created_at": 1795500000
+        }"#;
+        let slice: CatnapSliceRecordDto = serde_json::from_str(legacy_slice).unwrap();
+        assert_eq!(slice.trigger_mode, "auto");
+        assert_eq!(slice.actor, "catnap_scheduler");
+        assert!(slice.authorization_provenance.is_none());
+    }
 }

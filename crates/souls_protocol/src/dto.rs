@@ -1,4 +1,4 @@
-//! Universal Data Transfer Objects (DTOs) for Souls Engine (v7).
+//! Universal Data Transfer Objects (DTOs) for Souls Engine.
 //!
 //! Encompasses FinOps cost metrics ($E^3$), hardware telemetry (RTX 2060m/WDDM),
 //! and swarm coordination models (sub_agent_diaries, context_ledger, handoff).

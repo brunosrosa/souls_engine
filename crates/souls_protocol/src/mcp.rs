@@ -1,7 +1,7 @@
 //! Model Context Protocol (MCP) data structures and JSON-RPC 2.0 envelopes.
 //!
 //! Provides agnostic definitions for RPC requests, responses, tool schemas,
-//! and invocation results for the Souls Engine v7.
+//! and invocation results for the Souls Engine.
 //!
 //! Pure types, zero I/O side effects, zero unsafe code.
 
