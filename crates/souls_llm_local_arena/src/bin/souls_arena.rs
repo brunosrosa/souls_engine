@@ -56,7 +56,7 @@ async fn main() -> ExitCode {
 
 fn print_usage() {
     println!("\n=========================================================================================================");
-    println!("  🏟️ SOULS ARENA — CLI STANDALONE DE BENCHMARK & SILÍCIO LOCAL (v7)");
+    println!("  🏟️ SOULS ARENA — CLI STANDALONE DE BENCHMARK & SILÍCIO LOCAL");
     println!("=========================================================================================================");
     println!("  Uso:");
     println!("    souls_arena list [--tier <0|0.5|1|2|3|4>]");
