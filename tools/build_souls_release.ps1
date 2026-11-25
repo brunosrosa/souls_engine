@@ -1,7 +1,7 @@
 ﻿# tools/build_souls_release.ps1 — Compilação Otimizada de Produção para Windows x86_64 (LLD + sccache)
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== Compilando Souls Engine v7 em Modo Release (--release) com sccache & rust-lld ===" -ForegroundColor Cyan
+Write-Host "=== Compilando Souls Engine em Modo Release (--release) com sccache & rust-lld ===" -ForegroundColor Cyan
 
 $sccacheExe = "C:\Users\rosas\.cargo\bin\sccache.exe"
 $env:SCCACHE_DIR = "Z:\souls_engine\.souls_data\sccache"

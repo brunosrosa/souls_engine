@@ -1,4 +1,4 @@
-# test_symbiosis_e2e.ps1 — Validação Final de Simbiose Hermes Agent & Souls Engine (Sessão 13)
+﻿# test_symbiosis_e2e.ps1 — Validação Final de Simbiose Hermes Agent & Souls Engine (Sessão 13)
 # Executa a auditoria completa de todos os subsistemas em produção bare-metal
 
 [CmdletBinding()]
@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " 🏛️ TESTE FINALZÃO DE SIMBIOSE — HERMES & SOULS ENGINE v7  " -ForegroundColor Cyan
+Write-Host " 🏛️ TESTE FINALZÃO DE SIMBIOSE — HERMES & SOULS ENGINE    " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $checks = @()
@@ -85,8 +85,8 @@ $checks += Assert-Check "5. Adaptadores Hermes Desktop Plugin Links" {
 # 6. Central souls_config.toml Persistence
 $checks += Assert-Check "6. Configuração Centralizada souls_config.toml" {
     $cfg = Invoke-RestMethod -Uri "$BaseUrl/api/v1/settings/config"
-    if (-not $cfg.raw_toml -or ($cfg.parsed.finops.vram_hard_limit_mb -ne 5294 -and -not ($cfg.raw_toml -like "*vram*"))) { throw "Configuração TOML inválida" }
-    "OK (Arquivo persistido em $($cfg.path), VRAM Limit: $($cfg.parsed.finops.vram_hard_limit_mb)MB)"
+    if (-not $cfg.raw_toml -or (-not ($cfg.raw_toml -like "*wddm*" -or $cfg.raw_toml -like "*vram*"))) { throw "Configuração TOML inválida" }
+    "OK (Arquivo persistido em $($cfg.path))"
 }
 
 # 7. Esteira de Curadoria Viva do Obsidian

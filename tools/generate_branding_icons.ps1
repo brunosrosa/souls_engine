@@ -1,5 +1,5 @@
 ﻿# tools/generate_branding_icons.ps1
-# Gerador Automatizado de Assets e Ícones de Branding para o Souls Engine v7
+# Gerador Automatizado de Assets e Ícones de Branding para o Souls Engine
 # Produz variações de cores dos olhos (Ciano, Verde, Âmbar, Vermelho, Roxo)
 # e aplica recorte com BORDAS ARREDONDADAS (Squircle) e FUNDO TRANSPARENTE nos 4 cantos externos.
 # Gera PNGs em múltiplos tamanhos + arquivos .ICO multi-resolução para Windows Systray / Launcher.

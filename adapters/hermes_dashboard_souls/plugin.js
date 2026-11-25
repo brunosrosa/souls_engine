@@ -1,5 +1,5 @@
 /**
- * Souls Engine v7 — Official Hermes Desktop Integration Plugin
+ * Souls Engine — Official Hermes Desktop Integration Plugin
  * Integrates the bare-metal Souls Engine dashboard natively into Hermes Desktop:
  * 1. Left Sidebar Navigation button/tab ('sidebar.nav')
  * 2. Dedicated Workspace Page ('routes' at /souls)
@@ -100,7 +100,7 @@ function SoulsDashboardPageView({ ctx }) {
                   fontWeight: 600,
                   fontSize: '12px',
                 },
-                children: '⚡ Souls Engine v7 Bare-Metal Daemon',
+                children: '⚡ Souls Engine Bare-Metal Daemon',
               }),
               jsx('span', {
                 style: {
@@ -335,7 +335,7 @@ export default {
                 marginBottom: '8px',
                 fontWeight: 600,
               },
-              children: '⚡ Souls Engine v7 — Bare-Metal Daemon',
+              children: '⚡ Souls Engine — Bare-Metal Daemon',
             }),
             jsx('p', {
               style: {

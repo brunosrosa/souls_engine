@@ -1,8 +1,8 @@
-; installer/souls_engine_setup.iss — Script de Compilação do Instalador Inno Setup para Souls Engine v7
-; Gera o executável SoulsEngine_Setup_v7.exe para instalação no Windows 11 64-bit
+; installer/souls_engine_setup.iss — Script de Compilação do Instalador Inno Setup para Souls Engine
+; Gera o executável SoulsEngine_Setup_0.9.4+3.exe para instalação no Windows 11 64-bit
 
 #define MyAppName "Souls Engine"
-#define MyAppVersion "7.2.0"
+#define MyAppVersion "0.9.4+3"
 #define MyAppPublisher "Souls Engine Bare-Metal Team"
 #define MyAppURL "http://127.0.0.1:9123/dashboard"
 #define MyAppExeName "souls_engine.exe"
@@ -22,7 +22,7 @@ AllowNoIcons=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=Z:\souls_engine\installer_output
-OutputBaseFilename=SoulsEngine_Setup_v7
+OutputBaseFilename=SoulsEngine_Setup_0.9.4+3
 SetupIconFile=Z:\souls_engine\assets\branding\souls_icon_cyan.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -47,9 +47,9 @@ Source: "Z:\souls_engine\assets\branding\*"; DestDir: "{app}\assets\branding"; F
 
 [Icons]
 ; Atalho no Menu Iniciar
-Name: "{userprograms}\{#MyAppName}"; Filename: "pwsh.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\souls_launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\branding\souls_icon_cyan.ico"; Comment: "Souls Engine v7 Bare-Metal Companion & Daemon"
+Name: "{userprograms}\{#MyAppName}"; Filename: "pwsh.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\souls_launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\branding\souls_icon_cyan.ico"; Comment: "Souls Engine Bare-Metal Companion & Daemon"
 ; Atalho na Área de Trabalho
-Name: "{userdesktop}\{#MyAppName}"; Filename: "pwsh.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\souls_launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\branding\souls_icon_cyan.ico"; Comment: "Souls Engine v7 Bare-Metal Companion & Daemon"; Tasks: desktopicon
+Name: "{userdesktop}\{#MyAppName}"; Filename: "pwsh.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\souls_launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\branding\souls_icon_cyan.ico"; Comment: "Souls Engine Bare-Metal Companion & Daemon"; Tasks: desktopicon
 
 [Run]
 ; Opcional: Rodar o companion ao término da instalação

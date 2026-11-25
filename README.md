@@ -1,10 +1,10 @@
-# 👻 SOULS ENGINE (v7 Canônica)
+# 👻 SOULS ENGINE
 
 > **"O silício é o nosso limite; a soberania é o nosso dogma; o silêncio é a nossa estética."**  
 > *Exoesqueleto Cognitivo Bare-Metal e Prótese de Função Executiva de Baixo Nível.*
 
 [![Rust](https://img.shields.io/badge/Rust-2021_Edition-orange?logo=rust)](https://www.rust-lang.org/)
-[![Version](https://img.shields.io/badge/Version-v0.9.3--Canônica-blueviolet)](#-sumário-executivo)
+[![Version](https://img.shields.io/badge/Version-0.9.4+3--Canônica-blueviolet)](#-sumário-executivo)
 [![Platform](https://img.shields.io/badge/Platform-Windows_11_NT_Bare--Metal-blue?logo=windows)](https://microsoft.com)
 [![Storage](https://img.shields.io/badge/FS-Dev_Drive_ReFS_CoW-darkgreen)](https://learn.microsoft.com/windows/dev-drive/)
 [![Hardware](https://img.shields.io/badge/Hardware-Intel_i9_+_RTX_2060m-76b900?logo=nvidia)](https://nvidia.com)
@@ -21,7 +21,7 @@
 3. [Topologia Canônica das 11 Crates](#-topologia-canônica-das-11-crates)
 4. [Governança Físico-Computacional e Silício (RTX 2060m)](#-governança-físico-computacional-e-silício-rtx-2060m)
 5. [Matriz Simbiótica com o Hermes Agent](#-matriz-simbiótica-com-o-hermes-agent)
-6. [Catálogo MCP e Revelação Progressiva (91 Ferramentas)](#-catálogo-mcp-e-revelação-progressiva-91-ferramentas)
+6. [Catálogo MCP e Revelação Progressiva (97 Ferramentas)](#-catálogo-mcp-e-revelação-progressiva-91-ferramentas)
 7. [Dashboard Web Headless Modular (ADR-012)](#-dashboard-web-headless-modular-adr-012)
 8. [Como Ligar o Souls Engine Hoje](#-como-ligar-o-souls-engine-hoje)
 9. [Como Rodar as Tools via MCP Hoje (Hermes & IDEs)](#-como-rodar-as-tools-via-mcp-hoje-hermes--ides)
@@ -51,7 +51,7 @@ A dinâmica entre o operador humano e o motor é uma **parceria de pensamento cr
 - Toda inteligência gerada é ancorada na realidade física do hardware e na integridade matemática do código.
 
 ### A Estética do Silêncio
-- O Souls Engine v7 é um **Daemon 100% Headless Bare-Metal (`souls_server.exe`)**. É invisível, silencioso e opera na retaguarda como infraestrutura de altíssima velocidade.
+- O Souls Engine é um **Daemon 100% Headless Bare-Metal (`souls_server.exe`)**. É invisível, silencioso e opera na retaguarda como infraestrutura de altíssima velocidade.
 - A interface conversacional e executiva pertence ao **Hermes Agent** (Nous Research). Toda a observabilidade visual reside exclusivamente no Web Dashboard oficial do Hermes (`hermes dashboard`).
 
 ---
@@ -177,9 +177,9 @@ O Souls Engine é calibrado com precisão cirúrgica para a máquina host bare-m
 
 ### As 4 Leis Inegociáveis do Silício
 
-1. **Teto Útil Real de 5.294 MB sob WDDM:**
-   - O Desktop Window Manager (`dwm.exe`) do Windows 11 consome compulsoriamente até 850 MB de VRAM.
-   - O espaço estritamente seguro para alocações CUDA é de **5.294 MB**.
+1. **Teto Útil Derivado em Runtime sob WDDM:**
+   - O Desktop Window Manager (`dwm.exe`) do Windows 11 reserva VRAM compartilhada (padrão configurável `wddm_reserve_mb = 850` MB).
+   - O teto útil é derivado em runtime via `/health.hardware.vram_usable_mb = vram_total_mb - config.wddm_reserve_mb`.
    - Ultrapassar esse limite dispara o fallback de *Shared GPU Memory* via PCIe 3.0, colapsando a vazão de 45 tokens/s para menos de 1,5 tokens/s. O Watchdog NVML aborta requisições antes do *spillover*.
 2. **Exclusão Mútua de VRAM:**
    - O Tier 1 (modelo de código na dGPU, ex: Qwen Coder) e modelos pesados concorrentes **nunca coexistem na VRAM**. Se uma carga concorrente for acionada, ela é desviada compulsoriamente para as 16 threads AVX2 da CPU Intel i9.
@@ -284,11 +284,11 @@ As **Skills** ensinam a IA a encadear as ferramentas MCP sem desperdício de tok
 
 ## 🖥️ Dashboard Web Headless Modular (ADR-012)
 
-O Souls Engine v7 oferece observabilidade visual e governança em tempo real através de um **Web Dashboard SPA Single-Binary** servido diretamente na porta de loopback `http://127.0.0.1:9123`.
+O Souls Engine oferece observabilidade visual e governança em tempo real através de um **Web Dashboard SPA Single-Binary** servido diretamente na porta de loopback `http://127.0.0.1:9123`.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                   SOULS ENGINE DASHBOARD v0.9.3 (HEADLESS)                  │
+│                   SOULS ENGINE DASHBOARD 0.9.4+3 (HEADLESS)                  │
 ├───────────────┬─────────────────────────────────────────────────────────────┤
 │ 🎯 Cockpit    │ Overview, Voz & Visão Híbrida (1-clique), Agent Inbox, Pulse│
 │ 🌍 Life Hub   │ Google Personal Hub, Gemini Notebooks, Auto-Sync & Pulso    │
@@ -307,7 +307,7 @@ O Souls Engine v7 oferece observabilidade visual e governança em tempo real atr
 
 ## 🚀 Como Ligar o Souls Engine Hoje
 
-O Souls Engine v7 inicializa como um daemon nativo bare-metal Windows 11 com zero dependências de Docker, Node.js ou WSL.
+O Souls Engine inicializa como um daemon nativo bare-metal Windows 11 com zero dependências de Docker, Node.js ou WSL.
 
 ### 1. Pré-Requisitos do Sistema
 
@@ -353,7 +353,7 @@ INFO Bootstrapping Souls Engine bare-metal subsystems at: "Z:\\souls_engine\\.so
 INFO FrankenSQLite STRICT pool initialized (16 connections, WAL mode).
 INFO Seeding canonical models into registry: [tier0_onnx_cpu, tier05_llama_cpu, tier1_qwen_coder_gpu].
 INFO ParetoBanditRouter bootstrap complete (Thompson Sampling priors loaded).
-INFO NVML Hardware Watchdog initialized (RTX 2060m thermal barrier at 5294 MB).
+INFO NVML Hardware Watchdog initialized (RTX 2060m usable VRAM derived dynamically via wddm_reserve_mb).
 INFO All 8 workspace crates successfully bound into AppState.
 INFO Listening strictly on http://127.0.0.1:9123 (Zero-Trust Loopback Bare-Metal)
 ```
@@ -400,7 +400,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:9123/v1/chat/completions" `
 
 ## 🔌 Como Rodar as Tools via MCP Hoje (Hermes & IDEs)
 
-O ecossistema disponibiliza **dois canais de conexão MCP**: o canal de produção canônico v7 (**Loopback TCP HTTP/SSE na porta `:9123`**) e o canal direto de desenvolvimento (**Standard I/O `stdio` para IDEs**).
+O ecossistema disponibiliza **dois canais de conexão MCP**: o canal de produção canônico (**Loopback TCP HTTP/SSE na porta `:9123`**) e o canal direto de desenvolvimento (**Standard I/O `stdio` para IDEs**).
 
 ---
 
@@ -597,7 +597,7 @@ O código em `_donor/` representa o acervo legado das eras experimentais (v5/v6)
 │                      │ structs antigas. Refatorado para Tokio assíncrono.   │
 ├──────────────────────┼──────────────────────────────────────────────────────┤
 │ UPGRADE_CANDIDATE    │ Stubs ou mocks que ganham motores bare-metal         │
-│                      │ definitivos no v7 (ex: LanceDB, Wasmtime, NVML).     │
+│                      │ definitivos no motor (ex: LanceDB, Wasmtime, NVML).     │
 ├──────────────────────┼──────────────────────────────────────────────────────┤
 │ NECROSIS_INCINERATE  │ Código tóxico que viola as Linhas Vermelhas (Tauri,  │
 │                      │ Wry/Winit, :3001). INCINERAÇÃO ABSOLUTA E EXPURGO.   │
@@ -675,11 +675,11 @@ Antes de propor novas implementações ou alterar contratos existentes, consulte
 
 - **Manifesto Canônico:** [`docs/SOULS_CANON_MANIFEST.md`](file:///Z:/souls_engine/docs/SOULS_CANON_MANIFEST.md)
 - **Especificação das 11 Crates:** [`docs/architecture/CRATES_SPECIFICATION.md`](file:///Z:/souls_engine/docs/architecture/CRATES_SPECIFICATION.md)
-- **Contratos das 91 Ferramentas MCP:** [`docs/contracts/MCP_TOOL_CONTRACTS.md`](file:///Z:/souls_engine/docs/contracts/MCP_TOOL_CONTRACTS.md)
+- **Contratos das Ferramentas MCP (97 atuais):** [`docs/contracts/MCP_TOOL_CONTRACTS.md`](file:///Z:/souls_engine/docs/contracts/MCP_TOOL_CONTRACTS.md)
 - **Esquemas DDL FrankenSQLite & Arrow (`16` Tabelas `STRICT`):** [`docs/storage/SCHEMAS_DDL_MANIFEST.md`](file:///Z:/souls_engine/docs/storage/SCHEMAS_DDL_MANIFEST.md)
 - **Mapa Forense do Código Legado:** [`docs/migration/DONOR_EXTRACTION_MAP.md`](file:///Z:/souls_engine/docs/migration/DONOR_EXTRACTION_MAP.md)
 - **Registros de Decisões Arquiteturais (ADRs):** [`docs/decisions/adrs/`](file:///Z:/souls_engine/docs/decisions/adrs/) (ADR-001 a ADR-033)
 
 ---
 
-*Souls Engine v7 — Construído bare-metal em Rust para soberania computacional plena.*
+*Souls Engine — Construído bare-metal em Rust para soberania computacional plena.*

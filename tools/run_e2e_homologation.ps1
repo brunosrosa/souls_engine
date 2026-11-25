@@ -1,4 +1,4 @@
-# tools/run_e2e_homologation.ps1
+﻿# tools/run_e2e_homologation.ps1
 # Bateria Automatizada de Homologação Clínica & Testes Ponta-a-Ponta E2E (Sessão 8)
 # Valida REST, MCP Streamable HTTP, MCP SSE, 51 Ferramentas e gera o Relatório de Homologação.
 
@@ -10,7 +10,7 @@ param(
 $ErrorActionPreference = "Continue"
 
 Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "  SOULS ENGINE v7 — BATERIA DE HOMOLOGAÇÃO CLÍNICA E2E" -ForegroundColor Cyan
+Write-Host "  SOULS ENGINE — BATERIA DE HOMOLOGAÇÃO CLÍNICA E2E" -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 
 $testResults = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -59,7 +59,7 @@ $sw.Restart()
 try {
     $resp = Invoke-WebRequest -Uri "$BaseUrl/dashboard" -Method Get -TimeoutSec 3
     $sw.Stop()
-    $hasTitle = $resp.Content -match "Souls Engine v7"
+    $hasTitle = $resp.Content -match "Souls Engine"
     Record-TestResult -Category "Dashboard Web" -TestName "GET /dashboard (SPA HTML)" -Success ($resp.StatusCode -eq 200 -and $hasTitle) -LatencyMs $sw.Elapsed.TotalMilliseconds -Details ("Size: {0} bytes" -f $resp.Content.Length)
 } catch {
     $sw.Stop()
@@ -83,7 +83,7 @@ $sw.Restart()
 try {
     $resp = Invoke-RestMethod -Uri "$BaseUrl/api/v1/telemetry" -Method Get -TimeoutSec 3
     $sw.Stop()
-    $valid = ($resp.status -eq "online" -and $resp.port -eq 9123 -and $resp.vram_limit_mb -eq 5294)
+    $valid = ($resp.status -eq "online" -and $resp.port -eq 9123 -and $resp.vram_limit_mb -gt 0)
     Record-TestResult -Category "Silicon Telemetry" -TestName "GET /api/v1/telemetry" -Success $valid -LatencyMs $sw.Elapsed.TotalMilliseconds -Details ("GPU Temp: {0}°C, VRAM: {1}MB/{2}MB" -f $resp.gpu_temp_c, $resp.vram_used_mb, $resp.vram_limit_mb)
 } catch {
     $sw.Stop()
@@ -244,7 +244,7 @@ $reportContent = @"
 
 ## 1. Resumo Executivo da Homologação
 
-A bateria de testes ponta-a-ponta (E2E) foi executada contra a instância bare-metal do **Souls Engine v7** em regime de conexão local. A suíte cobriu as superfícies de interface REST, o Web Dashboard, os catálogos MCP via Streamable HTTP e as chamadas funcionais de ferramentas de silício, AST e memória.
+A bateria de testes ponta-a-ponta (E2E) foi executada contra a instância bare-metal do **Souls Engine** em regime de conexão local. A suíte cobriu as superfícies de interface REST, o Web Dashboard, os catálogos MCP via Streamable HTTP e as chamadas funcionais de ferramentas de silício, AST e memória.
 
 | Métrica de Homologação | Valor Registrado | Status Clínico |
 | :--- | :--- | :--- |

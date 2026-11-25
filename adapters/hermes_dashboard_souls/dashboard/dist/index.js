@@ -1,5 +1,5 @@
 /**
- * Souls Engine v7 Dashboard — Hermes Agent Web Plugin Component
+ * Souls Engine Dashboard — Hermes Agent Web Plugin Component
  * Packaged as an IIFE compatible with window.__HERMES_PLUGIN_SDK__ and React container.
  */
 (function () {
@@ -36,7 +36,7 @@
     header.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;"></span>
-        <strong style="color:#f1f5f9;">Souls Engine v7 Daemon</strong>
+        <strong style="color:#f1f5f9;">Souls Engine Daemon</strong>
         <span style="font-family:monospace;color:#06b6d4;">(127.0.0.1:9123)</span>
       </div>
       <div>

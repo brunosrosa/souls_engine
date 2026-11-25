@@ -1,9 +1,9 @@
-# curate_obsidian.ps1 — Esteira de Curadoria Incremental do Cofre Obsidian (v7)
+﻿# curate_obsidian.ps1 — Esteira de Curadoria Incremental do Cofre Obsidian
 # Governança: AGENTS.md do cofre e ADR-005 Emenda 3.3
 
 [CmdletBinding()]
 param(
-    [string]$VaultPath = "C:\Users\rosas\OneDrive\Documentos\Obisidian DB",
+    [string]$VaultPath = "$env:OBSIDIAN_VAULT_ROOT",
     [int]$BatchSize = 2,
     [switch]$StatusOnly,
     [switch]$ProcessBatch
@@ -12,7 +12,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " 🏛️ ESTEIRA DE CURADORIA INCREMENTAL — OBSIDIAN DB (v7)  " -ForegroundColor Cyan
+Write-Host " 🏛️ ESTEIRA DE CURADORIA INCREMENTAL — OBSIDIAN DB       " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $rawDir = Join-Path $VaultPath "raw"

@@ -1,5 +1,5 @@
 /**
- * Souls Engine v7 — Official Hermes Desktop Integration Plugin (Nested entry point)
+ * Souls Engine — Official Hermes Desktop Integration Plugin (Nested entry point)
  * Keeps parity with root plugin.js for discovery via findDesktopEntry(pluginRoot).
  */
 

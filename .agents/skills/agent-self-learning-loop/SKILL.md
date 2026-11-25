@@ -49,6 +49,8 @@ Identifique a natureza da instrução do operador:
 ### Etapa 2: Aplicação Imediata do Patch
 * Aplique a alteração no arquivo alvo com finais de linha `LF`.
 * Garanta que a regra seja expressa em linguagem prescritiva e inequívoca ("SEMPRE", "NUNCA", "OBRIGATÓRIO").
+* **Confira a durabilidade do alvo antes de escolhê-lo.** Uma skill regenerada por sync/build externo sem proteção de hash sofre overwrite silencioso. Para preferências permanentes do operador, prefira artefato durável (bloco protegido por marcadores `<!-- LOCAL_DIRECTIVES_START -->` / `<!-- LOCAL_DIRECTIVES_END -->` ou nota atômica no cofre + índice/log) e promova a `c1` apenas com validação explícita (`c1` é *fail-closed* por SHA-256 e exige re-assinatura).
+* **Após qualquer sync/build, releia o arquivo em disco** antes de assumir que o patch sobreviveu; `success` na escrita não é evidência de persistência.
 
 ### Etapa 3: Confirmação de Aprendizado
 Ao responder ao operador, confirme em uma única frase cirúrgica onde a lição foi perpetuada:

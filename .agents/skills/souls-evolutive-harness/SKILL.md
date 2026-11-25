@@ -53,6 +53,7 @@ Acione este playbook e suas ferramentas canônicas via `tool_dispatch` sempre qu
 2. **Proibição de `timeout_retry = true` em ações não-idempotentes:** Nunca repita automaticamente chamadas mutantes (envio de e-mail, deleção ou mutação externa) após timeout.
 3. **Preservação de Sigilo (`SCRUB_ENV`):** Variáveis sensíveis (`GITHUB_TOKEN`, `OPENAI_API_KEY`, etc.) são removidas antes de qualquer sonda ou script `c6`.
 4. **Custo Zero por Padrão & Termodinâmica Realista:** `max_daily_budget_usd = 0.00` por padrão; sondas respeitam o teto térmico padrão `gpu_temp_c <= 62.0°C` com banda de histerese `+5.0°C` em voo (até `68.0°C` para fatias leves CPU/SQLite `0 MB VRAM`) e Horário de Silêncio configurável (`quiet_hours_enabled`).
+5. **Editar `c1` é uma operação medida, não um `patch`:** identifique **qual arquivo** está realmente pinado comparando o `expected_sha256` de `harness_status` com o hash de cada candidato — nomes relativos como `AGENTS.md` são ambíguos entre cofre e repo. Faça backup, confirme `git status --short` / `diff --stat` limpos, edite cirurgicamente sem `git add -A`, **meça `fail_closed_triggered == true` antes de re-assinar** e só então chame `POST /api/v1/harness/pins/resign` com `authorization.provenance`; feche com `pins_verified == true`, nenhum `fail_closed` ativo e `expected == actual == disco`. Não commite nem faça push sem ASK FIRST explícito.
 
 ## Verification
 

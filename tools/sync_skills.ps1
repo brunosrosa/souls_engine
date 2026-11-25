@@ -1,68 +1,171 @@
-# sync_skills.ps1 — Sincronizador de Skills para Hermes Agent e Antigravity Global
-# Linha de Base v7 Canônica (ADR-005 Emenda 3.3)
+# tools/sync_skills.ps1
+# Sincronizador Seguro de Skills Canonicas do Souls Engine (Hash-Tracked / Zero Overwrite Silencioso)
 
-[CmdletBinding()]
 param(
-    [string]$SourceDir = "Z:\souls_engine\.agents\skills",
-    [string]$HermesSkillsDir = "$env:LOCALAPPDATA\hermes\skills",
-    [string]$GeminiConfigSkillsDir = "$env:USERPROFILE\.gemini\config\skills"
+    [switch]$Force,
+    [switch]$DryRun,
+    [string]$SourceBase = "Z:\souls_engine\.agents\skills",
+    [string]$DestBase = "$env:LOCALAPPDATA\hermes\skills\souls-engine"
 )
 
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " 🚀 Sincronizando Skills Canônicas do Souls Engine (v7) " -ForegroundColor Cyan
-Write-Host "==========================================================" -ForegroundColor Cyan
+$ErrorActionPreference = "Stop"
+$Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 
-if (-not (Test-Path $SourceDir)) {
-    Write-Error "Diretório fonte de skills não encontrado: $SourceDir"
+Write-Host "==================================================================" -ForegroundColor Cyan
+Write-Host "  Sincronizando Skills Canonicas do Souls Engine (Modo Seguro)    " -ForegroundColor Cyan
+Write-Host "==================================================================" -ForegroundColor Cyan
+
+if (-not (Test-Path $SourceBase)) {
+    Write-Host "ERRO: Diretorio fonte nao encontrado em $SourceBase" -ForegroundColor Red
     exit 1
 }
 
-$skills = Get-ChildItem -Path $SourceDir -Directory
-Write-Host "Encontradas $($skills.Count) skills em $SourceDir" -ForegroundColor Green
-
-# 1. Destino Hermes: C:\Users\rosas\AppData\Local\hermes\skills
-if (-not (Test-Path $HermesSkillsDir)) {
-    New-Item -ItemType Directory -Path $HermesSkillsDir -Force | Out-Null
-}
-
-# 2. Destino Antigravity Global: ~/.gemini/config/skills
-if (-not (Test-Path $GeminiConfigSkillsDir)) {
-    New-Item -ItemType Directory -Path $GeminiConfigSkillsDir -Force | Out-Null
-}
-
-foreach ($skill in $skills) {
-    $skillName = $skill.Name
-    Write-Host "  -> Sincronizando skill: $skillName" -ForegroundColor Yellow
-
-    # Determinar subpasta no Hermes
-    $hermesTargetSubdir = if ($skillName.StartsWith("obsidian-")) {
-        Join-Path $HermesSkillsDir "note-taking\$skillName"
-    } else {
-        Join-Path $HermesSkillsDir "souls-engine\$skillName"
+if (-not (Test-Path $DestBase)) {
+    if (-not $DryRun) {
+        New-Item -ItemType Directory -Path $DestBase -Force | Out-Null
     }
+    Write-Host "[+] Diretorio destino criado: $DestBase" -ForegroundColor Yellow
+}
 
-    # Destino Antigravity Global
-    $geminiTargetSubdir = Join-Path $GeminiConfigSkillsDir $skillName
-
-    # Criar diretórios se não existirem
-    if (-not (Test-Path $hermesTargetSubdir)) { New-Item -ItemType Directory -Path $hermesTargetSubdir -Force | Out-Null }
-    if (-not (Test-Path $geminiTargetSubdir)) { New-Item -ItemType Directory -Path $geminiTargetSubdir -Force | Out-Null }
-
-    # Copiar SKILL.md garantindo LF puro
-    $sourceSkillFile = Join-Path $skill.FullName "SKILL.md"
-    if (Test-Path $sourceSkillFile) {
-        $content = [System.IO.File]::ReadAllText($sourceSkillFile)
-        $cleanContent = $content.Replace("`r`n", "`n")
-        $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-
-        $hermesSkillFile = Join-Path $hermesTargetSubdir "SKILL.md"
-        [System.IO.File]::WriteAllBytes($hermesSkillFile, $utf8NoBom.GetBytes($cleanContent))
-
-        $geminiSkillFile = Join-Path $geminiTargetSubdir "SKILL.md"
-        [System.IO.File]::WriteAllBytes($geminiSkillFile, $utf8NoBom.GetBytes($cleanContent))
+$ManifestPath = Join-Path $DestBase ".souls_sync_manifest.json"
+$manifestFiles = @{}
+if (Test-Path $ManifestPath) {
+    try {
+        $rawManifest = Get-Content -Path $ManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($null -ne $rawManifest -and $null -ne $rawManifest.files) {
+            foreach ($prop in $rawManifest.files.PSObject.Properties) {
+                $manifestFiles[$prop.Name] = [string]$prop.Value
+            }
+        }
+    } catch {
+        Write-Host "[WARN] Manifesto anterior ilegivel; tratando divergencias de destino de forma conservadora." -ForegroundColor Yellow
     }
 }
 
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " ✅ Sincronização concluída com sucesso no Hermes e Antigravity! " -ForegroundColor Green
-Write-Host "==========================================================" -ForegroundColor Cyan
+function Get-LfText {
+    param([string]$Path)
+    $raw = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+    return $raw.Replace("`r`n", "`n")
+}
+
+function Get-TextSha256 {
+    param([string]$Text)
+    $bytes = $Utf8NoBom.GetBytes($Text)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha.ComputeHash($bytes)
+        return ([System.BitConverter]::ToString($hashBytes)).Replace("-", "").ToLowerInvariant()
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+function Merge-LocalDirectives {
+    param(
+        [string]$SourceText,
+        [string]$DestText
+    )
+    $pattern = '(?s)<!--\s*LOCAL_DIRECTIVES_START\s*-->.*?<!--\s*LOCAL_DIRECTIVES_END\s*-->'
+    $destMatch = [regex]::Match($DestText, $pattern)
+    if (-not $destMatch.Success) {
+        return $SourceText
+    }
+    $localBlock = $destMatch.Value
+    $srcMatch = [regex]::Match($SourceText, $pattern)
+    if ($srcMatch.Success) {
+        return [regex]::Replace($SourceText, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $localBlock })
+    }
+    $trimmed = $SourceText.TrimEnd("`n")
+    return "$trimmed`n`n$localBlock`n"
+}
+
+$synced = 0
+$preserved = 0
+$uptodate = 0
+
+$skillDirs = Get-ChildItem -Path $SourceBase -Directory | Sort-Object Name
+foreach ($skill in $skillDirs) {
+    # Nunca tocar em artefatos ou pastas de quarentena
+    if ($skill.Name -match '(?i)quarantine') { continue }
+
+    $srcFiles = Get-ChildItem -Path $skill.FullName -Recurse -File | Sort-Object FullName
+    foreach ($srcFile in $srcFiles) {
+        $relInsideSkill = $srcFile.FullName.Substring($skill.FullName.Length).TrimStart('\', '/')
+        $relKey = ($skill.Name + "/" + ($relInsideSkill -replace '\\', '/'))
+        if ($relKey -match '(?i)quarantine|\.souls_sync_manifest\.json$|\.bak$') { continue }
+
+        $destFilePath = Join-Path (Join-Path $DestBase $skill.Name) $relInsideSkill
+        $destDir = Split-Path -Path $destFilePath -Parent
+
+        $srcText = Get-LfText -Path $srcFile.FullName
+        $srcHash = Get-TextSha256 -Text $srcText
+
+        if (-not (Test-Path $destFilePath)) {
+            if (-not $DryRun) {
+                if (-not (Test-Path $destDir)) {
+                    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+                }
+                [System.IO.File]::WriteAllText($destFilePath, $srcText, $Utf8NoBom)
+                $manifestFiles[$relKey] = $srcHash
+            }
+            Write-Host "  [NEW SYNCED] $relKey" -ForegroundColor Green
+            $synced++
+            continue
+        }
+
+        $destText = Get-LfText -Path $destFilePath
+        $destHash = Get-TextSha256 -Text $destText
+        if ($destHash -eq $srcHash) {
+            $manifestFiles[$relKey] = $srcHash
+            $uptodate++
+            continue
+        }
+
+        $prevHash = if ($manifestFiles.ContainsKey($relKey)) { $manifestFiles[$relKey] } else { $null }
+        $isLocallyEdited = ($null -eq $prevHash) -or ($destHash -ne $prevHash)
+
+        if ($isLocallyEdited -and -not $Force) {
+            Write-Host "  [PRESERVED LOCAL EDIT] $relKey (use -Force para sobrescrever mantendo .bak e LOCAL_DIRECTIVES)" -ForegroundColor Yellow
+            $preserved++
+            continue
+        }
+
+        if ($Force -and $isLocallyEdited) {
+            $mergedText = Merge-LocalDirectives -SourceText $srcText -DestText $destText
+            $mergedHash = Get-TextSha256 -Text $mergedText
+            if (-not $DryRun) {
+                $bakPath = "$destFilePath.bak"
+                [System.IO.File]::WriteAllText($bakPath, $destText, $Utf8NoBom)
+                [System.IO.File]::WriteAllText($destFilePath, $mergedText, $Utf8NoBom)
+                $manifestFiles[$relKey] = $mergedHash
+            }
+            Write-Host "  [FORCED WITH BACKUP] $relKey (.bak salvo)" -ForegroundColor Cyan
+            $synced++
+            continue
+        }
+
+        if (-not $DryRun) {
+            [System.IO.File]::WriteAllText($destFilePath, $srcText, $Utf8NoBom)
+            $manifestFiles[$relKey] = $srcHash
+        }
+        Write-Host "  [UPDATED] $relKey" -ForegroundColor Green
+        $synced++
+    }
+}
+
+if (-not $DryRun) {
+    $orderedFiles = [ordered]@{}
+    foreach ($k in ($manifestFiles.Keys | Sort-Object)) {
+        $orderedFiles[$k] = $manifestFiles[$k]
+    }
+    $manifestObj = [ordered]@{
+        schema_version = 1
+        updated_at_utc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        source_base = $SourceBase
+        files = $orderedFiles
+    }
+    $manifestJson = ($manifestObj | ConvertTo-Json -Depth 5).Replace("`r`n", "`n") + "`n"
+    [System.IO.File]::WriteAllText($ManifestPath, $manifestJson, $Utf8NoBom)
+}
+
+Write-Host "`nConcluido: $synced sincronizados | $uptodate atualizados | $preserved preservados localmente (DryRun=$($DryRun.IsPresent))." -ForegroundColor Cyan

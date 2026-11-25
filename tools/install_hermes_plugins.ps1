@@ -1,4 +1,4 @@
-# install_hermes_plugins.ps1 — Utilitário de Simbiose e Instalação dos Adaptadores Hermes (v7)
+﻿# install_hermes_plugins.ps1 — Utilitário de Simbiose e Instalação dos Adaptadores Hermes
 # Governança: ADR-003, ADR-005 e Ponto de Auditoria 3
 
 [CmdletBinding()]
@@ -69,5 +69,5 @@ foreach ($plugin in $plugins) {
 }
 
 Write-Host "`n==========================================================" -ForegroundColor Cyan
-Write-Host " ✅ ADAPTADORES HERMES INSTALADOS E SIMBIÓTICOS (v7)      " -ForegroundColor Green
+Write-Host " ✅ ADAPTADORES HERMES INSTALADOS E SIMBIÓTICOS           " -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Cyan

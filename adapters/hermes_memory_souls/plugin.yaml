@@ -1,4 +1,4 @@
-# plugin.yaml — Manifesto Canônico do Plugin Hermes Memory Souls (v7.2)
+# plugin.yaml — Manifesto Canônico do Plugin Hermes Memory Souls
 name: hermes_memory_souls
 version: 7.2.0
 description: Ponte de Memória Bidirecional Bare-Metal L3 (FrozenMemorySnapshot, Recall Adaptativo Terceira Via, FrankenSQLite STRICT WAL + LanceDB + LadybugDB)

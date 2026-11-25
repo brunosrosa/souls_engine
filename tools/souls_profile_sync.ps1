@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     souls_profile_sync.ps1 - Governança e sincronização dos perfis do Master Brain do Hermes Agent.
 
@@ -53,7 +53,7 @@ $soulsApiUrl = "http://127.0.0.1:9123"
 function Write-Header {
     Write-Host ""
     Write-Host "=================================================================" -ForegroundColor Cyan
-    Write-Host "    SOULS ENGINE v7 — MASTER BRAIN PROFILE GOVERNANCE           " -ForegroundColor Cyan
+    Write-Host "    SOULS ENGINE — MASTER BRAIN PROFILE GOVERNANCE              " -ForegroundColor Cyan
     Write-Host "=================================================================" -ForegroundColor Cyan
     Write-Host ""
 }

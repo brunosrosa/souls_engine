@@ -1,3 +1,3 @@
 """
-Souls Engine v7 — Dashboard API Submodule
+Souls Engine — Dashboard API Submodule
 """

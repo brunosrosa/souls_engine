@@ -1,5 +1,5 @@
 """
-Hermes Memory Souls Adapter & Native MemoryProvider (v7.2)
+Hermes Memory Souls Adapter & Native MemoryProvider
 Conecta o Hermes Agent simbioticamente ao Hipocampo Bare-Metal L3 do Souls Engine
 via Loopback Zero-Trust (http://127.0.0.1:9123).
 

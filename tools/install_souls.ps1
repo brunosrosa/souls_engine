@@ -1,4 +1,4 @@
-﻿# tools/install_souls.ps1 — Script Mestre de Instalação, Setup e Simbiose do Souls Engine v7
+﻿# tools/install_souls.ps1 — Script Mestre de Instalação, Setup e Simbiose do Souls Engine
 # Governança: Linhas Vermelhas 1 e 4 do AGENTS.md, ADR-003, ADR-005
 
 [CmdletBinding()]
@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " 🚀 INSTALADOR MESTRE & SETUP SIMBIÓTICO — SOULS ENGINE v7 " -ForegroundColor Cyan
+Write-Host " 🚀 INSTALADOR MESTRE & SETUP SIMBIÓTICO — SOULS ENGINE    " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "Destino de Instalação: $InstallDir" -ForegroundColor Yellow
 Write-Host "Diretório de Modelos:  $ModelsDir" -ForegroundColor Yellow
@@ -133,7 +133,7 @@ Copy-Item -Path "Z:\souls_engine\tools\souls_launcher.ps1" -Destination $install
 # Conteúdo de start_souls.bat adaptado para o local instalado
 $startBatContent = @"
 @echo off
-title Souls Engine v7
+title Souls Engine
 pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0souls_launcher.ps1"
 "@
 Set-Content -Path $installedStartBat -Value $startBatContent -Encoding ASCII
@@ -153,7 +153,7 @@ Write-Host "  ✓ Scripts operacionais (start_souls.bat, stop_souls.bat) configu
 $globalConfigPath = Join-Path $configDir "souls_config.toml"
 $formattedModelsDir = $ModelsDir.Replace('\', '/')
 $tomlContent = @"
-# souls_config.toml — Configuração Global Canônica do Souls Engine v7
+# souls_config.toml — Configuração Global Canônica do Souls Engine
 
 [workspace]
 root = "Z:/souls_engine"
@@ -173,7 +173,7 @@ streamable_http = true
 
 [hardware]
 gpu_target = "RTX 2060m"
-vram_ceiling_mb = 5294
+wddm_reserve_mb = 850
 "@
 Set-Content -Path $globalConfigPath -Value $tomlContent -Encoding UTF8
 Write-Host "  ✓ Atualizado arquivo de configuração global em $globalConfigPath." -ForegroundColor Green
@@ -196,7 +196,7 @@ $shortcut.WorkingDirectory = $InstallDir
 if (Test-Path $iconPath) {
     $shortcut.IconLocation = $iconPath
 }
-$shortcut.Description = "Souls Engine v7 Bare-Metal Daemon"
+$shortcut.Description = "Souls Engine Bare-Metal Daemon"
 $shortcut.WindowStyle = 7 # Minimized
 $shortcut.Save()
 Write-Host "  ✓ Atalho criado no Menu Iniciar: $startShortcutPath" -ForegroundColor Green
@@ -211,7 +211,7 @@ $deskShortcut.WorkingDirectory = $InstallDir
 if (Test-Path $iconPath) {
     $deskShortcut.IconLocation = $iconPath
 }
-$deskShortcut.Description = "Souls Engine v7 Bare-Metal Daemon"
+$deskShortcut.Description = "Souls Engine Bare-Metal Daemon"
 $deskShortcut.WindowStyle = 7
 $deskShortcut.Save()
 Write-Host "  ✓ Atalho criado no Desktop: $desktopShortcutPath" -ForegroundColor Green

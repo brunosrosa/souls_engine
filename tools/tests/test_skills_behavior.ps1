@@ -1,4 +1,4 @@
-# test_skills_behavior.ps1 — Validação Comportamental das 15 Skills do Souls Engine (v7)
+﻿# test_skills_behavior.ps1 — Validação Comportamental das Skills do Souls Engine
 # Executa baterias de reflexos cognitivos contra o Switchboard e runtime local na porta 9123
 
 [CmdletBinding()]
@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " 🧠 TESTE COMPORTAMENTAL DAS 15 SKILLS — SOULS ENGINE v7  " -ForegroundColor Cyan
+Write-Host " 🧠 TESTE COMPORTAMENTAL DAS SKILLS — SOULS ENGINE        " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $testResults = @()
