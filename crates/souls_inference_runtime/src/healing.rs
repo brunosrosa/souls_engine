@@ -315,10 +315,10 @@ mod tests {
 
     #[test]
     fn test_heal_truncated_object() {
-        let raw = r#"{"name": "souls_engine", "version": "v7", "status": "act"#;
+        let raw = r#"{"name": "souls_engine", "version": "0.9.4", "status": "act"#;
         let val = heal_json_response(raw).expect("Truncated object healing failed");
         assert_eq!(val["name"], "souls_engine");
-        assert_eq!(val["version"], "v7");
+        assert_eq!(val["version"], "0.9.4");
         assert_eq!(val["status"], "act");
     }
 

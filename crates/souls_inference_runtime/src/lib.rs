@@ -1,4 +1,4 @@
-//! # souls_inference_runtime (Souls Engine v7)
+//! # souls_inference_runtime (Souls Engine)
 //!
 //! Bare-metal silicon execution and inference governance layer:
 //! - Tier 0: ONNX Runtime on CPU AVX2 (GLiClass Multilang Ultra / ModernBERT) with 0 MB VRAM.

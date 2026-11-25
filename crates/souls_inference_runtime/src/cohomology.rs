@@ -1,4 +1,4 @@
-//! Socratic Sheaf Cohomology Engine (`cohomology.rs`) for Souls Engine (v7).
+//! Socratic Sheaf Cohomology Engine (`cohomology.rs`) for Souls Engine.
 //!
 //! Evaluates logical consistency and sheaf cohomology over premise graphs
 //! using Galois Field arithmetic GF(2) (AND/XOR bitwise ops) packed into `[u64; 4]`.
