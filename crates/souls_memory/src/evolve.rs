@@ -18,8 +18,8 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 use souls_protocol::{
-    CatnapSliceRecordDto, DomainExperienceEntryDto, EpistemicMemoryRecord, MemoryTombstoneDto,
-    WeEvolveRatingDto,
+    AuthorizationProvenanceDto, CatnapSliceRecordDto, DomainExperienceEntryDto,
+    EpistemicMemoryRecord, MemoryTombstoneDto, WeEvolveRatingDto,
 };
 use sqlx::{Pool, Row, Sqlite};
 
@@ -310,10 +310,11 @@ pub async fn apply_memory_tombstone(
             OntologicalNode {
                 id: new_node_id.clone(),
                 node_type: "epistemic_memory".to_string(),
-                canonical_name: preview_text(&superseding_mem.content, 64),
+                canonical_name: format!("memory:{}:{}", superseding_mem.category, short_hash16(&superseding_mem.id)),
                 metadata_json: serde_json::json!({
                     "memory_id": superseding_mem.id,
                     "category": superseding_mem.category,
+                    "preview": preview_text(&superseding_mem.content, 64),
                 })
                 .to_string(),
                 banned_patterns: Vec::new(),
@@ -328,11 +329,12 @@ pub async fn apply_memory_tombstone(
             OntologicalNode {
                 id: old_node_id.clone(),
                 node_type: "epistemic_memory".to_string(),
-                canonical_name: preview_text(&superseded_mem.content, 64),
+                canonical_name: format!("memory:{}:{}", superseded_mem.category, short_hash16(&superseded_mem.id)),
                 metadata_json: serde_json::json!({
                     "memory_id": superseded_mem.id,
                     "category": superseded_mem.category,
                     "tombstone_status": "superseded",
+                    "preview": preview_text(&superseded_mem.content, 64),
                 })
                 .to_string(),
                 banned_patterns: Vec::new(),
@@ -736,16 +738,34 @@ pub async fn record_catnap_slice(
     pool: &Pool<Sqlite>,
     slice: &CatnapSliceRecordDto,
 ) -> Result<(), MemoryError> {
+    let provenance_json = match &slice.authorization_provenance {
+        Some(prov) => serde_json::to_string(prov).unwrap_or_else(|_| "{}".to_string()),
+        None => "{}".to_string(),
+    };
+    let trigger_mode = if slice.trigger_mode.trim().is_empty() {
+        "auto"
+    } else {
+        slice.trigger_mode.trim()
+    };
+    let actor = if slice.actor.trim().is_empty() {
+        "catnap_scheduler"
+    } else {
+        slice.actor.trim()
+    };
+
     sqlx::query(
         r#"
         INSERT INTO catnap_consolidation_ledger
-        (slice_id, slice_kind, runmark_fingerprint, cursor_checkpoint, status, duration_ms, cost_usd, summary_pt, created_at)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        (slice_id, slice_kind, runmark_fingerprint, cursor_checkpoint, status, duration_ms, cost_usd, summary_pt, trigger_mode, actor, provenance_json, created_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
         ON CONFLICT(slice_id) DO UPDATE SET
             status = excluded.status,
             duration_ms = excluded.duration_ms,
             cost_usd = excluded.cost_usd,
-            summary_pt = excluded.summary_pt
+            summary_pt = excluded.summary_pt,
+            trigger_mode = excluded.trigger_mode,
+            actor = excluded.actor,
+            provenance_json = excluded.provenance_json
         "#,
     )
     .bind(&slice.slice_id)
@@ -756,6 +776,9 @@ pub async fn record_catnap_slice(
     .bind(slice.duration_ms)
     .bind(slice.cost_usd)
     .bind(&slice.summary_pt)
+    .bind(trigger_mode)
+    .bind(actor)
+    .bind(&provenance_json)
     .bind(slice.created_at)
     .execute(pool)
     .await?;
@@ -770,7 +793,7 @@ pub async fn list_catnap_slices(
 ) -> Result<Vec<CatnapSliceRecordDto>, MemoryError> {
     let rows = sqlx::query(
         r#"
-        SELECT slice_id, slice_kind, runmark_fingerprint, cursor_checkpoint, status, duration_ms, cost_usd, summary_pt, created_at
+        SELECT slice_id, slice_kind, runmark_fingerprint, cursor_checkpoint, status, duration_ms, cost_usd, summary_pt, trigger_mode, actor, provenance_json, created_at
         FROM catnap_consolidation_ledger
         ORDER BY created_at DESC
         LIMIT ?1
@@ -782,18 +805,94 @@ pub async fn list_catnap_slices(
 
     Ok(rows
         .into_iter()
-        .map(|r| CatnapSliceRecordDto {
-            slice_id: r.get(0),
-            slice_kind: r.get(1),
-            runmark_fingerprint: r.get(2),
-            cursor_checkpoint: r.get(3),
-            status: r.get(4),
-            duration_ms: r.get(5),
-            cost_usd: r.get(6),
-            summary_pt: r.get(7),
-            created_at: r.get(8),
+        .map(|r| {
+            let prov_raw: String = r.get(10);
+            let authorization_provenance = if prov_raw.trim().is_empty() || prov_raw.trim() == "{}" {
+                None
+            } else {
+                serde_json::from_str::<AuthorizationProvenanceDto>(&prov_raw).ok()
+            };
+            CatnapSliceRecordDto {
+                slice_id: r.get(0),
+                slice_kind: r.get(1),
+                runmark_fingerprint: r.get(2),
+                cursor_checkpoint: r.get(3),
+                status: r.get(4),
+                duration_ms: r.get(5),
+                cost_usd: r.get(6),
+                summary_pt: r.get(7),
+                trigger_mode: r.get(8),
+                actor: r.get(9),
+                authorization_provenance,
+                created_at: r.get(11),
+            }
         })
         .collect())
+}
+
+/// Computes completed Catnap slices and total USD spent since `utc_day_start_epoch`.
+pub async fn get_catnap_utc_day_totals(
+    pool: &Pool<Sqlite>,
+    utc_day_start_epoch: i64,
+) -> Result<(u64, f64), MemoryError> {
+    let row = sqlx::query(
+        r#"
+        SELECT COUNT(*), COALESCE(SUM(cost_usd), 0.0)
+        FROM catnap_consolidation_ledger
+        WHERE status = 'completed' AND created_at >= ?1
+        "#,
+    )
+    .bind(utc_day_start_epoch)
+    .fetch_one(pool)
+    .await?;
+
+    let count: i64 = row.get(0);
+    let spent: f64 = row.get(1);
+    Ok((count.max(0) as u64, spent.max(0.0)))
+}
+
+/// Returns `true` if a LadybugDB `canonical_name` looks like unvalidated prose/memory residue.
+fn is_residue_ladybug_node(node_type: &str, canonical_name: &str) -> bool {
+    let trimmed = canonical_name.trim();
+    if trimmed.contains("http://")
+        || trimmed.contains("https://")
+        || trimmed.contains("://")
+        || trimmed.contains('\n')
+        || trimmed.contains('\r')
+        || trimmed.chars().count() > 80
+    {
+        return true;
+    }
+    if node_type == "epistemic_memory"
+        && (trimmed.contains("Souls Engine (")
+            || trimmed.contains("born ")
+            || trimmed.ends_with("..."))
+    {
+        return true;
+    }
+    false
+}
+
+/// Idempotently removes prose/URL residue nodes from LadybugDB (`ladybug_nodes`, `ON DELETE CASCADE` edges, and RAM).
+pub async fn cleanup_residue_ladybug_nodes(
+    pool: &Pool<Sqlite>,
+    ladybug: &LadybugOntologyGraph,
+) -> Result<Vec<String>, MemoryError> {
+    let rows = sqlx::query("SELECT id, node_type, canonical_name FROM ladybug_nodes")
+        .fetch_all(pool)
+        .await?;
+
+    let mut removed_ids = Vec::new();
+    for r in rows {
+        let id: String = r.get(0);
+        let node_type: String = r.get(1);
+        let canonical_name: String = r.get(2);
+        if is_residue_ladybug_node(&node_type, &canonical_name) {
+            ladybug.delete_node(pool, &id).await?;
+            removed_ids.push(id);
+        }
+    }
+    Ok(removed_ids)
 }
 
 /// Persistent episodic domain harness library (`harness2/core/library.py` port)

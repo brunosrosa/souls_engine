@@ -1,4 +1,4 @@
-//! LanceDB Vector Store Engine (`lancedb.rs`) for Souls Engine (v7).
+//! LanceDB Vector Store Engine (`lancedb.rs`) for Souls Engine.
 //!
 //! Manages dense vector embedding persistence and cosine similarity search
 //! over observation nodes (384 dimensions, fast local embedding) in Dev Drive ReFS.

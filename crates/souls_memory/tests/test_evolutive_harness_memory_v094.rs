@@ -1,8 +1,9 @@
 use souls_memory::{
-    apply_memory_tombstone, calculate_bradley_terry_elo, detect_and_apply_jit_tombstones,
-    list_catnap_slices, list_memory_tombstones, list_weevolve_ratings, preview_jit_tombstones,
-    record_catnap_slice, record_weevolve_signal, restore_tombstoned_memory, update_ema,
-    DomainExperienceLibrary, EpistemicMemoryRecord, EpistemicPartition, SoulsMemoryStore,
+    apply_memory_tombstone, calculate_bradley_terry_elo, cleanup_residue_ladybug_nodes,
+    detect_and_apply_jit_tombstones, get_catnap_utc_day_totals, list_catnap_slices,
+    list_memory_tombstones, list_weevolve_ratings, preview_jit_tombstones, record_catnap_slice,
+    record_weevolve_signal, restore_tombstoned_memory, update_ema, DomainExperienceLibrary,
+    EpistemicMemoryRecord, EpistemicPartition, SoulsMemoryStore,
 };
 use souls_protocol::{CatnapSliceRecordDto, DomainExperienceEntryDto};
 
@@ -295,6 +296,9 @@ async fn test_v094_weevolve_elo_ema_catnap_ledger_and_domain_library() {
         duration_ms: 14.2,
         cost_usd: 0.0,
         summary_pt: "Sondagem sem regressão a custo $0.00".to_string(),
+        trigger_mode: "auto".to_string(),
+        actor: "catnap_scheduler".to_string(),
+        authorization_provenance: None,
         created_at: 2000,
     };
     record_catnap_slice(&pool, &slice).await.unwrap();
@@ -337,4 +341,141 @@ async fn test_v094_weevolve_elo_ema_catnap_ledger_and_domain_library() {
     let eps = lib.list_episodes().unwrap();
     assert_eq!(eps.len(), 1, "Same runmark_fingerprint must reuse episode folder");
     assert_eq!(eps[0].episode_id, "ep_rust_01");
+}
+
+#[tokio::test]
+async fn test_v0943_catnap_utc_totals_force_manual_audit_and_legacy_migration() {
+    let store = SoulsMemoryStore::new_in_memory().await.unwrap();
+    let pool = store.pool();
+
+    let prov = souls_protocol::AuthorizationProvenanceDto {
+        channel: "antigravity_ide".to_string(),
+        timestamp: 1795577000,
+        scope: "manual_catnap_smoke".to_string(),
+        actor: Some("bruno".to_string()),
+    };
+
+    let day_start = 1795564800;
+    let old_slice = CatnapSliceRecordDto {
+        slice_id: "slice_prev_day".to_string(),
+        slice_kind: "shadow_probe_ppc".to_string(),
+        runmark_fingerprint: "fp_old".to_string(),
+        cursor_checkpoint: "cur_old".to_string(),
+        status: "completed".to_string(),
+        duration_ms: 2.0,
+        cost_usd: 0.15,
+        summary_pt: "Ontem".to_string(),
+        trigger_mode: "auto".to_string(),
+        actor: "catnap_scheduler".to_string(),
+        authorization_provenance: None,
+        created_at: day_start - 10,
+    };
+    let today_manual = CatnapSliceRecordDto {
+        slice_id: "slice_today_manual".to_string(),
+        slice_kind: "shadow_probe_ppc".to_string(),
+        runmark_fingerprint: "fp_today".to_string(),
+        cursor_checkpoint: "cur_today".to_string(),
+        status: "completed".to_string(),
+        duration_ms: 3.5,
+        cost_usd: 0.05,
+        summary_pt: "Hoje manual".to_string(),
+        trigger_mode: "manual_forced".to_string(),
+        actor: "bruno_ide".to_string(),
+        authorization_provenance: Some(prov.clone()),
+        created_at: day_start + 50,
+    };
+    let today_skipped = CatnapSliceRecordDto {
+        slice_id: "slice_today_skip".to_string(),
+        slice_kind: "ralph_crystallize".to_string(),
+        runmark_fingerprint: "fp_skip".to_string(),
+        cursor_checkpoint: "cur_skip".to_string(),
+        status: "skipped".to_string(),
+        duration_ms: 1.0,
+        cost_usd: 0.0,
+        summary_pt: "Ignorada".to_string(),
+        trigger_mode: "auto".to_string(),
+        actor: "catnap_scheduler".to_string(),
+        authorization_provenance: None,
+        created_at: day_start + 60,
+    };
+
+    record_catnap_slice(&pool, &old_slice).await.unwrap();
+    record_catnap_slice(&pool, &today_manual).await.unwrap();
+    record_catnap_slice(&pool, &today_skipped).await.unwrap();
+
+    let (count_today, spent_today) = get_catnap_utc_day_totals(&pool, day_start).await.unwrap();
+    assert_eq!(count_today, 1);
+    assert!((spent_today - 0.05).abs() < 1e-6);
+
+    let listed = list_catnap_slices(&pool, 10).await.unwrap();
+    let found = listed
+        .iter()
+        .find(|s| s.slice_id == "slice_today_manual")
+        .unwrap();
+    assert_eq!(found.trigger_mode, "manual_forced");
+    assert_eq!(found.actor, "bruno_ide");
+    assert_eq!(found.authorization_provenance.as_ref(), Some(&prov));
+
+    // Legacy table without the 3 new columns must migrate idempotently
+    sqlx::raw_sql(
+        r#"
+        DROP TABLE catnap_consolidation_ledger;
+        CREATE TABLE catnap_consolidation_ledger (
+            slice_id TEXT PRIMARY KEY NOT NULL,
+            slice_kind TEXT NOT NULL,
+            runmark_fingerprint TEXT NOT NULL,
+            cursor_checkpoint TEXT NOT NULL,
+            status TEXT NOT NULL,
+            duration_ms REAL NOT NULL DEFAULT 0.0,
+            cost_usd REAL NOT NULL DEFAULT 0.0,
+            summary_pt TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        ) STRICT;
+        "#,
+    )
+    .execute(&*pool)
+    .await
+    .unwrap();
+    souls_memory::sqlite::ensure_catnap_audit_columns(&pool)
+        .await
+        .unwrap();
+    souls_memory::sqlite::ensure_catnap_audit_columns(&pool)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn test_v0943_ladybug_residue_cleanup_is_idempotent() {
+    let store = SoulsMemoryStore::new_in_memory().await.unwrap();
+    let pool = store.pool();
+    let lb = store.ladybug();
+
+    let clean_node = souls_memory::OntologicalNode {
+        id: "node_souls_engine".to_string(),
+        node_type: "entity".to_string(),
+        canonical_name: "souls_engine".to_string(),
+        metadata_json: "{}".to_string(),
+        banned_patterns: vec![],
+    };
+    let residue_node = souls_memory::OntologicalNode {
+        id: "mem_node_hermes:memory:ff233f".to_string(),
+        node_type: "epistemic_memory".to_string(),
+        canonical_name: "Souls Engine (v0.9.2+3 / MCP v7.2.0 at http://127.0.0.1:9123/...".to_string(),
+        metadata_json: "{}".to_string(),
+        banned_patterns: vec![],
+    };
+    lb.insert_node(&pool, clean_node, 1000).await.unwrap();
+    lb.insert_node(&pool, residue_node, 1000).await.unwrap();
+
+    let first_removed = cleanup_residue_ladybug_nodes(&pool, lb).await.unwrap();
+    assert_eq!(first_removed, vec!["mem_node_hermes:memory:ff233f".to_string()]);
+
+    let second_removed = cleanup_residue_ladybug_nodes(&pool, lb).await.unwrap();
+    assert!(second_removed.is_empty());
+
+    let remaining: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ladybug_nodes")
+        .fetch_one(&*pool)
+        .await
+        .unwrap();
+    assert_eq!(remaining, 1);
 }

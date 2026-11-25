@@ -1,4 +1,4 @@
-//! Epistemic Research Passage Cache (Triadic L3 Memory) for Souls Engine (v7/v0.8.0).
+//! Epistemic Research Passage Cache (Triadic L3 Memory) for Souls Engine (`v0.8.0`).
 //!
 //! Provides deterministic caching across SQLite STRICT (`epistemic_passages`),
 //! LanceDB columnar dense vector search (`research_passages_vec`), and optional

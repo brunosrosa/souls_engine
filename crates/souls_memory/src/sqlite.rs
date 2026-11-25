@@ -318,6 +318,9 @@ CREATE TABLE IF NOT EXISTS catnap_consolidation_ledger (
     duration_ms REAL NOT NULL DEFAULT 0.0,
     cost_usd REAL NOT NULL DEFAULT 0.0,
     summary_pt TEXT NOT NULL,
+    trigger_mode TEXT NOT NULL DEFAULT 'auto',
+    actor TEXT NOT NULL DEFAULT 'catnap_scheduler',
+    provenance_json TEXT NOT NULL DEFAULT '{}',
     created_at INTEGER NOT NULL
 ) STRICT;
 
@@ -389,9 +392,45 @@ pub async fn create_in_memory_sqlite_pool() -> Result<Pool<Sqlite>, MemoryError>
     Ok(pool)
 }
 
+/// Idempotently adds audit columns (`trigger_mode`, `actor`, `provenance_json`) to legacy
+/// `catnap_consolidation_ledger` tables created before v0.9.4+3.
+pub async fn ensure_catnap_audit_columns(pool: &Pool<Sqlite>) -> Result<(), MemoryError> {
+    let rows = sqlx::query("PRAGMA table_info(catnap_consolidation_ledger);")
+        .fetch_all(pool)
+        .await?;
+    let cols: std::collections::HashSet<String> = rows
+        .into_iter()
+        .filter_map(|r| r.try_get::<String, _>(1).ok())
+        .collect();
+
+    if !cols.contains("trigger_mode") {
+        sqlx::query(
+            "ALTER TABLE catnap_consolidation_ledger ADD COLUMN trigger_mode TEXT NOT NULL DEFAULT 'auto';",
+        )
+        .execute(pool)
+        .await?;
+    }
+    if !cols.contains("actor") {
+        sqlx::query(
+            "ALTER TABLE catnap_consolidation_ledger ADD COLUMN actor TEXT NOT NULL DEFAULT 'catnap_scheduler';",
+        )
+        .execute(pool)
+        .await?;
+    }
+    if !cols.contains("provenance_json") {
+        sqlx::query(
+            "ALTER TABLE catnap_consolidation_ledger ADD COLUMN provenance_json TEXT NOT NULL DEFAULT '{}';",
+        )
+        .execute(pool)
+        .await?;
+    }
+    Ok(())
+}
+
 /// Initializes the canonical schema on the database pool.
 pub async fn init_schema(pool: &Pool<Sqlite>) -> Result<(), MemoryError> {
     sqlx::raw_sql(CANONICAL_DDL_MANIFEST).execute(pool).await?;
+    ensure_catnap_audit_columns(pool).await?;
     Ok(())
 }
 
