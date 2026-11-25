@@ -1,7 +1,7 @@
-# AGENTS.md — Leis Operacionais, Guardrails e Governança da Fábrica (v7 Canônica)
+# AGENTS.md — Leis Operacionais, Guardrails e Governança da Fábrica (Constituição Canônica)
 
 > **AVISO A TODOS OS AGENTES DE IA:**
-> Este documento é o alicerce operacional e a lei suprema deste repositório. Ele define os limites físicos, as fronteiras arquiteturais e a disciplina de trabalho inegociável para o desenvolvimento do **Souls Engine v7**.
+> Este documento é o alicerce operacional e a lei suprema deste repositório. Ele define os limites físicos, as fronteiras arquiteturais e a disciplina de trabalho inegociável para o desenvolvimento do **Souls Engine**.
 > O descumprimento de qualquer uma das cláusulas abaixo causará **rejeição imediata de código**.
 
 ## 0. PREÂMBULO CONSTITUCIONAL E IDENTIDADE
