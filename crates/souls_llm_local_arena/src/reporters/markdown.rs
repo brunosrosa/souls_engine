@@ -50,7 +50,7 @@ pub fn export_markdown_dossier<P: AsRef<Path>>(
         md.push_str("\n");
     }
 
-    md.push_str("---\n*Gerado automaticamente pela CLI `souls_arena` (Souls Engine v7).*\n");
+    md.push_str("---\n*Gerado automaticamente pela CLI `souls_arena` (Souls Engine).*\n");
 
     std::fs::write(p, md)?;
     Ok(())

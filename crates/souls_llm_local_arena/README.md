@@ -1,6 +1,6 @@
-# 🏟️ `souls_llm_local_arena` — Coliseu Bare-Metal de Silício & Benchmark Local (v7)
+# 🏟️ `souls_llm_local_arena` — Coliseu Bare-Metal de Silício & Benchmark Local
 
-> **Crate Oficial do Souls Engine v7**  
+> **Crate Oficial do Souls Engine**  
 > **Localização:** `crates/souls_llm_local_arena`  
 > **Governança:** ADR-004 (Teto WDDM 5.2GB), ADR-007 (Desacoplamento Ontológico) e ADR-008 (Scoring Multi-Perfil e Fronteira de Pareto)  
 > **Segurança:** `#![forbid(unsafe_code)]` padrão MSVC nativo  
@@ -182,4 +182,4 @@ cargo test -p souls_llm_local_arena
 ```
 
 ---
-*Souls Engine v7 Bare-Metal Infrastructure — Mantido sob governança inegociável pelo Arquiteto Chefe.*
+*Souls Engine Bare-Metal Infrastructure — Mantido sob governança inegociável pelo Arquiteto Chefe.*

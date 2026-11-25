@@ -1,4 +1,4 @@
-//! # souls_llm_local_arena (Souls Engine v7)
+//! # souls_llm_local_arena (Souls Engine)
 //!
 //! Bare-metal silicon profiling, cognitive evaluation, and benchmark colosseum
 //! governed strictly by ADR-007 and ARENA_BENCHMARK_SPECIFICATION.md.
