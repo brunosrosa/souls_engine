@@ -1,4 +1,4 @@
-//! # souls_model_router (Souls Engine v7)
+//! # souls_model_router (Souls Engine)
 //!
 //! FinOps Intelligence and Multi-Objective Contextual Bayesian Router (ParetoBandit).
 //!
