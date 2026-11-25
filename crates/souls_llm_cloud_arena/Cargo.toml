@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Ingestão diária, análise de fronteira de Pareto e scoring de custo-benefício para LLMs em nuvem no Souls Engine v7"
+description = "Ingestão diária, análise de fronteira de Pareto e scoring de custo-benefício para LLMs em nuvem no Souls Engine"
 
 [[bin]]
 name = "souls_cloud_arena"

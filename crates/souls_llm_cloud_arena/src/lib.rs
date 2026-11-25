@@ -1,4 +1,4 @@
-//! # souls_llm_cloud_arena (Souls Engine v7)
+//! # souls_llm_cloud_arena (Souls Engine)
 //!
 //! Ingestão diária, análise de custo-benefício e cálculo da Fronteira de Pareto
 //! para modelos de linguagem em nuvem (Nous Research Portal e OpenRouter)

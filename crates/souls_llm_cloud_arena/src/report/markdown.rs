@@ -11,7 +11,7 @@ pub fn generate_markdown_report(
     let mut out = String::new();
 
     out.push_str(&format!("# Relatório de Custo-Benefício de LLMs em Nuvem — {}\n\n", date));
-    out.push_str("Este relatório consolida os preços vigentes (Nous Portal e OpenRouter) e benchmarks cognitivos sob os 9 perfis ponderados do Souls Engine v7 (ADR-009).\n\n");
+    out.push_str("Este relatório consolida os preços vigentes (Nous Portal e OpenRouter) e benchmarks cognitivos sob os 9 perfis ponderados do Souls Engine (ADR-009).\n\n");
 
     out.push_str("## 1. Campeões da Fronteira de Pareto por Perfil de Carga\n\n");
 

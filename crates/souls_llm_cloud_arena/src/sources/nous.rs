@@ -67,7 +67,10 @@ impl NousPortalClient {
         let mut headers = HeaderMap::new();
         headers.insert(
             reqwest::header::USER_AGENT,
-            HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) SoulsEngine/v7"),
+            HeaderValue::from_static(concat!(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SoulsEngine/",
+                env!("CARGO_PKG_VERSION")
+            )),
         );
         headers.insert(
             reqwest::header::ACCEPT,

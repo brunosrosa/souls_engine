@@ -49,7 +49,13 @@ impl BenchmarkSource {
 
         let resp_res = client
             .get(url)
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SoulsEngine/v7")
+            .header(
+                "User-Agent",
+                concat!(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SoulsEngine/",
+                    env!("CARGO_PKG_VERSION")
+                ),
+            )
             .send()
             .await;
 
