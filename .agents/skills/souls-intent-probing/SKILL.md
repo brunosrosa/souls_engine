@@ -7,7 +7,7 @@ metadata:
   namespace: "think"
 ---
 
-# Souls Intent Probing — Playbook de Probing de Intenção (v7)
+# Souls Intent Probing — Playbook de Probing de Intenção
 
 Este playbook rege a análise rápida de ambiguidade informacional e intenção em prompts de entrada utilizando modelos locais ultraleves (Tier 0 / 0.5 executados na CPU Host Intel i9 a 0 MB de VRAM).
 

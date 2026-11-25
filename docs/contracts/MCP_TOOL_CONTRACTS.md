@@ -1,4 +1,4 @@
-# MCP_TOOL_CONTRACTS.md — Catálogo Canônico Exaustivo e Contratos de Ferramentas MCP (v7.2)
+# MCP_TOOL_CONTRACTS.md — Catálogo Canônico Exaustivo e Contratos de Ferramentas MCP (`mcp@7.2.0`)
 
 > **ESTATUS DO DOCUMENTO:** CANÔNICO E OBRIGATÓRIO (DOCS-AS-GUARDRAILS)
 > **APLICAÇÃO:** Agentes de IA (Cursor, Windsurf, Claude Code, Trae, Hermes Agent) e Engenheiros de Sistemas.
@@ -21,7 +21,7 @@ O subsistema MCP do Souls Engine é hospedado pelo binário bare-metal `souls_se
 
 A exposição estática simultânea de mais de 50 esquemas JSON consome entre 12.000 e 20.000 tokens no prompt de sistema do agente, provocando _Tool Blindness_ (cegueira de ferramentas), alucinação de parâmetros e aumento desnecessário de custos FinOps.
 
-Para resolver o inchaço de contexto **sem amputar o silício**, o Souls Engine v7 adota a **Revelação Progressiva de Ferramentas (Progressive Tool Disclosure)**:
+Para resolver o inchaço de contexto **sem amputar o silício**, o Souls Engine adota a **Revelação Progressiva de Ferramentas (Progressive Tool Disclosure)**:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────────────────┐
@@ -59,7 +59,7 @@ Ferramentas MCP são as _garras mecânicas_; as **Skills** são os _playbooks pr
 
 ## 2. QUADRO GERAL DAS 52 GARRAS MCP POR NAMESPACE
 
-Abaixo consta a relação exaustiva de todas as ferramentas operacionais do Souls Engine v7.2, sua maturidade clínica, latência média no silício e crate Rust de ancoragem:
+Abaixo consta a relação exaustiva de todas as ferramentas operacionais do Souls Engine (`mcp@7.2.0`), sua maturidade clínica, latência média no silício e crate Rust de ancoragem:
 
 | **#** | **Garra (tool_name)**         | **Namespace** | **O Que Faz no Sistema**                                                                                | **Crate Executora**       | **Maturidade Clínica** | **Latência Típica** |
 | ----- | ----------------------------- | ------------- | ------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------- | ------------------- |
@@ -640,7 +640,7 @@ Qualquer exceção capturada pelas barreiras `catch_unwind` da crate `souls_core
 3. **PROIBIÇÃO DE LOGS NO STDOUT EM MODO STDIO:** Nenhuma crate pode imprimir mensagens via `println!` ou logs de depuração para o descritor `stdout` quando operando via stdio. Toda a observabilidade deve ser direcionada para o buffer MPSC ou descritor `stderr` formatado.
 4. **PROIBIÇÃO DE I/O BLOQUEANTE NO DISCO FORA DO BUFFER:** Ferramentas MCP não devem ler ou gravar arquivos sem passar pelas salvaguardas da crate `souls_core` e validações de caminho em `Z:\`.
 5. **PROIBIÇÃO DE TELEMETRIA SÍNCRONA:** O registro de métricas de invocação de ferramentas deve ser emitido via canal assíncrono Tokio MPSC para esvaziamento agregado a cada 5 segundos no SQLite, sem travar o ciclo de resposta da ferramenta.
-6. **DISCIPLINA DE RESPOSTA DAS FERRAMENTAS RESTRINGIDAS:** Ferramentas marcadas como `UPGRADE_CANDIDATE` não devem ser removidas da árvore de código; devem ser investigadas e transplantadas com as adaptações da arquitetura v7.
+6. **DISCIPLINA DE RESPOSTA DAS FERRAMENTAS RESTRINGIDAS:** Ferramentas marcadas como `UPGRADE_CANDIDATE` não devem ser removidas da árvore de código; devem ser investigadas e transplantadas com as adaptações da arquitetura canônica.
 
 ---
 
@@ -1328,19 +1328,20 @@ Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª ski
 
 ---
 
-## 10. MILESTONE v0.9.4 — SOULS EVOLUTIVE HARNESS (`96 Tools & 18 Skills`)
+## 10. MILESTONE v0.9.4 — SOULS EVOLUTIVE HARNESS (`97 Tools & 18 Skills`, incl. Hardening `0.9.4+3`)
 
-> **Versão:** `v0.9.4` (ADR-034)
-> **Total de Ferramentas Canônicas:** **96 ferramentas** (**8** visíveis no Boot Nível 0 com `tool_dispatch` + **88** sob revelação progressiva via `tool_search`)
+> **Versão:** `v0.9.4` / `engine@0.9.4+3` (ADR-034)
+> **Total de Ferramentas Canônicas:** **97 ferramentas** (**8** visíveis no Boot Nível 0 com `tool_dispatch` + **89** sob revelação progressiva via `tool_search`)
 > **Total de Skills no Switchboard:** **18 skills canônicas** (incluindo `souls-evolutive-harness`)
 
-### 10.1 Resumo das Novas Ferramentas `harness_*` (`5 Tools`)
+### 10.1 Resumo das Ferramentas `harness_*` (`6 Tools`)
 
 | Ferramenta | Namespace | Descrição Canônica |
 | :--- | :---: | :--- |
-| `harness_status` | `ops` | Retorna integridade SHA-256 de `c1`, fibras Cordis ativas/revertidas, estado e gates Catnap, Tombstones, ranking WeEvolve e habilidades em Quarentena. |
-| `harness_catnap_pulse` | `ops` | Avalia os gates de ociosidade/GPU/orçamento e executa uma micro-fatia cooperativa (`< 1 ms` preempção) registrando `runmark.fingerprint` e `INDEX.md`. |
-| `harness_cordis_rollback` | `ops` | Desmonta uma fibra tática Cordis (`c2`/`c5`/`c7`/`c8`) em ordem estritamente LIFO em `< 1 ms` e aplica penalidade no ranking WeEvolve. |
+| `harness_status` | `ops` | Retorna integridade SHA-256 de `c1` (incluindo `drift_detected`, `resolved_path` e `checked_at`), fibras Cordis ativas/revertidas, estado e gates Catnap, Tombstones, ranking WeEvolve e habilidades em Quarentena. |
+| `harness_catnap_pulse` | `ops` | Avalia os gates de ociosidade/GPU/orçamento e executa uma micro-fatia cooperativa (`< 1 ms` preempção) auditando `actor`, `trigger_mode` e `authorization.provenance` no `catnap_consolidation_ledger` e `harness_audit_log.jsonl`. |
+| `harness_cordis_create` | `ops` | Cria e monta uma fibra tática Cordis (suportando `ephemeral: true` e `ttl_secs` em `0.9.4+3`) para exercitar rollback LIFO `< 1 ms` sem afetar proteções persistentes. |
+| `harness_cordis_rollback` | `ops` | Desmonta uma fibra tática Cordis (`c2`/`c5`/`c7`/`c8`) em ordem estritamente LIFO em `< 1 ms` (sem penalidade ELO quando `ephemeral: true`). |
 | `harness_tombstone_resolve` | `memory` | Varre (`scan`), aplica (`apply`), lista (`list`) ou restaura em 1 clique (`restore`) Tombstones lógicos sobre memórias contraditórias sem deletar `STABLE`. |
 | `harness_ralph_crystallize` | `ops` | Cristaliza uma solução aprendida em `SKILL.md` normalizada em LF na Quarentena do Skills Hub após Scanner Zero-Trust e cálculo Myers Diff. |
 
@@ -1363,8 +1364,28 @@ Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª ski
   "type": "object",
   "properties": {
     "slice_kind": { "type": "string", "enum": ["shadow_probe_ppc", "ladybug_reconcile", "langevin_micro_batch", "diary_distillation", "ralph_crystallize"] },
-    "force_manual": { "type": "boolean", "default": true }
+    "force_manual": { "type": "boolean", "default": true },
+    "actor": { "type": "string", "description": "Identificador do acionador humano/IDE para auditoria." },
+    "authorization": { "type": "object", "description": "Envelope opcional com provenance { channel, timestamp, scope, actor }." }
   },
+  "additionalProperties": false
+}
+```
+
+#### `harness_cordis_create`
+```json
+{
+  "type": "object",
+  "properties": {
+    "title_pt": { "type": "string" },
+    "cue_pattern": { "type": "string" },
+    "rule_instruction_pt": { "type": "string" },
+    "slot_code": { "type": "string", "enum": ["c2", "c5", "c7", "c8"], "default": "c7" },
+    "target_task_type": { "type": "string" },
+    "ttl_secs": { "type": "integer", "description": "TTL em segundos para expiração automática." },
+    "ephemeral": { "type": "boolean", "default": true, "description": "Se true, permanece só em memória e permite rollback LIFO sem penalidade ELO." }
+  },
+  "required": ["title_pt", "cue_pattern", "rule_instruction_pt"],
   "additionalProperties": false
 }
 ```
@@ -1374,7 +1395,8 @@ Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª ski
 {
   "type": "object",
   "properties": {
-    "fiber_id": { "type": "string" }
+    "fiber_id": { "type": "string" },
+    "authorization": { "type": "object", "description": "Envelope opcional com provenance para auditoria." }
   },
   "required": ["fiber_id"],
   "additionalProperties": false
@@ -1418,7 +1440,12 @@ Em `crates/souls_server/src/mcp/switchboard.rs` (`CANONICAL_SKILLS`), a 16ª ski
 
 - **Identificador:** `souls-evolutive-harness`
 - **Descrição:** `"Auto-evolução segura (ADR-034): pinagem SHA-256 de c1, microkernel Cordis reversível, cochilos Catnap (<1ms preempção), Tombstones lógicos e Ralph Loop."`
-- **Primary Tools (5):** `harness_status`, `harness_catnap_pulse`, `harness_cordis_rollback`, `harness_tombstone_resolve`, `harness_ralph_crystallize`
+- **Primary Tools (6):** `harness_status`, `harness_catnap_pulse`, `harness_cordis_create`, `harness_cordis_rollback`, `harness_tombstone_resolve`, `harness_ralph_crystallize`
+
+### 10.4 Refinos de Contrato na Release `0.9.4+3`
+- **`route_subtask`:** `structuredContent` e o texto distinguem explicitamente `active_context_window_tokens` (`Context Window: <N> tokens`) de `thinking_budget_tokens` (`Thinking Budget: <M> tokens`).
+- **`mem_create_entities`:** Rejeita nomes em prosa longa (`> 8` palavras), URLs (`http://`/`https://`), quebras de linha ou caracteres de controle com `-32007 InvalidInputParameters` e aceita `cleanup_residue: true` para expurgo idempotente no LadybugDB (também disponível em `POST /api/v1/memory/ladybug/cleanup-residue`).
+- **Proveniência Estrita em Mutações HTTP (`authorization.provenance`):** `POST /api/v1/harness/pins/resign` (com suporte seletivo a `paths`) e `POST /api/v1/harness/ralph/approve` retornam `400 Bad Request` caso `authorization.provenance` (`channel`, `timestamp > 0`, `scope`) esteja ausente.
 - **Keywords de Afinidade Semântica:** `harness`, `evolve`, `evolucao`, `auto-evolucao`, `catnap`, `cordis`, `rollback`, `tombstone`, `ralph`, `skill`, `quarantine`, `weevolve`, `elo`, `c1`, `pin`, `idle`, `ocio`
 
 

@@ -7,12 +7,12 @@ metadata:
   namespace: "ops"
 ---
 
-# Souls Hardware Watchdog — Playbook de Governança de Silício (v7)
+# Souls Hardware Watchdog — Playbook de Governança de Silício
 
 Este playbook rege a observabilidade física em tempo real do hardware bare-metal hospedeiro (NVIDIA GeForce RTX 2060m 6GB e Intel Core i9-9880H).
 
 ## 🌡️ LIMITES FÍSICOS INVIOLÁVEIS (ADR-004)
-1. **Teto Útil WDDM da VRAM:** O Windows DWM consome até 850 MB de VRAM. A margem útil real para cargas CUDA é de **5.294 MB**.
+1. **Teto Útil WDDM da VRAM Derivado em Runtime:** O Windows DWM reserva VRAM compartilhada (`config.wddm_reserve_mb`, padrão `850` MB). O teto útil efetivo deve ser sempre lido de `/health.hardware.vram_usable_mb` (`vram_total_mb - config.wddm_reserve_mb`).
 2. **Barreira Térmica:** A temperatura de junção da GPU não deve ultrapassar **$78^\circ\text{C}$**.
 3. **Spillover PCIe Proibido:** Se a alocação de vídeo ultrapassar o teto útil, o Windows aciona a memória compartilhada via PCIe, derrubando a taxa de 45 tok/s para menos de 1,5 tok/s.
 

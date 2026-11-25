@@ -175,3 +175,17 @@ Durante a homologação cruzada da `v0.9.3` contra o cliente Python real do Herm
 2. **Veracidade de Pesos + Provisionamento PT-BR em 1 Clique & Pós-Instalação (`souls_core::audio`, `tools/install_souls.ps1`):** `whisper_ready` exige `faster_whisper_py.is_some() && faster_whisper_model.is_some()` (reportando `"faster_whisper_needs_download"` enquanto faltam pesos). Criado `provision_local_faster_whisper_model()` baixando `Systran/faster-whisper-base` (`141,04 MB`, CPU `int8`, `0 MB VRAM`) via `huggingface_hub` para `.souls_data/models/audio/faster-whisper-base`; removido o fallback cross-language no Windows Speech.
 3. **Prioridade `mmproj` Irmão, Guardião `mode=auto` & Red Line 4 (`vision_ephemeral.rs`, `routes/vision.rs`, `tools_multimodal.rs`):** Seleção prioriza GGUFs acompanhados de `mmproj*.gguf`, arquivos temporários permanecem estritamente sob `Z:\souls_engine\.souls_data\vision_snapshots`, e `VisualAnalysisMode::Auto` sem `prompt` degrada determinísticamente para `DeterministicSomOnly` (`0 MB VRAM`).
 4. **UIA `-STA` & Evidência Real E2E:** `capture_live_windows_ax_tree` executa `powershell -NoProfile -STA`; em homologação real após rebuild (`161.943.040 bytes`), o ciclo `/v1/audio/speech` (`edge_tts_neural_pt_br`) → `/v1/audio/transcriptions` (`faster_whisper_cpu`, `language=pt`, `response_format=text`) transcreveu fielmente em português na CPU sem consumir VRAM.
+
+---
+
+## 10. POST-MORTEM & APRENDIZADOS: SYSTRAY STATE MACHINE, SYNC SEGURO DE SKILLS & HIGIENE DE TARGET REFS (`0.9.4+3`)
+
+### 10.1 Contexto & Sintomas Identificados
+1. **Systray preso em `"Iniciando servidor..."`:** Mesmo com o daemon respondendo `/health = healthy`, o companion permanecia em cinza com texto fixo de inicialização e rótulo legado `"v7"`.
+2. **Overwrite Silencioso de Skills no Sync:** `tools/sync_skills.ps1` sobrescrevia `SKILL.md` em `%LOCALAPPDATA%\hermes\skills\souls-engine\` sem comparar hashes, apagando diretivas operacionais locais aprendidas em sessão.
+3. **Esgotamento Súbito do Dev Drive `Z:\` em Testes Workspace:** `cargo test --workspace` falhou no linker `rust-lld` com `no space on device` ao atingir `0,00 GB` livres nos 80 GB da unidade `Z:\`.
+
+### 10.2 Causa-Raiz & Soluções Permanentes
+1. **Systray (`tools/souls_launcher.ps1` + `GET /health`):** O timer consultava `/api/v1/telemetry` (~80 KB, ~889 ms) sob timeout de `450 ms`, falhando em 100% dos ticks e caindo no ramo de texto fixo (`Iniciando servidor...`), agravado por `$ErrorActionPreference = "SilentlyContinue"`. Migrado para `GET /health` leve com timeout `1500 ms`, máquina de estados explícita (`stopped`/`starting`/`error`/`running`), tooltip truncado a `<= 63` chars derivado do runtime (`/health.version` e `vram_usable_mb`) e log rotativo em `Z:\souls_engine\.souls_data\logs\souls_launcher.log`.
+2. **Sync Protegido por Hash (`tools/sync_skills.ps1`):** Introduzido manifesto `.souls_sync_manifest.json` (SHA-256 normalizado em LF). Em modo padrão, arquivos divergentes localmente são pulados (`[PRESERVED LOCAL EDIT]`); com `-Force`, salva `.bak` e preserva blocos `<!-- LOCAL_DIRECTIVES_START --> ... <!-- LOCAL_DIRECTIVES_END -->`, mantendo pastas extras e `quarantine/` intocadas.
+3. **Expurgo de Artefatos Antigos no Target:** `target\x86_64-pc-windows-msvc\debug\deps` acumulava `33,76 GB` em 6.118 arquivos de builds anteriores; limpeza direcionada pré-release liberou mais de `34 GB` sem tocar em `.souls_data\` nem no código-fonte.

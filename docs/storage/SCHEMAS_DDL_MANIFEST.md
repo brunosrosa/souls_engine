@@ -1,4 +1,4 @@
-# SCHEMAS_DDL_MANIFEST.md — A Verdade Canônica de Persistência: FrankenSQLite STRICT & LanceDB Arrow (v7)
+# SCHEMAS_DDL_MANIFEST.md — A Verdade Canônica de Persistência: FrankenSQLite STRICT & LanceDB Arrow
 
 > **ESTATUS DO DOCUMENTO:** CANÔNICO E IMUTÁVEL (DOCS-AS-GUARDRAILS)
 > **APLICAÇÃO:** Todos os agentes de IA (Cursor, Windsurf, Claude Code) e engenheiros humanos.
@@ -684,7 +684,7 @@ CREATE TABLE IF NOT EXISTS weevolve_ratings (
 Registra cada micro-fatia cooperativa executada ou preemptada pelo **Cognitive Catnap Protocol**, preservando `runmark_fingerprint` SHA-256, `cursor_checkpoint` e custo FinOps real.
 
 ```sql
--- 19. Cognitive Catnap & Shadow Probing Consolidation Ledger (v0.9.4 / ADR-034)
+-- 19. Cognitive Catnap & Shadow Probing Consolidation Ledger (v0.9.4+3 / ADR-034)
 CREATE TABLE IF NOT EXISTS catnap_consolidation_ledger (
     slice_id TEXT PRIMARY KEY NOT NULL,
     slice_kind TEXT NOT NULL CHECK(slice_kind IN ('shadow_probe_ppc', 'ladybug_reconcile', 'langevin_micro_batch', 'diary_distillation', 'ralph_crystallize')),
@@ -694,8 +694,12 @@ CREATE TABLE IF NOT EXISTS catnap_consolidation_ledger (
     duration_ms REAL NOT NULL DEFAULT 0.0,
     cost_usd REAL NOT NULL DEFAULT 0.0,
     summary_pt TEXT NOT NULL,
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    trigger_mode TEXT NOT NULL DEFAULT 'automatic',
+    actor TEXT NOT NULL DEFAULT 'catnap_daemon',
+    provenance_json TEXT
 ) STRICT;
+-- Migração idempotente garantida por ensure_catnap_audit_columns() e hidratação UTC diária por get_catnap_utc_day_totals().
 
 CREATE INDEX IF NOT EXISTS idx_catnap_ledger_created
     ON catnap_consolidation_ledger (created_at DESC);

@@ -7,7 +7,7 @@ metadata:
   namespace: "memory"
 ---
 
-# Souls Memory Triad — Playbook do Hipocampo Bare-Metal L2 (v7)
+# Souls Memory Triad — Playbook do Hipocampo Bare-Metal L2
 
 Este playbook rege a consulta e persistência de memórias de arquitetura e fatos consolidados no Souls Engine (`127.0.0.1:9123`).
 

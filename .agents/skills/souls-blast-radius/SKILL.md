@@ -7,7 +7,7 @@ metadata:
   namespace: "ops"
 ---
 
-# Souls Blast Radius & Frecency — Playbook de Análise de Impacto (v7)
+# Souls Blast Radius & Frecency — Playbook de Análise de Impacto
 
 Este playbook rege a inspeção de risco estrutural e relevância histórica de código antes de qualquer refatoração que altere assinaturas públicas ou traits compartilhadas.
 

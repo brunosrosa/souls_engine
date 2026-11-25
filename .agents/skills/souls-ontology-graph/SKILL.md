@@ -7,7 +7,7 @@ metadata:
   namespace: "memory"
 ---
 
-# Souls Ontology Graph — Playbook do Grafo LadybugDB (v7)
+# Souls Ontology Graph — Playbook do Grafo LadybugDB
 
 Este playbook rege a modelagem de entidades e relações conceituais no grafo ontológico LadybugDB (`petgraph` em RAM serializado em SQLite STRICT).
 

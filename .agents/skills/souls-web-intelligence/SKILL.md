@@ -7,7 +7,7 @@ metadata:
   namespace: "sys"
 ---
 
-# Souls Web Intelligence — Playbook de Pesquisa Web Leve (v7)
+# Souls Web Intelligence — Playbook de Pesquisa Web Leve
 
 Este playbook rege a pesquisa externa e ingestão de documentações da web sem sangria de tokens de HTML.
 

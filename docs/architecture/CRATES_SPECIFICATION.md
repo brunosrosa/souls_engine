@@ -1,8 +1,8 @@
-# CRATES_SPECIFICATION.md — Dicionário e Matriz Arquitetural das 11 Crates Canônicas (v7)
+# CRATES_SPECIFICATION.md — Dicionário e Matriz Arquitetural das 11 Crates Canônicas
 
 > **ESTATUS DO DOCUMENTO:** CANÔNICO E OBRIGATÓRIO (DOCS-AS-GUARDRAILS)
 > **APLICAÇÃO:** Todos os agentes de IA (Cursor, Windsurf, Claude Code, Trae, Hermes) e engenheiros humanos.
-> **PROPÓSITO:** Congelar as fronteiras de software, eliminar acoplamentos circulares e erradicar o _Context Rot_ por invasão de escopo no Cargo Workspace do **Souls Engine v7**.
+> **PROPÓSITO:** Congelar as fronteiras de software, eliminar acoplamentos circulares e erradicar o _Context Rot_ por invasão de escopo no Cargo Workspace do **Souls Engine**.
 
 ## 1. PREÂMBULO E TOPOLOGIA GERAL DO WORKSPACE
 
@@ -469,7 +469,7 @@ Atuar como o daemon executável bare-metal **100% headless** (`souls_server.exe`
 #### Estrutura Canônica de Módulos (`crates/souls_server/src/`)
 
 - `main.rs`: Ponto de entrada Win32, inicialização do Tokio Runtime bare-metal e orquestração de shutdown.
-- `mcp/`: Catálogo de **96** ferramentas (`8` Boot Level 0 + `88` progressivas), `registry.rs`, `dispatcher.rs`, `switchboard.rs` (**18** skills), `tools_multimodal.rs` (`ui_*` / `voice_*`) e `tools_harness.rs` (`harness_*`).
+- `mcp/`: Catálogo de **97** ferramentas (`8` Boot Level 0 + `89` progressivas), `registry.rs`, `dispatcher.rs`, `switchboard.rs` (**18** skills), `tools_multimodal.rs` (`ui_*` / `voice_*`) e `tools_harness.rs` (`harness_*`).
 - `routes/`: Submódulos de rotas Axum (`dashboard.rs`, `inventory.rs`, `models.rs`, `telemetry.rs`, `chat.rs`, `vision.rs`, `audio.rs` com gateway OpenAI `/v1/audio/*` e Alfândega de Voz multi-perfil `/api/v1/hermes/voice-customs*`, `harness.rs` com 9 endpoints `/api/v1/harness/*`, além de rotas `google/*` e `inbox/*`).
 - `templates/`: Motor de montagem zero-copy do Dashboard SPA via macro Rust `concat!(include_str!(...))` (ADR-012 / ADR-013):
   - `mod.rs`: Ponto de costura estática em tempo de compilação (zero I/O em runtime).

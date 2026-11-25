@@ -6,7 +6,7 @@ metadata:
   author: "Souls Engine Architecture"
 ---
 
-# Agent Self-Learning Loop — Playbook de Aprendizado Contínuo (v7)
+# Agent Self-Learning Loop — Playbook de Aprendizado Contínuo
 
 Este playbook rege o ciclo de aprendizado em malha fechada (*closed-loop learning*), garantindo que toda correção, feedback negativo ou novo padrão ensinado pelo Arquiteto Humano seja absorvido de forma definitiva, impedindo regressões em sessões futuras.
 

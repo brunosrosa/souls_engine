@@ -21,7 +21,7 @@
 3. [Topologia Canônica das 11 Crates](#-topologia-canônica-das-11-crates)
 4. [Governança Físico-Computacional e Silício (RTX 2060m)](#-governança-físico-computacional-e-silício-rtx-2060m)
 5. [Matriz Simbiótica com o Hermes Agent](#-matriz-simbiótica-com-o-hermes-agent)
-6. [Catálogo MCP e Revelação Progressiva (97 Ferramentas)](#-catálogo-mcp-e-revelação-progressiva-91-ferramentas)
+6. [Catálogo MCP e Revelação Progressiva (97 Ferramentas)](#-catálogo-mcp-e-revelação-progressiva-97-ferramentas)
 7. [Dashboard Web Headless Modular (ADR-012)](#-dashboard-web-headless-modular-adr-012)
 8. [Como Ligar o Souls Engine Hoje](#-como-ligar-o-souls-engine-hoje)
 9. [Como Rodar as Tools via MCP Hoje (Hermes & IDEs)](#-como-rodar-as-tools-via-mcp-hoje-hermes--ides)
@@ -156,7 +156,7 @@ graph TD
 | [`souls_llm_cloud_arena`](file:///Z:/souls_engine/crates/souls_llm_cloud_arena) | **3** | Ingestão diária de tarifas de nuvem, cálculo de Fronteira de Pareto e leaderboard cognitivo de 9 perfis para subagentes. | `reqwest`, `chrono`, `sqlx`, `comfy-table` |
 | [`souls_llm_inventory`](file:///Z:/souls_engine/crates/souls_llm_inventory) | **3** | Catálogo curado de modelos físicos locais GGUF, download atômico HTTP Range, validação SHA-256 e profiling de viabilidade VRAM/RAM. | `reqwest`, `sha2`, `tokio` |
 | [`souls_anthropophagy`](file:///Z:/souls_engine/crates/souls_anthropophagy) | **3** | Esteira de engenharia reversa automatizada: dissecação estática de repositórios, firewall de licenças SPDX e catálogo "The Organ Vault". | `spdx-rs`, `petgraph`, `cargo_metadata` |
-| [`souls_server`](file:///Z:/souls_engine/crates/souls_server) | **4** | Daemon bare-metal headless em `127.0.0.1:9123`: catálogo MCP (**91** tools / **17** skills Switchboard), gateways OpenAI (`/v1/chat/*`, `/v1/audio/*`), Alfândega Hermes, Google Life Hub e Web Dashboard SPA modular. | `axum`, `tower-http`, `tokio` |
+| [`souls_server`](file:///Z:/souls_engine/crates/souls_server) | **4** | Daemon bare-metal headless em `127.0.0.1:9123`: catálogo MCP (**97** tools / **18** skills Switchboard), gateways OpenAI (`/v1/chat/*`, `/v1/audio/*`), Alfândega Hermes, Google Life Hub e Web Dashboard SPA modular. | `axum`, `tower-http`, `tokio` |
 
 ---
 
@@ -207,7 +207,7 @@ O ecossistema opera através de uma parceria simbiótica estritamente delimitada
 
 ---
 
-## 🛠️ Catálogo MCP e Revelação Progressiva (55 Ferramentas)
+## 🛠️ Catálogo MCP e Revelação Progressiva (97 Ferramentas)
 
 Para anular o paradoxo do inchaço de contexto (*Context Bloat* — onde esquemas estáticos consomem mais de 15.000 tokens no prompt), o Souls Engine adota a **Revelação Progressiva de Ferramentas (Progressive Tool Disclosure)**:
 
@@ -219,7 +219,7 @@ Para anular o paradoxo do inchaço de contexto (*Context Bloat* — onde esquema
                                        │ Invoca 'tool_search(namespace)' + 'tool_dispatch'
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│            NÍVEL 1: CATÁLOGOS DINÂMICOS (83 Progressivas = 91 Total)        │
+│            NÍVEL 1: CATÁLOGOS DINÂMICOS (89 Progressivas = 97 Total)        │
 │   code.*     ──► AST Tree-sitter, Callers/Callees, Myers Diff               │
 │   context.*  ──► Compressão LEAN, CCR De/Rehydration, Multi-Read            │
 │   memory.*   ──► Grafo LadybugDB, Observações, SQLite STRICT, LanceDB       │
@@ -233,7 +233,7 @@ Para anular o paradoxo do inchaço de contexto (*Context Bloat* — onde esquema
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Relação Canônica das 91 Ferramentas por Namespace
+### Relação Canônica das 97 Ferramentas por Namespace
 
 - **Meta-Ferramentas (Boot Nível 0):** `tool_search` (busca semântica por namespace/keyword) e `tool_dispatch` (gateway universal para clientes MCP estritos como o Hermes Agent).
 - **`code.*` (Cirurgia de Código & AST):**
@@ -276,8 +276,10 @@ Para anular o paradoxo do inchaço de contexto (*Context Bloat* — onde esquema
 - **`ui.*` (Percepção Multimodal Híbrida & Voz Soberana PT-BR — `0 MB VRAM`):**
   - `ui_inspect` / `ui_interact` / `ui_diff` / `ui_snapshot`: Captura AXTree LEAN, cálculo geométrico determinístico, diff estrutural e SoM on-demand.
   - `voice_transcribe` / `voice_synthesize` / `voice_rapport`: Pipeline PCOMP, cascata CPU PT-BR (`edge-tts` / `faster-whisper-base` / SAPI) e Rapport Polivagal EMA.
+- **`harness.*` (Evolutive Harness ADR-034 — `6` Tools):**
+  - `harness_status` / `harness_catnap_pulse` / `harness_cordis_create` / `harness_cordis_rollback` / `harness_tombstone_resolve` / `harness_ralph_crystallize`: Integridade SHA-256 `c1`, fibras táticas efêmeras/persistentes, consolidação ociosa auditada, tombstones lógicos e cristalização Ralph Loop.
 
-### Skills Canônicas no Switchboard (`17` Skills) & Playbooks (`.agents/skills/`)
+### Skills Canônicas no Switchboard (`18` Skills) & Playbooks (`.agents/skills/`)
 As **Skills** ensinam a IA a encadear as ferramentas MCP sem desperdício de tokens (destaque para `souls-code-surgeon`, `souls-context-lean`, `souls-memory-triad`, `souls-socratic-thinking`, `google-life-hub` e `souls-multimodal-perception` para visão O(1) e voz PT-BR).
 
 ---
@@ -354,7 +356,7 @@ INFO FrankenSQLite STRICT pool initialized (16 connections, WAL mode).
 INFO Seeding canonical models into registry: [tier0_onnx_cpu, tier05_llama_cpu, tier1_qwen_coder_gpu].
 INFO ParetoBanditRouter bootstrap complete (Thompson Sampling priors loaded).
 INFO NVML Hardware Watchdog initialized (RTX 2060m usable VRAM derived dynamically via wddm_reserve_mb).
-INFO All 8 workspace crates successfully bound into AppState.
+INFO All 11 workspace crates successfully bound into AppState.
 INFO Listening strictly on http://127.0.0.1:9123 (Zero-Trust Loopback Bare-Metal)
 ```
 
@@ -632,7 +634,7 @@ Em conformidade com a **Single Crate Rule** estipulada em [`AGENTS.md`](file:///
 # Checagem sintática e tipos de todo o workspace
 cargo check
 
-# Bateria de testes unitários e de integração de todas as 9 crates
+# Bateria de testes unitários e de integração de todas as 11 crates
 cargo test
 ```
 
@@ -678,7 +680,7 @@ Antes de propor novas implementações ou alterar contratos existentes, consulte
 - **Contratos das Ferramentas MCP (97 atuais):** [`docs/contracts/MCP_TOOL_CONTRACTS.md`](file:///Z:/souls_engine/docs/contracts/MCP_TOOL_CONTRACTS.md)
 - **Esquemas DDL FrankenSQLite & Arrow (`16` Tabelas `STRICT`):** [`docs/storage/SCHEMAS_DDL_MANIFEST.md`](file:///Z:/souls_engine/docs/storage/SCHEMAS_DDL_MANIFEST.md)
 - **Mapa Forense do Código Legado:** [`docs/migration/DONOR_EXTRACTION_MAP.md`](file:///Z:/souls_engine/docs/migration/DONOR_EXTRACTION_MAP.md)
-- **Registros de Decisões Arquiteturais (ADRs):** [`docs/decisions/adrs/`](file:///Z:/souls_engine/docs/decisions/adrs/) (ADR-001 a ADR-033)
+- **Registros de Decisões Arquiteturais (ADRs):** [`docs/decisions/adrs/`](file:///Z:/souls_engine/docs/decisions/adrs/) (ADR-001 a ADR-034)
 
 ---
 

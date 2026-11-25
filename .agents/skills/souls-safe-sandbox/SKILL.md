@@ -7,7 +7,7 @@ metadata:
   namespace: "sys"
 ---
 
-# Souls Safe Sandbox — Playbook de Execução Segura (v7)
+# Souls Safe Sandbox — Playbook de Execução Segura
 
 Este playbook rege a execução de comandos de sistema operacional e ferramentas de linha de comando no Windows 11.
 

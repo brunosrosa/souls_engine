@@ -7,7 +7,7 @@ metadata:
   namespace: "think"
 ---
 
-# Souls Socratic Thinking — Playbook do Freio Cognitivo DAG (v7)
+# Souls Socratic Thinking — Playbook do Freio Cognitivo DAG
 
 Este playbook rege o processo deliberativo em tarefas de alta entropia, prevenindo o "vibe coding" através do motor de raciocínio socrático (`core_think`).
 

@@ -7,7 +7,7 @@ metadata:
   namespace: "code"
 ---
 
-# Souls Code Surgeon — Playbook de Cirurgia Sintática (v7)
+# Souls Code Surgeon — Playbook de Cirurgia Sintática
 
 Este playbook rege a inspeção e modificação de código-fonte no workspace do Souls Engine (`Z:\souls_engine`).
 

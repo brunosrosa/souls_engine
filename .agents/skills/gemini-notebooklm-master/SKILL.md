@@ -18,13 +18,13 @@ Este playbook rege a orquestração e uso pleno do **Google NotebookLM** integra
 O MCP conecta-se diretamente aos endpoints RPC internos do Google NotebookLM utilizando a sessão autenticada local do usuário.
 
 ### 1.1 Configuração do Servidor MCP (`mcp_config.json`)
-No arquivo de configuração MCP (ex: `c:\Users\rosas\.gemini\config\mcp_config.json`), o servidor deve apontar diretamente para o binário nativo instalado:
+No arquivo de configuração MCP (ex: `%USERPROFILE%\.gemini\config\mcp_config.json`), o servidor deve apontar diretamente para o binário nativo instalado:
 
 ```json
 {
   "mcpServers": {
     "gemini_notebook_mcp": {
-      "command": "C:\\Users\\rosas\\.local\\bin\\notebooklm-mcp.exe"
+      "command": "%USERPROFILE%\\.local\\bin\\notebooklm-mcp.exe"
     }
   }
 }

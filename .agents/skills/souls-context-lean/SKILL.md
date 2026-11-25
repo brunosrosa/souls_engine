@@ -7,7 +7,7 @@ metadata:
   namespace: "context"
 ---
 
-# Souls Context Lean — Playbook de Compressão e CCR (v7)
+# Souls Context Lean — Playbook de Compressão e CCR
 
 Este playbook rege a leitura inteligente de documentações e arquivos densos, aplicando compressão semântica na RAM física e preservando a janela de atenção do modelo.
 

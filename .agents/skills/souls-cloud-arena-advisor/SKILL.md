@@ -7,7 +7,7 @@ metadata:
   namespace: "ops"
 ---
 
-# Souls Cloud Arena Advisor — Playbook de Inteligência de Nuvem (v7)
+# Souls Cloud Arena Advisor — Playbook de Inteligência de Nuvem
 
 Este playbook rege a inspeção de modelos de nuvem (Nous Research Portal, OpenRouter e gateways diretas autenticadas no Hermes) auditados pelo motor analítico da `souls_llm_cloud_arena` (ADR-009 / ADR-032 / v0.9.2.2).
 
