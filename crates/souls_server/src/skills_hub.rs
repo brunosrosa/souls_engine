@@ -3017,7 +3017,7 @@ pub async fn search_marketplace_hybrid_ext(
         let gh_token = read_github_token_from_env_or_hermes(&roots);
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(5))
-            .user_agent("SoulsEngine-BareMetal-v7")
+            .user_agent(concat!("SoulsEngine-BareMetal/", env!("CARGO_PKG_VERSION")))
             .build();
 
         if let Ok(http) = client {
@@ -3622,7 +3622,7 @@ pub async fn forge_generate_skill(
         .unwrap_or_default();
 
     let system_meta_prompt = format!(
-        "You are the Souls Engine v7 Bare-Metal Skill Architect.\n\
+        "You are the Souls Engine Bare-Metal Skill Architect.\n\
 Output ONLY a valid `SKILL.md` file starting at byte 0 with `---` YAML frontmatter (no markdown code fences).\n\
 HARDLINE RULES:\n\
 1. `name`: `{derived_slug}`\n\

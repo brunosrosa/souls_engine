@@ -1,8 +1,9 @@
 //! MCP Tool Implementations for Souls Evolutive Harness (`v0.9.4` / `ADR-034`).
 //!
-//! Exposes 5 canonical Progressive-Disclosure tools:
+//! Exposes 6 canonical Progressive-Disclosure tools:
 //! - `harness_status`
 //! - `harness_catnap_pulse`
+//! - `harness_cordis_create` (alias `cordis_create`)
 //! - `harness_cordis_rollback`
 //! - `harness_tombstone_resolve`
 //! - `harness_ralph_crystallize`
@@ -16,7 +17,9 @@ use souls_memory::{
     apply_memory_tombstone, detect_and_apply_jit_tombstones, list_memory_tombstones,
     preview_jit_tombstones, record_weevolve_signal, restore_tombstoned_memory,
 };
-use souls_protocol::{error::McpDomainError, EpistemicPartition};
+use souls_protocol::{
+    error::McpDomainError, AuthorizationProvenanceDto, EpistemicPartition, HarnessComponentSlot,
+};
 
 use crate::state::AppState;
 
@@ -28,7 +31,19 @@ fn mcp_ok(text: impl Into<String>, structured: Value) -> Value {
     })
 }
 
-/// Dispatches any of the 5 `harness_*` MCP tools. Returns `None` if `tool_name` is unrelated.
+fn parse_optional_provenance(
+    args: &serde_json::Map<String, Value>,
+) -> Option<AuthorizationProvenanceDto> {
+    let prov_val = args
+        .get("authorization")
+        .and_then(|a| a.get("provenance"))
+        .or_else(|| args.get("provenance"))?;
+    serde_json::from_value::<AuthorizationProvenanceDto>(prov_val.clone())
+        .ok()
+        .filter(AuthorizationProvenanceDto::is_valid)
+}
+
+/// Dispatches any of the `harness_*` MCP tools. Returns `None` if `tool_name` is unrelated.
 pub async fn try_dispatch_harness_tool(
     state: &AppState,
     tool_name: &str,
@@ -51,6 +66,9 @@ pub async fn try_dispatch_harness_tool(
             let pins_ok = overview["summary"]["pins_verified"]
                 .as_bool()
                 .unwrap_or(false);
+            let watch_drift = overview["summary"]["watch_drift_count"]
+                .as_u64()
+                .unwrap_or(0);
             let active_opt = overview["summary"]["active_optimizations"]
                 .as_u64()
                 .unwrap_or(0);
@@ -60,10 +78,17 @@ pub async fn try_dispatch_harness_tool(
             let quarantined = overview["summary"]["quarantined_skills"]
                 .as_u64()
                 .unwrap_or(0);
+            let drift_suffix = if watch_drift > 0 {
+                format!(", {} watch_drift", watch_drift)
+            } else {
+                String::new()
+            };
             Some(Ok(mcp_ok(
                 format!(
-                    "Evolutive Harness v0.9.4+2: c1 pins={}, {} otimizações ativas, {} memórias substituídas, {} habilidades em quarentena.",
+                    "Evolutive Harness engine@{}: c1 pins={}{}, {} otimizações ativas, {} memórias substituídas, {} habilidades em quarentena.",
+                    env!("CARGO_PKG_VERSION"),
                     if pins_ok { "íntegros" } else { "ALERTA" },
+                    drift_suffix,
                     active_opt,
                     superseded,
                     quarantined
@@ -77,22 +102,139 @@ pub async fn try_dispatch_harness_tool(
                 .get("force_manual")
                 .and_then(Value::as_bool)
                 .unwrap_or(true);
+            let provenance = parse_optional_provenance(args);
+            let actor = args
+                .get("actor")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    provenance
+                        .as_ref()
+                        .and_then(|p| p.actor.as_deref())
+                        .filter(|s| !s.trim().is_empty())
+                })
+                .or(session_id)
+                .or(Some("mcp_client"))
+                .map(str::to_string);
             match state
                 .evolutive_harness
-                .run_catnap_micro_slice(state, slice_kind, force_manual)
+                .run_catnap_micro_slice_with_audit(
+                    state,
+                    slice_kind,
+                    force_manual,
+                    actor.as_deref(),
+                    provenance,
+                )
                 .await
             {
                 Ok(res) => Some(Ok(mcp_ok(
                     format!(
-                        "Pulso Catnap finalizado (status={}, preempted={}).",
+                        "Pulso Catnap finalizado (status={}, preempted={}, trigger_mode={}).",
                         res["status"].as_str().unwrap_or("ok"),
-                        res["preempted"].as_bool().unwrap_or(false)
+                        res["preempted"].as_bool().unwrap_or(false),
+                        res["slice"]["trigger_mode"].as_str().unwrap_or(if force_manual { "manual_forced" } else { "auto" })
                     ),
                     res,
                 ))),
                 Err(e) => Some(Ok(json!({
                     "content": [{ "type": "text", "text": e }],
                     "structuredContent": { "status": "error", "error": e },
+                    "isError": true
+                }))),
+            }
+        }
+        "harness_cordis_create" | "cordis_create" => {
+            let slot_raw = args.get("slot").and_then(Value::as_str).unwrap_or("c5");
+            let Some(slot) = HarnessComponentSlot::from_str_lossy(slot_raw) else {
+                return Some(Err(McpDomainError::InvalidInputParameters));
+            };
+            let title_pt = args
+                .get("title_pt")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or("Fibra efêmera de verificação");
+            let cue_text = args
+                .get("ephemeral_cue_text")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or("Sonda efêmera Cordis para validação de rollback LIFO < 1 ms.");
+            let benefit = args
+                .get("benefit_summary_pt")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or("Permite exercitar reversão LIFO sem afetar proteções ativas.");
+            let fiber_id = args
+                .get("fiber_id")
+                .and_then(Value::as_str)
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty());
+            let target_task_type = args
+                .get("target_task_type")
+                .and_then(Value::as_str)
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty());
+            let ephemeral = args
+                .get("ephemeral")
+                .and_then(Value::as_bool)
+                .unwrap_or(true);
+            let ttl_secs = args
+                .get("ttl_secs")
+                .and_then(Value::as_u64)
+                .unwrap_or(300);
+            let now = Utc::now().timestamp();
+
+            let mount_res = if ephemeral {
+                state.evolutive_harness.cordis.mount_ephemeral_fiber(
+                    fiber_id,
+                    slot,
+                    title_pt,
+                    benefit,
+                    cue_text,
+                    target_task_type,
+                    Vec::new(),
+                    ttl_secs,
+                    now,
+                )
+            } else {
+                state.evolutive_harness.cordis.mount_fiber(
+                    fiber_id,
+                    slot,
+                    title_pt,
+                    benefit,
+                    cue_text,
+                    target_task_type,
+                    Vec::new(),
+                    Vec::new(),
+                    now,
+                )
+            };
+
+            match mount_res {
+                Ok(fiber) => {
+                    if !fiber.ephemeral {
+                        state.evolutive_harness.persist_cordis_state();
+                    }
+                    Some(Ok(mcp_ok(
+                        format!(
+                            "Fibra Cordis '{}' criada (slot={}, ephemeral={}, ttl_secs={}).",
+                            fiber.fiber_id,
+                            fiber.slot.as_code(),
+                            fiber.ephemeral,
+                            if fiber.ephemeral { ttl_secs.clamp(5, 3600) } else { 0 }
+                        ),
+                        json!({
+                            "status": "ok",
+                            "fiber": fiber,
+                        }),
+                    )))
+                }
+                Err(e) => Some(Ok(json!({
+                    "content": [{ "type": "text", "text": e.to_string() }],
+                    "structuredContent": { "status": "error", "error": e.to_string() },
                     "isError": true
                 }))),
             }
@@ -106,28 +248,35 @@ pub async fn try_dispatch_harness_tool(
             if fiber_id.is_empty() {
                 return Some(Err(McpDomainError::InvalidInputParameters));
             }
+            let was_ephemeral = state.evolutive_harness.cordis.is_ephemeral(fiber_id);
             match state.evolutive_harness.cordis.dispose_fiber(fiber_id) {
                 Ok(report) => {
-                    let pool = state.memory.pool();
-                    let now = Utc::now().timestamp();
-                    let _ = record_weevolve_signal(
-                        &pool,
-                        fiber_id,
-                        "cordis_fiber",
-                        "cordis_rollback",
-                        None,
-                        now,
-                    )
-                    .await;
+                    if !was_ephemeral {
+                        let pool = state.memory.pool();
+                        let now = Utc::now().timestamp();
+                        let _ = record_weevolve_signal(
+                            &pool,
+                            fiber_id,
+                            "cordis_fiber",
+                            "cordis_rollback",
+                            None,
+                            now,
+                        )
+                        .await;
+                        state.evolutive_harness.persist_cordis_state();
+                    }
                     Some(Ok(mcp_ok(
                         format!(
-                            "Otimização Cordis '{}' revertida em {} µs ({} passos LIFO).",
+                            "Otimização Cordis '{}' revertida em {} µs ({} passos LIFO, ephemeral={}).",
                             report.fiber_id,
                             report.elapsed_us,
-                            report.reverted_operations.len()
+                            report.reverted_operations.len(),
+                            was_ephemeral
                         ),
                         json!({
                             "status": "ok",
+                            "ephemeral": was_ephemeral,
+                            "elo_penalty_applied": !was_ephemeral,
                             "report": report,
                         }),
                     )))

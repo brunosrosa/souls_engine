@@ -1,5 +1,5 @@
 //! Extended low-level implementations for Domain 6 MCP tools, memory graph mutations,
-//! and systems sandboxing in the Souls Engine v7.
+//! and systems sandboxing in the Souls Engine.
 //!
 //! Replaces all legacy staging fallbacks with real bare-metal operations.
 

@@ -17,6 +17,9 @@ use crate::state::AppState;
 pub struct HardwareHealthReport {
     pub vram_free_mb: u32,
     pub vram_total_mb: u32,
+    pub vram_used_mb: u32,
+    pub wddm_reserve_mb: u32,
+    pub vram_usable_mb: u32,
     pub gpu_temp_c: f32,
     pub operational_zone: String,
     pub barrier_phi: f32,
@@ -26,10 +29,29 @@ pub struct HardwareHealthReport {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthResponse {
     pub status: String,
+    pub version: String,
     pub active_connections: usize,
+    pub catnap_active: bool,
     pub hardware: HardwareHealthReport,
     pub sqlite_status: String,
     pub uptime_secs: u64,
+}
+
+fn resolve_wddm_reserve_mb(config_path: &std::path::Path) -> u32 {
+    if let Ok(raw) = std::fs::read_to_string(config_path) {
+        for line in raw.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with('#') || !trimmed.starts_with("wddm_reserve_mb") {
+                continue;
+            }
+            if let Some((_, val)) = trimmed.split_once('=') {
+                if let Ok(parsed) = val.trim().parse::<u32>() {
+                    return parsed.clamp(128, 4096);
+                }
+            }
+        }
+    }
+    souls_inference_runtime::nvml::WDDM_RESERVED_MB
 }
 
 /// GET /health handler.
@@ -54,6 +76,9 @@ pub async fn health_handler(State(state): State<AppState>) -> impl IntoResponse 
             snap.barrier_phi,
         )
     };
+    let wddm_reserve_mb = resolve_wddm_reserve_mb(&state.evolutive_harness.config_path);
+    let vram_used_mb = vram_total_mb.saturating_sub(vram_free_mb);
+    let vram_usable_mb = vram_total_mb.saturating_sub(wddm_reserve_mb);
 
     // 2. Query FrankenSQLite integrity
     let pool = state.memory.pool();
@@ -68,10 +93,15 @@ pub async fn health_handler(State(state): State<AppState>) -> impl IntoResponse 
         } else {
             "degraded".to_string()
         },
+        version: env!("CARGO_PKG_VERSION").to_string(),
         active_connections: state.active_connections(),
+        catnap_active: state.evolutive_harness.catnap.is_slice_running(),
         hardware: HardwareHealthReport {
             vram_free_mb,
             vram_total_mb,
+            vram_used_mb,
+            wddm_reserve_mb,
+            vram_usable_mb,
             gpu_temp_c,
             operational_zone: zone_str,
             barrier_phi,

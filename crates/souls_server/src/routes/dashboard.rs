@@ -1888,7 +1888,7 @@ pub async fn vault_sanitize_handler(
             "status": "blocked",
             "law1_violation": true,
             "latency_us": elapsed_us,
-            "engine": "Souls Engine Bare-Metal Guardian (v7)",
+            "engine": concat!("Souls Engine Bare-Metal Guardian (", env!("CARGO_PKG_VERSION"), ")"),
             "verdict": "🛡️ VIOLAÇÃO DA LEI 1 BARRADA: Fontes em raw/ são estritamente Read-Only!",
             "sanitized_text": "[OPERAÇÃO INTERCEPTADA NO SILÍCIO]: A Lei 1 do AGENTS.md proíbe qualquer mutação, renomeação ou exclusão em raw/.",
             "rule": "Lei Suprema 1 do Cofre (AGENTS.md & obsidian-vault-curator)",
@@ -2083,7 +2083,7 @@ pub async fn agents_md_handler(Query(query): Query<AgentsMdQuery>) -> Json<Value
     let (path, title) = if source == "souls" {
         (
             PathBuf::from(r"Z:\souls_engine\AGENTS.md"),
-            "Souls Engine — Leis Operacionais Bare-Metal (v7 Canônica)".to_string(),
+            "Souls Engine — Leis Operacionais Bare-Metal (Constituição Canônica)".to_string(),
         )
     } else {
         let local_appdata = std::env::var("LOCALAPPDATA")
@@ -2266,7 +2266,7 @@ fn get_default_config_toml() -> String {
     });
     let escaped_vault_path = format!(r"{}\OneDrive\Documentos\Obsidian DB", user_profile).replace('\\', r"\\");
 
-    format!(r#"# souls_config.toml — SSOT de Configuração e Governança do Souls Engine v7
+    format!(r#"# souls_config.toml — SSOT de Configuração e Governança do Souls Engine
 # Dev Drive ReFS: Z:\souls_engine\.souls_data\config\souls_config.toml
 
 [server]

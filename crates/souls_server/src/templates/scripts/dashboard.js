@@ -9055,7 +9055,7 @@
         return el ? el.value : def;
       };
 
-      const rawToml = `# souls_config.toml — SSOT de Configuração e Governança do Souls Engine v7
+      const rawToml = `# souls_config.toml — SSOT de Configuração e Governança do Souls Engine
 # Configuração Ativa: ${(currentConfigData && currentConfigData.path) || ((window.soulsHostDefaults && window.soulsHostDefaults.default_souls_data_path) ? window.soulsHostDefaults.default_souls_data_path + '\\config\\souls_config.toml' : 'souls_config.toml')}
 # Atualizado via Dashboard UI em ${new Date().toISOString()}
 
@@ -10082,7 +10082,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
           "souls_engine": {
             "url": "http://127.0.0.1:9123/mcp",
             "transport": "http",
-            "description": "Souls Engine v7 Bare-Metal Infrastructure & AST Engine"
+            "description": "Souls Engine Bare-Metal Infrastructure & AST Engine"
           }
         }
       }, null, 2);
@@ -11232,7 +11232,7 @@ interval_minutes = ${getNum('cfg-obsidian-interval-min', 30)}
       { id: 'nav-set-obsidian', title: 'Configurar Cofre de Conhecimentos (Obsidian)', desc: 'Curadoria raw/ -> wiki/ e Privacy Shield', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-obsidian'); } },
       { id: 'nav-set-finops', title: 'Configurar Aceleração Local & FinOps', desc: 'Teto WDDM, proteção térmica NVML e CPU AVX2', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-finops'); } },
       { id: 'nav-set-sandbox', title: 'Configurar Segurança & Sandbox', desc: 'Confinamento de caminhos e guardrails', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-sandbox'); } },
-      { id: 'nav-set-tools', title: 'Inspecionar 96 Ferramentas MCP', desc: 'Permissões, schemas e catálogo switchboard', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-tools'); } },
+      { id: 'nav-set-tools', title: 'Inspecionar 97 Ferramentas MCP', desc: 'Permissões, schemas e catálogo switchboard', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-tools'); } },
       { id: 'nav-set-raw', title: 'Abrir Editor TOML (souls_config.toml)', desc: 'Edição direta da configuração persistida', category: 'Settings', action: () => { switchTab('tab-settings'); switchSettingsSubtab('subtab-raw'); } },
       { id: 'act-sync-pulse', title: 'Sincronizar Pulso do Ecossistema', desc: 'Atualizar KPIs de evolução, FinOps e telemetria', category: 'Ação Rápida', action: () => { if (typeof fetchEcosystemPulse === 'function') fetchEcosystemPulse(); if (typeof fetchTelemetry === 'function') fetchTelemetry(); showToast('Telemetria e pulso sincronizados!', 'success'); } },
       { id: 'act-ping-silicon', title: 'Testar Latência do Motor (Ping Loopback)', desc: 'Medir resposta HTTP em 127.0.0.1:9123/health', category: 'Ação Rápida', action: () => testSiliconPing() },

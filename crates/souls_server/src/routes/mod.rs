@@ -243,6 +243,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/memory/turn", post(memory::turn_handler))
         .route("/api/v1/memory/checkpoint", post(memory::checkpoint_handler))
         .route("/api/v1/memory/overview", get(memory::overview_handler))
+        .route("/api/v1/memory/ladybug/cleanup-residue", post(harness::cleanup_ladybug_residue_handler))
         // Milestone v0.9.4: Souls Evolutive Harness (Cordis, Catnap, Tombstones, WeEvolve & Ralph Loop)
         .route("/api/v1/harness/overview", get(harness::overview_handler))
         .route("/api/v1/harness/cues", get(harness::cues_handler))

@@ -31,14 +31,15 @@ use souls_core::{
     ConstitutionalPinVerifier, CordisMicrokernel, EffectUndoOp,
 };
 use souls_memory::{
-    apply_memory_tombstone, detect_and_apply_jit_tombstones, list_catnap_slices,
-    list_memory_tombstones, list_weevolve_ratings, record_catnap_slice, record_weevolve_signal,
-    restore_tombstoned_memory, DomainExperienceLibrary, OntologicalEdge, OntologicalNode,
+    apply_memory_tombstone, cleanup_residue_ladybug_nodes, detect_and_apply_jit_tombstones,
+    get_catnap_utc_day_totals, list_catnap_slices, list_memory_tombstones, list_weevolve_ratings,
+    record_catnap_slice, record_weevolve_signal, restore_tombstoned_memory, DomainExperienceLibrary,
+    OntologicalEdge, OntologicalNode,
 };
 use souls_protocol::{
-    CatnapConfigDto, CatnapSliceRecordDto, ConstitutionalPinStatusDto, CordisFiberDto,
-    DomainExperienceEntryDto, EpistemicPartition, HarnessComponentSlot, MemoryTombstoneDto,
-    RalphSkillCandidateDto,
+    AuthorizationProvenanceDto, CatnapConfigDto, CatnapSliceRecordDto, ConstitutionalPinStatusDto,
+    CordisFiberDto, DomainExperienceEntryDto, EpistemicPartition, HarnessComponentSlot,
+    MemoryTombstoneDto, RalphSkillCandidateDto,
 };
 
 use crate::skills_hub::{
@@ -225,7 +226,11 @@ impl EvolutiveHarnessService {
 
         let catnap = Arc::new(CatnapMonitor::new(catnap_cfg));
         let pin_verifier = ConstitutionalPinVerifier::new();
-        Self::seed_constitutional_pins(&pin_verifier, quarantine_dir_override.is_some());
+        Self::seed_constitutional_pins(
+            &data_dir,
+            &pin_verifier,
+            quarantine_dir_override.is_some(),
+        );
 
         let experience_lib = DomainExperienceLibrary::new(data_dir.join("experience_library"));
 
@@ -268,7 +273,35 @@ impl EvolutiveHarnessService {
         None
     }
 
-    fn pin_hermes_files_in_verifier(verifier: &ConstitutionalPinVerifier, hermes_dir: &Path) {
+    fn load_pin_baselines(data_dir: &Path) -> BTreeMap<String, String> {
+        let path = data_dir.join("constitutional_pins.json");
+        fs::read_to_string(path)
+            .ok()
+            .and_then(|raw| serde_json::from_str::<BTreeMap<String, String>>(&raw).ok())
+            .unwrap_or_default()
+    }
+
+    fn save_pin_baselines(&self) {
+        if self.quarantine_dir_override.is_some() {
+            return;
+        }
+        if let Ok(guard) = self.pin_verifier.read() {
+            let baselines = guard.export_baselines();
+            if let Ok(pretty) = serde_json::to_string_pretty(&baselines) {
+                let normalized = pretty.replace("\r\n", "\n") + "\n";
+                let _ = fs::write(
+                    self.data_dir.join("constitutional_pins.json"),
+                    normalized.as_bytes(),
+                );
+            }
+        }
+    }
+
+    fn pin_hermes_files_in_verifier(
+        verifier: &ConstitutionalPinVerifier,
+        hermes_dir: &Path,
+        saved_baselines: Option<&BTreeMap<String, String>>,
+    ) {
         let targets = [
             ("hermes/SOUL.md", hermes_dir.join("SOUL.md"), "fail_closed"),
             (
@@ -284,26 +317,42 @@ impl EvolutiveHarnessService {
         ];
         for (rel, abs, mode) in targets {
             if abs.is_file() {
-                let _ = verifier.pin_file_from_disk_with_mode(rel, &abs, mode);
+                if let Some(expected) = saved_baselines.and_then(|m| m.get(rel)) {
+                    let _ = verifier.pin_file_with_expected_hash(rel, &abs, expected, mode);
+                } else {
+                    let _ = verifier.pin_file_from_disk_with_mode(rel, &abs, mode);
+                }
             }
         }
     }
 
-    fn seed_constitutional_pins(verifier: &ConstitutionalPinVerifier, isolated_test: bool) {
+    fn seed_constitutional_pins(
+        data_dir: &Path,
+        verifier: &ConstitutionalPinVerifier,
+        isolated_test: bool,
+    ) {
         if !isolated_test {
+            let saved_baselines = Self::load_pin_baselines(data_dir);
             let candidates = [
                 ("AGENTS.md", PathBuf::from(r"Z:\souls_engine\AGENTS.md")),
                 ("AGENTS.md", PathBuf::from("AGENTS.md")),
             ];
             let mut agents_pinned = false;
             for (rel, path) in candidates {
-                if path.is_file()
-                    && verifier
-                        .pin_file_from_disk_with_mode(rel, &path, "fail_closed")
-                        .is_ok()
-                {
-                    agents_pinned = true;
-                    break;
+                if path.is_file() {
+                    let ok = if let Some(expected) = saved_baselines.get(rel) {
+                        verifier
+                            .pin_file_with_expected_hash(rel, &path, expected, "fail_closed")
+                            .is_ok()
+                    } else {
+                        verifier
+                            .pin_file_from_disk_with_mode(rel, &path, "fail_closed")
+                            .is_ok()
+                    };
+                    if ok {
+                        agents_pinned = true;
+                        break;
+                    }
                 }
             }
             if !agents_pinned {
@@ -315,7 +364,18 @@ impl EvolutiveHarnessService {
             }
 
             if let Some(hermes_dir) = Self::resolve_hermes_c1_root() {
-                Self::pin_hermes_files_in_verifier(verifier, &hermes_dir);
+                Self::pin_hermes_files_in_verifier(verifier, &hermes_dir, Some(&saved_baselines));
+            }
+
+            let exported = verifier.export_baselines();
+            if exported != saved_baselines {
+                if let Ok(pretty) = serde_json::to_string_pretty(&exported) {
+                    let normalized = pretty.replace("\r\n", "\n") + "\n";
+                    let _ = fs::write(
+                        data_dir.join("constitutional_pins.json"),
+                        normalized.as_bytes(),
+                    );
+                }
             }
         } else {
             let _ = verifier.pin_in_memory_with_mode(
@@ -345,25 +405,76 @@ impl EvolutiveHarnessService {
     /// `memories/USER.md`) on disk and clears the 30s RAM pin cache.
     pub fn pin_hermes_c1_dir_from_disk(&self, hermes_dir: &Path) {
         if let Ok(guard) = self.pin_verifier.read() {
-            Self::pin_hermes_files_in_verifier(&guard, hermes_dir);
+            Self::pin_hermes_files_in_verifier(&guard, hermes_dir, None);
         }
         if let Ok(mut cache) = self.last_pin_check.write() {
             cache.0 = 0;
         }
     }
 
-    /// Re-calculates disk SHA-256 baselines for all disk-backed `c1` pins and refreshes RAM cache.
-    pub fn resign_constitutional_pins(&self) -> Vec<ConstitutionalPinStatusDto> {
+    /// Re-calculates disk SHA-256 baselines for selected (or all) disk-backed `c1` pins,
+    /// persists `constitutional_pins.json`, and refreshes RAM cache.
+    pub fn resign_constitutional_pins_selective(
+        &self,
+        paths: Option<&[String]>,
+    ) -> Vec<ConstitutionalPinStatusDto> {
         let pins = self
             .pin_verifier
             .read()
-            .map(|v| v.resign_all_disk_pins())
+            .map(|v| v.resign_disk_pins_selective(paths))
             .unwrap_or_default();
+        self.save_pin_baselines();
         let now = Utc::now().timestamp();
         if let Ok(mut cache) = self.last_pin_check.write() {
             *cache = (now, pins.clone());
         }
         pins
+    }
+
+    /// Re-calculates disk SHA-256 baselines for all disk-backed `c1` pins and refreshes RAM cache.
+    pub fn resign_constitutional_pins(&self) -> Vec<ConstitutionalPinStatusDto> {
+        self.resign_constitutional_pins_selective(None)
+    }
+
+    /// Appends an auditable JSON-lines provenance record to `harness_audit_log.jsonl`.
+    pub fn append_audit_event(
+        &self,
+        action: &str,
+        actor: &str,
+        provenance: Option<&AuthorizationProvenanceDto>,
+        outcome: &str,
+        details: Value,
+    ) {
+        let entry = json!({
+            "timestamp": Utc::now().timestamp(),
+            "action": action,
+            "actor": actor,
+            "outcome": outcome,
+            "authorization_provenance": provenance,
+            "details": details,
+        });
+        if let Ok(line) = serde_json::to_string(&entry) {
+            let log_path = self.data_dir.join("harness_audit_log.jsonl");
+            if let Ok(mut f) = fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log_path)
+            {
+                use std::io::Write;
+                let _ = writeln!(f, "{line}");
+            }
+        }
+    }
+
+    /// Hydrates today's completed Catnap slices and USD spend from SQLite (`catnap_consolidation_ledger`).
+    pub async fn hydrate_catnap_today_from_db(&self, pool: &sqlx::Pool<sqlx::Sqlite>) {
+        let now = Utc::now().timestamp();
+        let utc_day_start = now - now.rem_euclid(86_400);
+        if let Ok((slices_completed, spent_usd)) =
+            get_catnap_utc_day_totals(pool, utc_day_start).await
+        {
+            self.catnap.hydrate_today_stats(slices_completed, spent_usd);
+        }
     }
 
     fn seed_default_cordis_fibers(cordis: &CordisMicrokernel) {
@@ -453,9 +564,9 @@ impl EvolutiveHarnessService {
         }
     }
 
-    fn persist_cordis_state(&self) {
+    pub fn persist_cordis_state(&self) {
         let path = self.data_dir.join("cordis_fibers.json");
-        let fibers = self.cordis.list_fibers();
+        let fibers = self.cordis.list_persistent_fibers();
         if let Ok(pretty) = serde_json::to_string_pretty(&fibers) {
             let normalized = pretty.replace("\r\n", "\n") + "\n";
             let _ = fs::write(path, normalized.as_bytes());
@@ -696,11 +807,17 @@ impl EvolutiveHarnessService {
             })
             .collect();
 
+        let watch_drift_count = pins
+            .iter()
+            .filter(|p| p.pin_mode == "watch" && p.drift_detected)
+            .count();
+
         json!({
             "status": "ok",
-            "version": "0.9.4+2",
+            "version": env!("CARGO_PKG_VERSION"),
             "summary": {
                 "pins_verified": pins_all_ok,
+                "watch_drift_count": watch_drift_count,
                 "superseded_memories": superseded_count,
                 "active_optimizations": active_fibers_count,
                 "quarantined_skills": quarantined_count,
@@ -743,8 +860,35 @@ impl EvolutiveHarnessService {
         slice_kind_override: Option<&str>,
         force_manual: bool,
     ) -> Result<Value, String> {
+        self.run_catnap_micro_slice_with_audit(state, slice_kind_override, force_manual, None, None)
+            .await
+    }
+
+    /// Executes a Catnap micro-slice recording explicit `trigger_mode`, `actor`, and `authorization_provenance`.
+    pub async fn run_catnap_micro_slice_with_audit(
+        &self,
+        state: &AppState,
+        slice_kind_override: Option<&str>,
+        force_manual: bool,
+        actor: Option<&str>,
+        provenance: Option<AuthorizationProvenanceDto>,
+    ) -> Result<Value, String> {
         let start = Instant::now();
         let now = Utc::now().timestamp();
+        let trigger_mode = if force_manual {
+            "manual_forced".to_string()
+        } else {
+            "auto".to_string()
+        };
+        let actor_name = actor
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(if force_manual {
+                "manual_operator"
+            } else {
+                "catnap_scheduler"
+            })
+            .to_string();
 
         let requested_kind = slice_kind_override
             .map(|s| s.trim().to_ascii_lowercase())
@@ -817,6 +961,9 @@ impl EvolutiveHarnessService {
                 cost_usd: 0.0,
                 summary_pt: "Micro-soneca cedida imediatamente (< 1 ms) por chegada de atividade do usuário."
                     .to_string(),
+                trigger_mode: trigger_mode.clone(),
+                actor: actor_name.clone(),
+                authorization_provenance: provenance.clone(),
                 created_at: now,
             };
             let pool = state.memory.pool();
@@ -868,7 +1015,7 @@ impl EvolutiveHarnessService {
                                     OntologicalNode {
                                         id: src_node.clone(),
                                         node_type: "epistemic_memory".to_string(),
-                                        canonical_name: t.new_content_preview.clone(),
+                                        canonical_name: format!("memory:{}:{}", t.category, t.superseded_by_memory_id),
                                         metadata_json: "{}".to_string(),
                                         banned_patterns: Vec::new(),
                                     },
@@ -883,7 +1030,7 @@ impl EvolutiveHarnessService {
                                     OntologicalNode {
                                         id: dst_node.clone(),
                                         node_type: "epistemic_memory".to_string(),
-                                        canonical_name: t.superseded_content_preview.clone(),
+                                        canonical_name: format!("memory:{}:{}", t.category, t.superseded_memory_id),
                                         metadata_json: "{}".to_string(),
                                         banned_patterns: Vec::new(),
                                     },
@@ -991,7 +1138,7 @@ impl EvolutiveHarnessService {
                                 .to_string(),
                         ),
                     };
-                    let cand = self
+                    let cand = match self
                         .crystallize_ralph_skill(
                             state,
                             &format!("Recuperação para {}", src_sess),
@@ -1000,7 +1147,14 @@ impl EvolutiveHarnessService {
                             "1. Compacte o traceback preservando o erro raiz.\n2. Consulte os símbolos envolvidos sem ler arquivos inteiros.\n3. Valide a correção com teste unitário focal.",
                             Some(&src_sess),
                         )
-                        .await?;
+                        .await
+                    {
+                        Ok(c) => c,
+                        Err(e) => {
+                            self.catnap.finish_slice_idle();
+                            return Err(e);
+                        }
+                    };
                     (
                         "completed",
                         format!(
@@ -1034,6 +1188,7 @@ impl EvolutiveHarnessService {
         if self.catnap.check_preempted()
             || (!force_manual && self.catnap.check_thermal_abort_in_flight(post_gpu_temp))
         {
+            self.catnap.finish_slice_idle();
             let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
             let rec = CatnapSliceRecordDto {
                 slice_id,
@@ -1045,6 +1200,9 @@ impl EvolutiveHarnessService {
                 cost_usd: 0.0,
                 summary_pt: "Micro-soneca interrompida de forma cooperativa (atividade do usuário ou histerese térmica)."
                     .to_string(),
+                trigger_mode,
+                actor: actor_name,
+                authorization_provenance: provenance,
                 created_at: now,
             };
             let _ = record_catnap_slice(&pool, &rec).await;
@@ -1074,25 +1232,44 @@ impl EvolutiveHarnessService {
             };
             let _ = self.experience_lib.record_episode(&ep);
             self.catnap.record_slice_completed(&cursor_checkpoint, 0.0);
+        } else {
+            self.catnap.finish_slice_idle();
         }
 
         self.catnap.reset_slice_backoff(&requested_kind);
 
         let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
         let rec = CatnapSliceRecordDto {
-            slice_id,
-            slice_kind: requested_kind,
+            slice_id: slice_id.clone(),
+            slice_kind: requested_kind.clone(),
             runmark_fingerprint,
             cursor_checkpoint,
             status: slice_status.to_string(),
             duration_ms: elapsed_ms,
             cost_usd: 0.0,
             summary_pt,
+            trigger_mode: trigger_mode.clone(),
+            actor: actor_name.clone(),
+            authorization_provenance: provenance.clone(),
             created_at: now,
         };
         record_catnap_slice(&pool, &rec)
             .await
             .map_err(|e| e.to_string())?;
+
+        if force_manual {
+            self.append_audit_event(
+                "catnap_pulse",
+                &actor_name,
+                provenance.as_ref(),
+                slice_status,
+                json!({
+                    "slice_id": slice_id,
+                    "slice_kind": requested_kind,
+                    "trigger_mode": trigger_mode,
+                }),
+            );
+        }
 
         Ok(json!({
             "status": slice_status,
@@ -1313,17 +1490,66 @@ pub async fn cues_handler(
     }))
 }
 
-/// `POST /api/v1/harness/pins/resign` (human 1-click re-signing of modified `c1` disk baselines)
-pub async fn resign_constitutional_pins_handler(State(state): State<AppState>) -> Json<Value> {
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthorizationEnvelope {
+    pub provenance: AuthorizationProvenanceDto,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct ResignPinsRequest {
+    pub authorization: Option<AuthorizationEnvelope>,
+    pub paths: Option<Vec<String>>,
+}
+
+/// `POST /api/v1/harness/pins/resign` (human 1-click re-signing of modified `c1` disk baselines; requires provenance)
+pub async fn resign_constitutional_pins_handler(
+    State(state): State<AppState>,
+    payload: Option<Json<ResignPinsRequest>>,
+) -> impl IntoResponse {
     let _guard = state.acquire_connection();
-    let pins = state.evolutive_harness.resign_constitutional_pins();
+    let req = payload.map(|p| p.0).unwrap_or_default();
+    let Some(prov) = req.authorization.map(|a| a.provenance).filter(AuthorizationProvenanceDto::is_valid) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "code": "missing_authorization_provenance",
+                "error": "authorization.provenance (channel, timestamp, scope) é obrigatório para re-assinar pins c1.",
+            })),
+        );
+    };
+
+    let actor_name = prov
+        .actor
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("operator")
+        .to_string();
+    let pins = state
+        .evolutive_harness
+        .resign_constitutional_pins_selective(req.paths.as_deref());
     let pins_verified = pins.iter().all(|p| !p.fail_closed_triggered);
-    Json(json!({
-        "status": "ok",
-        "message": "Base constitucional c1 re-assinada com sucesso.",
-        "pins_verified": pins_verified,
-        "pins": pins,
-    }))
+    state.evolutive_harness.append_audit_event(
+        "pins_resign",
+        &actor_name,
+        Some(&prov),
+        if pins_verified { "ok" } else { "partial" },
+        json!({
+            "paths": req.paths,
+            "pins_verified": pins_verified,
+        }),
+    );
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "ok",
+            "message": "Base constitucional c1 re-assinada com sucesso.",
+            "pins_verified": pins_verified,
+            "authorization": { "provenance": prov },
+            "pins": pins,
+        })),
+    )
 }
 
 #[derive(Debug, Deserialize)]
@@ -1398,6 +1624,8 @@ pub async fn update_catnap_config_handler(
 pub struct TriggerCatnapRequest {
     pub slice_kind: Option<String>,
     pub force_manual: Option<bool>,
+    pub actor: Option<String>,
+    pub authorization: Option<AuthorizationEnvelope>,
 }
 
 /// `POST /api/v1/harness/catnap/trigger`
@@ -1407,9 +1635,31 @@ pub async fn trigger_catnap_slice_handler(
 ) -> impl IntoResponse {
     let req = payload.map(|p| p.0).unwrap_or_default();
     let force_manual = req.force_manual.unwrap_or(true);
+    let provenance = req
+        .authorization
+        .map(|a| a.provenance)
+        .filter(AuthorizationProvenanceDto::is_valid);
+    let actor = req
+        .actor
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            provenance
+                .as_ref()
+                .and_then(|p| p.actor.as_deref())
+                .filter(|s| !s.trim().is_empty())
+        })
+        .map(str::to_string);
     match state
         .evolutive_harness
-        .run_catnap_micro_slice(&state, req.slice_kind.as_deref(), force_manual)
+        .run_catnap_micro_slice_with_audit(
+            &state,
+            req.slice_kind.as_deref(),
+            force_manual,
+            actor.as_deref(),
+            provenance,
+        )
         .await
     {
         Ok(res) => (StatusCode::OK, Json(res)),
@@ -1432,6 +1682,8 @@ pub struct MountCordisFiberRequest {
     pub ephemeral_cue_text: String,
     pub target_task_type: Option<String>,
     pub coeffect_dependencies: Option<Vec<String>>,
+    pub ephemeral: Option<bool>,
+    pub ttl_secs: Option<u64>,
 }
 
 /// `POST /api/v1/harness/cordis/mount`
@@ -1454,19 +1706,36 @@ pub async fn mount_cordis_fiber_handler(
     let benefit = req
         .benefit_summary_pt
         .unwrap_or_else(|| "Otimização reversível aplicada durante esta sessão.".to_string());
-    match state.evolutive_harness.cordis.mount_fiber(
-        req.fiber_id,
-        slot,
-        &req.title_pt,
-        &benefit,
-        &req.ephemeral_cue_text,
-        req.target_task_type,
-        req.coeffect_dependencies.unwrap_or_default(),
-        Vec::new(),
-        now,
-    ) {
+    let res = if req.ephemeral.unwrap_or(false) {
+        state.evolutive_harness.cordis.mount_ephemeral_fiber(
+            req.fiber_id,
+            slot,
+            &req.title_pt,
+            &benefit,
+            &req.ephemeral_cue_text,
+            req.target_task_type,
+            req.coeffect_dependencies.unwrap_or_default(),
+            req.ttl_secs.unwrap_or(300),
+            now,
+        )
+    } else {
+        state.evolutive_harness.cordis.mount_fiber(
+            req.fiber_id,
+            slot,
+            &req.title_pt,
+            &benefit,
+            &req.ephemeral_cue_text,
+            req.target_task_type,
+            req.coeffect_dependencies.unwrap_or_default(),
+            Vec::new(),
+            now,
+        )
+    };
+    match res {
         Ok(fiber) => {
-            state.evolutive_harness.persist_cordis_state();
+            if !fiber.ephemeral {
+                state.evolutive_harness.persist_cordis_state();
+            }
             (
                 StatusCode::OK,
                 Json(json!({
@@ -1496,24 +1765,29 @@ pub async fn dispose_cordis_fiber_handler(
     Json(req): Json<DisposeCordisFiberRequest>,
 ) -> impl IntoResponse {
     let _guard = state.acquire_connection();
+    let was_ephemeral = state.evolutive_harness.cordis.is_ephemeral(&req.fiber_id);
     match state.evolutive_harness.cordis.dispose_fiber(&req.fiber_id) {
         Ok(report) => {
-            let pool = state.memory.pool();
-            let now = Utc::now().timestamp();
-            let _ = record_weevolve_signal(
-                &pool,
-                &req.fiber_id,
-                "cordis_fiber",
-                "cordis_rollback",
-                None,
-                now,
-            )
-            .await;
-            state.evolutive_harness.persist_cordis_state();
+            if !was_ephemeral {
+                let pool = state.memory.pool();
+                let now = Utc::now().timestamp();
+                let _ = record_weevolve_signal(
+                    &pool,
+                    &req.fiber_id,
+                    "cordis_fiber",
+                    "cordis_rollback",
+                    None,
+                    now,
+                )
+                .await;
+                state.evolutive_harness.persist_cordis_state();
+            }
             (
                 StatusCode::OK,
                 Json(json!({
                     "status": "ok",
+                    "ephemeral": was_ephemeral,
+                    "elo_penalty_applied": !was_ephemeral,
                     "report": report,
                 })),
             )
@@ -1561,6 +1835,7 @@ pub struct ResolveTombstoneRequest {
     pub superseded_memory_id: Option<String>,
     pub superseded_by_memory_id: Option<String>,
     pub reason_pt: Option<String>,
+    pub authorization: Option<AuthorizationEnvelope>,
 }
 
 /// `POST /api/v1/harness/tombstones/resolve`
@@ -1570,6 +1845,13 @@ pub async fn resolve_tombstone_handler(
 ) -> impl IntoResponse {
     let _guard = state.acquire_connection();
     let req = payload.map(|p| p.0).unwrap_or_default();
+    let prov = req.authorization.map(|a| a.provenance);
+    let actor_name = prov
+        .as_ref()
+        .and_then(|p| p.actor.as_deref())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("operator")
+        .to_string();
     let pool = state.memory.pool();
     let now = Utc::now().timestamp();
 
@@ -1603,13 +1885,22 @@ pub async fn resolve_tombstone_handler(
         )
         .await
         {
-            Ok(tomb) => (
-                StatusCode::OK,
-                Json(json!({
-                    "status": "ok",
-                    "tombstones_applied": [tomb],
-                })),
-            ),
+            Ok(tomb) => {
+                state.evolutive_harness.append_audit_event(
+                    "tombstone_resolve",
+                    &actor_name,
+                    prov.as_ref(),
+                    "ok",
+                    json!({ "tombstone_id": tomb.tombstone_id, "mode": "manual_pair" }),
+                );
+                (
+                    StatusCode::OK,
+                    Json(json!({
+                        "status": "ok",
+                        "tombstones_applied": [tomb],
+                    })),
+                )
+            }
             Err(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "status": "error", "error": e.to_string() })),
@@ -1632,13 +1923,22 @@ pub async fn resolve_tombstone_handler(
         )
         .await
         {
-            Ok(applied) => (
-                StatusCode::OK,
-                Json(json!({
-                    "status": "ok",
-                    "tombstones_applied": applied,
-                })),
-            ),
+            Ok(applied) => {
+                state.evolutive_harness.append_audit_event(
+                    "tombstone_resolve",
+                    &actor_name,
+                    prov.as_ref(),
+                    "ok",
+                    json!({ "memory_id": target_id, "count": applied.len(), "mode": "target_scan" }),
+                );
+                (
+                    StatusCode::OK,
+                    Json(json!({
+                        "status": "ok",
+                        "tombstones_applied": applied,
+                    })),
+                )
+            }
             Err(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "status": "error", "error": e.to_string() })),
@@ -1667,6 +1967,14 @@ pub async fn resolve_tombstone_handler(
         }
     }
 
+    state.evolutive_harness.append_audit_event(
+        "tombstone_resolve",
+        &actor_name,
+        prov.as_ref(),
+        "ok",
+        json!({ "count": all_applied.len(), "mode": "batch_scan" }),
+    );
+
     (
         StatusCode::OK,
         Json(json!({
@@ -1680,6 +1988,7 @@ pub async fn resolve_tombstone_handler(
 #[derive(Debug, Deserialize)]
 pub struct RestoreTombstoneRequest {
     pub tombstone_id: String,
+    pub authorization: Option<AuthorizationEnvelope>,
 }
 
 /// `POST /api/v1/harness/tombstones/restore`
@@ -1688,6 +1997,13 @@ pub async fn restore_tombstone_handler(
     Json(req): Json<RestoreTombstoneRequest>,
 ) -> impl IntoResponse {
     let _guard = state.acquire_connection();
+    let prov = req.authorization.map(|a| a.provenance);
+    let actor_name = prov
+        .as_ref()
+        .and_then(|p| p.actor.as_deref())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("operator")
+        .to_string();
     let pool = state.memory.pool();
     let now = Utc::now().timestamp();
 
@@ -1700,6 +2016,13 @@ pub async fn restore_tombstone_handler(
                 .ladybug()
                 .remove_edge_by_rel(&pool, &src_node, &dst_node, "conflicts_with")
                 .await;
+            state.evolutive_harness.append_audit_event(
+                "tombstone_restore",
+                &actor_name,
+                prov.as_ref(),
+                "ok",
+                json!({ "tombstone_id": restored.tombstone_id }),
+            );
             (
                 StatusCode::OK,
                 Json(json!({
@@ -1772,25 +2095,79 @@ pub async fn crystallize_ralph_skill_handler(
 #[derive(Debug, Deserialize)]
 pub struct ApproveRalphSkillRequest {
     pub slug: String,
+    pub authorization: Option<AuthorizationEnvelope>,
 }
 
-/// `POST /api/v1/harness/ralph/approve` (1-click promotion from Quarantine to workspace/Hermes)
+/// `POST /api/v1/harness/ralph/approve` (1-click promotion from Quarantine to workspace/Hermes; requires provenance)
 pub async fn approve_ralph_skill_handler(
     State(state): State<AppState>,
     Json(req): Json<ApproveRalphSkillRequest>,
 ) -> impl IntoResponse {
     let _guard = state.acquire_connection();
+    let Some(prov) = req.authorization.map(|a| a.provenance).filter(AuthorizationProvenanceDto::is_valid) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "error",
+                "code": "missing_authorization_provenance",
+                "error": "authorization.provenance (channel, timestamp, scope) é obrigatório para aprovar skill da Quarentena.",
+            })),
+        );
+    };
+
+    let actor_name = prov
+        .actor
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("operator")
+        .to_string();
+
     match state
         .evolutive_harness
         .approve_ralph_skill(&state, &req.slug)
         .await
     {
-        Ok(res) => (StatusCode::OK, Json(res)),
+        Ok(mut res) => {
+            state.evolutive_harness.append_audit_event(
+                "ralph_approve",
+                &actor_name,
+                Some(&prov),
+                "ok",
+                json!({ "slug": req.slug }),
+            );
+            if let Some(obj) = res.as_object_mut() {
+                obj.insert("authorization".to_string(), json!({ "provenance": prov }));
+            }
+            (StatusCode::OK, Json(res))
+        }
         Err(e) => (
             StatusCode::NOT_FOUND,
             Json(json!({
                 "status": "error",
                 "error": e,
+            })),
+        ),
+    }
+}
+
+/// `POST /api/v1/memory/ladybug/cleanup-residue` (idempotent removal of legacy prose/URL nodes)
+pub async fn cleanup_ladybug_residue_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let _guard = state.acquire_connection();
+    let pool = state.memory.pool();
+    match cleanup_residue_ladybug_nodes(&pool, state.memory.ladybug()).await {
+        Ok(removed_ids) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "ok",
+                "removed_count": removed_ids.len(),
+                "removed_ids": removed_ids,
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "status": "error",
+                "error": e.to_string(),
             })),
         ),
     }

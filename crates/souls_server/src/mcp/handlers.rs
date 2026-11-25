@@ -134,15 +134,33 @@ pub async fn handle_route_subtask(
     let packed = state.router.gpu_telemetry_atomic().load(Ordering::Acquire);
     let (vram_allocated_mb, gpu_temp_c, zone) = unpack_gpu_telemetry(packed);
 
+    let active_context_window_tokens: u32 = sqlx::query_scalar::<_, Option<i64>>(
+        "SELECT CASE WHEN provider_type = 'LOCAL' AND vram_base_mb > 0 THEN MIN(max_context_window, 16000) ELSE max_context_window END FROM model_registry WHERE model_id = ?1 LIMIT 1",
+    )
+    .bind(&decision.model_id)
+    .fetch_one(&*state.memory.pool())
+    .await
+    .ok()
+    .flatten()
+    .unwrap_or(16_000)
+    .max(1) as u32;
+
+    let thinking_budget_tokens: u32 = decision
+        .reasoning_recommendation
+        .as_ref()
+        .map(|rec| rec.thinking_budget_tokens)
+        .unwrap_or(0);
+
     let reasoning_text = if let Some(ref rec) = decision.reasoning_recommendation {
         format!(
-            " | Reasoning: {} (Budget: {} tokens, Escalated: {})",
+            " | Context Window: {} tokens | Reasoning: {} (Thinking Budget: {} tokens, Escalated: {})",
+            active_context_window_tokens,
             rec.reasoning_effort.as_str(),
             rec.thinking_budget_tokens,
             rec.is_escalated_retry
         )
     } else {
-        String::new()
+        format!(" | Context Window: {} tokens", active_context_window_tokens)
     };
 
     Ok(json!({
@@ -173,6 +191,8 @@ pub async fn handle_route_subtask(
             "gpu_temp_c": gpu_temp_c,
             "operational_zone": format!("{zone:?}"),
             "thermodynamic_barrier_phi": decision.thermodynamic_barrier_phi,
+            "active_context_window_tokens": active_context_window_tokens,
+            "thinking_budget_tokens": thinking_budget_tokens,
             "rationale": decision.rationale,
             "reasoning_recommendation": decision.reasoning_recommendation,
             "fallback_chain": fallback_chain,
@@ -630,6 +650,26 @@ pub async fn handle_sub_agent(
                 }
             }
 
+            let auth_prov = args
+                .get("authorization")
+                .and_then(|a| a.get("provenance"))
+                .and_then(|v| serde_json::from_value::<souls_protocol::AuthorizationProvenanceDto>(v.clone()).ok())
+                .filter(souls_protocol::AuthorizationProvenanceDto::is_valid);
+            if let Some(ref prov) = auth_prov {
+                let actor = prov
+                    .actor
+                    .as_deref()
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or("sub_agent_caller");
+                state.evolutive_harness.append_audit_event(
+                    "sub_agent_complete",
+                    actor,
+                    Some(prov),
+                    if is_success { "SUCCESS" } else { "FAILED" },
+                    json!({ "agent_id": record.agent_id, "tokens_used": tokens_used }),
+                );
+            }
+
             Ok(json!({
                 "content": [{
                     "type": "text",
@@ -645,6 +685,7 @@ pub async fn handle_sub_agent(
                     "status": "ok",
                     "outcome": if is_success { "SUCCESS" } else { "FAILED" },
                     "pareto_updated": pareto_updated,
+                    "authorization": auth_prov.map(|p| json!({ "provenance": p })),
                     "session": record,
                     "return_handoff": return_handoff
                 },
@@ -1002,24 +1043,60 @@ pub async fn handle_semantic_search(
 }
 
 /// Handles `mem_create_entities` on LadybugDB.
+fn validate_entity_name(raw: &str) -> Result<String, McpDomainError> {
+    let trimmed = raw.trim();
+    let len = trimmed.chars().count();
+    if !(2..=80).contains(&len) {
+        return Err(McpDomainError::InvalidInputParameters);
+    }
+    if trimmed.contains("http://")
+        || trimmed.contains("https://")
+        || trimmed.contains("://")
+        || trimmed.contains('\n')
+        || trimmed.contains('\r')
+        || trimmed.chars().any(char::is_control)
+        || trimmed.split_whitespace().count() > 8
+    {
+        return Err(McpDomainError::InvalidInputParameters);
+    }
+    Ok(trimmed.to_string())
+}
+
 pub async fn handle_mem_create_entities(
     state: &AppState,
     args: &serde_json::Map<String, Value>,
 ) -> Result<Value, McpDomainError> {
     let pool = state.memory.pool();
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+
+    if args.get("cleanup_residue").and_then(Value::as_bool) == Some(true) {
+        let removed_ids = souls_memory::cleanup_residue_ladybug_nodes(&pool, state.memory.ladybug())
+            .await
+            .map_err(|_| McpDomainError::InternalEnginePanic)?;
+        return Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": format!("LadybugDB residue cleanup removed {} invalid node(s).", removed_ids.len())
+            }],
+            "structuredContent": {
+                "status": "ok",
+                "removed_count": removed_ids.len(),
+                "removed_ids": removed_ids
+            },
+            "isError": false
+        }));
+    }
+
     let mut created_nodes = Vec::new();
 
     if let Some(entities_arr) = args.get("entities").and_then(Value::as_array) {
         for ent in entities_arr {
             let ent_obj = match ent.as_object() {
                 Some(o) => o,
-                None => continue,
+                None => return Err(McpDomainError::InvalidInputParameters),
             };
-            let name = ent_obj.get("name").and_then(Value::as_str).unwrap_or("");
-            if name.is_empty() {
-                continue;
-            }
+            let raw_name = ent_obj.get("name").and_then(Value::as_str).unwrap_or("");
+            let name = validate_entity_name(raw_name)?;
             let node_type = ent_obj
                 .get("entity_type")
                 .or_else(|| ent_obj.get("entityType"))
@@ -1030,7 +1107,7 @@ pub async fn handle_mem_create_entities(
             let node = souls_memory::OntologicalNode {
                 id: format!("node_{name}"),
                 node_type: node_type.to_string(),
-                canonical_name: name.to_string(),
+                canonical_name: name,
                 metadata_json: metadata.to_string(),
                 banned_patterns: Vec::new(),
             };
@@ -1049,7 +1126,8 @@ pub async fn handle_mem_create_entities(
         }));
     }
 
-    let name = args.get("name").and_then(Value::as_str).unwrap_or("entity");
+    let raw_name = args.get("name").and_then(Value::as_str).unwrap_or("entity");
+    let name = validate_entity_name(raw_name)?;
     let node_type = args
         .get("entity_type")
         .or_else(|| args.get("entityType"))
@@ -1060,7 +1138,7 @@ pub async fn handle_mem_create_entities(
     let node = souls_memory::OntologicalNode {
         id: format!("node_{name}"),
         node_type: node_type.to_string(),
-        canonical_name: name.to_string(),
+        canonical_name: name,
         metadata_json: metadata_json.to_string(),
         banned_patterns: Vec::new(),
     };

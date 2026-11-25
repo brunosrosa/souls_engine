@@ -1,6 +1,6 @@
 //! # Souls Server (`souls_server`)
 //!
-//! Bare-metal Headless Daemon for the Souls Engine v7.
+//! Bare-metal Headless Daemon for the Souls Engine.
 //! Listens on `127.0.0.1:9123` via Axum and Tokio multithread runtime.
 //! Zero UI, Zero Systray, strictly ReFS/NVMe bare-metal execution.
 
@@ -188,13 +188,13 @@ async fn main() -> ExitCode {
     for arg in &args[1..] {
         match arg.as_str() {
             "-v" | "--version" => {
-                println!("Souls Engine v7.2.0 (Bare-Metal MSVC x86_64)");
+                println!("Souls Engine {} (Bare-Metal MSVC x86_64)", env!("CARGO_PKG_VERSION"));
                 println!("Daemon Identity: souls_server / souls_engine");
                 println!("Subsystems: Axum HTTP/SSE (:9123) + FrankenSQLite STRICT WAL + LanceDB L3 + Ladybug Graph");
                 return ExitCode::SUCCESS;
             }
             "-h" | "--help" => {
-                println!("Souls Engine v7.2.0 — Bare-Metal Engine & MCP Server");
+                println!("Souls Engine {} — Bare-Metal Engine & MCP Server", env!("CARGO_PKG_VERSION"));
                 println!("Uso: souls_engine.exe [OPÇÕES]\n");
                 println!("Opções:");
                 println!("  -v, --version         Exibe versão do produto, compilador e arquitetura");
@@ -243,7 +243,7 @@ async fn main() -> ExitCode {
 
     // 1. Initialize structured logging
     let _guard = souls_core::logging::init_tracing("info");
-    info!("=== SOULS ENGINE v7 — Headless Daemon (:9123) Boot Sequence ===");
+    info!("=== SOULS ENGINE {} — Headless Daemon (:9123) Boot Sequence ===", env!("CARGO_PKG_VERSION"));
 
     let data_dir = resolve_data_dir();
 
@@ -324,6 +324,10 @@ async fn main() -> ExitCode {
     });
 
     // 12. Cooperative Cognitive Catnap Background Loop (45s heartbeat, round-robin slices)
+    state
+        .evolutive_harness
+        .hydrate_catnap_today_from_db(&state.memory.pool())
+        .await;
     let state_for_catnap = state.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(45));
@@ -362,7 +366,7 @@ async fn main() -> ExitCode {
     // Clean up PID file
     let _ = std::fs::remove_file(&pid_file);
 
-    info!("=== SOULS ENGINE v7 Daemon Shutdown Cleanly (ExitCode::SUCCESS) ===");
+    info!("=== SOULS ENGINE {} Daemon Shutdown Cleanly (ExitCode::SUCCESS) ===", env!("CARGO_PKG_VERSION"));
     ExitCode::SUCCESS
 }
 
@@ -438,7 +442,10 @@ mod tests {
 
         assert_eq!(val["status"], "healthy");
         assert_eq!(val["sqlite_status"], "ok");
+        assert_eq!(val["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(val["catnap_active"], false);
         assert!(val["hardware"]["vram_free_mb"].as_u64().unwrap() > 0);
+        assert!(val["hardware"]["vram_usable_mb"].is_u64());
         assert_eq!(val["hardware"]["operational_zone"], "Nominal");
     }
 
@@ -697,7 +704,7 @@ mod tests {
         let tools_compact = val["result"]["tools"].as_array().unwrap();
         assert_eq!(tools_compact.len(), 8, "Level 0 must expose exactly 8 boot tools");
 
-        // 2. Full mode (96 tools)
+        // 2. Full mode (97 tools)
         let payload_full = serde_json::json!({
             "jsonrpc": "2.0",
             "id": 3,
@@ -719,7 +726,7 @@ mod tests {
         let body_bytes_full = to_bytes(resp_full.into_body(), usize::MAX).await.unwrap();
         let val_full: serde_json::Value = serde_json::from_slice(&body_bytes_full).unwrap();
         let tools_full = val_full["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools_full.len(), 96, "Full mode must expose all 96 canonical tools (64 baseline + 19 google.* + 3 inbox.* + 5 multimodal ui.* + 5 evolutive harness_*)");
+        assert_eq!(tools_full.len(), 97, "Full mode must expose all 97 canonical tools (64 baseline + 19 google.* + 3 inbox.* + 5 multimodal ui.* + 6 evolutive harness_*)");
     }
 
     #[tokio::test]
@@ -1348,7 +1355,7 @@ impl FixtureService {
         assert_eq!(resp_root.status(), StatusCode::OK);
         let bytes_root = to_bytes(resp_root.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(bytes_root.to_vec()).unwrap();
-        assert!(html.contains("Souls Engine v7"));
+        assert!(html.contains("Souls Engine — Command & Governance Dashboard"));
         assert!(html.contains("Hardware Local"));
         assert!(html.contains("Memória de Longo Prazo & Cofre Pessoal"));
 
@@ -2112,7 +2119,7 @@ model:
         let json_h: serde_json::Value = serde_json::from_slice(&bytes_h).unwrap();
         assert_eq!(json_h["status"], "healthy");
         assert_eq!(json_h["total_skills"], 18);
-        assert_eq!(json_h["total_tools"], 96);
+        assert_eq!(json_h["total_tools"], 97);
 
         // 2. GET /api/v1/switchboard/skills
         let req_skills = Request::builder()
@@ -6094,7 +6101,7 @@ telegram:
         let ov_json: serde_json::Value =
             serde_json::from_slice(&to_bytes(resp_ov.into_body(), usize::MAX).await.unwrap())
                 .unwrap();
-        assert_eq!(ov_json["version"], "0.9.4+2");
+        assert_eq!(ov_json["version"], env!("CARGO_PKG_VERSION"));
         assert_eq!(ov_json["summary"]["pins_verified"], true);
         assert_eq!(ov_json["summary"]["active_connections"], 0);
         assert_eq!(ov_json["constitutional_pins"].as_array().unwrap().len(), 4);
@@ -6108,6 +6115,7 @@ telegram:
         let saved_catnap_cfg = state.evolutive_harness.catnap.get_config();
         let mut idle_gate_cfg = saved_catnap_cfg.clone();
         idle_gate_cfg.quiet_hours_enabled = false;
+        idle_gate_cfg.max_gpu_temp_c = 95.0;
         state.evolutive_harness.catnap.update_config(idle_gate_cfg);
         state.evolutive_harness.catnap.set_idle_elapsed_secs_for_test(210);
         let _ = app
@@ -6528,8 +6536,8 @@ telegram:
         assert!(q_skill_path.is_file(), "Quarantined SKILL.md must exist");
         assert!(!std::fs::read_to_string(&q_skill_path).unwrap().contains("\r\n"));
 
-        // 7b. 1-click Ralph approval promotes isolated skill cleanly & updates status
-        let resp_approve = app
+        // 7b. 1-click Ralph approval requires provenance and promotes isolated skill cleanly
+        let resp_approve_missing = app
             .clone()
             .oneshot(
                 Request::builder()
@@ -6538,6 +6546,33 @@ telegram:
                     .header("content-type", "application/json")
                     .body(Body::from(
                         serde_json::json!({ "slug": slug }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp_approve_missing.status(), StatusCode::BAD_REQUEST);
+
+        let resp_approve = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/ralph/approve")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "slug": slug,
+                            "authorization": {
+                                "provenance": {
+                                    "channel": "hermes_dashboard",
+                                    "timestamp": chrono::Utc::now().timestamp(),
+                                    "scope": format!("harness:ralph:approve:{slug}"),
+                                    "actor": "test_operator"
+                                }
+                            }
+                        })
+                        .to_string(),
                     ))
                     .unwrap(),
             )
@@ -6690,10 +6725,10 @@ telegram:
         let ev_js = include_str!("templates/scripts/evolutive_harness.js");
         assert!(!ev_html.contains("style=\""), "Zero inline style= permitted");
         assert!(!ev_js.contains("style=\""), "Zero inline style= permitted in JS");
-        assert!(crate::templates::DASHBOARD_HTML.contains("(v0.9.4+2)"));
+        assert!(crate::templates::DASHBOARD_HTML.contains("(0.9.4+3)"));
         assert!(crate::templates::DASHBOARD_HTML.contains("tab-evolutive-harness"));
         assert!(crate::templates::DASHBOARD_HTML.contains("drawer-lab-evolutive-harness"));
-        assert!(crate::templates::DASHBOARD_HTML.contains("96 Ferramentas MCP Nativas"));
+        assert!(crate::templates::DASHBOARD_HTML.contains("97 Ferramentas MCP Nativas"));
 
         for text in [ev_html, ev_js] {
             for ch in text.chars() {
@@ -6809,11 +6844,45 @@ telegram:
             .iter()
             .any(|p| p["file_path_posix"] == "hermes/SOUL.md" && p["fail_closed_triggered"] == true));
 
-        // 1-click resign restores verified=true
+        // Missing provenance is rejected with 400 Bad Request
+        let missing_resign_resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/harness/pins/resign")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(missing_resign_resp.status(), StatusCode::BAD_REQUEST);
+
+        // 1-click resign with valid provenance restores verified=true
         let resign_resp: serde_json::Value = serde_json::from_slice(
             &to_bytes(
                 app.clone()
-                    .oneshot(Request::builder().uri("/api/v1/harness/pins/resign").method("POST").body(Body::empty()).unwrap())
+                    .oneshot(
+                        Request::builder()
+                            .uri("/api/v1/harness/pins/resign")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "authorization": {
+                                        "provenance": {
+                                            "channel": "antigravity_ide",
+                                            "timestamp": chrono::Utc::now().timestamp(),
+                                            "scope": "harness:pins:resign:test",
+                                            "actor": "test_architect"
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
                     .await
                     .unwrap()
                     .into_body(),
@@ -7067,6 +7136,275 @@ telegram:
             .unwrap()
             .iter()
             .any(|q| q["slug"] == "teste-quarentena-v0942"));
+
+        let _ = std::fs::remove_dir_all(&harness_root);
+        let _ = std::fs::remove_dir_all(&google_dir);
+    }
+
+    #[tokio::test]
+    async fn test_v094_3_hardening_provenance_ephemeral_cordis_catnap_and_entity_guard() {
+        let state = create_test_state().await;
+        let harness_root = state.evolutive_harness.data_dir.parent().unwrap().to_path_buf();
+        let google_dir = state.google_hub.data_dir.clone();
+        let app = build_router(state.clone());
+
+        // 1. Ephemeral Cordis fiber: create + rollback <1ms without ELO penalty or persistent write
+        let create_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1101, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_dispatch",
+                                        "arguments": {
+                                            "tool": "harness_cordis_create",
+                                            "arguments": {
+                                                "title_pt": "Fibra Efemera T4",
+                                                "cue_pattern": "t4_test",
+                                                "rule_instruction_pt": "Teste reversivel sem regressao.",
+                                                "ttl_secs": 120,
+                                                "ephemeral": true
+                                            }
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(create_resp["result"]["isError"], false);
+        let eph_id = create_resp["result"]["structuredContent"]["fiber"]["fiber_id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert_eq!(create_resp["result"]["structuredContent"]["fiber"]["ephemeral"], true);
+
+        let before_elo = state.evolutive_harness.cordis.list_fibers().iter().map(|f| f.elo_rating).sum::<f64>();
+        let rb_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1102, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_dispatch",
+                                        "arguments": {
+                                            "tool": "harness_cordis_rollback",
+                                            "arguments": {
+                                                "fiber_id": eph_id,
+                                                "authorization": {
+                                                    "provenance": {
+                                                        "channel": "antigravity_ide",
+                                                        "timestamp": chrono::Utc::now().timestamp(),
+                                                        "scope": "cordis:rollback:ephemeral",
+                                                        "actor": "test_architect"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rb_resp["result"]["isError"], false);
+        assert_eq!(rb_resp["result"]["structuredContent"]["ephemeral"], true);
+        let after_elo = state.evolutive_harness.cordis.list_fibers().iter().map(|f| f.elo_rating).sum::<f64>();
+        assert!((after_elo - before_elo).abs() < 1e-6, "Ephemeral rollback must not penalize active fibers");
+
+        // 2. harness_catnap_pulse records actor + authorization.provenance and cold-boot hydration restores totals
+        let pulse_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1103, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_dispatch",
+                                        "arguments": {
+                                            "tool": "harness_catnap_pulse",
+                                            "arguments": {
+                                                "force_manual": true,
+                                                "slice_kind": "sqlite_wal_checkpoint",
+                                                "actor": "hermes_ide",
+                                                "authorization": {
+                                                    "provenance": {
+                                                        "channel": "antigravity_ide",
+                                                        "timestamp": chrono::Utc::now().timestamp(),
+                                                        "scope": "catnap:pulse:test"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(pulse_resp["result"]["isError"], false);
+        assert_eq!(pulse_resp["result"]["structuredContent"]["slice"]["trigger_mode"], "manual_forced");
+        assert_eq!(pulse_resp["result"]["structuredContent"]["slice"]["actor"], "hermes_ide");
+
+        state
+            .evolutive_harness
+            .hydrate_catnap_today_from_db(&state.memory.pool())
+            .await;
+        let snap_after = state.evolutive_harness.catnap.snapshot_state();
+        assert!(snap_after.slices_completed_today >= 1);
+
+        // 3. route_subtask distinguishes active_context_window_tokens from thinking_budget_tokens
+        let route_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1104, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_dispatch",
+                                        "arguments": {
+                                            "tool": "route_subtask",
+                                            "arguments": {
+                                                "task_type": "coding",
+                                                "estimated_tokens": 500,
+                                                "entropy": 0.9
+                                            }
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(route_resp["result"]["isError"], false);
+        let route_sc = &route_resp["result"]["structuredContent"];
+        let active_ctx = route_sc["active_context_window_tokens"].as_u64().unwrap();
+        let thinking_budget = route_sc["thinking_budget_tokens"].as_u64().unwrap();
+        assert!(active_ctx >= 4096, "Expected valid active context window, got {active_ctx}");
+        assert!(thinking_budget > 0, "Expected positive thinking budget for high entropy coding task");
+        assert!(active_ctx != thinking_budget || active_ctx >= 8192);
+        let route_txt = route_resp["result"]["content"][0]["text"].as_str().unwrap();
+        assert!(route_txt.contains(&format!("Context Window: {active_ctx} tokens")));
+        assert!(route_txt.contains(&format!("Thinking Budget: {thinking_budget} tokens")));
+
+        // 4. mem_create_entities rejects prose/URLs and cleanup_residue endpoint is idempotent
+        let bad_entity_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/mcp")
+                            .method("POST")
+                            .header("content-type", "application/json")
+                            .body(Body::from(
+                                serde_json::json!({
+                                    "jsonrpc": "2.0", "id": 1105, "method": "tools/call",
+                                    "params": {
+                                        "name": "tool_dispatch",
+                                        "arguments": {
+                                            "tool": "mem_create_entities",
+                                            "arguments": {
+                                                "entities": [{
+                                                    "name": "Souls Engine (http://127.0.0.1:9123/health prose muito longa acima de oito palavras invalidas)",
+                                                    "entity_type": "system"
+                                                }]
+                                            }
+                                        }
+                                    }
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(bad_entity_resp["error"].is_object() || bad_entity_resp["result"]["isError"] == true);
+
+        let cleanup_resp: serde_json::Value = serde_json::from_slice(
+            &to_bytes(
+                app.clone()
+                    .oneshot(
+                        Request::builder()
+                            .uri("/api/v1/memory/ladybug/cleanup-residue")
+                            .method("POST")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap()
+                    .into_body(),
+                usize::MAX,
+            )
+            .await
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(cleanup_resp["status"], "ok");
 
         let _ = std::fs::remove_dir_all(&harness_root);
         let _ = std::fs::remove_dir_all(&google_dir);

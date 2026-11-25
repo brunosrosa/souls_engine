@@ -1,6 +1,6 @@
 //! # Canonical MCP Tool Registry (`souls_server::mcp::registry`)
 //!
-//! Exposes all 96 canonical MCP tools, input schemas, namespaces, and Progressive
+//! Exposes all 97 canonical MCP tools, input schemas, namespaces, and Progressive
 //! Tool Disclosure (Level 0 boot compact vs Level 1 dynamic discovery).
 
 use serde_json::{json, Value};
@@ -18,7 +18,7 @@ pub struct ToolMeta {
 
 static ALL_TOOLS: OnceLock<Vec<ToolMeta>> = OnceLock::new();
 
-/// Returns the static repository of all 96 tools.
+/// Returns the static repository of all 97 tools.
 pub fn get_canonical_tools() -> &'static [ToolMeta] {
     ALL_TOOLS.get_or_init(build_canonical_tools)
 }
@@ -1646,6 +1646,26 @@ fn build_canonical_tools() -> Vec<ToolMeta> {
                 "properties": {
                     "slice_kind": { "type": "string", "enum": ["shadow_probe_ppc", "ladybug_reconcile", "langevin_micro_batch", "diary_distillation", "ralph_crystallize"], "description": "Tipo específico de micro-tarefa de manutenção." },
                     "force_manual": { "type": "boolean", "default": true, "description": "Ignorar espera mínima de 180s quando acionado manualmente pelo operador." }
+                },
+                "additionalProperties": false
+            }),
+        },
+        ToolMeta {
+            name: "harness_cordis_create",
+            namespace: "ops",
+            description: "Cria uma fibra tática Cordis (por padrão ephemeral=true com ttl_secs) para exercitar reversão LIFO < 1 ms sem tocar em proteções ativas.",
+            is_level_0: false,
+            input_schema: || json!({
+                "type": "object",
+                "properties": {
+                    "fiber_id": { "type": "string", "description": "Identificador opcional da fibra." },
+                    "slot": { "type": "string", "enum": ["c2", "c5", "c7", "c8"], "default": "c5", "description": "Slot de anatomia editável (c1 bloqueado)." },
+                    "title_pt": { "type": "string", "default": "Fibra efêmera de teste", "description": "Título humano da fibra." },
+                    "benefit_summary_pt": { "type": "string", "description": "Resumo prático do objetivo." },
+                    "ephemeral_cue_text": { "type": "string", "default": "Sonda temporária para validação de rollback LIFO.", "description": "Diretriz efêmera aplicada." },
+                    "target_task_type": { "type": "string", "description": "Filtro opcional de tipo de tarefa." },
+                    "ephemeral": { "type": "boolean", "default": true, "description": "Quando true, não persiste em disco e expira ao fim do TTL." },
+                    "ttl_secs": { "type": "integer", "default": 300, "description": "Tempo de vida em segundos (5..3600) para fibras efêmeras." }
                 },
                 "additionalProperties": false
             }),

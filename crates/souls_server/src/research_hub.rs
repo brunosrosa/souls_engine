@@ -1812,7 +1812,7 @@ pub fn estimate_finops(brief: &ResearchBrief) -> FinOpsPreview {
         est_usd_low: usd_low,
         est_usd_high: usd_high,
         cap_usd: cap,
-        pricing_source: "Souls Cloud Arena (Pareto Frontier v7.2)".to_string(),
+        pricing_source: "Souls Cloud Arena (Pareto Frontier)".to_string(),
     }
 }
 

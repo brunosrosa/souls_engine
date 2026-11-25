@@ -237,11 +237,15 @@ function renderHarnessLabDrawer(data) {
           .map((p) => {
             const stateTag = p.fail_closed_triggered
               ? 'FAIL-CLOSED'
-              : p.verified
-                ? 'OK'
-                : 'DRIFT';
+              : p.drift_detected
+                ? 'DRIFT'
+                : p.verified
+                  ? 'OK'
+                  : 'DRIFT';
             const modeTag = p.pin_mode || 'fail_closed';
-            return `[${stateTag} | ${modeTag}] ${p.file_path_posix}\n  expected: ${p.expected_sha256}\n  actual:   ${p.actual_sha256}`;
+            const driftFlag = p.drift_detected ? ' | drift_detected=true' : '';
+            const resolved = p.resolved_path ? `\n  resolved: ${p.resolved_path}` : '';
+            return `[${stateTag} | ${modeTag}${driftFlag}] ${p.file_path_posix}${resolved}\n  expected: ${p.expected_sha256}\n  actual:   ${p.actual_sha256}`;
           })
           .join('\n\n')
       : 'Sem arquivos c1 registrados.';
@@ -317,6 +321,18 @@ async function saveHarnessCatnapConfig() {
   }
 }
 
+function buildUiProvenance(scope, triggerMode = 'ui_button') {
+  return {
+    provenance: {
+      channel: 'hermes_dashboard',
+      timestamp: Math.floor(Date.now() / 1000),
+      scope,
+      actor: 'operator_dashboard',
+      trigger_mode: triggerMode,
+    },
+  };
+}
+
 async function triggerHarnessCatnapCycle() {
   const btn = document.getElementById('btn-harness-run-catnap');
   if (btn) btn.disabled = true;
@@ -325,7 +341,11 @@ async function triggerHarnessCatnapCycle() {
     await fetch('/api/v1/harness/catnap/trigger', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ force_manual: true }),
+      body: JSON.stringify({
+        force_manual: true,
+        actor: 'operator_dashboard',
+        authorization: buildUiProvenance('harness:catnap:trigger', 'force_manual'),
+      }),
     });
     await loadEvolutiveHarnessTab();
   } finally {
@@ -337,7 +357,9 @@ async function scanHarnessTombstones() {
   await fetch('/api/v1/harness/tombstones/resolve', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
+    body: JSON.stringify({
+      authorization: buildUiProvenance('harness:tombstones:resolve'),
+    }),
   });
   await loadEvolutiveHarnessTab();
 }
@@ -346,7 +368,10 @@ async function restoreHarnessTombstone(tombstoneId) {
   await fetch('/api/v1/harness/tombstones/restore', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tombstone_id: tombstoneId }),
+    body: JSON.stringify({
+      tombstone_id: tombstoneId,
+      authorization: buildUiProvenance(`harness:tombstones:restore:${tombstoneId}`),
+    }),
   });
   await loadEvolutiveHarnessTab();
 }
@@ -458,11 +483,16 @@ async function approveHarnessRalphSkill(slug) {
   const resp = await fetch('/api/v1/harness/ralph/approve', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ slug }),
+    body: JSON.stringify({
+      slug,
+      authorization: buildUiProvenance(`harness:ralph:approve:${slug}`),
+    }),
   });
   const res = await resp.json();
   if (res.status === 'ok' && typeof showToast === 'function') {
     showToast(`Habilidade '${slug}' ativada com sucesso!`, 'success');
+  } else if (res.error && typeof showToast === 'function') {
+    showToast(res.error, 'error');
   }
   await loadEvolutiveHarnessTab();
 }
@@ -474,10 +504,15 @@ async function resignHarnessConstitutionalPins() {
     const resp = await fetch('/api/v1/harness/pins/resign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        authorization: buildUiProvenance('harness:pins:resign:all'),
+      }),
     });
     const res = await resp.json();
     if (res.status === 'ok' && typeof showToast === 'function') {
       showToast(res.message || 'Base constitucional c1 re-assinada.', 'success');
+    } else if (res.error && typeof showToast === 'function') {
+      showToast(res.error, 'error');
     }
     await loadEvolutiveHarnessTab();
   } finally {
