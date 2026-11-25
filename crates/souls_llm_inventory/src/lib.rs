@@ -1,4 +1,4 @@
-//! # souls_llm_inventory (Souls Engine v7)
+//! # souls_llm_inventory (Souls Engine)
 //!
 //! Bare-metal silicon model hub, hardware profiling, and resilient download manager.
 //! Governed strictly by RFC-007, ADR-004, and ADR-007.
