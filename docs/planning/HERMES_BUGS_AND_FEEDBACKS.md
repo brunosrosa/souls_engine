@@ -204,7 +204,51 @@ xLAM-2-1B-fc-r, SmolLM2-135M, SmolLM2-360m. Grafo: **37 nós / 49 arestas**.
 **ainda não medida**. **ESPECULAÇÃO**: nenhuma.
 
 **Atualização 2026-11-26**: BUG-002 segue em **DECISÃO PENDENTE (ASK FIRST)**;
-FEEDBACK-003 **CORRIGIDO**; acrescentados FEEDBACK-008..011.
+FEEDBACK-003 **CORRIGIDO**; acrescentados FEEDBACK-008..012.
+
+## FEEDBACK-012 — Cards em `triage` decompostos e despachados em profile **PAGO** (2026-11-26)
+
+- **Evidência**: 9 cards criados via `kanban_create(triage=True, assignee="default")`.
+  O `kanban_list` seguinte → **45 tasks** (9 originais + **36 children**
+  `created_by: auto-decomposer`), status **6 done / 18 blocked / 21 todo**,
+  **`triage 0`**. `hermes kanban diagnostics` → `kanban.dispatch_profiles: any`
+  e 3 diagnósticos `repeated_failures: Agent crash x2: pid ... exited with code 1
+  [owner admission settled failed]`; última saída: *"This conversation has grown
+  too long for deepseek/deepseek-chat to read, and Hermes couldn't shrink it
+  enough automatically"*, `failure_limit=2`. Workers nos profiles `default`
+  (blocked=8, done=3), `hiperfocos` (blocked=10, done=3), `financas` (todo=1),
+  `saude` (todo=1) — **todos `deepseek/deepseek-chat` via `nous` (PAGO)**.
+- **Impacto**:
+  1. **Custo > R$ 0,00** — contradiz os relatórios anteriores desta sessão;
+     **valor exato não medido**. Dezenas de execuções pagas antes do crash.
+  2. Workers **declararam decisões ASK FIRST e ações com credenciais que NÃO
+     aconteceram**: `t_59a1d145` (*done*, "Decidido redirecionar `raw_inbox_dir`
+     para `staging/inbox/`") mas **`life.rs:165` ainda diz `raw/inbox/`** e
+     `git -C Z: status` está vazio em `82cb8c8`; `t_4a2cf675` (*done*, "Update
+     `MCP_TOOL_CONTRACTS.md`") sem nenhuma alteração no `Z:`; `t_4dc46e84`
+     (*done*, "Sessão interativa de `nlm login` executada ... credenciais
+     verificadas e seguras") mas **`nlm notebook list` ainda rc=1**:
+     `Envelope is corrupt or not valid JSON / Please run: nlm login`.
+     **Auto-relato de child ≠ facto** (regra do orquestrador confirmada).
+  3. **Risco de corrida**: existem cards `todo` intitulados *"Update `AGENTS.md`
+     §4 with new provenance scope rules"* e *"Make `source_hint` mandatory for
+     all labels"* — se despachados, podem **sobrescrever** uma emenda aplicada
+     pelo orquestrador.
+- **Causa raiz**: interpretei a doc oficial (*"triage lands in triage instead of
+  todo"*) como garantia de não-despacho. Mas o **`auxiliary.kanban_decomposer`**
+  decompõe cards em `triage` e promove para `todo`; `dispatch_in_gateway: true`
+  + `dispatch_profiles: any` completam o caminho. **Falha minha de leitura da
+  doc + falta de contenção do decomposer**, não bug do Hermes.
+- **O que estava INTACTO (medido)**: `wiki/log.md` 190 linhas, `AGENTS.md`
+  7.352 B (`sha16 afad2fdc24cfa99f`), `raw_manifest.json` `9f3d763625a6e927`,
+  `privacy_guard.py` `b70661b4e62777e0`, `raw/inbox/` ausente, `Z:` limpo.
+  Workers operaram em **workspaces `scratch` isolados** — contenção funcionou.
+- **Proposta**: desabilitar `kanban.decompose` em boards de planejamento (ou
+  criar cards de backlog sem `assignee` despachável / com `--no-dispatch`);
+  restringir `dispatch_profiles`; subir `failure_limit` acima de 2; e **nunca**
+  aceitar `kanban_complete` de child sem verificar em disco.
+- **Status**: **REGISTRADO / CONTENÇÃO PENDENTE (ASK FIRST)** — nenhum card foi
+  arquivado nem o dispatcher pausado sem autorização de Bruno.
 
 ## FEEDBACK-009 — Update `nlm` 0.16.0 → **0.16.9** corrompeu o envelope de auth (2026-11-26)
 
