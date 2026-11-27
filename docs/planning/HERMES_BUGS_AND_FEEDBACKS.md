@@ -204,7 +204,13 @@ xLAM-2-1B-fc-r, SmolLM2-135M, SmolLM2-360m. Grafo: **37 nós / 49 arestas**.
 **ainda não medida**. **ESPECULAÇÃO**: nenhuma.
 
 **Atualização 2026-11-26**: BUG-002 segue em **DECISÃO PENDENTE (ASK FIRST)**;
-FEEDBACK-003 **CORRIGIDO**; acrescentados FEEDBACK-008..013.
+FEEDBACK-003 **CORRIGIDO**; FEEDBACK-010 **CORRIGIDO**; FEEDBACK-012 **CONTIDO**;
+acrescentados FEEDBACK-008..013.
+
+**Atualização FEEDBACK-001**: primeira chamada real a `/v1/chat/completions` em
+2026-11-26 (`chatcmpl-6b091095`, `qwen3-5-4b...`, 200 OK, prompt de 2 tokens) —
+usada para validar o decomposer local. A subutilização de silício descrita acima
+começa a ser corrigida, mas **ainda não há síntese de wiki via SLM**.
 
 ## FEEDBACK-013 — `nlm` 0.16.9: **2º bug** — `login --help`/`auth --help` crasham por `pydantic` incompatível (2026-11-26)
 
@@ -282,8 +288,17 @@ Ourocard, `R$` e `privacy_tier: strict_local` continuam `SENSITIVO`;
   criar cards de backlog sem `assignee` despachável / com `--no-dispatch`);
   restringir `dispatch_profiles`; subir `failure_limit` acima de 2; e **nunca**
   aceitar `kanban_complete` de child sem verificar em disco.
-- **Status**: **REGISTRADO / CONTENÇÃO PENDENTE (ASK FIRST)** — nenhum card foi
-  arquivado nem o dispatcher pausado sem autorização de Bruno.
+- **CONTENÇÃO EXECUTADA em 2026-11-26** (Bruno via `clarify`): `hermes config set
+  kanban.auto_decompose false` e `auxiliary.kanban_decomposer` → **`provider: custom`,
+  `model: qwen3-5-4b-agentic-coder-v4-i1-q4-k-s`, `base_url 127.0.0.1:9123/v1`**,
+  todos verificados com `config get`. **Endpoint local respondeu 200 sem auth**
+  (primeira inferência local real da sessão; FEEDBACK-001 atualizado).
+  `hermes kanban dispatch --dry-run` → **`spawned: []`, `promoted: 0`**. Tentativa de
+  `block --ids` nos 21 `todo` falhou (`cannot block`) e **não era necessária**: os 2
+  cards que mexem no `AGENTS.md` estão **`blocked`**, não `todo` — o risco de corrida
+  era menor do que o orquestrador havia estimado. Nenhum card foi arquivado.
+- **Status**: **CONTIDO (custo zero daqui em diante para decomposição); `block` dos
+  `todo` segue pendente se Bruno quiser congelamento explícito**.
 
 ## FEEDBACK-009 — Update `nlm` 0.16.0 → **0.16.9** corrompeu o envelope de auth (2026-11-26)
 
@@ -315,8 +330,14 @@ Ourocard, `R$` e `privacy_tier: strict_local` continuam `SENSITIVO`;
 - **Proposta**: `SENSITIVO` só com PII estruturada validada, marcador
   `privacy_tier: strict_local` explícito, ou co-ocorrência com PII; registrar
   `privacy_reason` no manifesto. Estimativa **197 → ~14**.
-- **Status**: **REGISTRADO / DECISÃO PENDENTE (ASK FIRST)** — é a regra do
-  incidente Lote1 R1; **não aplicada** nesta sessão.
+- **APLICADO em 2026-11-26** (Bruno via `clarify`): `privacy_guard.py` reemitido com
+  `PII_CORE` (exclui pacotes npm), `SAUDE_CORE`, `FIN_CORE`, `TIER_EXPLICITO`; termos
+  ambientais só em co-ocorrência com PII/tier. `raw_manifest.json` reclassificado com
+  **`privacy_reason` nas 502 entradas**. Resultado **medido**: **197 → 43
+  `LOCAL_ONLY` / 305 → 459 `STANDARD`** (−154, −78%) — **não** os −93% da estimativa.
+  **Gate de regressão 11/11** sobre o módulo gravado. Backups duplos, 502/502
+  `sha256`, `--self-test` PASSOU. `AGENTS.md` §4 também emendado (L58).
+- **Status**: **CORRIGIDO (2026-11-26)** — cláusulas de segurança mantidas.
 
 ## FEEDBACK-011 — "The 30-Minute Drip" especificado, **0 cron jobs ativos** (2026-11-26)
 
