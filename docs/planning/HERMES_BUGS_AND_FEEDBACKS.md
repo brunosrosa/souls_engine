@@ -205,7 +205,37 @@ xLAM-2-1B-fc-r, SmolLM2-135M, SmolLM2-360m. Grafo: **37 nós / 49 arestas**.
 
 **Atualização 2026-11-26**: BUG-002 segue em **DECISÃO PENDENTE (ASK FIRST)**;
 FEEDBACK-003 **CORRIGIDO**; FEEDBACK-010 **CORRIGIDO**; FEEDBACK-012 **CONTIDO**;
-acrescentados FEEDBACK-008..013.
+acrescentados FEEDBACK-008..014.
+
+## FEEDBACK-014 — `nlm` 0.16.9: **3º bug** — tool env do `uv` quebrado (2026-11-26)
+
+- **Evidência**: `nlm --version`, `nlm notebook list` e `nlm doctor` passaram a
+  falhar com **`ModuleNotFoundError: No module named 'notebooklm_tools'`**;
+  `uv tool list` → `Failed find package notebooklm-mcp-cli in tool environment`.
+  **Porém** `uv tool run --from notebooklm-mcp-cli nlm --version` → **rc=0**,
+  `nlm version 0.16.9 / You are on the latest version`. Ou seja: o **pacote está
+  íntegro no índice/cache**, o que quebrou foi o **registro da tool** em
+  `%APPDATA%\uv\tools\notebooklm-mcp-cli`. Soma-se ao envelope corrompido
+  (FEEDBACK-009) e ao `pydantic` contaminado (FEEDBACK-013).
+- **Impacto**: o CLI `nlm` está **completamente inutilizável** até reinstalar a
+  tool; `nlm login` não pode ser invocado. Bloqueia as fontes do NotebookLM.
+  **`agy mcp list` continua `enabled`** — o MCP em si não foi afetado.
+- **Proposta**: `uv tool install --force notebooklm-mcp-cli==0.16.9`; garantir
+  que `PYTHONPATH`/`VIRTUAL_ENV` do Hermes não vazem; como fallback permanente,
+  `uv tool run --from notebooklm-mcp-cli nlm <cmd>`. **Não apagar keystores**:
+  nenhuma das pastas usuais de config existe (perfil `default` com cookies/CSRF
+  está no keystore protegido do pacote). Ver `wiki/audit/GUIA_BLOQUEIOS_MANUAIS_2026-11-26.md`.
+- **Status**: **REGISTRADO / NÃO CORRIGIDO** — reinstalação e login são ações
+  manuais de Bruno; nenhuma credencial foi pedida no chat.
+
+## Nota de custo atualizada (2026-11-26)
+
+Sessões `source=kanban` em `state.db`: **38**, **`estimated_cost_usd`
+US$ 1,11511957** (antes da limpeza: 12 / US$ 0,484349). A diferença
+**+US$ 0,63077** é o custo **medido** da reabertura de workers durante o
+`unlink` das arestas do board — fecha a pendência deixada em aberto no
+FEEDBACK-012. `actual_cost_usd` segue `0.0` localmente; o faturado real só em
+https://portal.nousresearch.com (Usage/Billing).
 
 **Atualização FEEDBACK-001**: primeira chamada real a `/v1/chat/completions` em
 2026-11-26 (`chatcmpl-6b091095`, `qwen3-5-4b...`, 200 OK, prompt de 2 tokens) —
