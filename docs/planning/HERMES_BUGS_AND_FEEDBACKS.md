@@ -204,7 +204,42 @@ xLAM-2-1B-fc-r, SmolLM2-135M, SmolLM2-360m. Grafo: **37 nós / 49 arestas**.
 **ainda não medida**. **ESPECULAÇÃO**: nenhuma.
 
 **Atualização 2026-11-26**: BUG-002 segue em **DECISÃO PENDENTE (ASK FIRST)**;
-FEEDBACK-003 **CORRIGIDO**; acrescentados FEEDBACK-008..012.
+FEEDBACK-003 **CORRIGIDO**; acrescentados FEEDBACK-008..013.
+
+## FEEDBACK-013 — `nlm` 0.16.9: **2º bug** — `login --help`/`auth --help` crasham por `pydantic` incompatível (2026-11-26)
+
+- **Evidência**: `nlm login --help` e `nlm auth --help` → **rc=1 com traceback**:
+  `notebooklm_tools/cli/commands/alias.py` → `cli/utils.py` →
+  `services/auth.py` → `core/auth.py` → `utils/config.py` →
+  `from pydantic import BaseModel, Field` falha apontando para
+  `C:\Users\rosas\AppData\Local\hermes\installs\e67763590f6d93e7\environments\e57f5aae82794b969568ff383b953273\venv\Lib\site-packages\pydantic\__init__.py`.
+  Ou seja, o CLI do `nlm` está importando **`pydantic` de um venv do Hermes**, não do
+  seu próprio ambiente `uv` (`%APPDATA%\uv\tools\notebooklm-mcp-cli`). Outros
+  comandos (`nlm --version`, `nlm notebook list`) funcionam — este caminho de
+  import é específico de `login`/`auth`/`alias`.
+- **Impacto**: além do envelope corrompido (FEEDBACK-009), **o próprio `nlm login`
+  pode estar inutilizável** até corrigir o ambiente. `nlm doctor` não detecta isso.
+  Worker `t_969be52f` diagnosticou `missing_files: [".nlm/config.json"]` e
+  sugeriu `clean_reinstall` — diagnóstico plausível, **não executado**.
+- **Proposta**: rodar `nlm` com o ambiente isolado
+  (`uv tool run --from notebooklm-mcp-cli nlm login`) ou reinstalar limpo com
+  `uv tool install --reinstall notebooklm-mcp-cli==0.16.9`; garantir que
+  `PYTHONPATH`/`VIRTUAL_ENV` do Hermes não vaze para o binário. Verificar se o
+  update preserva `~/.nlm` / `~/.config/nlm` entre versões.
+- **Status**: **REGISTRADO / NÃO CORRIGIDO** — nenhum `login` executado, nenhuma
+  credencial pedida no chat.
+
+## Nota de calibração (2026-11-26, sem afrouxar)
+
+A estimativa `197 → ~14` do FEEDBACK-010 era **otimista**. Protótipo medido da
+lógica **segura** (mantém `SAUDE_CORE` = venvanse/escitalopram/olmesartana/holter/
+posologia e `FIN_CORE` = ourocard/consignado/cartão de crédito/`R$`) sobre os 502
+arquivos: **43 `SENSITIVO`** (23 `FIN_CORE`, 6 `SAUDE_CORE`, 6 `PII_CORE`,
+6 `PII_CORE+AMBIENTE`, 1 `SAUDE+FIN`, 1 `PII+FIN`) e **154 reclassificados**
+(−78%, não −93%). **Gate de regressão 11/11**: CPF, e-mail, telefone, medicamento,
+Ourocard, `R$` e `privacy_tier: strict_local` continuam `SENSITIVO`;
+`mcp-remote@0.1.38`, `"exame"`, `"fatura"` e `"saldo"` isolados → `STANDARD`.
+**Nunca trocar a estimativa pelo número medido.**
 
 ## FEEDBACK-012 — Cards em `triage` decompostos e despachados em profile **PAGO** (2026-11-26)
 
