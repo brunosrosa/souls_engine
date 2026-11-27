@@ -204,4 +204,53 @@ xLAM-2-1B-fc-r, SmolLM2-135M, SmolLM2-360m. Grafo: **37 nós / 49 arestas**.
 **ainda não medida**. **ESPECULAÇÃO**: nenhuma.
 
 **Atualização 2026-11-26**: BUG-002 segue em **DECISÃO PENDENTE (ASK FIRST)**;
-FEEDBACK-003 **CORRIGIDO** (ver acima); acrescentado FEEDBACK-008.
+FEEDBACK-003 **CORRIGIDO**; acrescentados FEEDBACK-008..011.
+
+## FEEDBACK-009 — Update `nlm` 0.16.0 → **0.16.9** corrompeu o envelope de auth (2026-11-26)
+
+- **Evidência**: após atualização feita por Bruno, `nlm doctor` →
+  `Profile 'default': error loading (Envelope is corrupt or not valid JSON)` e
+  `No AI tools configured`; **`nlm notebook list` → rc=1**:
+  `Authentication error: Envelope is corrupt or not valid JSON / Please run: nlm login`.
+  Antes: 0.16.0 com `Cookies: present (80 cookies)` e `CSRF token: yes`.
+  **`agy mcp list` continua** com `gemini_notebook_mcp` + `souls_engine` **enabled**
+  (a config do cliente não foi afetada; quebrou a sessão do **CLI**).
+- **Impacto**: `nlm source content`, `nlm research`, `nlm batch` etc. ficam
+  **indisponíveis** até `nlm login`. Bloqueia o ingresso das 865 fontes.
+- **Proposta**: `nlm login` (ação de Bruno, interativa); registrar se o update
+  preserva ou não `~/.local/share/nlm` entre versões; considerar export/backup do
+  envelope antes de atualizar.
+- **Status**: **REGISTRADO / NÃO CORRIGIDO** (nenhum `nlm login` executado nesta
+  sessão — evita prompt interativo e credencial no chat).
+
+## FEEDBACK-010 — `privacy_guard` superinclusivo: **197 `LOCAL_ONLY` por palavra-chave isolada** (2026-11-26)
+
+- **Evidência**: ver `wiki/audit/ESTUDO_REGRAS_E_LLM_WIKI_2026-11-26.md` §3.
+  197/197 arquivos `LOCAL_ONLY` são `.md` de `projetos/` (177) e
+  `deep-researchs/` (20); **zero** em `saude/`/`financas/`. Disparos:
+  `FIN` 175, `SAUDE` 28, `PII` 14, `TIER` 0; **156 arquivos sensíveis só por
+  `FIN`**. Exemplos: `"saldo"`, `"Fatura"`, `"exame"` em pesquisas técnicas;
+  `"mcp-remote@0.1.38"` lido como PII.
+- **Impacto**: barreira artificial impediu uso de `agy`/cloud **e de SLM local**
+  em 183 documentos técnicos; contribuiu para a subutilização do FEEDBACK-001.
+- **Proposta**: `SENSITIVO` só com PII estruturada validada, marcador
+  `privacy_tier: strict_local` explícito, ou co-ocorrência com PII; registrar
+  `privacy_reason` no manifesto. Estimativa **197 → ~14**.
+- **Status**: **REGISTRADO / DECISÃO PENDENTE (ASK FIRST)** — é a regra do
+  incidente Lote1 R1; **não aplicada** nesta sessão.
+
+## FEEDBACK-011 — "The 30-Minute Drip" especificado, **0 cron jobs ativos** (2026-11-26)
+
+- **Evidência**: `HERMES_OBSIDIAN_CURATOR_CRON_GUIDE.md:49` (17/10/2026) define
+  cron `*/30 * * * *` com `agy` processando 2-3 `PENDING`. Medição atual:
+  **`cronjob_manage list` → 0 jobs**, `hermes kanban stats` → board vazio,
+  `/health` → **`catnap_active: false`**, placar `raw_manifest.json` = **0 `PENDING`**.
+  ADR-006/034 (Chyros/Langevin/Catnap/Tombstones) estão **"Aprovado e
+  Implementado"** no engine.
+- **Impacto**: o refinamento contínuo de memória está **pensado e implementado no
+  engine, mas desconectado do cofre**; o cron do guia está obsoleto (não há
+  `PENDING` a processar).
+- **Proposta**: substituir o cron por um **lint/ingest incremental** no padrão LLM
+  Wiki (`wiki/state.md` + lint periódico + `ladybug_reconcile`), com teto LOCAL e
+  `no_agent`/script quando possível (custo zero).
+- **Status**: **REGISTRADO / DECISÃO PENDENTE**.
