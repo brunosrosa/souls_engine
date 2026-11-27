@@ -1,0 +1,207 @@
+---
+type: engineering_log
+title: HERMES — Bugs, Feedbacks & Uso Indevido do Souls Engine
+tags: [souls_engine, bugs, feedback, orquestracao, padrao]
+last_updated: 2026-11-26
+reviewed: false
+temporal_status: active_canonical
+---
+
+# HERMES — Bugs, Feedbacks & Uso Indevido do Souls Engine
+
+> **PADRÃO (Bruno, 2026-11-26)** — sempre que surgir **bug, melhoria, uso inadequado,
+> achado de orquestração ou lição de uso diário** do Souls Engine, **APENDAR** neste
+> arquivo com: `ID` · data · **evidência medida** (comando + saída real) · classificação
+> · impacto · proposta · status. **NUNCA sobrescrever**. É log de engenharia (não é
+> `AGENTS.md` nem `SOUL.md`): registrar não exige ASK FIRST, mas **mudanças de contrato
+> continuam ASK FIRST**. Fica ao lado do ROADMAP canônico
+> `docs/planning/roadmap/SOULS_ENGINE_ROADMAP_NEXT_DELIVERIES.md`.
+>
+> **Redação**: este repositório caminha para **distribuição pública (v1.0.0)** —
+> **nunca** colar conta/e-mail, cookies, CSRF, tokens ou PII. Usar `[REDACTED]`.
+
+## Estado medido do engine em 2026-11-26
+
+`/health`: `healthy` · `0.9.4+3` · uptime 3.402 s · `sqlite_status: ok` ·
+VRAM **1.290 / 6.144 MB** (**4.854 MB livre**) · GPU **48 °C** · zona **Nominal** ·
+`barrier_phi 0.0`. **14 arquivos `.gguf`** em `C:\Users\rosas\llm_local_models`
+(13 modelos + 1 `mmproj`): Qwen2.5-Coder-0.5B, Qwen2.5-VL-3B, Arch-Function-Chat-3B,
+Hermes-3-Llama-3.2-3B, Hy-MT2-7B, Nemotron-3-Nano-4B, Phi-4-mini,
+**qwen3.5-4b-agentic-coder-v4** (pinado), Qwen3.5-4B-Uncensored, Temper-1-1.5B,
+xLAM-2-1B-fc-r, SmolLM2-135M, SmolLM2-360m. Grafo: **37 nós / 49 arestas**.
+
+---
+
+## BUG-001 — `mem_search` / `SELECT name` → `-32000 InternalEnginePanic` (2026-11-26)
+
+- **Evidência**: `sqlite_query` com `SELECT name FROM ladybug_nodes` e `mem_search`
+  retornam `-32000 InternalEnginePanic`. A coluna correta é **`canonical_name`**;
+  `SELECT canonical_name FROM ladybug_nodes` retorna os 37 nomes normalmente.
+- **Impacto**: queries ingênuas derrubam a chamada; workaround não é óbvio.
+- **Proposta**: corrigir `souls_memory` (ou expor `name` como alias/view), cobrir com
+  teste de regressão e documentar o esquema canônico em `docs/contracts/`.
+- **Status**: **REGISTRADO / NÃO CORRIGIDO** (fora do cofre; bug do engine).
+
+## BUG-002 — `raw/inbox/` do ADR-030 contradiz `AGENTS.md` §3 NEVER (2026-11-26)
+
+- **Evidência**: `ADR-030...md:39` e `ROADMAP...md:465` dizem que
+  `google_tasks(action="quick_capture")` / `POST /api/v1/google/quick-capture`
+  grava notas Markdown **diretamente em `raw/inbox/`** do cofre. Código medido:
+  `crates/souls_core/src/google_bridge/life.rs:165-166` (`raw_inbox_dir`,
+  `quick_capture_to_obsidian`) e `oauth.rs:664`. Por outro lado,
+  **`AGENTS.md:48-49`** (emenda validada por Bruno) proíbe **"Modificar, mover,
+  apagar OU CRIAR qualquer arquivo/diretório dentro de `raw/`"** e fixa a porta de
+  ingresso como **`staging/inbox/`**. `raw/inbox/` **não existe** no cofre hoje.
+- **Impacto**: no primeiro Quick Capture real, o engine **viola o contrato do cofre**.
+  É uma contradição entre documento de decisão e contrato imutável, não um erro de
+  execução desta sessão.
+- **Proposta**: redirecionar `raw_inbox_dir` para `staging/inbox/` **ou** emendar o
+  `AGENTS.md` com exceção explícita e registrada (ASK FIRST). Alinhar ADR-030,
+  ROADMAP e `docs/contracts/MCP_TOOL_CONTRACTS.md` na mesma revisão.
+- **Status**: **REGISTRADO / DECISÃO PENDENTE (ASK FIRST)**.
+
+## FEEDBACK-001 — **Zero inferência local** apesar de 14 GGUF e 4.854 MB de VRAM livre (2026-11-26)
+
+- **Evidência**: na sessão de curadoria `raw -> wiki` + Frente B, o engine foi usado
+  **apenas** como `sqlite_query` (grafo), `mem_create_*`, `/health` e `route_subtask`.
+  **Nenhuma chamada** a `POST /v1/chat/completions`. O `R$ 0,00` veio de **código
+  determinístico em Python**, não de silício.
+- **Classificação**: **USO INCOMPLETO / SUBUTILIZAÇÃO** — usamos o "banco de dados",
+  não o "acelerador de silício".
+- **Proposta**: aplicar SLM local (100% local, sem PII saindo) em: similaridade
+  semântica dos **37 títulos exclusivos V6/V7**; deduplicação dos **133 `staged`**;
+  triagem dos **8 `SENSITIVO`**; síntese dos **39 dossiês**. Medir latência/qualidade
+  e alimentar o `feedback` do ParetoBandit depois de cada lote.
+- **Status**: **REGISTRADO / OPORTUNIDADE ABERTA**.
+
+## FEEDBACK-002 — Orquestração configurada, **não exercitada** (2026-11-26)
+
+- **Evidência**: `hermes config get delegation` → `provider: custom`,
+  `model: qwen3-5-4b-agentic-coder-v4-i1-q4-k-s`,
+  `base_url: http://127.0.0.1:9123/v1`, `max_concurrent_children: 10`,
+  `max_spawn_depth: 1`, `orchestrator_enabled: true`, `subagent_auto_approve: false`,
+  `oneshot_max_children: 2`. `hermes fallback list` → **Primary
+  `deepseek/deepseek-chat` via `nous` (PAGO)** → fallback 1 = qwen local.
+  **0 `delegate_task`** nesta sessão (tudo foi `execute_code` determinístico).
+- **Classificação**: **USO INDEVIDO POR OMISSÃO** — decisão correta para privacidade e
+  custo, mas o fan-out local **nunca foi validado na prática**.
+- **Nuance importante**: o pin "100% LOCAL" vale para **delegação**, **não** para o
+  modelo principal do chat, que segue pago (regra: chat mestre pago é aceitável para
+  raciocínio/verificação). Não confundir os dois.
+- **Proposta**: piloto de **1 worker** com `route_subtask` pre-flight, conferência do
+  campo `Model:`, bundle **curado** (nunca bruto) e medição de custo/qualidade.
+- **Status**: **REGISTRADO / PILOTO PENDENTE**.
+
+## FEEDBACK-003 — MCP montado no **cliente órfão** (`gemini`), não no `agy` (2026-11-26)
+
+- **Evidência**: `nlm setup add gemini` gravou `~/.gemini/settings.json`
+  (`gemini-notebook-mcp`, **`trust: true`**, 896 B) e `nlm doctor` reporta
+  `"Gemini CLI: configured / ✓ All checks passed!"`. Mas **`gemini --version` →
+  `[WinError 2]` (binário ausente)** e Bruno reportou: *"This client is no longer
+  supported for Gemini Code Assist for individuals ... migrate to the Antigravity
+  suite"*. Cliente ativo medido: **`agy 1.5.17`**, que tem subcomando
+  **`mcp` (add/remove/list/enable/disable)**. `nlm setup add --help` **oferece
+  `nlm setup add antigravity`** explicitamente. `nlm doctor` **não lista Antigravity**
+  como alvo de configuração.
+- **Classificação**: **BUG DE DIAGNÓSTICO (meu) + DÍVIDA DE SEGURANÇA**.
+  `trust: true` concede execução de shell/arquivos sem prompt a um cliente que
+  **não existe mais**. Configurado ≠ ativo, e aqui nem consumidor legítimo há.
+- **Proposta**: `nlm setup add antigravity` + `agy mcp list/enable`; **revogar** o
+  `trust: true` de `~/.gemini/settings.json` (com backup e `sha256`); corrigir
+  relatório/inventário que ainda dizem "abrir novo terminal `gemini`".
+- **CORREÇÃO DO DIAGNÓSTICO (2026-11-26, Bruno autorizou via `clarify`)**: nova
+  medição mostrou **`agy mcp list` → `gemini_notebook_mcp` stdio `enabled`**
+  (`notebooklm-mcp.exe`) + `souls_engine` http `enabled`. Ou seja, o MCP **JÁ ESTAVA**
+  no cliente ativo; **eu havia diagnosticado mal** ao dizer "montado no cliente
+  errado". O problema real era **apenas** a entrada **órfã** com `trust: true` em
+  `~/.gemini/settings.json`, e o **`nlm doctor` tem falso negativo** — reporta só
+  "Gemini CLI: configured" e **não detecta Antigravity** (FEEDBACK-008).
+- **Ação executada**: **NENHUM `trust` novo foi concedido** (não era necessário).
+  **Removida** a entrada `gemini-notebook-mcp` de `~/.gemini/settings.json`, com
+  **backup duplo** (`wiki/audit/settings.pre_revogacao_trust.json` +
+  `wiki/archive/`, `sha256` preservado) e **rollback automático** caso `agy mcp
+  list` perdesse o servidor — não perdeu. `MCP_DOCKER`, `pencil`, `security` e
+  `ide` preservados. `agy mcp list` revalidado **depois** da remoção.
+- **Status**: **CORRIGIDO (2026-11-26)** — privilégio **reduzido**, funcionalidade
+  preservada. `nlm setup add antigravity` **NÃO foi executado** (redundante).
+
+## FEEDBACK-008 — `nlm doctor` não detecta Antigravity (falso negativo) (2026-11-26)
+
+- **Evidência**: `nlm doctor` lista apenas Claude Desktop / **Gemini CLI** / Cursor /
+  Windsurf. `nlm setup add --help` **oferece `antigravity`**, e `agy mcp list` prova
+  que o servidor está `enabled` — mas o doctor não o reporta.
+- **Impacto**: induziu diagnóstico errado nesta sessão ("MCP não ativo / montado no
+  cliente errado") e pode induzir `setup add` redundante.
+- **Proposta**: incluir Antigravity (`agy mcp list`) no doctor; ou sinalizar
+  explicitamente "outros clientes não verificados" em vez de "✓ All checks passed".
+- **Status**: **REGISTRADO**.
+
+## FEEDBACK-004 — `route_subtask` muda de tier conforme a descrição (2026-11-26)
+
+- **Evidência**: no R3 (tarefa "definir 3 testes + grafo") → `tier0_onnx_cpu`.
+  Agora (tarefa "classificar 10 fontes locais") → **`tier05_llama_cpu`**
+  (`Provider: LOCAL`, `Utility 0.8639`, `Latency 131.1 ms`, `VRAM 0 MB`,
+  janela **8.192 tokens**, `reasoning: medium`, `Thinking Budget 4096`).
+- **Classificação**: **COMPORTAMENTO ESPERADO, MAS NÃO DOCUMENTADO** — o ParetoBandit
+  é sensível ao texto; convém registrar a variação para não tratar um tier como fixo.
+- **Proposta**: tabela `descrição → tier → custo → qualidade` no wiki de operação;
+  sempre reler o campo `Model:` antes de despachar.
+- **Status**: **REGISTRADO**.
+
+## FEEDBACK-005 — Nós de **teste** no grafo de produção (2026-11-26)
+
+- **Evidência**: entre os **37** `canonical_name` medidos constam
+  `TestSystemComponent`, `TestNodeAlpha`, `TestNodeBeta`, `entity` (nome genérico) e
+  `Benchmark_LEAN_vs_JSON_T3`.
+- **Classificação**: **HIGIENE DE DADOS** — resíduo de testes/benchmarks misturado
+  ao hipocampo L3 de produção.
+- **Proposta**: namespace `test.*` / flag `is_test: true`, ou limpeza com backup;
+  gate que impeça `mem_create_entities` com nomes `Test*` em profile de produção.
+- **Status**: **REGISTRADO / LIMPEZA PENDENTE**.
+
+## FEEDBACK-006 — Hipocampo L3 **não foi alimentado** com o conhecimento curado (2026-11-26)
+
+- **Evidência**: as **6 entidades** criadas nesta sessão
+  (`claim_provenance_sidecar`, `manifest_sincronizacao_notebooks`,
+  `frente_b_notebooklm`, `staging_inbox`, `emenda_agents_20261126`,
+  `testes_r3_20261126`) são **metadados do pipeline**, não conteúdo. O grafo já
+  tinha **31 nós de conteúdo** (`Bruno`, `Carreira_BB_UAN`, `SODA_Framework_Lineage`,
+  `CommunitZ_Parked`, `Protocolo_Nexus_Saude`, ...), mas **nenhum dos 465 `CURATED`
+  ou dos 39 dossiês foi injetado** nesta sessão.
+- **Classificação**: **USO INCOMPLETO** — o fluxo foi `raw/ → wiki/`, e
+  `wiki/ → L3` **ainda não aconteceu**. Premissa "já estamos na memória ampla" é
+  **parcialmente falsa**.
+- **Proposta**: pipeline `notas atômicas de wiki/ → mem_create_entities + arestas
+  tipadas (depends_on / conflicts_with / implements / relates_to) → LadybugDB`, com
+  `temporal_status` e proveniência. Validar se o engine já possui ingestão de wiki.
+- **Status**: **REGISTRADO / DÍVIDA ABERTA**.
+
+## FEEDBACK-007 — `nlm doctor` expõe a conta em texto claro (2026-11-26)
+
+- **Evidência**: `nlm doctor` imprime `Account: [REDACTED]`, `Cookies: present
+  (80 cookies)`, `CSRF token: yes`, `Keystore: active (protected mode)`.
+- **Classificação**: **RISCO DE REDAÇÃO** — saída de diagnóstico copiada para
+  relatório/log/repositório com destino público vaza PII.
+- **Proposta**: `--redact` no doctor, ou redigir sempre ao colar em `wiki/`, `Z:` e
+  no próprio `HERMES_BUGS_AND_FEEDBACKS.md`.
+- **Status**: **REGISTRADO**.
+
+---
+
+## Modelo de registro (apendar sempre)
+
+```
+### ID — título curto (YYYY-MM-DD)
+- **Classificação**: BUG | FEEDBACK | USO-INDEVIDO | MELHORIA | HIGIENE | SEGURANCA
+- **Evidência**: comando + saída REAL medida (com hash/contagem quando aplicável)
+- **Impacto**: o que quebra ou se perde
+- **Proposta**: correção/critério de aceite, sem inventar API
+- **Status**: REGISTRADO | EM CORRECAO | CORRIGIDO | DECISAO PENDENTE (ASK FIRST)
+```
+
+**FACTO**: todas as medições acima foram feitas em disco / `/health` / CLI nesta data.
+**HIPÓTESE**: que `nlm batch`/`pipeline` permita download de conteúdo em massa —
+**ainda não medida**. **ESPECULAÇÃO**: nenhuma.
+
+**Atualização 2026-11-26**: BUG-002 segue em **DECISÃO PENDENTE (ASK FIRST)**;
+FEEDBACK-003 **CORRIGIDO** (ver acima); acrescentado FEEDBACK-008.
