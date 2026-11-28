@@ -98,7 +98,7 @@ agy "Execute a curadoria dos próximos 2 arquivos PENDING de '$OBSIDIAN_VAULT_RO
 
 1. **Reporte no ato**, sempre na ordem **(a) estado e placar -> (b) o que foi feito -> (c) como ficou**, com evidência verificável (saída de ferramenta, hash, diff).
 2. **Nunca confie em `success`**: após `patch` / `write_file`, releia o arquivo em disco e confirme por hash ou diff antes de declarar a etapa concluída.
-3. **Nunca apresente nota de juiz LLM como FACTO**: contagens, frontmatter e hashes são FACTO; densidade e fidelidade são HIPÓTESE. Reconcilie cada achado do juiz contra o `raw/` antes de aplicar.
+3. **Nunca apresente nota de juiz LLM como FATO**: contagens, frontmatter e hashes são FATO; densidade e fidelidade são HIPÓTESE. Reconcilie cada achado do juiz contra o `raw/` antes de aplicar.
 4. **Uma variável por camada**, piloto antes de escalar, **limiar definido antes de medir** e **await** até liberação explícita antes de avançar. **Congele a unidade de saída ANTES do piloto** de acordo com o padrão do manifesto (`generated_notes`).
 5. **Registre cada camada** em `wiki/log.md` (custo, tier, resultado, heurística) e consolide `wiki/index.md`, `raw_manifest.json` e grafo deterministicamente, sem subagente pago.
 6. **Feche cada entrega com resumo objetivo**: se o operador pedir **"explica primeiro"**, entregue o método em prosa antes de abrir decisões.

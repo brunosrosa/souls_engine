@@ -3,13 +3,13 @@
 Use após qualquer lote de curadoria/síntese, antes de declarar "pronto". Aplica-se a notas `wiki/`, dossiês, relatórios e qualquer artefato gerado por modelo a partir de fontes.
 
 ## Princípio
-Auditoria **auto-referente não é evidência**: um juiz da mesma família e dos mesmos prompts que geraram o artefato compartilha os mesmos vieses de preferência. Separe **FORMA** (determinística, FACTO) de **CONTEÚDO** (juízo, HIPÓTESE). Nunca apresentar nota de juiz como facto.
+Auditoria **auto-referente não é evidência**: um juiz da mesma família e dos mesmos prompts que geraram o artefato compartilha os mesmos vieses de preferência. Separe **FORMA** (determinística, FATO) de **CONTEÚDO** (juízo, HIPÓTESE). Nunca apresentar nota de juiz como facto.
 
 ## Camadas (baratas -> caras; custo zero em créditos pagos quando locais/assinatura)
 
 | # | Camada | O que prova | Como |
 | :--- | :--- | :--- | :--- |
-| 0 | Rotulação epistêmica | Não confundir forma com conteúdo | FACTO = fontes, frontmatter, links, contagens. HIPÓTESE = densidade/fidelidade. |
+| 0 | Rotulação epistêmica | Não confundir forma com conteúdo | FATO = fontes, frontmatter, links, contagens. HIPÓTESE = densidade/fidelidade. |
 | 1 | Juiz independente | Quebra o viés de preferência | Auditar com modelo de **família diferente** do gerador, rubrica **cega**. |
 | 2 | **Ancoragem na fonte** | O que realmente falta | Extrair claims verificáveis e buscá-los no bundle -> `% de claims ancorados`. |
 | 3 | Juiz adversarial | Remove o viés de cortesia | Inverter o pedido: "tente provar que este artefato é inútil — o que falta, o que foi inventado". |

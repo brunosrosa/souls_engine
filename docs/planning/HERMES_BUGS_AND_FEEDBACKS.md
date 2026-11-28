@@ -2,7 +2,7 @@
 type: engineering_log
 title: HERMES — Bugs, Feedbacks & Uso Indevido do Souls Engine
 tags: [souls_engine, bugs, feedback, orquestracao, padrao]
-last_updated: 2026-11-26
+last_updated: 2026-11-29
 reviewed: false
 temporal_status: active_canonical
 ---
@@ -199,7 +199,7 @@ xLAM-2-1B-fc-r, SmolLM2-135M, SmolLM2-360m. Grafo: **37 nós / 49 arestas**.
 - **Status**: REGISTRADO | EM CORRECAO | CORRIGIDO | DECISAO PENDENTE (ASK FIRST)
 ```
 
-**FACTO**: todas as medições acima foram feitas em disco / `/health` / CLI nesta data.
+**FATO**: todas as medições acima foram feitas em disco / `/health` / CLI nesta data.
 **HIPÓTESE**: que `nlm batch`/`pipeline` permita download de conteúdo em massa —
 **ainda não medida**. **ESPECULAÇÃO**: nenhuma.
 
@@ -446,3 +446,119 @@ Ourocard, `R$` e `privacy_tier: strict_local` continuam `SENSITIVO`;
   conteúdo normal e pode ir para nuvem ser tratado; **anonimização por tags** é cuidado
   de saída, não gate de entrada. Decisão de Bruno em 28/11.
 - **Status**: registrado. Nenhuma mutação em código.
+
+---
+
+## FEEDBACK-016 — Escada de custo e orquestração: sub-agentes no modelo mais caro (2026-11-29)
+
+- **Classificação**: **USO-INDEVIDO** + **MELHORIA** (diretriz de Bruno, pedida antes da v0.9.4+4/+5)
+- **Evidência** (medida em disco):
+  - CSV faturado do Nous Portal `usage-day-summary-0d174240-2026-11-29.csv` (20→28/11,
+    84 lançamentos, `credit_source = Subscription credits`): **`google/gemini-4-carbon`
+    = US$ 21,6079 de US$ 31,4293 (~69%)**; `tencent/hy4` US$ 8,019;
+    `deepseek/deepseek-chat` US$ 1,7953; ferramentas US$ 0,0072; `qwen/...:free` 0.
+  - `state.db → sessions`: **27 sessões `source=subagent` / US$ 15,65 estimados**.
+  - Ou seja: os **sub-agentes foram despachados no modelo mais caro** do print do Portal,
+    em vez de `agy` (assinatura já paga) ou silício local — foi erro de roteamento, não
+    de necessidade de qualidade. Bruno: *"Sempre priorizar custo x benefício"*.
+- **Causa raiz (sem adulação)**: `route_subtask` / ParetoBandit do Souls Engine **SUGERE**
+  o tier; quem **DECIDE** é `delegation` do Hermes. `delegate_task` herda `model.default`
+  (pago) quando `delegation.model/provider` não estão pinados. A orquestração está
+  **configurada, não amarrada** — ver FEEDBACK-001 (14 GGUF ociosos), 002 (não exercitada),
+  004 (tier oscila conforme a descrição) e 012 (decomposer pago em `triage`).
+- **Escada obrigatória (nesta ordem)**: (1) modelos locais (`127.0.0.1:9123/v1`, R$ 0) →
+  (2) CLI agêntica por assinatura já paga (`agy`) → (3) cloud **FREE** (`Hy4 flash (free)`,
+  `Step 3.7 Flash`, `Solar Mini 4 (free)`) → (4) cloud **fast/barato que DÊ CONTA DO
+  RECADO** (`Hy4` 80% off, `DeepSeek V4.1 Flash`, `Solar Mini 4.5`) → (5) cloud **forte**
+  (Gemini 4 Carbon/Argon) só com reflexão custo×benefício + teto aprovado (**ASK FIRST**).
+  Outras chaves de API / CLIs entram na mesma escada.
+- **Critério central**: **"dar conta do recado"** é a restrição de qualidade mínima —
+  escolher o **mais barato que ainda resolve**, não o mais barato absoluto.
+- **Kanban futuro**: modelo com custo de créditos = **decisão prévia de Bruno** ou worker
+  refinado para caber em local / free / subscription / baixo custo. A contenção atual
+  (`auto_decompose: false`, `dispatch_in_gateway: false`, decomposer pinado `custom`/qwen
+  local) é o **1º passo**, não a regra de teto por card.
+- **Objetivo de Bruno**: o orquestrador deve **disparar mais agentes** (menos contexto sujo
+  no chat mestre, menos compactações), usando o Souls Engine como **"braços e pernas"**:
+  `route_subtask` com `estimated_tokens <= 4096` por chunk + map-reduce local.
+  **FATO**: nesta sessão foram **0 `delegate_task`**, e o contexto inchou por isso —
+  **custo de contexto também é custo**.
+- **Status**: **REGISTRADO / DIRETRIZ**. Ref `wiki/log.md` (`ORCAMENTO_20261129`) e
+  playbook `licoes_onda_c_2026.md` L37. Nenhuma mutação em código.
+
+## FEEDBACK-017 — Gateway do Kanban emite ecos *stale* após arquivamento (2026-11-29)
+
+- **Classificação**: **BUG** (gateway) + **HIGIENE**
+- **Evidência**: após arquivar os **36 children `auto-decomposer`**, o gateway emitiu
+  **~42 notificações** `blocked / crashed / completed / gave up / handed off for review /
+  review requested changes` para cards cujo `tasks.status` já era **`archived`**.
+  Medição em `kanban.db`: **36 `archived`, 7 `blocked`, 2 `done`**, **0 arestas**,
+  **0 `running`**, `dispatch_in_gateway: false`, `dispatch --dry-run → spawned: []`;
+  **15 cards `archived` ainda com `block_kind` residual** (`needs_input`, `capability`);
+  `kanban_notify_subs` = **9** inscrições; `dispatch_held.json` presente.
+- **Causa**: o gateway drena uma fila de eventos **anteriores** ao arquivamento.
+  `block_kind` / `block_recurrences` / `consecutive_failures` são **resíduo histórico**,
+  não estado atual. Textos como *"dispatcher will retry"* e *"gave up (retries
+  exhausted)"* chegaram **juntos e contraditórios** para o mesmo card.
+- **Impacto**: ~42 turnos de inspeção, **nenhuma ação necessária**, **zero custo em
+  créditos**, mas **custo de contexto e de atenção** (perfil 2e/TDAH).
+- **Regra**: **medir `tasks.status` no `kanban.db` antes de agir**; notificação automática
+  **não é pedido**, não autoriza decompor, desarquivar ou recriar grafos. Verificador
+  correto = `tasks.status`, não o texto da notificação.
+- **Recomendação**: `hermes kanban notify-unsubscribe` / `auto_subscribe_on_create: false`;
+  e o gateway deve comparar `status` corrente antes de emitir. **ASK FIRST** para religar.
+- **Status**: **REGISTRADO**. Board contido; nenhuma mutação feita por essas notificações.
+
+## FEEDBACK-018 — Calibração de verificadores: 4 falsos negativos medidos em 29/11
+
+- **Classificação**: **MELHORIA** (qualidade de gate)
+- **Evidência** (4 casos reais desta sessão, com saída de ferramenta):
+  1. `run_homogeneizar_20261129.py` **v1** exigia `len(raw.rglob) == 502` → **gate 12/13**,
+     mas `raw/` tem **1.043 arquivos físicos** (`raw_manifest.json` cobre **502**). O
+     verificador forte é a comparação **sha256 byte-a-byte dos 1.043 antes/depois**, que
+     passou. **v1 preservado** como evidência; **v2 idempotente** → **13/13**.
+  2. Marcador de idempotência continha **o próprio termo substituído**: ao homogeneizar a
+     linha de log, o marcador desapareceu, a re-execução appendou duplicata e
+     **reintroduziu** o termo. O gate 13/13 **não media o artefato DEPOIS do append**.
+     Correção: token neutro `HOMOG_FATO_20261129` + retificação no log.
+  3. Busca **rasa por regex** levou a trocar `type: query` → `summary` em 28/11. Medição
+     funda de `run_lint_wiki.py`: **`CORE_TYPES` já incluía `query`**, e
+     `EXCLUDED_DIRS` / `INFRA_FILES` / `STATE_NOTES` já tratavam `index`/`audit`/`state`
+     **por caminho**. `--self-test` rc=0. O `type: query` foi **restaurado** após a
+     emenda do `AGENTS.md`.
+  4. `privacy_guard`: um teste **novo e mais rígido** com paráfrases genéricas
+     ("extrato bancário") foi tratado como "risco", quando media **outra política**.
+     Decisão correta de Bruno: **manter, não endurecer** — o gate 11/11 aprovado
+     continua válido para identificadores reais.
+- **Regra**: **definir o verificador antes de medir**; medir o artefato **DEPOIS** de toda
+  mutação; **não afrouxar nem endurecer** gate por conta própria (ASK FIRST); preservar
+  o script reprovado; registrar a calibração no log sem apagar o veredito.
+- **Status**: **REGISTRADO**. Ref playbook L33–L36 e skill
+  `souls-engine/calibrar-o-verificador-antes-de-confiar-nele`.
+
+## BUG-003 — `git push` trava no diálogo de credencial do Windows (ambiente headless)
+
+- **Classificação**: **BUG** (ambiente) — recorrente em 26/11 e 29/11
+- **Evidência**: `git -C Z:/souls_engine push origin main` → **`PUSH_RC=124`** com
+  `bash: /dev/tty: No such device or address`; `git status -sb` ficou
+  `## main...origin/main [ahead 1]` embora, em outra ocorrência, o **servidor já tivesse
+  aceito** o commit (`64c4515`) — a ref local `@{u}` **não prova publicação**.
+  `credential.helper` abre uma GUI em ambiente sem TTY (Hermes `terminal`/`execute_code`).
+- **Correção aplicada e verificada**: **`GIT_TERMINAL_PROMPT=0 git -C <repo> push origin
+  main`** → `68bfed6..42f221b main -> main`, depois `42f221b..c9e0b60 main -> main`.
+  Fonte de verdade: **`git ls-remote origin main`** (16º falso negativo corrigido).
+- **Impacto**: nenhum dado perdido; risco de **afirmar "push não executado"** com base só
+  na ref local. Bruno viu o diálogo de credenciais na tela e não soube qual opção escolher
+  — **não precisa escolher nenhuma**, o push sem prompt já publica. Nunca solicitar
+  senha/token no chat; se o diálogo aparecer no desktop, a opção segura é
+  **"Entrar com o navegador"**.
+- **Status**: **CONTORNADO / CORREÇÃO DOCUMENTADA**. Ref skill
+  `bruno-resuminho-e-autonomia` §2 e playbook L16.
+
+---
+
+> **Checklist para a v0.9.4+4/+5 (Antigravity IDE)**: FEEDBACK-001, 002, 004, 005, 006,
+> 007, 008, 011, 012, 016, 017, 018 e BUG-002, BUG-003. **Resolvidos / contornados**:
+> BUG-001, BUG-003 (contorno), FEEDBACK-003, 009, 010, 013, 014, 015. BUG-002 fica
+> **unificado na v0.9.5** (decisão de Bruno em 28/11), não nesta release.
+

@@ -154,7 +154,7 @@ Arquivos legados desenvolvidos em ambientes Windows mistos podem conter quebras 
 Nenhum arquivo de produção entra na árvore canônica sem passar pela esteira:
 1. **RED:** Transplanta ou redige primeiro o teste unitário correspondente em `tests/` ou no módulo `#[cfg(test)]`. Confirma que o teste falha ou não compila pela ausência da implementação canônica.
 2. **GREEN:** Transplanta e higieniza a lógica de produção do órgão até que o teste passe integralmente.
-3. **REFACTOR:** Remove avisos do linter (`cargo clippy -p <crate>`) e confirma que `cargo check -p <crate>` retorna código zero.
+3. **REFATOR:** Remove avisos do linter (`cargo clippy -p <crate>`) e confirma que `cargo check -p <crate>` retorna código zero.
 
 ### Lei 6: Purga de Caminhos Hardcoded Win32
 
