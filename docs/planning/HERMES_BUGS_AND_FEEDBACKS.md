@@ -424,3 +424,25 @@ Ourocard, `R$` e `privacy_tier: strict_local` continuam `SENSITIVO`;
   **não** conceder `trust: true` novo (revogado em 26/11).
 - **Status**: **REGISTRADO**. Nenhuma mutação em `raw/`, `AGENTS.md`, `SOUL.md`
   ou sidecar. Custo **R$ 0,00**.
+
+---
+
+## Sincronização 2026-11-28 (Bruno, FATO medido)
+
+- **FEEDBACK-009 / 013 / 014** (envelope corrompido, crash `pydantic`, tool env do `uv`):
+  **RESOLVIDOS**. `nlm 0.16.9`; `nlm login --check` → `✓ Authentication valid /
+  7 cadernos` no terminal de Bruno; `nlm notebook list` → 7 cadernos / 877 fontes;
+  `nlm usage` → 0% usado. Ver FEEDBACK-015 para a causa do `os error 5` e do timeout
+  no processo Hermes.
+- **BUG-002**: decisão de Bruno **unificar na v0.9.5** (alinhar `raw_inbox_dir` do
+  ADR-030 / `life.rs` com `staging/inbox/` do `AGENTS.md`), **não** na release
+  `0.9.4+3`. Até lá manter como está: o cofre funciona, `staging/inbox/` existe e as
+  133 fontes foram curadas. **ASK FIRST** para qualquer emenda do `AGENTS.md`.
+- **FEEDBACK-005 / 006 / 011** (nós de teste no grafo, hipocampo L3, lint periódico /
+  cron): **confirmados como abertos**, escopo da **v0.9.5** — Bruno atua no
+  Antigravity IDE.
+- **Política `privacy_guard`**: **mantida, sem endurecer**. Fica local apenas o
+  **identificador real** (CPF, nome, endereço, conta, valor real); texto de pesquisa é
+  conteúdo normal e pode ir para nuvem ser tratado; **anonimização por tags** é cuidado
+  de saída, não gate de entrada. Decisão de Bruno em 28/11.
+- **Status**: registrado. Nenhuma mutação em código.
