@@ -384,3 +384,43 @@ Ourocard, `R$` e `privacy_tier: strict_local` continuam `SENSITIVO`;
   Wiki (`wiki/state.md` + lint periódico + `ladybug_reconcile`), com teto LOCAL e
   `no_agent`/script quando possível (custo zero).
 - **Status**: **REGISTRADO / DECISÃO PENDENTE**.
+
+---
+
+## FEEDBACK-015 — `nlm` 0.16.9: `os error 5` no reinstall e `login --check` divergente por ambiente (2026-11-28)
+
+- **Classificação**: BUG (ambiente Windows) + CORREÇÃO DE DIAGNÓSTICO
+- **Evidência** (medida em disco):
+  - `uv tool install --reinstall notebooklm-mcp-cli==0.16.9` →
+    `error: failed to remove directory ...\uv\tools\notebooklm-mcp-cli\Scripts:
+    Acesso negado (os error 5)`.
+  - Processo medido: `chrome.exe` PID 248 + 10 filhos com
+    `--user-data-dir=...\.notebooklm-mcp-cli\chrome-profiles\default
+    --remote-debugging-port=9223 --headless=new`. É o browser de autenticação do
+    próprio `nlm`; mantém `Scripts\python.exe` aberto e o Windows não permite apagar
+    executável em uso. Corroborado por `astral-sh/uv#13986`, `#16747`, `#20792`,
+    `github/spec-kit#5141`.
+  - `agy mcp list` → `gemini_notebook_mcp  stdio  enabled` (o MCP do Antigravity é
+    quem mantém o browser vivo). **Não é o Hermes nem o Souls Engine**: fechar o
+    Hermes não libera o handle e encerra a sessão; o daemon `127.0.0.1:9123` não
+    usa o tool env do `uv`.
+- **Segundo achado, distinto**: `nlm login --check` no **terminal do usuário** →
+  `✓ Authentication valid! / Notebooks found: 7 / Account: [REDACTED]` (rc=0).
+  No **processo Hermes** (ambiente sanitizado de `terminal`/`execute_code`) →
+  `RC=124` timeout. **Não é falha de autenticação nem envelope corrompido**:
+  `nlm auth storage status` → `Storage mode: protected / Ciphertext envelope present
+  (credentials.enc)`; `nlm notebook list` → rc=0, **7 cadernos / 877 fontes**;
+  `nlm usage` → **0.0% usado / 100% restante**.
+- **Correção de diagnóstico anterior**: a hipótese de "resíduo de `unfinished
+  storage operation`" foi **retificada**. A causa do timeout é o **ambiente isolado
+  do processo Hermes**, não o tool env. O `os error 5` do reinstall é um evento
+  **separado**, já resolvido (o `Scripts/` foi recomposto em 27/11 20:57).
+- **Impacto**: nenhum. `nlm` 0.16.9 funcional; FEEDBACK-009/013/014 (envelope,
+  pydantic, tool env) **resolvidos**. O `nlm doctor` continua reportando
+  `No AI tools configured` / `Gemini CLI: not configured` por **falso negativo**
+  (FEEDBACK-008) — essa seção **não** deve ser usada como gate; usar `agy mcp list`.
+- **Recomendação**: se precisar reinstalar, encerrar **apenas** o Chrome headless
+  ou `agy mcp disable gemini_notebook_mcp` antes; **não** fechar o Hermes;
+  **não** conceder `trust: true` novo (revogado em 26/11).
+- **Status**: **REGISTRADO**. Nenhuma mutação em `raw/`, `AGENTS.md`, `SOUL.md`
+  ou sidecar. Custo **R$ 0,00**.
